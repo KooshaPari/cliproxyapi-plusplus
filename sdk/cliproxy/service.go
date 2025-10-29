@@ -210,13 +210,14 @@ func (s *Service) wsOnConnected(channelID string) {
 	}
 	now := time.Now().UTC()
 	auth := &coreauth.Auth{
-		ID:        channelID,  // keep channel identifier as ID
-		Provider:  "aistudio", // logical provider for switch routing
-		Label:     channelID,  // display original channel id
-		Status:    coreauth.StatusActive,
-		CreatedAt: now,
-		UpdatedAt: now,
-		Metadata:  map[string]any{"email": channelID}, // inject email inline
+		ID:         channelID,  // keep channel identifier as ID
+		Provider:   "aistudio", // logical provider for switch routing
+		Label:      channelID,  // display original channel id
+		Status:     coreauth.StatusActive,
+		CreatedAt:  now,
+		UpdatedAt:  now,
+		Attributes: map[string]string{"runtime_only": "true"},
+		Metadata:   map[string]any{"email": channelID}, // metadata drives logging and usage tracking
 	}
 	log.Infof("websocket provider connected: %s", channelID)
 	s.applyCoreAuthAddOrUpdate(context.Background(), auth)
