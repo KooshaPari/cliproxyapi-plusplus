@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"html"
 	"net/http"
 	"sort"
 	"strings"
@@ -319,4 +320,38 @@ func formatAuthInfo(info upstreamRequestLog) string {
 	}
 
 	return strings.Join(parts, ", ")
+}
+
+func summarizeErrorBody(contentType string, body []byte) string {
+	if strings.Contains(strings.ToLower(contentType), "text/html") {
+		if title := extractHTMLTitle(body); title != "" {
+			return title
+		}
+		return "[html body omitted]"
+	}
+	return string(body)
+}
+
+func extractHTMLTitle(body []byte) string {
+	lower := bytes.ToLower(body)
+	start := bytes.Index(lower, []byte("<title"))
+	if start == -1 {
+		return ""
+	}
+	gt := bytes.IndexByte(lower[start:], '>')
+	if gt == -1 {
+		return ""
+	}
+	start += gt + 1
+	end := bytes.Index(lower[start:], []byte("</title>"))
+	if end == -1 {
+		return ""
+	}
+	title := string(body[start : start+end])
+	title = html.UnescapeString(title)
+	title = strings.TrimSpace(title)
+	if title == "" {
+		return ""
+	}
+	return strings.Join(strings.Fields(title), " ")
 }
