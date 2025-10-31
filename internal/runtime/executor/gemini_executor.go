@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/config"
@@ -94,7 +95,8 @@ func (e *GeminiExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, r
 			action = "countTokens"
 		}
 	}
-	url := fmt.Sprintf("%s/%s/models/%s:%s", glEndpoint, glAPIVersion, req.Model, action)
+	baseURL := resolveGeminiBaseURL(auth)
+	url := fmt.Sprintf("%s/%s/models/%s:%s", baseURL, glAPIVersion, req.Model, action)
 	if opts.Alt != "" && action != "countTokens" {
 		url = url + fmt.Sprintf("?$alt=%s", opts.Alt)
 	}
@@ -111,6 +113,7 @@ func (e *GeminiExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, r
 	} else if bearer != "" {
 		httpReq.Header.Set("Authorization", "Bearer "+bearer)
 	}
+	applyGeminiHeaders(httpReq, auth)
 	var authID, authLabel, authType, authValue string
 	if auth != nil {
 		authID = auth.ID
@@ -180,7 +183,8 @@ func (e *GeminiExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.A
 	body = util.StripThinkingConfigIfUnsupported(req.Model, body)
 	body = fixGeminiImageAspectRatio(req.Model, body)
 
-	url := fmt.Sprintf("%s/%s/models/%s:%s", glEndpoint, glAPIVersion, req.Model, "streamGenerateContent")
+	baseURL := resolveGeminiBaseURL(auth)
+	url := fmt.Sprintf("%s/%s/models/%s:%s", baseURL, glAPIVersion, req.Model, "streamGenerateContent")
 	if opts.Alt == "" {
 		url = url + "?alt=sse"
 	} else {
@@ -199,6 +203,7 @@ func (e *GeminiExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.A
 	} else {
 		httpReq.Header.Set("Authorization", "Bearer "+bearer)
 	}
+	applyGeminiHeaders(httpReq, auth)
 	var authID, authLabel, authType, authValue string
 	if auth != nil {
 		authID = auth.ID
@@ -290,7 +295,8 @@ func (e *GeminiExecutor) CountTokens(ctx context.Context, auth *cliproxyauth.Aut
 	translatedReq, _ = sjson.DeleteBytes(translatedReq, "tools")
 	translatedReq, _ = sjson.DeleteBytes(translatedReq, "generationConfig")
 
-	url := fmt.Sprintf("%s/%s/models/%s:%s", glEndpoint, glAPIVersion, req.Model, "countTokens")
+	baseURL := resolveGeminiBaseURL(auth)
+	url := fmt.Sprintf("%s/%s/models/%s:%s", baseURL, glAPIVersion, req.Model, "countTokens")
 
 	requestBody := bytes.NewReader(translatedReq)
 
@@ -304,6 +310,7 @@ func (e *GeminiExecutor) CountTokens(ctx context.Context, auth *cliproxyauth.Aut
 	} else {
 		httpReq.Header.Set("Authorization", "Bearer "+bearer)
 	}
+	applyGeminiHeaders(httpReq, auth)
 	var authID, authLabel, authType, authValue string
 	if auth != nil {
 		authID = auth.ID
@@ -471,6 +478,60 @@ func geminiCreds(a *cliproxyauth.Auth) (apiKey, bearer string) {
 		}
 	}
 	return
+}
+
+func resolveGeminiBaseURL(auth *cliproxyauth.Auth) string {
+	base := glEndpoint
+	if auth != nil && auth.Attributes != nil {
+		if custom := strings.TrimSpace(auth.Attributes["base_url"]); custom != "" {
+			base = strings.TrimRight(custom, "/")
+		}
+	}
+	if base == "" {
+		return glEndpoint
+	}
+	return base
+}
+
+func applyGeminiHeaders(req *http.Request, auth *cliproxyauth.Auth) {
+	if req == nil {
+		return
+	}
+	headers := geminiCustomHeaders(auth)
+	if len(headers) == 0 {
+		return
+	}
+	for k, v := range headers {
+		if k == "" || v == "" {
+			continue
+		}
+		req.Header.Set(k, v)
+	}
+}
+
+func geminiCustomHeaders(auth *cliproxyauth.Auth) map[string]string {
+	if auth == nil || auth.Attributes == nil {
+		return nil
+	}
+	headers := make(map[string]string, len(auth.Attributes))
+	for k, v := range auth.Attributes {
+		if !strings.HasPrefix(k, "header:") {
+			continue
+		}
+		name := strings.TrimSpace(strings.TrimPrefix(k, "header:"))
+		if name == "" {
+			continue
+		}
+		val := strings.TrimSpace(v)
+		if val == "" {
+			continue
+		}
+		headers[name] = val
+	}
+	if len(headers) == 0 {
+		return nil
+	}
+	return headers
 }
 
 func fixGeminiImageAspectRatio(modelName string, rawJSON []byte) []byte {

@@ -12,7 +12,13 @@ import (
 )
 
 func (h *Handler) GetConfig(c *gin.Context) {
-	c.JSON(200, h.cfg)
+	if h == nil || h.cfg == nil {
+		c.JSON(200, gin.H{})
+		return
+	}
+	cfgCopy := *h.cfg
+	cfgCopy.GlAPIKey = geminiKeyStringsFromConfig(h.cfg)
+	c.JSON(200, &cfgCopy)
 }
 
 func (h *Handler) GetConfigYAML(c *gin.Context) {

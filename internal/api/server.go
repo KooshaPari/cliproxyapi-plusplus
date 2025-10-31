@@ -474,6 +474,11 @@ func (s *Server) registerManagementRoutes() {
 		mgmt.PATCH("/generative-language-api-key", s.mgmt.PatchGlKeys)
 		mgmt.DELETE("/generative-language-api-key", s.mgmt.DeleteGlKeys)
 
+		mgmt.GET("/gemini-api-key", s.mgmt.GetGeminiKeys)
+		mgmt.PUT("/gemini-api-key", s.mgmt.PutGeminiKeys)
+		mgmt.PATCH("/gemini-api-key", s.mgmt.PatchGeminiKey)
+		mgmt.DELETE("/gemini-api-key", s.mgmt.DeleteGeminiKey)
+
 		mgmt.GET("/logs", s.mgmt.GetLogs)
 		mgmt.DELETE("/logs", s.mgmt.DeleteLogs)
 		mgmt.GET("/request-log", s.mgmt.GetRequestLog)
@@ -847,7 +852,7 @@ func (s *Server) UpdateClients(cfg *config.Config) {
 
 	// Count client sources from configuration and auth directory
 	authFiles := util.CountAuthFiles(cfg.AuthDir)
-	glAPIKeyCount := len(cfg.GlAPIKey)
+	geminiAPIKeyCount := len(cfg.GeminiKey)
 	claudeAPIKeyCount := len(cfg.ClaudeKey)
 	codexAPIKeyCount := len(cfg.CodexKey)
 	openAICompatCount := 0
@@ -860,11 +865,11 @@ func (s *Server) UpdateClients(cfg *config.Config) {
 		openAICompatCount += len(entry.APIKeys)
 	}
 
-	total := authFiles + glAPIKeyCount + claudeAPIKeyCount + codexAPIKeyCount + openAICompatCount
-	fmt.Printf("server clients and configuration updated: %d clients (%d auth files + %d GL API keys + %d Claude API keys + %d Codex keys + %d OpenAI-compat)\n",
+	total := authFiles + geminiAPIKeyCount + claudeAPIKeyCount + codexAPIKeyCount + openAICompatCount
+	fmt.Printf("server clients and configuration updated: %d clients (%d auth files + %d Gemini API keys + %d Claude API keys + %d Codex keys + %d OpenAI-compat)\n",
 		total,
 		authFiles,
-		glAPIKeyCount,
+		geminiAPIKeyCount,
 		claudeAPIKeyCount,
 		codexAPIKeyCount,
 		openAICompatCount,

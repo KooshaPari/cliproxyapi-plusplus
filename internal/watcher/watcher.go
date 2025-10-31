@@ -604,8 +604,8 @@ func (w *Watcher) reloadClients(rescanAuth bool) {
 	// no legacy clients to unregister
 
 	// Create new API key clients based on the new config
-	glAPIKeyCount, claudeAPIKeyCount, codexAPIKeyCount, openAICompatCount := BuildAPIKeyClients(cfg)
-	totalAPIKeyClients := glAPIKeyCount + claudeAPIKeyCount + codexAPIKeyCount + openAICompatCount
+	geminiAPIKeyCount, claudeAPIKeyCount, codexAPIKeyCount, openAICompatCount := BuildAPIKeyClients(cfg)
+	totalAPIKeyClients := geminiAPIKeyCount + claudeAPIKeyCount + codexAPIKeyCount + openAICompatCount
 	log.Debugf("loaded %d API key clients", totalAPIKeyClients)
 
 	var authFileCount int
@@ -648,7 +648,7 @@ func (w *Watcher) reloadClients(rescanAuth bool) {
 		w.clientsMutex.Unlock()
 	}
 
-	totalNewClients := authFileCount + glAPIKeyCount + claudeAPIKeyCount + codexAPIKeyCount + openAICompatCount
+	totalNewClients := authFileCount + geminiAPIKeyCount + claudeAPIKeyCount + codexAPIKeyCount + openAICompatCount
 
 	// Ensure consumers observe the new configuration before auth updates dispatch.
 	if w.reloadCallback != nil {
@@ -658,10 +658,10 @@ func (w *Watcher) reloadClients(rescanAuth bool) {
 
 	w.refreshAuthState()
 
-	log.Infof("full client load complete - %d clients (%d auth files + %d GL API keys + %d Claude API keys + %d Codex keys + %d OpenAI-compat)",
+	log.Infof("full client load complete - %d clients (%d auth files + %d Gemini API keys + %d Claude API keys + %d Codex keys + %d OpenAI-compat)",
 		totalNewClients,
 		authFileCount,
-		glAPIKeyCount,
+		geminiAPIKeyCount,
 		claudeAPIKeyCount,
 		codexAPIKeyCount,
 		openAICompatCount,
@@ -746,23 +746,41 @@ func (w *Watcher) SnapshotCoreAuths() []*coreauth.Auth {
 	w.clientsMutex.RUnlock()
 	if cfg != nil {
 		// Gemini official API keys -> synthesize auths
-		for i := range cfg.GlAPIKey {
-			k := strings.TrimSpace(cfg.GlAPIKey[i])
-			if k == "" {
+		for i := range cfg.GeminiKey {
+			entry := cfg.GeminiKey[i]
+			key := strings.TrimSpace(entry.APIKey)
+			if key == "" {
 				continue
 			}
-			id, token := idGen.next("gemini:apikey", k)
+			base := strings.TrimSpace(entry.BaseURL)
+			proxyURL := strings.TrimSpace(entry.ProxyURL)
+			id, token := idGen.next("gemini:apikey", key, base)
+			attrs := map[string]string{
+				"source":  fmt.Sprintf("config:gemini[%s]", token),
+				"api_key": key,
+			}
+			if base != "" {
+				attrs["base_url"] = base
+			}
+			if len(entry.Headers) > 0 {
+				for hk, hv := range entry.Headers {
+					key := strings.TrimSpace(hk)
+					val := strings.TrimSpace(hv)
+					if key == "" || val == "" {
+						continue
+					}
+					attrs["header:"+key] = val
+				}
+			}
 			a := &coreauth.Auth{
-				ID:       id,
-				Provider: "gemini",
-				Label:    "gemini-apikey",
-				Status:   coreauth.StatusActive,
-				Attributes: map[string]string{
-					"source":  fmt.Sprintf("config:gemini[%s]", token),
-					"api_key": k,
-				},
-				CreatedAt: now,
-				UpdatedAt: now,
+				ID:         id,
+				Provider:   "gemini",
+				Label:      "gemini-apikey",
+				Status:     coreauth.StatusActive,
+				ProxyURL:   proxyURL,
+				Attributes: attrs,
+				CreatedAt:  now,
+				UpdatedAt:  now,
 			}
 			out = append(out, a)
 		}
@@ -1030,14 +1048,14 @@ func (w *Watcher) loadFileClients(cfg *config.Config) int {
 }
 
 func BuildAPIKeyClients(cfg *config.Config) (int, int, int, int) {
-	glAPIKeyCount := 0
+	geminiAPIKeyCount := 0
 	claudeAPIKeyCount := 0
 	codexAPIKeyCount := 0
 	openAICompatCount := 0
 
-	if len(cfg.GlAPIKey) > 0 {
+	if len(cfg.GeminiKey) > 0 {
 		// Stateless executor handles Gemini API keys; avoid constructing legacy clients.
-		glAPIKeyCount += len(cfg.GlAPIKey)
+		geminiAPIKeyCount += len(cfg.GeminiKey)
 	}
 	if len(cfg.ClaudeKey) > 0 {
 		claudeAPIKeyCount += len(cfg.ClaudeKey)
@@ -1056,7 +1074,7 @@ func BuildAPIKeyClients(cfg *config.Config) (int, int, int, int) {
 			}
 		}
 	}
-	return glAPIKeyCount, claudeAPIKeyCount, codexAPIKeyCount, openAICompatCount
+	return geminiAPIKeyCount, claudeAPIKeyCount, codexAPIKeyCount, openAICompatCount
 }
 
 func diffOpenAICompatibility(oldList, newList []config.OpenAICompatibility) []string {
@@ -1239,10 +1257,31 @@ func buildConfigChangeDetails(oldCfg, newCfg *config.Config) []string {
 	} else if !reflect.DeepEqual(trimStrings(oldCfg.APIKeys), trimStrings(newCfg.APIKeys)) {
 		changes = append(changes, "api-keys: values updated (count unchanged, redacted)")
 	}
-	if len(oldCfg.GlAPIKey) != len(newCfg.GlAPIKey) {
-		changes = append(changes, fmt.Sprintf("generative-language-api-key count: %d -> %d", len(oldCfg.GlAPIKey), len(newCfg.GlAPIKey)))
-	} else if !reflect.DeepEqual(trimStrings(oldCfg.GlAPIKey), trimStrings(newCfg.GlAPIKey)) {
-		changes = append(changes, "generative-language-api-key: values updated (count unchanged, redacted)")
+	if len(oldCfg.GeminiKey) != len(newCfg.GeminiKey) {
+		changes = append(changes, fmt.Sprintf("gemini-api-key count: %d -> %d", len(oldCfg.GeminiKey), len(newCfg.GeminiKey)))
+	} else {
+		for i := range oldCfg.GeminiKey {
+			if i >= len(newCfg.GeminiKey) {
+				break
+			}
+			o := oldCfg.GeminiKey[i]
+			n := newCfg.GeminiKey[i]
+			if strings.TrimSpace(o.BaseURL) != strings.TrimSpace(n.BaseURL) {
+				changes = append(changes, fmt.Sprintf("gemini[%d].base-url: %s -> %s", i, strings.TrimSpace(o.BaseURL), strings.TrimSpace(n.BaseURL)))
+			}
+			if strings.TrimSpace(o.ProxyURL) != strings.TrimSpace(n.ProxyURL) {
+				changes = append(changes, fmt.Sprintf("gemini[%d].proxy-url: %s -> %s", i, strings.TrimSpace(o.ProxyURL), strings.TrimSpace(n.ProxyURL)))
+			}
+			if strings.TrimSpace(o.APIKey) != strings.TrimSpace(n.APIKey) {
+				changes = append(changes, fmt.Sprintf("gemini[%d].api-key: updated", i))
+			}
+			if !equalStringMap(o.Headers, n.Headers) {
+				changes = append(changes, fmt.Sprintf("gemini[%d].headers: updated", i))
+			}
+		}
+		if !reflect.DeepEqual(trimStrings(oldCfg.GlAPIKey), trimStrings(newCfg.GlAPIKey)) {
+			changes = append(changes, "generative-language-api-key: values updated (legacy view, redacted)")
+		}
 	}
 
 	// Claude keys (do not print key material)
@@ -1324,4 +1363,16 @@ func trimStrings(in []string) []string {
 		out[i] = strings.TrimSpace(in[i])
 	}
 	return out
+}
+
+func equalStringMap(a, b map[string]string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for k, v := range a {
+		if b[k] != v {
+			return false
+		}
+	}
+	return true
 }
