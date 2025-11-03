@@ -77,7 +77,7 @@ CLIProxyAPI 用户手册： [https://help.router-for.me/](https://help.router-fo
 
 此项目根据 MIT 许可证授权 - 有关详细信息，请参阅 [LICENSE](LICENSE) 文件。
 
-# 写给所有中国网友的
+## 写给所有中国网友的
 
 QQ 群：188637136
 
