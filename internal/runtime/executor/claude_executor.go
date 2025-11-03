@@ -538,7 +538,15 @@ func applyClaudeHeaders(r *http.Request, apiKey string, stream bool) {
 		ginHeaders = ginCtx.Request.Header
 	}
 
-	misc.EnsureHeader(r.Header, ginHeaders, "Anthropic-Beta", "claude-code-20250219,oauth-2025-04-20,interleaved-thinking-2025-05-14,fine-grained-tool-streaming-2025-05-14")
+	if val := strings.TrimSpace(ginHeaders.Get("Anthropic-Beta")); val != "" {
+		if !strings.Contains(val, "oauth") {
+			val += ",oauth-2025-04-20"
+		}
+		r.Header.Set("Anthropic-Beta", val)
+	} else {
+		r.Header.Set("Anthropic-Beta", "claude-code-20250219,oauth-2025-04-20,interleaved-thinking-2025-05-14,fine-grained-tool-streaming-2025-05-14")
+	}
+
 	misc.EnsureHeader(r.Header, ginHeaders, "Anthropic-Version", "2023-06-01")
 	misc.EnsureHeader(r.Header, ginHeaders, "Anthropic-Dangerous-Direct-Browser-Access", "true")
 	misc.EnsureHeader(r.Header, ginHeaders, "X-App", "cli")
