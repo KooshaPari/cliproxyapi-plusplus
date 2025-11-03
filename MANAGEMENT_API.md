@@ -80,12 +80,14 @@ If a plaintext key is detected in the config at startup, it will be bcrypt‑has
             }
           }
         }
-      }
+      },
+      "failed_requests": 2
     }
     ```
   - Notes:
     - Statistics are recalculated for every request that reports token usage; data resets when the server restarts.
     - Hourly counters fold all days into the same hour bucket (`00`–`23`).
+    - The top-level `failed_requests` repeats `usage.failure_count` for convenience when polling.
 
 ### Config
 - GET `/config` — Get the full config
@@ -95,8 +97,11 @@ If a plaintext key is detected in the config at startup, it will be bcrypt‑has
       ```
     - Response:
       ```json
-      {"debug":true,"proxy-url":"","api-keys":["1...5","JS...W"],"quota-exceeded":{"switch-project":true,"switch-preview-model":true},"gemini-api-key":[{"api-key":"AI...01","base-url":"https://generativelanguage.googleapis.com","headers":{"X-Custom-Header":"custom-value"},"proxy-url":""},{"api-key":"AI...02","proxy-url":"socks5://proxy.example.com:1080"}],"request-log":true,"request-retry":3,"claude-api-key":[{"api-key":"cr...56","base-url":"https://example.com/api","proxy-url":"socks5://proxy.example.com:1080","models":[{"name":"claude-3-5-sonnet-20241022","alias":"claude-sonnet-latest"}]},{"api-key":"cr...e3","base-url":"http://example.com:3000/api","proxy-url":""},{"api-key":"sk-...q2","base-url":"https://example.com","proxy-url":""}],"codex-api-key":[{"api-key":"sk...01","base-url":"https://example/v1","proxy-url":""}],"openai-compatibility":[{"name":"openrouter","base-url":"https://openrouter.ai/api/v1","api-key-entries":[{"api-key":"sk...01","proxy-url":""}],"models":[{"name":"moonshotai/kimi-k2:free","alias":"kimi-k2"}]},{"name":"iflow","base-url":"https://apis.iflow.cn/v1","api-key-entries":[{"api-key":"sk...7e","proxy-url":"socks5://proxy.example.com:1080"}],"models":[{"name":"deepseek-v3.1","alias":"deepseek-v3.1"},{"name":"glm-4.5","alias":"glm-4.5"},{"name":"kimi-k2","alias":"kimi-k2"}]}]}
+      {"debug":true,"proxy-url":"","api-keys":["1...5","JS...W"],"quota-exceeded":{"switch-project":true,"switch-preview-model":true},"gemini-api-key":[{"api-key":"AI...01","base-url":"https://generativelanguage.googleapis.com","headers":{"X-Custom-Header":"custom-value"},"proxy-url":""},{"api-key":"AI...02","proxy-url":"socks5://proxy.example.com:1080"}],"gl-api-key":["AI...01","AI...02"],"request-log":true,"request-retry":3,"claude-api-key":[{"api-key":"cr...56","base-url":"https://example.com/api","proxy-url":"socks5://proxy.example.com:1080","models":[{"name":"claude-3-5-sonnet-20241022","alias":"claude-sonnet-latest"}]},{"api-key":"cr...e3","base-url":"http://example.com:3000/api","proxy-url":""},{"api-key":"sk-...q2","base-url":"https://example.com","proxy-url":""}],"codex-api-key":[{"api-key":"sk...01","base-url":"https://example/v1","proxy-url":""}],"openai-compatibility":[{"name":"openrouter","base-url":"https://openrouter.ai/api/v1","api-key-entries":[{"api-key":"sk...01","proxy-url":""}],"models":[{"name":"moonshotai/kimi-k2:free","alias":"kimi-k2"}]},{"name":"iflow","base-url":"https://apis.iflow.cn/v1","api-key-entries":[{"api-key":"sk...7e","proxy-url":"socks5://proxy.example.com:1080"}],"models":[{"name":"deepseek-v3.1","alias":"deepseek-v3.1"},{"name":"glm-4.5","alias":"glm-4.5"},{"name":"kimi-k2","alias":"kimi-k2"}]}]}
       ```
+  - Notes:
+    - The response includes a sanitized `gl-api-key` list derived from the detailed `gemini-api-key` entries.
+    - When no configuration is loaded yet the handler returns `{}`.
 
 ### Debug
 - GET `/debug` — Get the current debug state
@@ -121,23 +126,81 @@ If a plaintext key is detected in the config at startup, it will be bcrypt‑has
     { "status": "ok" }
     ```
 
-### Force GPT-5 Codex
-- GET `/force-gpt-5-codex` — Get current flag
+### Config YAML
+- GET `/config.yaml` — Download the persisted YAML file as-is
+  - Response headers:
+    - `Content-Type: application/yaml; charset=utf-8`
+    - `Cache-Control: no-store`
+  - Response body: raw YAML stream preserving comments/formatting.
+- PUT `/config.yaml` — Replace the config with a YAML document
   - Request:
     ```bash
-    curl -H 'Authorization: Bearer <MANAGEMENT_KEY>' http://localhost:8317/v0/management/force-gpt-5-codex
+    curl -X PUT -H 'Content-Type: application/yaml' \
+    -H 'Authorization: Bearer <MANAGEMENT_KEY>' \
+      --data-binary @config.yaml \
+      http://localhost:8317/v0/management/config.yaml
     ```
   - Response:
     ```json
-    { "gpt-5-codex": false }
+    { "ok": true, "changed": ["config"] }
     ```
-- PUT/PATCH `/force-gpt-5-codex` — Set boolean
+  - Notes:
+    - The server validates the YAML by loading it before persisting; invalid configs return `422` with `{ "error": "invalid_config", "message": "..." }`.
+    - Write failures return `500` with `{ "error": "write_failed", "message": "..." }`.
+
+### Logging to File
+- GET `/logging-to-file` — Check whether file logging is enabled
+  - Response:
+    ```json
+    { "logging-to-file": true }
+    ```
+- PUT/PATCH `/logging-to-file` — Enable or disable file logging
+  - Request:
+    ```bash
+    curl -X PATCH -H 'Content-Type: application/json' \
+    -H 'Authorization: Bearer <MANAGEMENT_KEY>' \
+      -d '{"value":false}' \
+      http://localhost:8317/v0/management/logging-to-file
+    ```
+  - Response:
+    ```json
+    { "status": "ok" }
+    ```
+
+### Log Files
+- GET `/logs` — Stream recent log lines
+  - Query params:
+    - `after` (optional): Unix timestamp; only lines newer than this are returned.
+  - Response:
+    ```json
+    {
+      "lines": ["2024-05-20 12:00:00 info request accepted"],
+      "line-count": 125,
+      "latest-timestamp": 1716206400
+    }
+    ```
+  - Notes:
+    - Requires file logging to be enabled; otherwise returns `{ "error": "logging to file disabled" }` with `400`.
+    - When no log file exists yet the response contains empty `lines` and `line-count: 0`.
+- DELETE `/logs` — Remove rotated log files and truncate the active log
+  - Response:
+    ```json
+    { "success": true, "message": "Logs cleared successfully", "removed": 3 }
+    ```
+
+### Usage Statistics Toggle
+- GET `/usage-statistics-enabled` — Check whether telemetry collection is active
+  - Response:
+    ```json
+    { "usage-statistics-enabled": true }
+    ```
+- PUT/PATCH `/usage-statistics-enabled` — Enable or disable collection
   - Request:
     ```bash
     curl -X PUT -H 'Content-Type: application/json' \
     -H 'Authorization: Bearer <MANAGEMENT_KEY>' \
       -d '{"value":true}' \
-      http://localhost:8317/v0/management/force-gpt-5-codex
+      http://localhost:8317/v0/management/usage-statistics-enabled
     ```
   - Response:
     ```json
@@ -616,8 +679,10 @@ Manage JSON token files under `auth-dir`: list, download, upload, delete.
     ```
   - Response:
     ```json
-    { "files": [ { "name": "acc1.json", "size": 1234, "modtime": "2025-08-30T12:34:56Z", "type": "google" } ] }
+    { "files": [ { "name": "acc1.json", "size": 1234, "modtime": "2025-08-30T12:34:56Z", "type": "google", "email": "user@example.com" } ] }
     ```
+  - Notes:
+    - `modtime` is returned in RFC3339 format; when metadata includes an email it is surfaced.
 
 - GET `/auth-files/download?name=<file.json>` — Download a single file
   - Request:
@@ -643,6 +708,9 @@ Manage JSON token files under `auth-dir`: list, download, upload, delete.
     ```json
     { "status": "ok" }
     ```
+  - Notes:
+    - The core auth manager must be active; otherwise the API returns `503` with `{ "error": "core auth manager unavailable" }`.
+    - Uploaded filenames must end with `.json`.
 
 - DELETE `/auth-files?name=<file.json>` — Delete a single file
   - Request:
@@ -668,6 +736,8 @@ Manage JSON token files under `auth-dir`: list, download, upload, delete.
 
 These endpoints initiate provider login flows and return a URL to open in a browser. Tokens are saved under `auths/` once the flow completes.
 
+For Anthropic, Codex, Gemini CLI, and iFlow you can append `?is_webui=true` to reuse the embedded callback forwarder when launching from the management UI.
+
 - GET `/anthropic-auth-url` — Start Anthropic (Claude) login
   - Request:
     ```bash
@@ -676,8 +746,10 @@ These endpoints initiate provider login flows and return a URL to open in a brow
     ```
   - Response:
     ```json
-    { "status": "ok", "url": "https://..." }
+    { "status": "ok", "url": "https://...", "state": "anth-1716206400" }
     ```
+  - Notes:
+    - Add `?is_webui=true` when triggering from the built-in UI to reuse the local callback service.
 
 - GET `/codex-auth-url` — Start Codex login
   - Request:
@@ -687,7 +759,7 @@ These endpoints initiate provider login flows and return a URL to open in a brow
     ```
   - Response:
     ```json
-    { "status": "ok", "url": "https://..." }
+    { "status": "ok", "url": "https://...", "state": "codex-1716206400" }
     ```
 
 - GET `/gemini-cli-auth-url` — Start Google (Gemini CLI) login
@@ -700,7 +772,7 @@ These endpoints initiate provider login flows and return a URL to open in a brow
     ```
   - Response:
     ```json
-    { "status": "ok", "url": "https://..." }
+    { "status": "ok", "url": "https://...", "state": "gem-1716206400" }
     ```
 
 - GET `/qwen-auth-url` — Start Qwen login (device flow)
@@ -711,7 +783,7 @@ These endpoints initiate provider login flows and return a URL to open in a brow
     ```
   - Response:
     ```json
-    { "status": "ok", "url": "https://..." }
+    { "status": "ok", "url": "https://...", "state": "gem-1716206400" }
     ```
 
 - GET `/iflow-auth-url` — Start iFlow login
@@ -722,7 +794,7 @@ These endpoints initiate provider login flows and return a URL to open in a brow
     ```
   - Response:
     ```json
-    { "status": "ok", "url": "https://..." }
+    { "status": "ok", "url": "https://...", "state": "ifl-1716206400" }
     ```
 
 - GET `/get-auth-status?state=<state>` — Poll OAuth flow status
@@ -745,7 +817,9 @@ Generic error format:
 - 401 Unauthorized: `{ "error": "missing management key" }` or `{ "error": "invalid management key" }`
 - 403 Forbidden: `{ "error": "remote management disabled" }`
 - 404 Not Found: `{ "error": "item not found" }` or `{ "error": "file not found" }`
+- 422 Unprocessable Entity: `{ "error": "invalid_config", "message": "..." }`
 - 500 Internal Server Error: `{ "error": "failed to save config: ..." }`
+- 503 Service Unavailable: `{ "error": "core auth manager unavailable" }`
 
 ## Notes
 

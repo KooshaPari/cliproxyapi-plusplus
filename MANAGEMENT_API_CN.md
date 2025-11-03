@@ -80,12 +80,14 @@
             }
           }
         }
-      }
+      },
+      "failed_requests": 2
     }
     ```
   - 说明：
     - 仅统计带有 token 使用信息的请求，服务重启后数据会被清空。
     - 小时维度会将所有日期折叠到 `00`–`23` 的统一小时桶中。
+    - 顶层字段 `failed_requests` 与 `usage.failure_count` 相同，便于轮询。
 
 ### Config
 - GET `/config` — 获取完整的配置
@@ -95,8 +97,11 @@
       ```
     - 响应:
       ```json
-      {"debug":true,"proxy-url":"","api-keys":["1...5","JS...W"],"quota-exceeded":{"switch-project":true,"switch-preview-model":true},"gemini-api-key":[{"api-key":"AI...01","base-url":"https://generativelanguage.googleapis.com","headers":{"X-Custom-Header":"custom-value"},"proxy-url":""},{"api-key":"AI...02","proxy-url":"socks5://proxy.example.com:1080"}],"request-log":true,"request-retry":3,"claude-api-key":[{"api-key":"cr...56","base-url":"https://example.com/api","proxy-url":"socks5://proxy.example.com:1080","models":[{"name":"claude-3-5-sonnet-20241022","alias":"claude-sonnet-latest"}]},{"api-key":"cr...e3","base-url":"http://example.com:3000/api","proxy-url":""},{"api-key":"sk-...q2","base-url":"https://example.com","proxy-url":""}],"codex-api-key":[{"api-key":"sk...01","base-url":"https://example/v1","proxy-url":""}],"openai-compatibility":[{"name":"openrouter","base-url":"https://openrouter.ai/api/v1","api-key-entries":[{"api-key":"sk...01","proxy-url":""}],"models":[{"name":"moonshotai/kimi-k2:free","alias":"kimi-k2"}]},{"name":"iflow","base-url":"https://apis.iflow.cn/v1","api-key-entries":[{"api-key":"sk...7e","proxy-url":"socks5://proxy.example.com:1080"}],"models":[{"name":"deepseek-v3.1","alias":"deepseek-v3.1"},{"name":"glm-4.5","alias":"glm-4.5"},{"name":"kimi-k2","alias":"kimi-k2"}]}]}
+      {"debug":true,"proxy-url":"","api-keys":["1...5","JS...W"],"quota-exceeded":{"switch-project":true,"switch-preview-model":true},"gemini-api-key":[{"api-key":"AI...01","base-url":"https://generativelanguage.googleapis.com","headers":{"X-Custom-Header":"custom-value"},"proxy-url":""},{"api-key":"AI...02","proxy-url":"socks5://proxy.example.com:1080"}],"gl-api-key":["AI...01","AI...02"],"request-log":true,"request-retry":3,"claude-api-key":[{"api-key":"cr...56","base-url":"https://example.com/api","proxy-url":"socks5://proxy.example.com:1080","models":[{"name":"claude-3-5-sonnet-20241022","alias":"claude-sonnet-latest"}]},{"api-key":"cr...e3","base-url":"http://example.com:3000/api","proxy-url":""},{"api-key":"sk-...q2","base-url":"https://example.com","proxy-url":""}],"codex-api-key":[{"api-key":"sk...01","base-url":"https://example/v1","proxy-url":""}],"openai-compatibility":[{"name":"openrouter","base-url":"https://openrouter.ai/api/v1","api-key-entries":[{"api-key":"sk...01","proxy-url":""}],"models":[{"name":"moonshotai/kimi-k2:free","alias":"kimi-k2"}]},{"name":"iflow","base-url":"https://apis.iflow.cn/v1","api-key-entries":[{"api-key":"sk...7e","proxy-url":"socks5://proxy.example.com:1080"}],"models":[{"name":"deepseek-v3.1","alias":"deepseek-v3.1"},{"name":"glm-4.5","alias":"glm-4.5"},{"name":"kimi-k2","alias":"kimi-k2"}]}]}
       ```
+  - 说明：
+    - 返回中会附带 `gl-api-key`，其内容来自 `gemini-api-key` 的 API Key 列表（仅保留纯字符串视图）。
+    - 若服务尚未加载配置文件，则返回空对象 `{}`。
 
 ### Debug
 - GET `/debug` — 获取当前 debug 状态
@@ -121,23 +126,81 @@
     { "status": "ok" }
     ```
 
-### 强制 GPT-5 Codex
-- GET `/force-gpt-5-codex` — 获取当前标志
+### Config YAML
+- GET `/config.yaml` — 原样下载持久化的 YAML 配置
+  - 响应头：
+    - `Content-Type: application/yaml; charset=utf-8`
+    - `Cache-Control: no-store`
+  - 响应体：保留注释与格式的原始 YAML 流。
+- PUT `/config.yaml` — 使用 YAML 文档整体替换配置
   - 请求：
     ```bash
-    curl -H 'Authorization: Bearer <MANAGEMENT_KEY>' http://localhost:8317/v0/management/force-gpt-5-codex
+    curl -X PUT -H 'Content-Type: application/yaml' \
+    -H 'Authorization: Bearer <MANAGEMENT_KEY>' \
+      --data-binary @config.yaml \
+      http://localhost:8317/v0/management/config.yaml
     ```
   - 响应：
     ```json
-    { "gpt-5-codex": false }
+    { "ok": true, "changed": ["config"] }
     ```
-- PUT/PATCH `/force-gpt-5-codex` — 设置布尔值
+  - 说明：
+    - 服务会先加载 YAML 验证其有效性，校验失败返回 `422` 以及 `{ "error": "invalid_config", "message": "..." }`。
+    - 写入失败会返回 `500`，格式 `{ "error": "write_failed", "message": "..." }`。
+
+### 文件日志开关
+- GET `/logging-to-file` — 查看是否启用文件日志
+  - 响应：
+    ```json
+    { "logging-to-file": true }
+    ```
+- PUT/PATCH `/logging-to-file` — 开启或关闭文件日志
+  - 请求：
+    ```bash
+    curl -X PATCH -H 'Content-Type: application/json' \
+    -H 'Authorization: Bearer <MANAGEMENT_KEY>' \
+      -d '{"value":false}' \
+      http://localhost:8317/v0/management/logging-to-file
+    ```
+  - 响应：
+    ```json
+    { "status": "ok" }
+    ```
+
+### 日志文件
+- GET `/logs` — 获取合并后的最新日志行
+  - 查询参数：
+    - `after`（可选）：Unix 时间戳，仅返回该时间之后的日志。
+  - 响应：
+    ```json
+    {
+      "lines": ["2024-05-20 12:00:00 info request accepted"],
+      "line-count": 125,
+      "latest-timestamp": 1716206400
+    }
+    ```
+  - 说明：
+    - 需要先启用文件日志，否则会以 `400` 返回 `{ "error": "logging to file disabled" }`。
+    - 若当前没有日志文件，返回的 `lines` 为空数组、`line-count` 为 `0`。
+- DELETE `/logs` — 删除轮换日志并清空主日志
+  - 响应：
+    ```json
+    { "success": true, "message": "Logs cleared successfully", "removed": 3 }
+    ```
+
+### Usage 统计开关
+- GET `/usage-statistics-enabled` — 查看是否启用请求统计
+  - 响应：
+    ```json
+    { "usage-statistics-enabled": true }
+    ```
+- PUT/PATCH `/usage-statistics-enabled` — 启用或关闭统计
   - 请求：
     ```bash
     curl -X PUT -H 'Content-Type: application/json' \
     -H 'Authorization: Bearer <MANAGEMENT_KEY>' \
       -d '{"value":true}' \
-      http://localhost:8317/v0/management/force-gpt-5-codex
+      http://localhost:8317/v0/management/usage-statistics-enabled
     ```
   - 响应：
     ```json
@@ -616,8 +679,10 @@
     ```
   - 响应：
     ```json
-    { "files": [ { "name": "acc1.json", "size": 1234, "modtime": "2025-08-30T12:34:56Z", "type": "google" } ] }
+    { "files": [ { "name": "acc1.json", "size": 1234, "modtime": "2025-08-30T12:34:56Z", "type": "google", "email": "user@example.com" } ] }
     ```
+  - 说明：
+    - `modtime` 使用 RFC3339 格式；若文件中包含邮箱字段则一并返回。
 
 - GET `/auth-files/download?name=<file.json>` — 下载单个文件
   - 请求：
@@ -643,6 +708,9 @@
     ```json
     { "status": "ok" }
     ```
+  - 说明：
+    - 需确保核心认证管理器已启用，否则会以 `503` 返回 `{ "error": "core auth manager unavailable" }`。
+    - 上传的文件名必须以 `.json` 结尾。
 
 - DELETE `/auth-files?name=<file.json>` — 删除单个文件
   - 请求：
@@ -668,6 +736,8 @@
 
 以下端点用于发起各提供商的登录流程，并返回需要在浏览器中打开的 URL。流程完成后，令牌会保存到 `auths/` 目录。
 
+对于 Anthropic、Codex、Gemini CLI 与 iFlow，可附加 `?is_webui=true` 以便从管理界面复用内置回调转发。
+
 - GET `/anthropic-auth-url` — 开始 Anthropic（Claude）登录
   - 请求：
     ```bash
@@ -676,8 +746,10 @@
     ```
   - 响应：
     ```json
-    { "status": "ok", "url": "https://..." }
+    { "status": "ok", "url": "https://...", "state": "anth-1716206400" }
     ```
+  - 说明：
+    - 若从 Web UI 触发，可添加 `?is_webui=true` 复用本地回调服务。
 
 - GET `/codex-auth-url` — 开始 Codex 登录
   - 请求：
@@ -687,7 +759,7 @@
     ```
   - 响应：
     ```json
-    { "status": "ok", "url": "https://..." }
+    { "status": "ok", "url": "https://...", "state": "codex-1716206400" }
     ```
 
 - GET `/gemini-cli-auth-url` — 开始 Google（Gemini CLI）登录
@@ -700,7 +772,7 @@
     ```
   - 响应：
     ```json
-    { "status": "ok", "url": "https://..." }
+    { "status": "ok", "url": "https://...", "state": "gem-1716206400" }
     ```
 
 - GET `/qwen-auth-url` — 开始 Qwen 登录（设备授权流程）
@@ -711,7 +783,7 @@
     ```
   - 响应：
     ```json
-    { "status": "ok", "url": "https://..." }
+    { "status": "ok", "url": "https://...", "state": "gem-1716206400" }
     ```
 
 - GET `/iflow-auth-url` — 开始 iFlow 登录
@@ -722,7 +794,7 @@
     ```
   - 响应：
     ```json
-    { "status": "ok", "url": "https://..." }
+    { "status": "ok", "url": "https://...", "state": "ifl-1716206400" }
     ```
 
 - GET `/get-auth-status?state=<state>` — 轮询 OAuth 流程状态
@@ -745,7 +817,9 @@
 - 401 Unauthorized: `{ "error": "missing management key" }` 或 `{ "error": "invalid management key" }`
 - 403 Forbidden: `{ "error": "remote management disabled" }`
 - 404 Not Found: `{ "error": "item not found" }` 或 `{ "error": "file not found" }`
+- 422 Unprocessable Entity: `{ "error": "invalid_config", "message": "..." }`
 - 500 Internal Server Error: `{ "error": "failed to save config: ..." }`
+- 503 Service Unavailable: `{ "error": "core auth manager unavailable" }`
 
 ## 说明
 
