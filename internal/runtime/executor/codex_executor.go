@@ -205,9 +205,6 @@ func (e *CodexExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.Au
 			body, _ = sjson.SetBytes(body, "reasoning.effort", "medium")
 		case "gpt-5-codex-mini-high":
 			body, _ = sjson.SetBytes(body, "reasoning.effort", "high")
-		default:
-			// For base "gpt-5-codex-mini", set reasoning.effort to "medium" by default
-			body, _ = sjson.SetBytes(body, "reasoning.effort", "medium")
 		}
 	}
 
