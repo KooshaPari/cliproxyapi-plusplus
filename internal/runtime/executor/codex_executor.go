@@ -585,6 +585,11 @@ func applyCodexHeaders(r *http.Request, auth *cliproxyauth.Auth, token string) {
 			}
 		}
 	}
+	var attrs map[string]string
+	if auth != nil {
+		attrs = auth.Attributes
+	}
+	util.ApplyCustomHeadersFromAttrs(r, attrs)
 }
 
 func codexCreds(a *cliproxyauth.Auth) (apiKey, baseURL string) {

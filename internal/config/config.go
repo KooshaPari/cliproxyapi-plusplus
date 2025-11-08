@@ -100,6 +100,9 @@ type ClaudeKey struct {
 
 	// Models defines upstream model names and aliases for request routing.
 	Models []ClaudeModel `yaml:"models" json:"models"`
+
+	// Headers optionally adds extra HTTP headers for requests sent with this key.
+	Headers map[string]string `yaml:"headers,omitempty" json:"headers,omitempty"`
 }
 
 // ClaudeModel describes a mapping between an alias and the actual upstream model name.
@@ -123,6 +126,9 @@ type CodexKey struct {
 
 	// ProxyURL overrides the global proxy setting for this API key if provided.
 	ProxyURL string `yaml:"proxy-url" json:"proxy-url"`
+
+	// Headers optionally adds extra HTTP headers for requests sent with this key.
+	Headers map[string]string `yaml:"headers,omitempty" json:"headers,omitempty"`
 }
 
 // GeminiKey represents the configuration for a Gemini API key,
@@ -159,6 +165,9 @@ type OpenAICompatibility struct {
 
 	// Models defines the model configurations including aliases for routing.
 	Models []OpenAICompatibilityModel `yaml:"models" json:"models"`
+
+	// Headers optionally adds extra HTTP headers for requests sent to this provider.
+	Headers map[string]string `yaml:"headers,omitempty" json:"headers,omitempty"`
 }
 
 // OpenAICompatibilityAPIKey represents an API key configuration with optional proxy setting.
@@ -255,6 +264,9 @@ func LoadConfigOptional(configFile string, optional bool) (*Config, error) {
 	// Sanitize Codex keys: drop entries without base-url
 	sanitizeCodexKeys(&cfg)
 
+	// Normalize Claude key headers
+	normalizeClaudeKeys(&cfg)
+
 	// Return the populated configuration struct.
 	return &cfg, nil
 }
@@ -271,6 +283,7 @@ func sanitizeOpenAICompatibility(cfg *Config) {
 		e := cfg.OpenAICompatibility[i]
 		e.Name = strings.TrimSpace(e.Name)
 		e.BaseURL = strings.TrimSpace(e.BaseURL)
+		e.Headers = normalizeHeaders(e.Headers)
 		if e.BaseURL == "" {
 			// Skip providers with no base-url; treated as removed
 			continue
@@ -290,12 +303,23 @@ func sanitizeCodexKeys(cfg *Config) {
 	for i := range cfg.CodexKey {
 		e := cfg.CodexKey[i]
 		e.BaseURL = strings.TrimSpace(e.BaseURL)
+		e.Headers = normalizeHeaders(e.Headers)
 		if e.BaseURL == "" {
 			continue
 		}
 		out = append(out, e)
 	}
 	cfg.CodexKey = out
+}
+
+func normalizeClaudeKeys(cfg *Config) {
+	if cfg == nil || len(cfg.ClaudeKey) == 0 {
+		return
+	}
+	for i := range cfg.ClaudeKey {
+		entry := &cfg.ClaudeKey[i]
+		entry.Headers = normalizeHeaders(entry.Headers)
+	}
 }
 
 func (cfg *Config) SyncGeminiKeys() {
@@ -313,7 +337,7 @@ func (cfg *Config) SyncGeminiKeys() {
 		}
 		entry.BaseURL = strings.TrimSpace(entry.BaseURL)
 		entry.ProxyURL = strings.TrimSpace(entry.ProxyURL)
-		entry.Headers = normalizeGeminiHeaders(entry.Headers)
+		entry.Headers = normalizeHeaders(entry.Headers)
 		if _, exists := seen[entry.APIKey]; exists {
 			continue
 		}
@@ -356,7 +380,7 @@ func looksLikeBcrypt(s string) bool {
 	return len(s) > 4 && (s[:4] == "$2a$" || s[:4] == "$2b$" || s[:4] == "$2y$")
 }
 
-func normalizeGeminiHeaders(headers map[string]string) map[string]string {
+func normalizeHeaders(headers map[string]string) map[string]string {
 	if len(headers) == 0 {
 		return nil
 	}
