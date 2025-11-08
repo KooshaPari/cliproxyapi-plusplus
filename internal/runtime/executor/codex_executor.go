@@ -75,6 +75,16 @@ func (e *CodexExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, re
 		case "gpt-5-codex-high":
 			body, _ = sjson.SetBytes(body, "reasoning.effort", "high")
 		}
+	} else if util.InArray([]string{"gpt-5-codex-mini", "gpt-5-codex-mini-medium", "gpt-5-codex-mini-high"}, req.Model) {
+		body, _ = sjson.SetBytes(body, "model", "codex-mini-latest")
+		switch req.Model {
+		case "gpt-5-codex-mini-medium":
+			body, _ = sjson.SetBytes(body, "reasoning.effort", "medium")
+		case "gpt-5-codex-mini-high":
+			body, _ = sjson.SetBytes(body, "reasoning.effort", "high")
+		default:
+			body, _ = sjson.SetBytes(body, "reasoning.effort", "medium")
+		}
 	}
 
 	body, _ = sjson.SetBytes(body, "stream", true)
@@ -187,6 +197,17 @@ func (e *CodexExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.Au
 			body, _ = sjson.SetBytes(body, "reasoning.effort", "medium")
 		case "gpt-5-codex-high":
 			body, _ = sjson.SetBytes(body, "reasoning.effort", "high")
+		}
+	} else if util.InArray([]string{"gpt-5-codex-mini", "gpt-5-codex-mini-medium", "gpt-5-codex-mini-high"}, req.Model) {
+		body, _ = sjson.SetBytes(body, "model", "codex-mini-latest")
+		switch req.Model {
+		case "gpt-5-codex-mini-medium":
+			body, _ = sjson.SetBytes(body, "reasoning.effort", "medium")
+		case "gpt-5-codex-mini-high":
+			body, _ = sjson.SetBytes(body, "reasoning.effort", "high")
+		default:
+			// For base "gpt-5-codex-mini", set reasoning.effort to "medium" by default
+			body, _ = sjson.SetBytes(body, "reasoning.effort", "medium")
 		}
 	}
 
@@ -311,6 +332,17 @@ func (e *CodexExecutor) CountTokens(ctx context.Context, auth *cliproxyauth.Auth
 			body, _ = sjson.SetBytes(body, "reasoning.effort", "high")
 		default:
 			body, _ = sjson.SetBytes(body, "reasoning.effort", "low")
+		}
+	} else if util.InArray([]string{"gpt-5-codex-mini", "gpt-5-codex-mini-medium", "gpt-5-codex-mini-high"}, req.Model) {
+		modelForCounting = "gpt-5"
+		body, _ = sjson.SetBytes(body, "model", "codex-mini-latest")
+		switch req.Model {
+		case "gpt-5-codex-mini-medium":
+			body, _ = sjson.SetBytes(body, "reasoning.effort", "medium")
+		case "gpt-5-codex-mini-high":
+			body, _ = sjson.SetBytes(body, "reasoning.effort", "high")
+		default:
+			body, _ = sjson.SetBytes(body, "reasoning.effort", "medium")
 		}
 	}
 
