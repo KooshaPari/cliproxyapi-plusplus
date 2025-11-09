@@ -116,6 +116,8 @@ func (e *OpenAICompatExecutor) Execute(ctx context.Context, auth *cliproxyauth.A
 	}
 	appendAPIResponseChunk(ctx, e.cfg, body)
 	reporter.publish(ctx, parseOpenAIUsage(body))
+	// Ensure we at least record the request even if upstream doesn't return usage
+	reporter.ensurePublished(ctx)
 	// Translate response back to source format when needed
 	var param any
 	out := sdktranslator.TranslateNonStream(ctx, to, from, req.Model, bytes.Clone(opts.OriginalRequest), translated, body, &param)
@@ -225,6 +227,8 @@ func (e *OpenAICompatExecutor) ExecuteStream(ctx context.Context, auth *cliproxy
 			reporter.publishFailure(ctx)
 			out <- cliproxyexecutor.StreamChunk{Err: errScan}
 		}
+		// Ensure we record the request if no usage chunk was ever seen
+		reporter.ensurePublished(ctx)
 	}()
 	return stream, nil
 }
