@@ -153,6 +153,14 @@ func (h *Handler) PutRequestLog(c *gin.Context) {
 	h.updateBoolField(c, func(v bool) { h.cfg.RequestLog = v })
 }
 
+// Websocket auth
+func (h *Handler) GetWebsocketAuth(c *gin.Context) {
+	c.JSON(200, gin.H{"ws-auth": h.cfg.WebsocketAuth})
+}
+func (h *Handler) PutWebsocketAuth(c *gin.Context) {
+	h.updateBoolField(c, func(v bool) { h.cfg.WebsocketAuth = v })
+}
+
 // Request retry
 func (h *Handler) GetRequestRetry(c *gin.Context) {
 	c.JSON(200, gin.H{"request-retry": h.cfg.RequestRetry})
