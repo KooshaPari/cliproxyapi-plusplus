@@ -538,6 +538,24 @@ func (h *Handler) DeleteAuthFile(c *gin.Context) {
 	c.JSON(200, gin.H{"status": "ok"})
 }
 
+func (h *Handler) authIDForPath(path string) string {
+	path = strings.TrimSpace(path)
+	if path == "" {
+		return ""
+	}
+	if h == nil || h.cfg == nil {
+		return path
+	}
+	authDir := strings.TrimSpace(h.cfg.AuthDir)
+	if authDir == "" {
+		return path
+	}
+	if rel, err := filepath.Rel(authDir, path); err == nil && rel != "" {
+		return rel
+	}
+	return path
+}
+
 func (h *Handler) registerAuthFromFile(ctx context.Context, path string, data []byte) error {
 	if h.authManager == nil {
 		return nil
@@ -566,13 +584,18 @@ func (h *Handler) registerAuthFromFile(ctx context.Context, path string, data []
 	}
 	lastRefresh, hasLastRefresh := extractLastRefreshTimestamp(metadata)
 
+	authID := h.authIDForPath(path)
+	if authID == "" {
+		authID = path
+	}
 	attr := map[string]string{
 		"path":   path,
 		"source": path,
 	}
 	auth := &coreauth.Auth{
-		ID:         path,
+		ID:         authID,
 		Provider:   provider,
+		FileName:   filepath.Base(path),
 		Label:      label,
 		Status:     coreauth.StatusActive,
 		Attributes: attr,
@@ -583,7 +606,7 @@ func (h *Handler) registerAuthFromFile(ctx context.Context, path string, data []
 	if hasLastRefresh {
 		auth.LastRefreshedAt = lastRefresh
 	}
-	if existing, ok := h.authManager.GetByID(path); ok {
+	if existing, ok := h.authManager.GetByID(authID); ok {
 		auth.CreatedAt = existing.CreatedAt
 		if !hasLastRefresh {
 			auth.LastRefreshedAt = existing.LastRefreshedAt
@@ -598,10 +621,17 @@ func (h *Handler) registerAuthFromFile(ctx context.Context, path string, data []
 }
 
 func (h *Handler) disableAuth(ctx context.Context, id string) {
-	if h.authManager == nil || id == "" {
+	if h == nil || h.authManager == nil {
 		return
 	}
-	if auth, ok := h.authManager.GetByID(id); ok {
+	authID := h.authIDForPath(id)
+	if authID == "" {
+		authID = strings.TrimSpace(id)
+	}
+	if authID == "" {
+		return
+	}
+	if auth, ok := h.authManager.GetByID(authID); ok {
 		auth.Disabled = true
 		auth.Status = coreauth.StatusDisabled
 		auth.StatusMessage = "removed via management API"
