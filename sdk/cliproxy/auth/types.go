@@ -152,11 +152,29 @@ func (a *Auth) AccountInfo() (string, string) {
 			}
 		}
 	}
-	if a.Metadata != nil {
-		if v, ok := a.Metadata["email"].(string); ok {
-			return "oauth", v
+
+	// For iFlow provider, prioritize OAuth type if email is present
+	if strings.ToLower(a.Provider) == "iflow" {
+		if a.Metadata != nil {
+			if email, ok := a.Metadata["email"].(string); ok {
+				email = strings.TrimSpace(email)
+				if email != "" {
+					return "oauth", email
+				}
+			}
 		}
 	}
+
+	// Check metadata for email first (OAuth-style auth)
+	if a.Metadata != nil {
+		if v, ok := a.Metadata["email"].(string); ok {
+			email := strings.TrimSpace(v)
+			if email != "" {
+				return "oauth", email
+			}
+		}
+	}
+	// Fall back to API key (API-key auth)
 	if a.Attributes != nil {
 		if v := a.Attributes["api_key"]; v != "" {
 			return "api_key", v
@@ -259,6 +277,7 @@ func parseTimeValue(v any) (time.Time, bool) {
 			time.RFC3339,
 			time.RFC3339Nano,
 			"2006-01-02 15:04:05",
+			"2006-01-02 15:04",
 			"2006-01-02T15:04:05Z07:00",
 		}
 		for _, layout := range layouts {
