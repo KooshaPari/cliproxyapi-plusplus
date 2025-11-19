@@ -279,6 +279,7 @@ func (e *GeminiCLIExecutor) ExecuteStream(ctx context.Context, auth *cliproxyaut
 		var httpResp *http.Response
 		var payload []byte
 		var errDo error
+		shouldContinueToNextModel := false
 
 		// Inner retry loop for 429 errors on the same model
 		for retryCount := 0; retryCount <= maxRetries; retryCount++ {
@@ -364,6 +365,7 @@ func (e *GeminiCLIExecutor) ExecuteStream(ctx context.Context, auth *cliproxyaut
 						// Exhausted retries for this model, try next model if available
 						if idx+1 < len(models) {
 							log.Infof("gemini cli executor: rate limited, exhausted %d retries for stream model %s, trying fallback model: %s", maxRetries, attemptModel, models[idx+1])
+							shouldContinueToNextModel = true
 							break // Break inner loop to try next model
 						} else {
 							log.Infof("gemini cli executor: rate limited, exhausted %d retries for stream model %s, no additional fallback model", maxRetries, attemptModel)
@@ -383,6 +385,11 @@ func (e *GeminiCLIExecutor) ExecuteStream(ctx context.Context, auth *cliproxyaut
 			// Success - httpResp.StatusCode is 2xx, break out of retry loop
 			// and proceed to streaming logic below
 			break
+		}
+
+		// If we need to try the next fallback model, skip streaming logic
+		if shouldContinueToNextModel {
+			continue
 		}
 
 		out := make(chan cliproxyexecutor.StreamChunk)
