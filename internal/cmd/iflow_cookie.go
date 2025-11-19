@@ -95,14 +95,13 @@ func promptForCookie(promptFn func(string) (string, error)) (string, error) {
 // getAuthFilePath returns the auth file path for the given provider and email
 func getAuthFilePath(cfg *config.Config, provider, email string) string {
 	// Clean email to make it filename-safe
-	cleanEmail := strings.ReplaceAll(email, "@", "_at_")
-	cleanEmail = strings.ReplaceAll(cleanEmail, ".", "_")
-	cleanEmail = strings.ReplaceAll(cleanEmail, "-", "_")
+	cleanEmail := strings.ReplaceAll(email, "*", "x")
 
-	// Remove any remaining special characters
+	// Remove any unsafe characters, but allow standard email chars (@, ., -)
 	var result strings.Builder
 	for _, r := range cleanEmail {
-		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '_' {
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') ||
+			r == '_' || r == '@' || r == '.' || r == '-' {
 			result.WriteRune(r)
 		}
 	}
