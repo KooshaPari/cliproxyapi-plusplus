@@ -286,6 +286,17 @@ func ConvertOpenAIRequestToGeminiCLI(modelName string, inputRawJSON []byte, _ bo
 						renamed, errRename := util.RenameKey(fnRaw, "parameters", "parametersJsonSchema")
 						if errRename != nil {
 							log.Warnf("Failed to rename parameters for tool '%s': %v", fn.Get("name").String(), errRename)
+							var errSet error
+							fnRaw, errSet = sjson.Set(fnRaw, "parametersJsonSchema.type", "object")
+							if errSet != nil {
+								log.Warnf("Failed to set default schema type for tool '%s': %v", fn.Get("name").String(), errSet)
+								continue
+							}
+							fnRaw, errSet = sjson.Set(fnRaw, "parametersJsonSchema.properties", map[string]interface{}{})
+							if errSet != nil {
+								log.Warnf("Failed to set default schema properties for tool '%s': %v", fn.Get("name").String(), errSet)
+								continue
+							}
 						} else {
 							fnRaw = renamed
 						}

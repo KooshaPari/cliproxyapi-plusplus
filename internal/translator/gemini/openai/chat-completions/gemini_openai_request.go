@@ -306,8 +306,34 @@ func ConvertOpenAIRequestToGemini(modelName string, inputRawJSON []byte, _ bool)
 			if t.Get("type").String() == "function" {
 				fn := t.Get("function")
 				if fn.Exists() && fn.IsObject() {
-					parametersJsonSchema, _ := util.RenameKey(fn.Raw, "parameters", "parametersJsonSchema")
-					out, _ = sjson.SetRawBytes(out, fdPath+".-1", []byte(parametersJsonSchema))
+					fnRaw := fn.Raw
+					if fn.Get("parameters").Exists() {
+						renamed, errRename := util.RenameKey(fnRaw, "parameters", "parametersJsonSchema")
+						if errRename != nil {
+							log.Warnf("Failed to rename parameters for tool '%s': %v", fn.Get("name").String(), errRename)
+						} else {
+							fnRaw = renamed
+						}
+					} else {
+						var errSet error
+						fnRaw, errSet = sjson.Set(fnRaw, "parametersJsonSchema.type", "object")
+						if errSet != nil {
+							log.Warnf("Failed to set default schema type for tool '%s': %v", fn.Get("name").String(), errSet)
+							continue
+						}
+						fnRaw, errSet = sjson.Set(fnRaw, "parametersJsonSchema.properties", map[string]interface{}{})
+						if errSet != nil {
+							log.Warnf("Failed to set default schema properties for tool '%s': %v", fn.Get("name").String(), errSet)
+							continue
+						}
+					}
+					fnRaw, _ = sjson.Delete(fnRaw, "strict")
+					tmp, errSet := sjson.SetRawBytes(out, fdPath+".-1", []byte(fnRaw))
+					if errSet != nil {
+						log.Warnf("Failed to append tool declaration for '%s': %v", fn.Get("name").String(), errSet)
+						continue
+					}
+					out = tmp
 				}
 			}
 		}
