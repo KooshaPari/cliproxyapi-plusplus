@@ -65,7 +65,7 @@ func noCORSMiddleware() gin.HandlerFunc {
 // registerManagementRoutes registers Amp management proxy routes
 // These routes proxy through to the Amp control plane for OAuth, user management, etc.
 // If restrictToLocalhost is true, routes will only accept connections from 127.0.0.1/::1.
-func (m *AmpModule) registerManagementRoutes(engine *gin.Engine, proxyHandler gin.HandlerFunc, restrictToLocalhost bool) {
+func (m *AmpModule) registerManagementRoutes(engine *gin.Engine, baseHandler *handlers.BaseAPIHandler, proxyHandler gin.HandlerFunc, restrictToLocalhost bool) {
 	ampAPI := engine.Group("/api")
 
 	// Always disable CORS for management routes to prevent browser-based attacks
@@ -96,8 +96,16 @@ func (m *AmpModule) registerManagementRoutes(engine *gin.Engine, proxyHandler gi
 	ampAPI.Any("/otel", proxyHandler)
 	ampAPI.Any("/otel/*path", proxyHandler)
 
-	// Google v1beta1 passthrough (Gemini native API)
-	ampAPI.Any("/provider/google/v1beta1/*path", proxyHandler)
+	// Google v1beta1 passthrough with OAuth fallback
+	// AMP CLI uses non-standard paths like /publishers/google/models/...
+	// We bridge these to our standard Gemini handler to enable local OAuth.
+	// If no local OAuth is available, falls back to ampcode.com proxy.
+	geminiHandlers := gemini.NewGeminiAPIHandler(baseHandler)
+	geminiBridge := createGeminiBridgeHandler(geminiHandlers)
+	geminiV1Beta1Fallback := NewFallbackHandler(func() *httputil.ReverseProxy {
+		return m.proxy
+	})
+	ampAPI.POST("/provider/google/v1beta1/*path", geminiV1Beta1Fallback.WrapHandler(geminiBridge))
 }
 
 // registerProviderAliases registers /api/provider/{provider}/... routes
