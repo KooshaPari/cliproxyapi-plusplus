@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	baseauth "github.com/router-for-me/CLIProxyAPI/v6/internal/auth"
@@ -14,6 +15,8 @@ import (
 type Auth struct {
 	// ID uniquely identifies the auth record across restarts.
 	ID string `json:"id"`
+	// Index is a monotonically increasing runtime identifier used for diagnostics.
+	Index uint64 `json:"-"`
 	// Provider is the upstream provider key (e.g. "gemini", "claude").
 	Provider string `json:"provider"`
 	// FileName stores the relative or absolute path of the backing auth file.
@@ -55,6 +58,8 @@ type Auth struct {
 
 	// Runtime carries non-serialisable data used during execution (in-memory only).
 	Runtime any `json:"-"`
+
+	indexAssigned bool `json:"-"`
 }
 
 // QuotaState contains limiter tracking data for a credential.
@@ -87,6 +92,12 @@ type ModelState struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
+var authIndexCounter atomic.Uint64
+
+func nextAuthIndex() uint64 {
+	return authIndexCounter.Add(1) - 1
+}
+
 // Clone shallow copies the Auth structure, duplicating maps to avoid accidental mutation.
 func (a *Auth) Clone() *Auth {
 	if a == nil {
@@ -113,6 +124,20 @@ func (a *Auth) Clone() *Auth {
 	}
 	copyAuth.Runtime = a.Runtime
 	return &copyAuth
+}
+
+// EnsureIndex returns the global index, assigning one if it was not set yet.
+func (a *Auth) EnsureIndex() uint64 {
+	if a == nil {
+		return 0
+	}
+	if a.indexAssigned {
+		return a.Index
+	}
+	idx := nextAuthIndex()
+	a.Index = idx
+	a.indexAssigned = true
+	return idx
 }
 
 // Clone duplicates a model state including nested error details.
