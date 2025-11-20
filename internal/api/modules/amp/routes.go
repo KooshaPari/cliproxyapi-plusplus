@@ -16,14 +16,28 @@ import (
 
 // localhostOnlyMiddleware restricts access to localhost (127.0.0.1, ::1) only.
 // Returns 403 Forbidden for non-localhost clients.
+//
+// Security: Uses RemoteAddr (actual TCP connection) instead of ClientIP() to prevent
+// header spoofing attacks via X-Forwarded-For or similar headers. This means the
+// middleware will not work correctly behind reverse proxies - users deploying behind
+// nginx/Cloudflare should disable this feature and use firewall rules instead.
 func localhostOnlyMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		clientIP := c.ClientIP()
+		// Use actual TCP connection address (RemoteAddr) to prevent header spoofing
+		// This cannot be forged by X-Forwarded-For or other client-controlled headers
+		remoteAddr := c.Request.RemoteAddr
+
+		// RemoteAddr format is "IP:port" or "[IPv6]:port", extract just the IP
+		host, _, err := net.SplitHostPort(remoteAddr)
+		if err != nil {
+			// Try parsing as raw IP (shouldn't happen with standard HTTP, but be defensive)
+			host = remoteAddr
+		}
 
 		// Parse the IP to handle both IPv4 and IPv6
-		ip := net.ParseIP(clientIP)
+		ip := net.ParseIP(host)
 		if ip == nil {
-			log.Warnf("Amp management: invalid client IP %s, denying access", clientIP)
+			log.Warnf("Amp management: invalid RemoteAddr %s, denying access", remoteAddr)
 			c.AbortWithStatusJSON(403, gin.H{
 				"error": "Access denied: management routes restricted to localhost",
 			})
@@ -32,7 +46,7 @@ func localhostOnlyMiddleware() gin.HandlerFunc {
 
 		// Check if IP is loopback (127.0.0.1 or ::1)
 		if !ip.IsLoopback() {
-			log.Warnf("Amp management: non-localhost IP %s attempted access, denying", clientIP)
+			log.Warnf("Amp management: non-localhost connection from %s attempted access, denying", remoteAddr)
 			c.AbortWithStatusJSON(403, gin.H{
 				"error": "Access denied: management routes restricted to localhost",
 			})

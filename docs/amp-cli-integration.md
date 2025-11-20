@@ -135,8 +135,39 @@ When enabled, management routes (`/api/auth`, `/api/user`, `/api/threads`, etc.)
 - Drive-by browser attacks
 - Remote access to management endpoints
 - CORS-based attacks
+- Header spoofing attacks (e.g., `X-Forwarded-For: 127.0.0.1`)
 
-**Important**: Only disable this if you understand the security implications and have other protections in place (VPN, firewall, etc.).
+#### How It Works
+
+This restriction uses the **actual TCP connection address** (`RemoteAddr`), not HTTP headers like `X-Forwarded-For`. This prevents header spoofing attacks but has important implications:
+
+- ✅ **Works for direct connections**: Running CLIProxyAPI directly on your machine or server
+- ⚠️ **May not work behind reverse proxies**: If deploying behind nginx, Cloudflare, or other proxies, the connection will appear to come from the proxy's IP, not localhost
+
+#### Reverse Proxy Deployments
+
+If you need to run CLIProxyAPI behind a reverse proxy (nginx, Caddy, Cloudflare Tunnel, etc.):
+
+1. **Disable the localhost restriction**:
+   ```yaml
+   amp-restrict-management-to-localhost: false
+   ```
+
+2. **Use alternative security measures**:
+   - Firewall rules restricting access to management routes
+   - Proxy-level authentication (HTTP Basic Auth, OAuth)
+   - Network-level isolation (VPN, Tailscale, Cloudflare Access)
+   - Bind CLIProxyAPI to `127.0.0.1` only and access via SSH tunnel
+
+3. **Example nginx configuration** (blocks external access to management routes):
+   ```nginx
+   location /api/auth { deny all; }
+   location /api/user { deny all; }
+   location /api/threads { deny all; }
+   location /api/internal { deny all; }
+   ```
+
+**Important**: Only disable `amp-restrict-management-to-localhost` if you understand the security implications and have other protections in place.
 
 ## Setup
 

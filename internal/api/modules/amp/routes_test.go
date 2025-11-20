@@ -220,3 +220,82 @@ func TestRegisterProviderAliases_NoAuthMiddleware(t *testing.T) {
 		t.Fatal("routes should register even without auth middleware")
 	}
 }
+
+func TestLocalhostOnlyMiddleware_PreventsSpoofing(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+
+	// Apply localhost-only middleware
+	r.Use(localhostOnlyMiddleware())
+	r.GET("/test", func(c *gin.Context) {
+		c.String(http.StatusOK, "ok")
+	})
+
+	tests := []struct {
+		name           string
+		remoteAddr     string
+		forwardedFor   string
+		expectedStatus int
+		description    string
+	}{
+		{
+			name:           "spoofed_header_remote_connection",
+			remoteAddr:     "192.168.1.100:12345",
+			forwardedFor:   "127.0.0.1",
+			expectedStatus: http.StatusForbidden,
+			description:    "Spoofed X-Forwarded-For header should be ignored",
+		},
+		{
+			name:           "real_localhost_ipv4",
+			remoteAddr:     "127.0.0.1:54321",
+			forwardedFor:   "",
+			expectedStatus: http.StatusOK,
+			description:    "Real localhost IPv4 connection should work",
+		},
+		{
+			name:           "real_localhost_ipv6",
+			remoteAddr:     "[::1]:54321",
+			forwardedFor:   "",
+			expectedStatus: http.StatusOK,
+			description:    "Real localhost IPv6 connection should work",
+		},
+		{
+			name:           "remote_ipv4",
+			remoteAddr:     "203.0.113.42:8080",
+			forwardedFor:   "",
+			expectedStatus: http.StatusForbidden,
+			description:    "Remote IPv4 connection should be blocked",
+		},
+		{
+			name:           "remote_ipv6",
+			remoteAddr:     "[2001:db8::1]:9090",
+			forwardedFor:   "",
+			expectedStatus: http.StatusForbidden,
+			description:    "Remote IPv6 connection should be blocked",
+		},
+		{
+			name:           "spoofed_localhost_ipv6",
+			remoteAddr:     "203.0.113.42:8080",
+			forwardedFor:   "::1",
+			expectedStatus: http.StatusForbidden,
+			description:    "Spoofed X-Forwarded-For with IPv6 localhost should be ignored",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, "/test", nil)
+			req.RemoteAddr = tt.remoteAddr
+			if tt.forwardedFor != "" {
+				req.Header.Set("X-Forwarded-For", tt.forwardedFor)
+			}
+
+			w := httptest.NewRecorder()
+			r.ServeHTTP(w, req)
+
+			if w.Code != tt.expectedStatus {
+				t.Errorf("%s: expected status %d, got %d", tt.description, tt.expectedStatus, w.Code)
+			}
+		})
+	}
+}
