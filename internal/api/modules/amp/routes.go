@@ -10,6 +10,7 @@ import (
 	"github.com/router-for-me/CLIProxyAPI/v6/sdk/api/handlers/claude"
 	"github.com/router-for-me/CLIProxyAPI/v6/sdk/api/handlers/gemini"
 	"github.com/router-for-me/CLIProxyAPI/v6/sdk/api/handlers/openai"
+	"github.com/router-for-me/CLIProxyAPI/v6/internal/util"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -105,7 +106,31 @@ func (m *AmpModule) registerManagementRoutes(engine *gin.Engine, baseHandler *ha
 	geminiV1Beta1Fallback := NewFallbackHandler(func() *httputil.ReverseProxy {
 		return m.proxy
 	})
-	ampAPI.POST("/provider/google/v1beta1/*path", geminiV1Beta1Fallback.WrapHandler(geminiBridge))
+	geminiV1Beta1Handler := geminiV1Beta1Fallback.WrapHandler(geminiBridge)
+
+	// Route POST model calls through Gemini bridge when a local provider exists, otherwise proxy.
+	// All other methods (e.g., GET model listing) always proxy to upstream to preserve Amp CLI behavior.
+	ampAPI.Any("/provider/google/v1beta1/*path", func(c *gin.Context) {
+		if c.Request.Method == "POST" {
+			// Attempt to extract the model name from the AMP-style path
+			if path := c.Param("path"); strings.Contains(path, "/models/") {
+				modelPart := path[strings.Index(path, "/models/")+len("/models/"):]
+				if colonIdx := strings.Index(modelPart, ":"); colonIdx > 0 {
+					modelPart = modelPart[:colonIdx]
+				}
+				if modelPart != "" {
+					normalized, _ := util.NormalizeGeminiThinkingModel(modelPart)
+					// Only handle locally when we have a provider; otherwise fall back to proxy
+					if providers := util.GetProviderName(normalized); len(providers) > 0 {
+						geminiV1Beta1Handler(c)
+						return
+					}
+				}
+			}
+		}
+		// Non-POST or no local provider available -> proxy upstream
+		proxyHandler(c)
+	})
 }
 
 // registerProviderAliases registers /api/provider/{provider}/... routes

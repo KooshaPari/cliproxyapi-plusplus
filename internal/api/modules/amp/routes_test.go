@@ -21,34 +21,40 @@ func TestRegisterManagementRoutes(t *testing.T) {
 	}
 
 	m := &AmpModule{}
-	m.registerManagementRoutes(r, proxyHandler, false) // false = don't restrict to localhost in tests
+	base := &handlers.BaseAPIHandler{}
+	m.registerManagementRoutes(r, base, proxyHandler, false) // false = don't restrict to localhost in tests
 
-	managementPaths := []string{
-		"/api/internal",
-		"/api/internal/some/path",
-		"/api/user",
-		"/api/user/profile",
-		"/api/auth",
-		"/api/auth/login",
-		"/api/meta",
-		"/api/telemetry",
-		"/api/threads",
-		"/api/otel",
-		"/api/provider/google/v1beta1/models",
+	managementPaths := []struct {
+		path   string
+		method string
+	}{
+		{"/api/internal", http.MethodGet},
+		{"/api/internal/some/path", http.MethodGet},
+		{"/api/user", http.MethodGet},
+		{"/api/user/profile", http.MethodGet},
+		{"/api/auth", http.MethodGet},
+		{"/api/auth/login", http.MethodGet},
+		{"/api/meta", http.MethodGet},
+		{"/api/telemetry", http.MethodGet},
+		{"/api/threads", http.MethodGet},
+		{"/api/otel", http.MethodGet},
+		// Google v1beta1 bridge should still proxy non-model requests (GET) and allow POST
+		{"/api/provider/google/v1beta1/models", http.MethodGet},
+		{"/api/provider/google/v1beta1/models", http.MethodPost},
 	}
 
 	for _, path := range managementPaths {
-		t.Run(path, func(t *testing.T) {
+		t.Run(path.path, func(t *testing.T) {
 			proxyCalled = false
-			req := httptest.NewRequest(http.MethodGet, path, nil)
+			req := httptest.NewRequest(path.method, path.path, nil)
 			w := httptest.NewRecorder()
 			r.ServeHTTP(w, req)
 
 			if w.Code == http.StatusNotFound {
-				t.Fatalf("route %s not registered", path)
+				t.Fatalf("route %s not registered", path.path)
 			}
 			if !proxyCalled {
-				t.Fatalf("proxy handler not called for %s", path)
+				t.Fatalf("proxy handler not called for %s", path.path)
 			}
 		})
 	}

@@ -101,13 +101,13 @@ func (e *GeminiCLIExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth
 
 	// Get max retry count from config, default to 3 if not set
 	maxRetries := e.cfg.RequestRetry
-	if maxRetries <= 0 {
+	if maxRetries < 0 {
 		maxRetries = 3
 	}
 
 	for idx, attemptModel := range models {
-		// Inner retry loop for 429 errors on the same model
-		for retryCount := 0; retryCount <= maxRetries; retryCount++ {
+		retryCount := 0
+		for {
 			payload := append([]byte(nil), basePayload...)
 			if action == "countTokens" {
 				payload = deleteJSONField(payload, "project")
@@ -185,7 +185,8 @@ func (e *GeminiCLIExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth
 				if retryCount < maxRetries {
 					// Parse retry delay from Google's response
 					retryDelay := parseRetryDelay(data)
-					log.Infof("gemini cli executor: rate limited (429), retrying model %s in %v (attempt %d/%d)", attemptModel, retryDelay, retryCount+1, maxRetries)
+					log.Infof("gemini cli executor: rate limited (429), retrying model %s in %v (retry %d/%d)", attemptModel, retryDelay, retryCount+1, maxRetries)
+					retryCount++
 
 					// Wait for the specified delay
 					select {
@@ -271,7 +272,7 @@ func (e *GeminiCLIExecutor) ExecuteStream(ctx context.Context, auth *cliproxyaut
 
 	// Get max retry count from config, default to 3 if not set
 	maxRetries := e.cfg.RequestRetry
-	if maxRetries <= 0 {
+	if maxRetries < 0 {
 		maxRetries = 3
 	}
 
@@ -281,8 +282,9 @@ func (e *GeminiCLIExecutor) ExecuteStream(ctx context.Context, auth *cliproxyaut
 		var errDo error
 		shouldContinueToNextModel := false
 
+		retryCount := 0
 		// Inner retry loop for 429 errors on the same model
-		for retryCount := 0; retryCount <= maxRetries; retryCount++ {
+		for {
 			payload = append([]byte(nil), basePayload...)
 			payload = setJSONField(payload, "project", projectID)
 			payload = setJSONField(payload, "model", attemptModel)
@@ -349,7 +351,8 @@ func (e *GeminiCLIExecutor) ExecuteStream(ctx context.Context, auth *cliproxyaut
 					if retryCount < maxRetries {
 						// Parse retry delay from Google's response
 						retryDelay := parseRetryDelay(data)
-						log.Infof("gemini cli executor: rate limited (429), retrying stream model %s in %v (attempt %d/%d)", attemptModel, retryDelay, retryCount+1, maxRetries)
+						log.Infof("gemini cli executor: rate limited (429), retrying stream model %s in %v (retry %d/%d)", attemptModel, retryDelay, retryCount+1, maxRetries)
+						retryCount++
 
 						// Wait for the specified delay
 						select {
