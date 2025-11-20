@@ -3,8 +3,6 @@
 // when registering their supported models.
 package registry
 
-import "time"
-
 // GetClaudeModels returns the standard Claude model definitions
 func GetClaudeModels() []*ModelInfo {
 	return []*ModelInfo{
@@ -426,7 +424,7 @@ func GetOpenAIModels() []*ModelInfo {
 		{
 			ID:                  "gpt-5",
 			Object:              "model",
-			Created:             time.Now().Unix(),
+			Created:             1754524800,
 			OwnedBy:             "openai",
 			Type:                "openai",
 			Version:             "gpt-5-2025-08-07",
@@ -439,7 +437,7 @@ func GetOpenAIModels() []*ModelInfo {
 		{
 			ID:                  "gpt-5-minimal",
 			Object:              "model",
-			Created:             time.Now().Unix(),
+			Created:             1754524800,
 			OwnedBy:             "openai",
 			Type:                "openai",
 			Version:             "gpt-5-2025-08-07",
@@ -452,7 +450,7 @@ func GetOpenAIModels() []*ModelInfo {
 		{
 			ID:                  "gpt-5-low",
 			Object:              "model",
-			Created:             time.Now().Unix(),
+			Created:             1754524800,
 			OwnedBy:             "openai",
 			Type:                "openai",
 			Version:             "gpt-5-2025-08-07",
@@ -465,7 +463,7 @@ func GetOpenAIModels() []*ModelInfo {
 		{
 			ID:                  "gpt-5-medium",
 			Object:              "model",
-			Created:             time.Now().Unix(),
+			Created:             1754524800,
 			OwnedBy:             "openai",
 			Type:                "openai",
 			Version:             "gpt-5-2025-08-07",
@@ -478,7 +476,7 @@ func GetOpenAIModels() []*ModelInfo {
 		{
 			ID:                  "gpt-5-high",
 			Object:              "model",
-			Created:             time.Now().Unix(),
+			Created:             1754524800,
 			OwnedBy:             "openai",
 			Type:                "openai",
 			Version:             "gpt-5-2025-08-07",
@@ -491,7 +489,7 @@ func GetOpenAIModels() []*ModelInfo {
 		{
 			ID:                  "gpt-5-codex",
 			Object:              "model",
-			Created:             time.Now().Unix(),
+			Created:             1757894400,
 			OwnedBy:             "openai",
 			Type:                "openai",
 			Version:             "gpt-5-2025-09-15",
@@ -504,7 +502,7 @@ func GetOpenAIModels() []*ModelInfo {
 		{
 			ID:                  "gpt-5-codex-low",
 			Object:              "model",
-			Created:             time.Now().Unix(),
+			Created:             1757894400,
 			OwnedBy:             "openai",
 			Type:                "openai",
 			Version:             "gpt-5-2025-09-15",
@@ -517,7 +515,7 @@ func GetOpenAIModels() []*ModelInfo {
 		{
 			ID:                  "gpt-5-codex-medium",
 			Object:              "model",
-			Created:             time.Now().Unix(),
+			Created:             1757894400,
 			OwnedBy:             "openai",
 			Type:                "openai",
 			Version:             "gpt-5-2025-09-15",
@@ -530,7 +528,7 @@ func GetOpenAIModels() []*ModelInfo {
 		{
 			ID:                  "gpt-5-codex-high",
 			Object:              "model",
-			Created:             time.Now().Unix(),
+			Created:             1757894400,
 			OwnedBy:             "openai",
 			Type:                "openai",
 			Version:             "gpt-5-2025-09-15",
@@ -543,7 +541,7 @@ func GetOpenAIModels() []*ModelInfo {
 		{
 			ID:                  "gpt-5-codex-mini",
 			Object:              "model",
-			Created:             time.Now().Unix(),
+			Created:             1762473600,
 			OwnedBy:             "openai",
 			Type:                "openai",
 			Version:             "gpt-5-2025-11-07",
@@ -556,7 +554,7 @@ func GetOpenAIModels() []*ModelInfo {
 		{
 			ID:                  "gpt-5-codex-mini-medium",
 			Object:              "model",
-			Created:             time.Now().Unix(),
+			Created:             1762473600,
 			OwnedBy:             "openai",
 			Type:                "openai",
 			Version:             "gpt-5-2025-11-07",
@@ -569,7 +567,7 @@ func GetOpenAIModels() []*ModelInfo {
 		{
 			ID:                  "gpt-5-codex-mini-high",
 			Object:              "model",
-			Created:             time.Now().Unix(),
+			Created:             1762473600,
 			OwnedBy:             "openai",
 			Type:                "openai",
 			Version:             "gpt-5-2025-11-07",
@@ -582,7 +580,7 @@ func GetOpenAIModels() []*ModelInfo {
 		{
 			ID:                  "gpt-5.1",
 			Object:              "model",
-			Created:             time.Now().Unix(),
+			Created:             1762905600,
 			OwnedBy:             "openai",
 			Type:                "openai",
 			Version:             "gpt-5.1-2025-11-12",
@@ -595,7 +593,7 @@ func GetOpenAIModels() []*ModelInfo {
 		{
 			ID:                  "gpt-5.1-none",
 			Object:              "model",
-			Created:             time.Now().Unix(),
+			Created:             1762905600,
 			OwnedBy:             "openai",
 			Type:                "openai",
 			Version:             "gpt-5.1-2025-11-12",
@@ -608,7 +606,7 @@ func GetOpenAIModels() []*ModelInfo {
 		{
 			ID:                  "gpt-5.1-low",
 			Object:              "model",
-			Created:             time.Now().Unix(),
+			Created:             1762905600,
 			OwnedBy:             "openai",
 			Type:                "openai",
 			Version:             "gpt-5.1-2025-11-12",
@@ -621,7 +619,7 @@ func GetOpenAIModels() []*ModelInfo {
 		{
 			ID:                  "gpt-5.1-medium",
 			Object:              "model",
-			Created:             time.Now().Unix(),
+			Created:             1762905600,
 			OwnedBy:             "openai",
 			Type:                "openai",
 			Version:             "gpt-5.1-2025-11-12",
@@ -634,7 +632,7 @@ func GetOpenAIModels() []*ModelInfo {
 		{
 			ID:                  "gpt-5.1-high",
 			Object:              "model",
-			Created:             time.Now().Unix(),
+			Created:             1762905600,
 			OwnedBy:             "openai",
 			Type:                "openai",
 			Version:             "gpt-5.1-2025-11-12",
@@ -647,7 +645,7 @@ func GetOpenAIModels() []*ModelInfo {
 		{
 			ID:                  "gpt-5.1-codex",
 			Object:              "model",
-			Created:             time.Now().Unix(),
+			Created:             1762905600,
 			OwnedBy:             "openai",
 			Type:                "openai",
 			Version:             "gpt-5.1-2025-11-12",
@@ -660,7 +658,7 @@ func GetOpenAIModels() []*ModelInfo {
 		{
 			ID:                  "gpt-5.1-codex-low",
 			Object:              "model",
-			Created:             time.Now().Unix(),
+			Created:             1762905600,
 			OwnedBy:             "openai",
 			Type:                "openai",
 			Version:             "gpt-5.1-2025-11-12",
@@ -673,7 +671,7 @@ func GetOpenAIModels() []*ModelInfo {
 		{
 			ID:                  "gpt-5.1-codex-medium",
 			Object:              "model",
-			Created:             time.Now().Unix(),
+			Created:             1762905600,
 			OwnedBy:             "openai",
 			Type:                "openai",
 			Version:             "gpt-5.1-2025-11-12",
@@ -686,7 +684,7 @@ func GetOpenAIModels() []*ModelInfo {
 		{
 			ID:                  "gpt-5.1-codex-high",
 			Object:              "model",
-			Created:             time.Now().Unix(),
+			Created:             1762905600,
 			OwnedBy:             "openai",
 			Type:                "openai",
 			Version:             "gpt-5.1-2025-11-12",
@@ -699,7 +697,7 @@ func GetOpenAIModels() []*ModelInfo {
 		{
 			ID:                  "gpt-5.1-codex-mini",
 			Object:              "model",
-			Created:             time.Now().Unix(),
+			Created:             1762905600,
 			OwnedBy:             "openai",
 			Type:                "openai",
 			Version:             "gpt-5.1-2025-11-12",
@@ -712,7 +710,7 @@ func GetOpenAIModels() []*ModelInfo {
 		{
 			ID:                  "gpt-5.1-codex-mini-medium",
 			Object:              "model",
-			Created:             time.Now().Unix(),
+			Created:             1762905600,
 			OwnedBy:             "openai",
 			Type:                "openai",
 			Version:             "gpt-5.1-2025-11-12",
@@ -725,7 +723,7 @@ func GetOpenAIModels() []*ModelInfo {
 		{
 			ID:                  "gpt-5.1-codex-mini-high",
 			Object:              "model",
-			Created:             time.Now().Unix(),
+			Created:             1762905600,
 			OwnedBy:             "openai",
 			Type:                "openai",
 			Version:             "gpt-5.1-2025-11-12",
@@ -739,7 +737,7 @@ func GetOpenAIModels() []*ModelInfo {
 		{
 			ID:                  "gpt-5.1-codex-max",
 			Object:              "model",
-			Created:             time.Now().Unix(),
+			Created:             1763424000,
 			OwnedBy:             "openai",
 			Type:                "openai",
 			Version:             "gpt-5.1-max",
@@ -752,7 +750,7 @@ func GetOpenAIModels() []*ModelInfo {
 		{
 			ID:                  "gpt-5.1-codex-max-low",
 			Object:              "model",
-			Created:             time.Now().Unix(),
+			Created:             1763424000,
 			OwnedBy:             "openai",
 			Type:                "openai",
 			Version:             "gpt-5.1-max",
@@ -765,7 +763,7 @@ func GetOpenAIModels() []*ModelInfo {
 		{
 			ID:                  "gpt-5.1-codex-max-medium",
 			Object:              "model",
-			Created:             time.Now().Unix(),
+			Created:             1763424000,
 			OwnedBy:             "openai",
 			Type:                "openai",
 			Version:             "gpt-5.1-max",
@@ -778,7 +776,7 @@ func GetOpenAIModels() []*ModelInfo {
 		{
 			ID:                  "gpt-5.1-codex-max-high",
 			Object:              "model",
-			Created:             time.Now().Unix(),
+			Created:             1763424000,
 			OwnedBy:             "openai",
 			Type:                "openai",
 			Version:             "gpt-5.1-max",
@@ -791,7 +789,7 @@ func GetOpenAIModels() []*ModelInfo {
 		{
 			ID:                  "gpt-5.1-codex-max-xhigh",
 			Object:              "model",
-			Created:             time.Now().Unix(),
+			Created:             1763424000,
 			OwnedBy:             "openai",
 			Type:                "openai",
 			Version:             "gpt-5.1-max",
@@ -810,7 +808,7 @@ func GetQwenModels() []*ModelInfo {
 		{
 			ID:                  "qwen3-coder-plus",
 			Object:              "model",
-			Created:             time.Now().Unix(),
+			Created:             1753228800,
 			OwnedBy:             "qwen",
 			Type:                "qwen",
 			Version:             "3.0",
@@ -823,7 +821,7 @@ func GetQwenModels() []*ModelInfo {
 		{
 			ID:                  "qwen3-coder-flash",
 			Object:              "model",
-			Created:             time.Now().Unix(),
+			Created:             1753228800,
 			OwnedBy:             "qwen",
 			Type:                "qwen",
 			Version:             "3.0",
@@ -836,7 +834,7 @@ func GetQwenModels() []*ModelInfo {
 		{
 			ID:                  "vision-model",
 			Object:              "model",
-			Created:             time.Now().Unix(),
+			Created:             1758672000,
 			OwnedBy:             "qwen",
 			Type:                "qwen",
 			Version:             "3.0",
@@ -852,38 +850,38 @@ func GetQwenModels() []*ModelInfo {
 // GetIFlowModels returns supported models for iFlow OAuth accounts.
 
 func GetIFlowModels() []*ModelInfo {
-	created := time.Now().Unix()
 	entries := []struct {
 		ID          string
 		DisplayName string
 		Description string
+		Created     int64
 	}{
-		{ID: "tstars2.0", DisplayName: "TStars-2.0", Description: "iFlow TStars-2.0 multimodal assistant"},
-		{ID: "qwen3-coder-plus", DisplayName: "Qwen3-Coder-Plus", Description: "Qwen3 Coder Plus code generation"},
-		{ID: "qwen3-coder", DisplayName: "Qwen3-Coder-480B-A35B", Description: "Qwen3 Coder 480B A35B"},
-		{ID: "qwen3-max", DisplayName: "Qwen3-Max", Description: "Qwen3 flagship model"},
-		{ID: "qwen3-vl-plus", DisplayName: "Qwen3-VL-Plus", Description: "Qwen3 multimodal vision-language"},
-		{ID: "qwen3-max-preview", DisplayName: "Qwen3-Max-Preview", Description: "Qwen3 Max preview build"},
-		{ID: "kimi-k2-0905", DisplayName: "Kimi-K2-Instruct-0905", Description: "Moonshot Kimi K2 instruct 0905"},
-		{ID: "glm-4.6", DisplayName: "GLM-4.6", Description: "Zhipu GLM 4.6 general model"},
-		{ID: "kimi-k2", DisplayName: "Kimi-K2", Description: "Moonshot Kimi K2 general model"},
-		{ID: "kimi-k2-thinking", DisplayName: "Kimi-K2-Thinking", Description: "Moonshot Kimi K2 general model"},
-		{ID: "deepseek-v3.2", DisplayName: "DeepSeek-V3.2-Exp", Description: "DeepSeek V3.2 experimental"},
-		{ID: "deepseek-v3.1", DisplayName: "DeepSeek-V3.1-Terminus", Description: "DeepSeek V3.1 Terminus"},
-		{ID: "deepseek-r1", DisplayName: "DeepSeek-R1", Description: "DeepSeek reasoning model R1"},
-		{ID: "deepseek-v3", DisplayName: "DeepSeek-V3-671B", Description: "DeepSeek V3 671B"},
-		{ID: "qwen3-32b", DisplayName: "Qwen3-32B", Description: "Qwen3 32B"},
-		{ID: "qwen3-235b-a22b-thinking-2507", DisplayName: "Qwen3-235B-A22B-Thinking", Description: "Qwen3 235B A22B Thinking (2507)"},
-		{ID: "qwen3-235b-a22b-instruct", DisplayName: "Qwen3-235B-A22B-Instruct", Description: "Qwen3 235B A22B Instruct"},
-		{ID: "qwen3-235b", DisplayName: "Qwen3-235B-A22B", Description: "Qwen3 235B A22B"},
-		{ID: "minimax-m2", DisplayName: "MiniMax-M2", Description: "MiniMax M2"},
+		{ID: "tstars2.0", DisplayName: "TStars-2.0", Description: "iFlow TStars-2.0 multimodal assistant", Created: 1746489600},
+		{ID: "qwen3-coder-plus", DisplayName: "Qwen3-Coder-Plus", Description: "Qwen3 Coder Plus code generation", Created: 1753228800},
+		{ID: "qwen3-coder", DisplayName: "Qwen3-Coder-480B-A35B", Description: "Qwen3 Coder 480B A35B", Created: 1753228800},
+		{ID: "qwen3-max", DisplayName: "Qwen3-Max", Description: "Qwen3 flagship model", Created: 1758672000},
+		{ID: "qwen3-vl-plus", DisplayName: "Qwen3-VL-Plus", Description: "Qwen3 multimodal vision-language", Created: 1758672000},
+		{ID: "qwen3-max-preview", DisplayName: "Qwen3-Max-Preview", Description: "Qwen3 Max preview build", Created: 1757030400},
+		{ID: "kimi-k2-0905", DisplayName: "Kimi-K2-Instruct-0905", Description: "Moonshot Kimi K2 instruct 0905", Created: 1757030400},
+		{ID: "glm-4.6", DisplayName: "GLM-4.6", Description: "Zhipu GLM 4.6 general model", Created: 1759190400},
+		{ID: "kimi-k2", DisplayName: "Kimi-K2", Description: "Moonshot Kimi K2 general model", Created: 1752192000},
+		{ID: "kimi-k2-thinking", DisplayName: "Kimi-K2-Thinking", Description: "Moonshot Kimi K2 general model", Created: 1762387200},
+		{ID: "deepseek-v3.2", DisplayName: "DeepSeek-V3.2-Exp", Description: "DeepSeek V3.2 experimental", Created: 1759104000},
+		{ID: "deepseek-v3.1", DisplayName: "DeepSeek-V3.1-Terminus", Description: "DeepSeek V3.1 Terminus", Created: 1756339200},
+		{ID: "deepseek-r1", DisplayName: "DeepSeek-R1", Description: "DeepSeek reasoning model R1", Created: 1737331200},
+		{ID: "deepseek-v3", DisplayName: "DeepSeek-V3-671B", Description: "DeepSeek V3 671B", Created: 1734307200},
+		{ID: "qwen3-32b", DisplayName: "Qwen3-32B", Description: "Qwen3 32B", Created: 1747094400},
+		{ID: "qwen3-235b-a22b-thinking-2507", DisplayName: "Qwen3-235B-A22B-Thinking", Description: "Qwen3 235B A22B Thinking (2507)", Created: 1753401600},
+		{ID: "qwen3-235b-a22b-instruct", DisplayName: "Qwen3-235B-A22B-Instruct", Description: "Qwen3 235B A22B Instruct", Created: 1753401600},
+		{ID: "qwen3-235b", DisplayName: "Qwen3-235B-A22B", Description: "Qwen3 235B A22B", Created: 1753401600},
+		{ID: "minimax-m2", DisplayName: "MiniMax-M2", Description: "MiniMax M2", Created: 1758672000},
 	}
 	models := make([]*ModelInfo, 0, len(entries))
 	for _, entry := range entries {
 		models = append(models, &ModelInfo{
 			ID:          entry.ID,
 			Object:      "model",
-			Created:     created,
+			Created:     entry.Created,
 			OwnedBy:     "iflow",
 			Type:        "iflow",
 			DisplayName: entry.DisplayName,
