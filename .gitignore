@@ -30,4 +30,3 @@ GEMINI.md
 .vscode/*
 .claude/*
 .serena/*
-/cmd/server/server
