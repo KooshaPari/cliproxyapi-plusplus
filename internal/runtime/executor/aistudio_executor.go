@@ -264,6 +264,7 @@ func (e *AIStudioExecutor) translateRequest(req cliproxyexecutor.Request, opts c
 		}
 		payload = util.ApplyGeminiThinkingConfig(payload, budgetOverride, includeOverride)
 	}
+	payload = util.ConvertThinkingLevelToBudget(payload)
 	payload = util.StripThinkingConfigIfUnsupported(req.Model, payload)
 	payload = fixGeminiImageAspectRatio(req.Model, payload)
 	payload = applyPayloadConfig(e.cfg, req.Model, payload)
