@@ -1443,6 +1443,87 @@ func (h *Handler) RequestIFlowToken(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": "ok", "url": authURL, "state": state})
 }
 
+func (h *Handler) RequestIFlowCookieToken(c *gin.Context) {
+	ctx := context.Background()
+
+	var payload struct {
+		Cookie string `json:"cookie"`
+	}
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "error": "cookie is required"})
+		return
+	}
+
+	cookieValue := strings.TrimSpace(payload.Cookie)
+
+	if cookieValue == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "error": "cookie is required"})
+		return
+	}
+
+	cookieValue, errNormalize := iflowauth.NormalizeCookie(cookieValue)
+	if errNormalize != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "error": errNormalize.Error()})
+		return
+	}
+
+	authSvc := iflowauth.NewIFlowAuth(h.cfg)
+	tokenData, errAuth := authSvc.AuthenticateWithCookie(ctx, cookieValue)
+	if errAuth != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "error": errAuth.Error()})
+		return
+	}
+
+	tokenData.Cookie = cookieValue
+
+	tokenStorage := authSvc.CreateCookieTokenStorage(tokenData)
+	email := strings.TrimSpace(tokenStorage.Email)
+	if email == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "error": "failed to extract email from token"})
+		return
+	}
+
+	fileName := iflowauth.SanitizeIFlowFileName(email)
+	if fileName == "" {
+		fileName = fmt.Sprintf("iflow-%d", time.Now().UnixMilli())
+	}
+
+	tokenStorage.Email = email
+
+	record := &coreauth.Auth{
+		ID:       fmt.Sprintf("iflow-%s.json", fileName),
+		Provider: "iflow",
+		FileName: fmt.Sprintf("iflow-%s.json", fileName),
+		Storage:  tokenStorage,
+		Metadata: map[string]any{
+			"email":        email,
+			"api_key":      tokenStorage.APIKey,
+			"expired":      tokenStorage.Expire,
+			"cookie":       tokenStorage.Cookie,
+			"type":         tokenStorage.Type,
+			"last_refresh": tokenStorage.LastRefresh,
+		},
+		Attributes: map[string]string{
+			"api_key": tokenStorage.APIKey,
+		},
+	}
+
+	savedPath, errSave := h.saveTokenRecord(ctx, record)
+	if errSave != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "error": "failed to save authentication tokens"})
+		return
+	}
+
+	fmt.Printf("iFlow cookie authentication successful. Token saved to %s\n", savedPath)
+	c.JSON(http.StatusOK, gin.H{
+		"status":     "ok",
+		"saved_path": savedPath,
+		"email":      email,
+		"expired":    tokenStorage.Expire,
+		"type":       tokenStorage.Type,
+	})
+}
+
 type projectSelectionRequiredError struct{}
 
 func (e *projectSelectionRequiredError) Error() string {
