@@ -151,7 +151,7 @@ func (e *AIStudioExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth
 			case wsrelay.MessageTypeStreamChunk:
 				if len(event.Payload) > 0 {
 					appendAPIResponseChunk(ctx, e.cfg, bytes.Clone(event.Payload))
-					filtered := filterAIStudioUsageMetadata(event.Payload)
+					filtered := FilterSSEUsageMetadata(event.Payload)
 					if detail, ok := parseGeminiStreamUsage(filtered); ok {
 						reporter.publish(ctx, detail)
 					}
@@ -294,65 +294,6 @@ func (e *AIStudioExecutor) buildEndpoint(model, action, alt string) string {
 		return base + "?$alt=" + url.QueryEscape(alt)
 	}
 	return base
-}
-
-// filterAIStudioUsageMetadata removes usageMetadata from intermediate SSE events so that
-// only the terminal chunk retains token statistics.
-func filterAIStudioUsageMetadata(payload []byte) []byte {
-	if len(payload) == 0 {
-		return payload
-	}
-
-	lines := bytes.Split(payload, []byte("\n"))
-	modified := false
-	for idx, line := range lines {
-		trimmed := bytes.TrimSpace(line)
-		if len(trimmed) == 0 || !bytes.HasPrefix(trimmed, []byte("data:")) {
-			continue
-		}
-		dataIdx := bytes.Index(line, []byte("data:"))
-		if dataIdx < 0 {
-			continue
-		}
-		rawJSON := bytes.TrimSpace(line[dataIdx+5:])
-		cleaned, changed := stripUsageMetadataFromJSON(rawJSON)
-		if !changed {
-			continue
-		}
-		var rebuilt []byte
-		rebuilt = append(rebuilt, line[:dataIdx]...)
-		rebuilt = append(rebuilt, []byte("data:")...)
-		if len(cleaned) > 0 {
-			rebuilt = append(rebuilt, ' ')
-			rebuilt = append(rebuilt, cleaned...)
-		}
-		lines[idx] = rebuilt
-		modified = true
-	}
-	if !modified {
-		return payload
-	}
-	return bytes.Join(lines, []byte("\n"))
-}
-
-// stripUsageMetadataFromJSON drops usageMetadata when no finishReason is present.
-func stripUsageMetadataFromJSON(rawJSON []byte) ([]byte, bool) {
-	jsonBytes := bytes.TrimSpace(rawJSON)
-	if len(jsonBytes) == 0 || !gjson.ValidBytes(jsonBytes) {
-		return rawJSON, false
-	}
-	finishReason := gjson.GetBytes(jsonBytes, "candidates.0.finishReason")
-	if finishReason.Exists() && finishReason.String() != "" {
-		return rawJSON, false
-	}
-	if !gjson.GetBytes(jsonBytes, "usageMetadata").Exists() {
-		return rawJSON, false
-	}
-	cleaned, err := sjson.DeleteBytes(jsonBytes, "usageMetadata")
-	if err != nil {
-		return rawJSON, false
-	}
-	return cleaned, true
 }
 
 // ensureColonSpacedJSON normalizes JSON objects so that colons are followed by a single space while
