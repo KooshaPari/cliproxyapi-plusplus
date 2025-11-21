@@ -21,6 +21,7 @@ import (
 const (
 	antigravityClientID     = "1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.googleusercontent.com"
 	antigravityClientSecret = "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"
+	antigravityCallbackPort = 51121
 )
 
 var antigravityScopes = []string{
@@ -160,7 +161,8 @@ type callbackResult struct {
 }
 
 func startAntigravityCallbackServer() (*http.Server, int, <-chan callbackResult, error) {
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	addr := fmt.Sprintf(":%d", antigravityCallbackPort)
+	listener, err := net.Listen("tcp", addr)
 	if err != nil {
 		return nil, 0, nil, err
 	}
