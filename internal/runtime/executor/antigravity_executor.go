@@ -70,7 +70,7 @@ func (e *AntigravityExecutor) Execute(ctx context.Context, auth *cliproxyauth.Au
 	defer reporter.trackFailure(ctx, &err)
 
 	from := opts.SourceFormat
-	to := sdktranslator.FromString("gemini-cli")
+	to := sdktranslator.FromString("antigravity")
 	translated := sdktranslator.TranslateRequest(from, to, req.Model, bytes.Clone(req.Payload), false)
 
 	httpReq, errReq := e.buildRequest(ctx, auth, token, req.Model, translated, false, opts.Alt)
@@ -127,7 +127,7 @@ func (e *AntigravityExecutor) ExecuteStream(ctx context.Context, auth *cliproxya
 	defer reporter.trackFailure(ctx, &err)
 
 	from := opts.SourceFormat
-	to := sdktranslator.FromString("gemini-cli")
+	to := sdktranslator.FromString("antigravity")
 	translated := sdktranslator.TranslateRequest(from, to, req.Model, bytes.Clone(req.Payload), true)
 
 	httpReq, errReq := e.buildRequest(ctx, auth, token, req.Model, translated, true, opts.Alt)

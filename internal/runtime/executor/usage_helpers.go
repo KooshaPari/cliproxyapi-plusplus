@@ -453,6 +453,10 @@ func StripUsageMetadataFromJSON(rawJSON []byte) ([]byte, bool) {
 		usageMetadata = gjson.GetBytes(jsonBytes, "response.usageMetadata")
 	}
 
+	if hasNonZeroUsageMetadata(usageMetadata) {
+		return rawJSON, false
+	}
+
 	if !usageMetadata.Exists() {
 		return rawJSON, false
 	}
@@ -474,4 +478,15 @@ func StripUsageMetadataFromJSON(rawJSON []byte) ([]byte, bool) {
 	}
 
 	return cleaned, changed
+}
+
+// hasNonZeroUsageMetadata checks if any usage token counts are present.
+func hasNonZeroUsageMetadata(node gjson.Result) bool {
+	if !node.Exists() {
+		return false
+	}
+	return node.Get("totalTokenCount").Int() > 0 ||
+		node.Get("promptTokenCount").Int() > 0 ||
+		node.Get("candidatesTokenCount").Int() > 0 ||
+		node.Get("thoughtsTokenCount").Int() > 0
 }
