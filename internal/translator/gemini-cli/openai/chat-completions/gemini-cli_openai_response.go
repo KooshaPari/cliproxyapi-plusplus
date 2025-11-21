@@ -98,25 +98,40 @@ func ConvertCliResponseToOpenAI(_ context.Context, _ string, originalRequestRawJ
 	// Process the main content part of the response.
 	partsResult := gjson.GetBytes(rawJSON, "response.candidates.0.content.parts")
 	hasFunctionCall := false
+	hasValidContent := false
 	if partsResult.IsArray() {
 		partResults := partsResult.Array()
 		for i := 0; i < len(partResults); i++ {
 			partResult := partResults[i]
 			partTextResult := partResult.Get("text")
 			functionCallResult := partResult.Get("functionCall")
+			thoughtSignatureResult := partResult.Get("thoughtSignature")
 			inlineDataResult := partResult.Get("inlineData")
 			if !inlineDataResult.Exists() {
 				inlineDataResult = partResult.Get("inline_data")
 			}
 
+			// Handle thoughtSignature - this is encrypted reasoning content that should not be exposed to the client
+			if thoughtSignatureResult.Exists() && thoughtSignatureResult.String() != "" {
+				// Skip thoughtSignature processing - it's internal encrypted data
+				continue
+			}
+
 			if partTextResult.Exists() {
+				textContent := partTextResult.String()
+				// Skip empty text content to avoid generating unnecessary chunks
+				if textContent == "" {
+					continue
+				}
+
 				// Handle text content, distinguishing between regular content and reasoning/thoughts.
 				if partResult.Get("thought").Bool() {
-					template, _ = sjson.Set(template, "choices.0.delta.reasoning_content", partTextResult.String())
+					template, _ = sjson.Set(template, "choices.0.delta.reasoning_content", textContent)
 				} else {
-					template, _ = sjson.Set(template, "choices.0.delta.content", partTextResult.String())
+					template, _ = sjson.Set(template, "choices.0.delta.content", textContent)
 				}
 				template, _ = sjson.Set(template, "choices.0.delta.role", "assistant")
+				hasValidContent = true
 			} else if functionCallResult.Exists() {
 				// Handle function call content.
 				hasFunctionCall = true
@@ -174,6 +189,12 @@ func ConvertCliResponseToOpenAI(_ context.Context, _ string, originalRequestRawJ
 	if hasFunctionCall {
 		template, _ = sjson.Set(template, "choices.0.finish_reason", "tool_calls")
 		template, _ = sjson.Set(template, "choices.0.native_finish_reason", "tool_calls")
+	}
+
+	// Only return a chunk if there's actual content or a finish reason
+	finishReason := gjson.GetBytes(rawJSON, "response.candidates.0.finishReason")
+	if !hasValidContent && !finishReason.Exists() {
+		return []string{}
 	}
 
 	return []string{template}
