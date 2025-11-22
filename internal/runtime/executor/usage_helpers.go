@@ -486,7 +486,7 @@ func FilterSSEUsageMetadata(payload []byte) []byte {
 	return bytes.Join(lines, []byte("\n"))
 }
 
-// StripUsageMetadataFromJSON drops usageMetadata unless finishReason is "stop".
+// StripUsageMetadataFromJSON drops usageMetadata unless finishReason is present (terminal).
 // It handles both formats:
 // - Aistudio: candidates.0.finishReason
 // - Antigravity: response.candidates.0.finishReason
@@ -501,15 +501,15 @@ func StripUsageMetadataFromJSON(rawJSON []byte) ([]byte, bool) {
 	if !finishReason.Exists() {
 		finishReason = gjson.GetBytes(jsonBytes, "response.candidates.0.finishReason")
 	}
-	stopReason := finishReason.Exists() && strings.ToLower(strings.TrimSpace(finishReason.String())) == "stop"
+	terminalReason := finishReason.Exists() && strings.TrimSpace(finishReason.String()) != ""
 
 	usageMetadata := gjson.GetBytes(jsonBytes, "usageMetadata")
 	if !usageMetadata.Exists() {
 		usageMetadata = gjson.GetBytes(jsonBytes, "response.usageMetadata")
 	}
 
-	// Stop chunk: keep as-is.
-	if stopReason {
+	// Terminal chunk: keep as-is.
+	if terminalReason {
 		return rawJSON, false
 	}
 
@@ -556,7 +556,8 @@ func isStopChunkWithoutUsage(jsonBytes []byte) bool {
 	if !finishReason.Exists() {
 		finishReason = gjson.GetBytes(jsonBytes, "response.candidates.0.finishReason")
 	}
-	if !finishReason.Exists() || strings.ToLower(strings.TrimSpace(finishReason.String())) != "stop" {
+	trimmed := strings.TrimSpace(finishReason.String())
+	if !finishReason.Exists() || trimmed == "" {
 		return false
 	}
 	return !hasUsageMetadata(jsonBytes)
