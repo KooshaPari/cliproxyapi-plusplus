@@ -269,13 +269,16 @@ func FetchAntigravityModels(ctx context.Context, auth *cliproxyauth.Auth, cfg *c
 	now := time.Now().Unix()
 	models := make([]*registry.ModelInfo, 0, len(result.Map()))
 	for id := range result.Map() {
-		models = append(models, &registry.ModelInfo{
-			ID:      id,
-			Object:  "model",
-			Created: now,
-			OwnedBy: antigravityAuthType,
-			Type:    antigravityAuthType,
-		})
+		id = modelName2Alias(id)
+		if id != "" {
+			models = append(models, &registry.ModelInfo{
+				ID:      id,
+				Object:  "model",
+				Created: now,
+				OwnedBy: antigravityAuthType,
+				Type:    antigravityAuthType,
+			})
+		}
 	}
 	return models
 }
@@ -389,6 +392,7 @@ func (e *AntigravityExecutor) buildRequest(ctx context.Context, auth *cliproxyau
 	}
 
 	payload = geminiToAntigravity(modelName, payload)
+	payload, _ = sjson.SetBytes(payload, "model", alias2ModelName(modelName))
 	httpReq, errReq := http.NewRequestWithContext(ctx, http.MethodPost, requestURL.String(), bytes.NewReader(payload))
 	if errReq != nil {
 		return nil, errReq
@@ -553,6 +557,20 @@ func geminiToAntigravity(modelName string, payload []byte) []byte {
 		return true
 	})
 
+	if strings.HasPrefix(modelName, "claude-sonnet-") {
+		gjson.Get(template, "request.tools").ForEach(func(key, tool gjson.Result) bool {
+			tool.Get("functionDeclarations").ForEach(func(funKey, funcDecl gjson.Result) bool {
+				if funcDecl.Get("parametersJsonSchema").Exists() {
+					template, _ = sjson.SetRaw(template, fmt.Sprintf("request.tools.%d.functionDeclarations.%d.parameters", key.Int(), funKey.Int()), funcDecl.Get("parametersJsonSchema").Raw)
+					template, _ = sjson.Delete(template, fmt.Sprintf("request.tools.%d.functionDeclarations.%d.parameters.$schema", key.Int(), funKey.Int()))
+					template, _ = sjson.Delete(template, fmt.Sprintf("request.tools.%d.functionDeclarations.%d.parametersJsonSchema", key.Int(), funKey.Int()))
+				}
+				return true
+			})
+			return true
+		})
+	}
+
 	return []byte(template)
 }
 
@@ -572,4 +590,40 @@ func generateProjectID() string {
 	noun := nouns[randSource.Intn(len(nouns))]
 	randomPart := strings.ToLower(uuid.NewString())[:5]
 	return adj + "-" + noun + "-" + randomPart
+}
+
+func modelName2Alias(modelName string) string {
+	switch modelName {
+	case "rev19-uic3-1p":
+		return "gemini-2.5-computer-use-preview-10-2025"
+	case "gemini-3-pro-image":
+		return "gemini-3-pro-image-preview"
+	case "gemini-3-pro-high":
+		return "gemini-3-pro-preview"
+	case "claude-sonnet-4-5":
+		return "gemini-claude-sonnet-4-5"
+	case "claude-sonnet-4-5-thinking":
+		return "gemini-claude-sonnet-4-5-thinking"
+	case "chat_20706", "chat_23310", "gemini-2.5-flash-thinking", "gemini-3-pro-low":
+		return ""
+	default:
+		return modelName
+	}
+}
+
+func alias2ModelName(modelName string) string {
+	switch modelName {
+	case "gemini-2.5-computer-use-preview-10-2025":
+		return "rev19-uic3-1p"
+	case "gemini-3-pro-image-preview":
+		return "gemini-3-pro-image"
+	case "gemini-3-pro-preview":
+		return "gemini-3-pro-high"
+	case "gemini-claude-sonnet-4-5":
+		return "claude-sonnet-4-5"
+	case "gemini-claude-sonnet-4-5-thinking":
+		return "claude-sonnet-4-5-thinking"
+	default:
+		return modelName
+	}
 }
