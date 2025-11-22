@@ -45,10 +45,6 @@ func ConvertAntigravityResponseToOpenAI(_ context.Context, _ string, originalReq
 		}
 	}
 
-	if len(bytes.TrimSpace(rawJSON)) == 0 {
-		return []string{}
-	}
-
 	if bytes.Equal(rawJSON, []byte("[DONE]")) {
 		return []string{}
 	}
