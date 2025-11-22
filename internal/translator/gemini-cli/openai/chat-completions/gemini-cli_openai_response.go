@@ -45,6 +45,10 @@ func ConvertCliResponseToOpenAI(_ context.Context, _ string, originalRequestRawJ
 		}
 	}
 
+	if len(bytes.TrimSpace(rawJSON)) == 0 {
+		return []string{}
+	}
+
 	if bytes.Equal(rawJSON, []byte("[DONE]")) {
 		return []string{}
 	}
