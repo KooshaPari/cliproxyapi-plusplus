@@ -131,6 +131,9 @@ func ConvertOpenAIRequestToAntigravity(modelName string, inputRawJSON []byte, _ 
 		if ar := imgCfg.Get("aspect_ratio"); ar.Exists() && ar.Type == gjson.String {
 			out, _ = sjson.SetBytes(out, "request.generationConfig.imageConfig.aspectRatio", ar.Str)
 		}
+		if size := imgCfg.Get("image_size"); size.Exists() && size.Type == gjson.String {
+			out, _ = sjson.SetBytes(out, "request.generationConfig.imageConfig.imageSize", size.Str)
+		}
 	}
 
 	// messages -> systemInstruction + contents
@@ -281,11 +284,12 @@ func ConvertOpenAIRequestToAntigravity(modelName string, inputRawJSON []byte, _ 
 		}
 	}
 
-	// tools -> request.tools[0].functionDeclarations
+	// tools -> request.tools[0].functionDeclarations + request.tools[0].googleSearch passthrough
 	tools := gjson.GetBytes(rawJSON, "tools")
 	if tools.IsArray() && len(tools.Array()) > 0 {
-		out, _ = sjson.SetRawBytes(out, "request.tools", []byte(`[{"functionDeclarations":[]}]`))
-		fdPath := "request.tools.0.functionDeclarations"
+		toolNode := []byte(`{}`)
+		hasTool := false
+		hasFunction := false
 		for _, t := range tools.Array() {
 			if t.Get("type").String() == "function" {
 				fn := t.Get("function")
@@ -323,14 +327,32 @@ func ConvertOpenAIRequestToAntigravity(modelName string, inputRawJSON []byte, _ 
 						}
 					}
 					fnRaw, _ = sjson.Delete(fnRaw, "strict")
-					tmp, errSet := sjson.SetRawBytes(out, fdPath+".-1", []byte(fnRaw))
+					if !hasFunction {
+						toolNode, _ = sjson.SetRawBytes(toolNode, "functionDeclarations", []byte("[]"))
+					}
+					tmp, errSet := sjson.SetRawBytes(toolNode, "functionDeclarations.-1", []byte(fnRaw))
 					if errSet != nil {
 						log.Warnf("Failed to append tool declaration for '%s': %v", fn.Get("name").String(), errSet)
 						continue
 					}
-					out = tmp
+					toolNode = tmp
+					hasFunction = true
+					hasTool = true
 				}
 			}
+			if gs := t.Get("google_search"); gs.Exists() {
+				var errSet error
+				toolNode, errSet = sjson.SetRawBytes(toolNode, "googleSearch", []byte(gs.Raw))
+				if errSet != nil {
+					log.Warnf("Failed to set googleSearch tool: %v", errSet)
+					continue
+				}
+				hasTool = true
+			}
+		}
+		if hasTool {
+			out, _ = sjson.SetRawBytes(out, "request.tools", []byte("[]"))
+			out, _ = sjson.SetRawBytes(out, "request.tools.0", toolNode)
 		}
 	}
 
