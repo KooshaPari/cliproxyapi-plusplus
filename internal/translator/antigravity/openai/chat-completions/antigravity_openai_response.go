@@ -98,7 +98,6 @@ func ConvertAntigravityResponseToOpenAI(_ context.Context, _ string, originalReq
 	// Process the main content part of the response.
 	partsResult := gjson.GetBytes(rawJSON, "response.candidates.0.content.parts")
 	hasFunctionCall := false
-	hasValidContent := false
 	if partsResult.IsArray() {
 		partResults := partsResult.Array()
 		for i := 0; i < len(partResults); i++ {
@@ -119,10 +118,6 @@ func ConvertAntigravityResponseToOpenAI(_ context.Context, _ string, originalReq
 
 			if partTextResult.Exists() {
 				textContent := partTextResult.String()
-				// Skip empty text content to avoid generating unnecessary chunks
-				if textContent == "" {
-					continue
-				}
 
 				// Handle text content, distinguishing between regular content and reasoning/thoughts.
 				if partResult.Get("thought").Bool() {
@@ -131,7 +126,6 @@ func ConvertAntigravityResponseToOpenAI(_ context.Context, _ string, originalReq
 					template, _ = sjson.Set(template, "choices.0.delta.content", textContent)
 				}
 				template, _ = sjson.Set(template, "choices.0.delta.role", "assistant")
-				hasValidContent = true
 			} else if functionCallResult.Exists() {
 				// Handle function call content.
 				hasFunctionCall = true
@@ -189,12 +183,6 @@ func ConvertAntigravityResponseToOpenAI(_ context.Context, _ string, originalReq
 	if hasFunctionCall {
 		template, _ = sjson.Set(template, "choices.0.finish_reason", "tool_calls")
 		template, _ = sjson.Set(template, "choices.0.native_finish_reason", "tool_calls")
-	}
-
-	// Only return a chunk if there's actual content or a finish reason
-	finishReason := gjson.GetBytes(rawJSON, "response.candidates.0.finishReason")
-	if !hasValidContent && !finishReason.Exists() {
-		return []string{}
 	}
 
 	return []string{template}
