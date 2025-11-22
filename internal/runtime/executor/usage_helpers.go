@@ -416,27 +416,12 @@ func parseAntigravityStreamUsage(line []byte) (usage.Detail, bool) {
 	return detail, true
 }
 
-func jsonPayload(line []byte) []byte {
-	trimmed := bytes.TrimSpace(line)
-	if len(trimmed) == 0 {
-		return nil
-	}
-	if bytes.Equal(trimmed, []byte("[DONE]")) {
-		return nil
-	}
-	if bytes.HasPrefix(trimmed, []byte("event:")) {
-		return nil
-	}
-	if bytes.HasPrefix(trimmed, []byte("data:")) {
-		trimmed = bytes.TrimSpace(trimmed[len("data:"):])
-	}
-	if len(trimmed) == 0 || trimmed[0] != '{' {
-		return nil
-	}
-	return trimmed
-}
-
 var stopChunkWithoutUsage sync.Map
+
+func rememberStopWithoutUsage(traceID string) {
+	stopChunkWithoutUsage.Store(traceID, struct{}{})
+	time.AfterFunc(10*time.Minute, func() { stopChunkWithoutUsage.Delete(traceID) })
+}
 
 // FilterSSEUsageMetadata removes usageMetadata from SSE events that are not
 // terminal (finishReason != "stop"). Stop chunks are left untouched. This
@@ -462,15 +447,13 @@ func FilterSSEUsageMetadata(payload []byte) []byte {
 		rawJSON := bytes.TrimSpace(line[dataIdx+5:])
 		traceID := gjson.GetBytes(rawJSON, "traceId").String()
 		if isStopChunkWithoutUsage(rawJSON) && traceID != "" {
-			stopChunkWithoutUsage.Store(traceID, true)
+			rememberStopWithoutUsage(traceID)
 			continue
 		}
 		if traceID != "" {
-			if v, ok := stopChunkWithoutUsage.Load(traceID); ok {
-				if keep, _ := v.(bool); keep && hasUsageMetadata(rawJSON) {
-					stopChunkWithoutUsage.Delete(traceID)
-					continue
-				}
+			if _, ok := stopChunkWithoutUsage.Load(traceID); ok && hasUsageMetadata(rawJSON) {
+				stopChunkWithoutUsage.Delete(traceID)
+				continue
 			}
 		}
 
@@ -577,4 +560,24 @@ func isStopChunkWithoutUsage(jsonBytes []byte) bool {
 		return false
 	}
 	return !hasUsageMetadata(jsonBytes)
+}
+
+func jsonPayload(line []byte) []byte {
+	trimmed := bytes.TrimSpace(line)
+	if len(trimmed) == 0 {
+		return nil
+	}
+	if bytes.Equal(trimmed, []byte("[DONE]")) {
+		return nil
+	}
+	if bytes.HasPrefix(trimmed, []byte("event:")) {
+		return nil
+	}
+	if bytes.HasPrefix(trimmed, []byte("data:")) {
+		trimmed = bytes.TrimSpace(trimmed[len("data:"):])
+	}
+	if len(trimmed) == 0 || trimmed[0] != '{' {
+		return nil
+	}
+	return trimmed
 }
