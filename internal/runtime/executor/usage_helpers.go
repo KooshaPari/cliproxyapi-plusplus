@@ -385,6 +385,8 @@ func jsonPayload(line []byte) []byte {
 	return trimmed
 }
 
+var stopChunkWithoutUsage sync.Map
+
 // FilterSSEUsageMetadata removes usageMetadata from SSE events that are not
 // terminal (finishReason != "stop"). Stop chunks are left untouched. This
 // function is shared between aistudio and antigravity executors.
@@ -407,6 +409,20 @@ func FilterSSEUsageMetadata(payload []byte) []byte {
 			continue
 		}
 		rawJSON := bytes.TrimSpace(line[dataIdx+5:])
+		traceID := gjson.GetBytes(rawJSON, "traceId").String()
+		if isStopChunkWithoutUsage(rawJSON) && traceID != "" {
+			stopChunkWithoutUsage.Store(traceID, true)
+			continue
+		}
+		if traceID != "" {
+			if v, ok := stopChunkWithoutUsage.Load(traceID); ok {
+				if keep, _ := v.(bool); keep && hasUsageMetadata(rawJSON) {
+					stopChunkWithoutUsage.Delete(traceID)
+					continue
+				}
+			}
+		}
+
 		cleaned, changed := StripUsageMetadataFromJSON(rawJSON)
 		if !changed {
 			continue
@@ -483,4 +499,31 @@ func StripUsageMetadataFromJSON(rawJSON []byte) ([]byte, bool) {
 	}
 
 	return cleaned, changed
+}
+
+func hasUsageMetadata(jsonBytes []byte) bool {
+	if len(jsonBytes) == 0 || !gjson.ValidBytes(jsonBytes) {
+		return false
+	}
+	if gjson.GetBytes(jsonBytes, "usageMetadata").Exists() {
+		return true
+	}
+	if gjson.GetBytes(jsonBytes, "response.usageMetadata").Exists() {
+		return true
+	}
+	return false
+}
+
+func isStopChunkWithoutUsage(jsonBytes []byte) bool {
+	if len(jsonBytes) == 0 || !gjson.ValidBytes(jsonBytes) {
+		return false
+	}
+	finishReason := gjson.GetBytes(jsonBytes, "candidates.0.finishReason")
+	if !finishReason.Exists() {
+		finishReason = gjson.GetBytes(jsonBytes, "response.candidates.0.finishReason")
+	}
+	if !finishReason.Exists() || strings.ToLower(strings.TrimSpace(finishReason.String())) != "stop" {
+		return false
+	}
+	return !hasUsageMetadata(jsonBytes)
 }
