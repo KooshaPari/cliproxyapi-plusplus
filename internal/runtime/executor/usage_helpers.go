@@ -385,9 +385,9 @@ func jsonPayload(line []byte) []byte {
 	return trimmed
 }
 
-// FilterSSEUsageMetadata removes usageMetadata from intermediate SSE events so that
-// only the terminal chunk retains token statistics.
-// This function is shared between aistudio and antigravity executors.
+// FilterSSEUsageMetadata removes usageMetadata from SSE events that are not
+// terminal (finishReason != "stop"). Stop chunks are left untouched. This
+// function is shared between aistudio and antigravity executors.
 func FilterSSEUsageMetadata(payload []byte) []byte {
 	if len(payload) == 0 {
 		return payload
@@ -395,11 +395,13 @@ func FilterSSEUsageMetadata(payload []byte) []byte {
 
 	lines := bytes.Split(payload, []byte("\n"))
 	modified := false
+	foundData := false
 	for idx, line := range lines {
 		trimmed := bytes.TrimSpace(line)
 		if len(trimmed) == 0 || !bytes.HasPrefix(trimmed, []byte("data:")) {
 			continue
 		}
+		foundData = true
 		dataIdx := bytes.Index(line, []byte("data:"))
 		if dataIdx < 0 {
 			continue
@@ -420,13 +422,21 @@ func FilterSSEUsageMetadata(payload []byte) []byte {
 		modified = true
 	}
 	if !modified {
+		if !foundData {
+			// Handle payloads that are raw JSON without SSE data: prefix.
+			trimmed := bytes.TrimSpace(payload)
+			cleaned, changed := StripUsageMetadataFromJSON(trimmed)
+			if !changed {
+				return payload
+			}
+			return cleaned
+		}
 		return payload
 	}
 	return bytes.Join(lines, []byte("\n"))
 }
 
-// StripUsageMetadataFromJSON drops usageMetadata when no finishReason is present.
-// This function is shared between aistudio and antigravity executors.
+// StripUsageMetadataFromJSON drops usageMetadata unless finishReason is "stop".
 // It handles both formats:
 // - Aistudio: candidates.0.finishReason
 // - Antigravity: response.candidates.0.finishReason
@@ -441,22 +451,19 @@ func StripUsageMetadataFromJSON(rawJSON []byte) ([]byte, bool) {
 	if !finishReason.Exists() {
 		finishReason = gjson.GetBytes(jsonBytes, "response.candidates.0.finishReason")
 	}
+	stopReason := finishReason.Exists() && strings.ToLower(strings.TrimSpace(finishReason.String())) == "stop"
 
-	// If finishReason exists and is not empty, keep the usageMetadata
-	if finishReason.Exists() && finishReason.String() != "" {
-		return rawJSON, false
-	}
-
-	// Check for usageMetadata in both possible locations
 	usageMetadata := gjson.GetBytes(jsonBytes, "usageMetadata")
 	if !usageMetadata.Exists() {
 		usageMetadata = gjson.GetBytes(jsonBytes, "response.usageMetadata")
 	}
 
-	if hasNonZeroUsageMetadata(usageMetadata) {
+	// Stop chunk: keep as-is.
+	if stopReason {
 		return rawJSON, false
 	}
 
+	// Nothing to strip
 	if !usageMetadata.Exists() {
 		return rawJSON, false
 	}
@@ -465,28 +472,15 @@ func StripUsageMetadataFromJSON(rawJSON []byte) ([]byte, bool) {
 	cleaned := jsonBytes
 	var changed bool
 
-	// Try to remove usageMetadata from root level
 	if gjson.GetBytes(cleaned, "usageMetadata").Exists() {
 		cleaned, _ = sjson.DeleteBytes(cleaned, "usageMetadata")
 		changed = true
 	}
 
-	// Try to remove usageMetadata from response level
 	if gjson.GetBytes(cleaned, "response.usageMetadata").Exists() {
 		cleaned, _ = sjson.DeleteBytes(cleaned, "response.usageMetadata")
 		changed = true
 	}
 
 	return cleaned, changed
-}
-
-// hasNonZeroUsageMetadata checks if any usage token counts are present.
-func hasNonZeroUsageMetadata(node gjson.Result) bool {
-	if !node.Exists() {
-		return false
-	}
-	return node.Get("totalTokenCount").Int() > 0 ||
-		node.Get("promptTokenCount").Int() > 0 ||
-		node.Get("candidatesTokenCount").Int() > 0 ||
-		node.Get("thoughtsTokenCount").Int() > 0
 }
