@@ -365,6 +365,57 @@ func parseGeminiCLIStreamUsage(line []byte) (usage.Detail, bool) {
 	return detail, true
 }
 
+func parseAntigravityUsage(data []byte) usage.Detail {
+	usageNode := gjson.ParseBytes(data)
+	node := usageNode.Get("response.usageMetadata")
+	if !node.Exists() {
+		node = usageNode.Get("usageMetadata")
+	}
+	if !node.Exists() {
+		node = usageNode.Get("usage_metadata")
+	}
+	if !node.Exists() {
+		return usage.Detail{}
+	}
+	detail := usage.Detail{
+		InputTokens:     node.Get("promptTokenCount").Int(),
+		OutputTokens:    node.Get("candidatesTokenCount").Int(),
+		ReasoningTokens: node.Get("thoughtsTokenCount").Int(),
+		TotalTokens:     node.Get("totalTokenCount").Int(),
+	}
+	if detail.TotalTokens == 0 {
+		detail.TotalTokens = detail.InputTokens + detail.OutputTokens + detail.ReasoningTokens
+	}
+	return detail
+}
+
+func parseAntigravityStreamUsage(line []byte) (usage.Detail, bool) {
+	payload := jsonPayload(line)
+	if len(payload) == 0 || !gjson.ValidBytes(payload) {
+		return usage.Detail{}, false
+	}
+	node := gjson.GetBytes(payload, "response.usageMetadata")
+	if !node.Exists() {
+		node = gjson.GetBytes(payload, "usageMetadata")
+	}
+	if !node.Exists() {
+		node = gjson.GetBytes(payload, "usage_metadata")
+	}
+	if !node.Exists() {
+		return usage.Detail{}, false
+	}
+	detail := usage.Detail{
+		InputTokens:     node.Get("promptTokenCount").Int(),
+		OutputTokens:    node.Get("candidatesTokenCount").Int(),
+		ReasoningTokens: node.Get("thoughtsTokenCount").Int(),
+		TotalTokens:     node.Get("totalTokenCount").Int(),
+	}
+	if detail.TotalTokens == 0 {
+		detail.TotalTokens = detail.InputTokens + detail.OutputTokens + detail.ReasoningTokens
+	}
+	return detail, true
+}
+
 func jsonPayload(line []byte) []byte {
 	trimmed := bytes.TrimSpace(line)
 	if len(trimmed) == 0 {

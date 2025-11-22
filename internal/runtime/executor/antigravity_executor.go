@@ -104,6 +104,7 @@ func (e *AntigravityExecutor) Execute(ctx context.Context, auth *cliproxyauth.Au
 		return resp, err
 	}
 
+	reporter.publish(ctx, parseAntigravityUsage(bodyBytes))
 	var param any
 	converted := sdktranslator.TranslateNonStream(ctx, to, from, req.Model, bytes.Clone(opts.OriginalRequest), translated, bodyBytes, &param)
 	resp = cliproxyexecutor.Response{Payload: []byte(converted)}
@@ -175,6 +176,10 @@ func (e *AntigravityExecutor) ExecuteStream(ctx context.Context, auth *cliproxya
 			payload := jsonPayload(line)
 			if payload == nil {
 				continue
+			}
+
+			if detail, ok := parseAntigravityStreamUsage(payload); ok {
+				reporter.publish(ctx, detail)
 			}
 
 			chunks := sdktranslator.TranslateStream(ctx, to, from, req.Model, bytes.Clone(opts.OriginalRequest), translated, bytes.Clone(payload), &param)
