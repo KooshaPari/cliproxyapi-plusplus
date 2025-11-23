@@ -544,11 +544,20 @@ func geminiToAntigravity(modelName string, payload []byte) []byte {
 
 	template, _ = sjson.Delete(template, "request.safetySettings")
 	template, _ = sjson.Set(template, "request.toolConfig.functionCallingConfig.mode", "VALIDATED")
+	template, _ = sjson.Delete(template, "request.generationConfig.maxOutputTokens")
+	if !strings.HasPrefix(modelName, "gemini-3-") {
+		if thinkingLevel := gjson.Get(template, "request.generationConfig.thinkingConfig.thinkingLevel"); thinkingLevel.Exists() {
+			template, _ = sjson.Delete(template, "request.generationConfig.thinkingConfig.thinkingLevel")
+			template, _ = sjson.Set(template, "request.generationConfig.thinkingConfig.thinkingBudget", -1)
+		}
+	}
 
 	gjson.Get(template, "request.contents").ForEach(func(key, content gjson.Result) bool {
 		if content.Get("role").String() == "model" {
 			content.Get("parts").ForEach(func(partKey, part gjson.Result) bool {
 				if part.Get("functionCall").Exists() {
+					template, _ = sjson.Set(template, fmt.Sprintf("request.contents.%d.parts.%d.thoughtSignature", key.Int(), partKey.Int()), "skip_thought_signature_validator")
+				} else if part.Get("thoughtSignature").Exists() {
 					template, _ = sjson.Set(template, fmt.Sprintf("request.contents.%d.parts.%d.thoughtSignature", key.Int(), partKey.Int()), "skip_thought_signature_validator")
 				}
 				return true
