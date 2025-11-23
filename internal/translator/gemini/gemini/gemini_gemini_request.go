@@ -72,6 +72,20 @@ func ConvertGeminiRequestToGemini(_ string, inputRawJSON []byte, _ bool) []byte 
 		return true
 	})
 
+	gjson.GetBytes(out, "contents").ForEach(func(key, content gjson.Result) bool {
+		if content.Get("role").String() == "model" {
+			content.Get("parts").ForEach(func(partKey, part gjson.Result) bool {
+				if part.Get("functionCall").Exists() {
+					out, _ = sjson.SetBytes(out, fmt.Sprintf("contents.%d.parts.%d.thoughtSignature", key.Int(), partKey.Int()), "skip_thought_signature_validator")
+				} else if part.Get("thoughtSignature").Exists() {
+					out, _ = sjson.SetBytes(out, fmt.Sprintf("contents.%d.parts.%d.thoughtSignature", key.Int(), partKey.Int()), "skip_thought_signature_validator")
+				}
+				return true
+			})
+		}
+		return true
+	})
+
 	out = common.AttachDefaultSafetySettings(out, "safetySettings")
 
 	return out

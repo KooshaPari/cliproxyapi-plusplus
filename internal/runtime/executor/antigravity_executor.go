@@ -669,20 +669,6 @@ func geminiToAntigravity(modelName string, payload []byte) []byte {
 		}
 	}
 
-	gjson.Get(template, "request.contents").ForEach(func(key, content gjson.Result) bool {
-		if content.Get("role").String() == "model" {
-			content.Get("parts").ForEach(func(partKey, part gjson.Result) bool {
-				if part.Get("functionCall").Exists() {
-					template, _ = sjson.Set(template, fmt.Sprintf("request.contents.%d.parts.%d.thoughtSignature", key.Int(), partKey.Int()), "skip_thought_signature_validator")
-				} else if part.Get("thoughtSignature").Exists() {
-					template, _ = sjson.Set(template, fmt.Sprintf("request.contents.%d.parts.%d.thoughtSignature", key.Int(), partKey.Int()), "skip_thought_signature_validator")
-				}
-				return true
-			})
-		}
-		return true
-	})
-
 	if strings.HasPrefix(modelName, "claude-sonnet-") {
 		gjson.Get(template, "request.tools").ForEach(func(key, tool gjson.Result) bool {
 			tool.Get("functionDeclarations").ForEach(func(funKey, funcDecl gjson.Result) bool {
