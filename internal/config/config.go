@@ -63,6 +63,8 @@ type Config struct {
 
 	// RequestRetry defines the retry times when the request failed.
 	RequestRetry int `yaml:"request-retry" json:"request-retry"`
+	// MaxRetryInterval defines the maximum wait time in seconds before retrying a cooled-down credential.
+	MaxRetryInterval int `yaml:"max-retry-interval" json:"max-retry-interval"`
 
 	// ClaudeKey defines a list of Claude API key configurations as specified in the YAML configuration file.
 	ClaudeKey []ClaudeKey `yaml:"claude-api-key" json:"claude-api-key"`

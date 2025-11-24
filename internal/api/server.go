@@ -247,6 +247,9 @@ func NewServer(cfg *config.Config, authManager *auth.Manager, accessManager *sdk
 	// Save initial YAML snapshot
 	s.oldConfigYaml, _ = yaml.Marshal(cfg)
 	s.applyAccessConfig(nil, cfg)
+	if authManager != nil {
+		authManager.SetRetryConfig(cfg.RequestRetry, time.Duration(cfg.MaxRetryInterval)*time.Second)
+	}
 	managementasset.SetCurrentConfig(cfg)
 	auth.SetQuotaCooldownDisabled(cfg.DisableCooling)
 	// Initialize management handler
@@ -521,6 +524,9 @@ func (s *Server) registerManagementRoutes() {
 		mgmt.GET("/request-retry", s.mgmt.GetRequestRetry)
 		mgmt.PUT("/request-retry", s.mgmt.PutRequestRetry)
 		mgmt.PATCH("/request-retry", s.mgmt.PutRequestRetry)
+		mgmt.GET("/max-retry-interval", s.mgmt.GetMaxRetryInterval)
+		mgmt.PUT("/max-retry-interval", s.mgmt.PutMaxRetryInterval)
+		mgmt.PATCH("/max-retry-interval", s.mgmt.PutMaxRetryInterval)
 
 		mgmt.GET("/claude-api-key", s.mgmt.GetClaudeKeys)
 		mgmt.PUT("/claude-api-key", s.mgmt.PutClaudeKeys)
@@ -815,6 +821,9 @@ func (s *Server) UpdateClients(cfg *config.Config) {
 		} else {
 			log.Debugf("disable_cooling toggled to %t", cfg.DisableCooling)
 		}
+	}
+	if s.handlers != nil && s.handlers.AuthManager != nil {
+		s.handlers.AuthManager.SetRetryConfig(cfg.RequestRetry, time.Duration(cfg.MaxRetryInterval)*time.Second)
 	}
 
 	// Update log level dynamically when debug flag changes
