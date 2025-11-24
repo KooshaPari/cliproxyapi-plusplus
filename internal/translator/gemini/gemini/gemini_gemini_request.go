@@ -30,8 +30,10 @@ func ConvertGeminiRequestToGemini(_ string, inputRawJSON []byte, _ bool) []byte 
 	if toolsResult.Exists() && toolsResult.IsArray() {
 		toolResults := toolsResult.Array()
 		for i := 0; i < len(toolResults); i++ {
-			strJson, _ := util.RenameKey(string(rawJSON), fmt.Sprintf("tools.%d.functionDeclarations", i), fmt.Sprintf("tools.%d.function_declarations", i))
-			rawJSON = []byte(strJson)
+			if gjson.GetBytes(rawJSON, fmt.Sprintf("tools.%d.functionDeclarations", i)).Exists() {
+				strJson, _ := util.RenameKey(string(rawJSON), fmt.Sprintf("tools.%d.functionDeclarations", i), fmt.Sprintf("tools.%d.function_declarations", i))
+				rawJSON = []byte(strJson)
+			}
 
 			functionDeclarationsResult := gjson.GetBytes(rawJSON, fmt.Sprintf("tools.%d.function_declarations", i))
 			if functionDeclarationsResult.Exists() && functionDeclarationsResult.IsArray() {
@@ -39,7 +41,7 @@ func ConvertGeminiRequestToGemini(_ string, inputRawJSON []byte, _ bool) []byte 
 				for j := 0; j < len(functionDeclarationsResults); j++ {
 					parametersResult := gjson.GetBytes(rawJSON, fmt.Sprintf("tools.%d.function_declarations.%d.parameters", i, j))
 					if parametersResult.Exists() {
-						strJson, _ = util.RenameKey(string(rawJSON), fmt.Sprintf("tools.%d.function_declarations.%d.parameters", i, j), fmt.Sprintf("tools.%d.function_declarations.%d.parametersJsonSchema", i, j))
+						strJson, _ := util.RenameKey(string(rawJSON), fmt.Sprintf("tools.%d.function_declarations.%d.parameters", i, j), fmt.Sprintf("tools.%d.function_declarations.%d.parametersJsonSchema", i, j))
 						rawJSON = []byte(strJson)
 					}
 				}
