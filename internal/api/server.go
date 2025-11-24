@@ -694,17 +694,33 @@ func (s *Server) unifiedModelsHandler(openaiHandler *openai.OpenAIAPIHandler, cl
 	}
 }
 
-// Start begins listening for and serving HTTP requests.
+// Start begins listening for and serving HTTP or HTTPS requests.
 // It's a blocking call and will only return on an unrecoverable error.
 //
 // Returns:
 //   - error: An error if the server fails to start
 func (s *Server) Start() error {
-	log.Debugf("Starting API server on %s", s.server.Addr)
+	if s == nil || s.server == nil {
+		return fmt.Errorf("failed to start HTTP server: server not initialized")
+	}
 
-	// Start the HTTP server.
-	if err := s.server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		return fmt.Errorf("failed to start HTTP server: %v", err)
+	useTLS := s.cfg != nil && s.cfg.TLS.Enable
+	if useTLS {
+		cert := strings.TrimSpace(s.cfg.TLS.Cert)
+		key := strings.TrimSpace(s.cfg.TLS.Key)
+		if cert == "" || key == "" {
+			return fmt.Errorf("failed to start HTTPS server: tls.cert or tls.key is empty")
+		}
+		log.Debugf("Starting API server on %s with TLS", s.server.Addr)
+		if errServeTLS := s.server.ListenAndServeTLS(cert, key); errServeTLS != nil && !errors.Is(errServeTLS, http.ErrServerClosed) {
+			return fmt.Errorf("failed to start HTTPS server: %v", errServeTLS)
+		}
+		return nil
+	}
+
+	log.Debugf("Starting API server on %s", s.server.Addr)
+	if errServe := s.server.ListenAndServe(); errServe != nil && !errors.Is(errServe, http.ErrServerClosed) {
+		return fmt.Errorf("failed to start HTTP server: %v", errServe)
 	}
 
 	return nil
