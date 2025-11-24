@@ -26,7 +26,7 @@ func GetClaudeModels() []*ModelInfo {
 		{
 			ID:                  "claude-opus-4-5-20251101",
 			Object:              "model",
-			Created:             1730419200, // 2025-11-01
+			Created:             1761955200, // 2025-11-01
 			OwnedBy:             "anthropic",
 			Type:                "claude",
 			DisplayName:         "Claude 4.5 Opus",
