@@ -58,8 +58,14 @@ func (h *Handler) GetLogs(c *gin.Context) {
 		return
 	}
 
+	limit, errLimit := parseLimit(c.Query("limit"))
+	if errLimit != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("invalid limit: %v", errLimit)})
+		return
+	}
+
 	cutoff := parseCutoff(c.Query("after"))
-	acc := newLogAccumulator(cutoff)
+	acc := newLogAccumulator(cutoff, limit)
 	for i := range files {
 		if errProcess := acc.consumeFile(files[i]); errProcess != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("failed to read log file %s: %v", files[i], errProcess)})
@@ -314,16 +320,22 @@ func (h *Handler) collectLogFiles(dir string) ([]string, error) {
 
 type logAccumulator struct {
 	cutoff  int64
+	limit   int
 	lines   []string
 	total   int
 	latest  int64
 	include bool
 }
 
-func newLogAccumulator(cutoff int64) *logAccumulator {
+func newLogAccumulator(cutoff int64, limit int) *logAccumulator {
+	capacity := 256
+	if limit > 0 && limit < capacity {
+		capacity = limit
+	}
 	return &logAccumulator{
 		cutoff: cutoff,
-		lines:  make([]string, 0, 256),
+		limit:  limit,
+		lines:  make([]string, 0, capacity),
 	}
 }
 
@@ -361,12 +373,19 @@ func (acc *logAccumulator) addLine(raw string) {
 	if ts > 0 {
 		acc.include = acc.cutoff == 0 || ts > acc.cutoff
 		if acc.cutoff == 0 || acc.include {
-			acc.lines = append(acc.lines, line)
+			acc.append(line)
 		}
 		return
 	}
 	if acc.cutoff == 0 || acc.include {
-		acc.lines = append(acc.lines, line)
+		acc.append(line)
+	}
+}
+
+func (acc *logAccumulator) append(line string) {
+	acc.lines = append(acc.lines, line)
+	if acc.limit > 0 && len(acc.lines) > acc.limit {
+		acc.lines = acc.lines[len(acc.lines)-acc.limit:]
 	}
 }
 
@@ -387,6 +406,21 @@ func parseCutoff(raw string) int64 {
 		return 0
 	}
 	return ts
+}
+
+func parseLimit(raw string) (int, error) {
+	value := strings.TrimSpace(raw)
+	if value == "" {
+		return 0, nil
+	}
+	limit, err := strconv.Atoi(value)
+	if err != nil {
+		return 0, fmt.Errorf("must be a positive integer")
+	}
+	if limit <= 0 {
+		return 0, fmt.Errorf("must be greater than zero")
+	}
+	return limit, nil
 }
 
 func parseTimestamp(line string) int64 {
