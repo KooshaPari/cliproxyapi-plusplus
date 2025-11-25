@@ -60,7 +60,7 @@ func (e *ClaudeExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, r
 	}
 
 	if !strings.HasPrefix(modelForUpstream, "claude-3-5-haiku") {
-		body, _ = sjson.SetRawBytes(body, "system", []byte(misc.ClaudeCodeInstructions))
+		// body, _ = sjson.SetRawBytes(body, "system", []byte(misc.ClaudeCodeInstructions))
 	}
 	body = applyPayloadConfig(e.cfg, req.Model, body)
 
@@ -154,7 +154,7 @@ func (e *ClaudeExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.A
 	if modelOverride := e.resolveUpstreamModel(req.Model, auth); modelOverride != "" {
 		body, _ = sjson.SetBytes(body, "model", modelOverride)
 	}
-	body, _ = sjson.SetRawBytes(body, "system", []byte(misc.ClaudeCodeInstructions))
+	// body, _ = sjson.SetRawBytes(body, "system", []byte(misc.ClaudeCodeInstructions))
 	body = applyPayloadConfig(e.cfg, req.Model, body)
 
 	url := fmt.Sprintf("%s/v1/messages?beta=true", baseURL)
@@ -283,7 +283,7 @@ func (e *ClaudeExecutor) CountTokens(ctx context.Context, auth *cliproxyauth.Aut
 	}
 
 	if !strings.HasPrefix(modelForUpstream, "claude-3-5-haiku") {
-		body, _ = sjson.SetRawBytes(body, "system", []byte(misc.ClaudeCodeInstructions))
+		// body, _ = sjson.SetRawBytes(body, "system", []byte(misc.ClaudeCodeInstructions))
 	}
 
 	url := fmt.Sprintf("%s/v1/messages/count_tokens?beta=true", baseURL)
