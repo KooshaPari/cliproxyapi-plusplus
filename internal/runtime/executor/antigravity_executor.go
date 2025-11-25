@@ -366,11 +366,15 @@ func FetchAntigravityModels(ctx context.Context, auth *cliproxyauth.Auth, cfg *c
 			id = modelName2Alias(id)
 			if id != "" {
 				models = append(models, &registry.ModelInfo{
-					ID:      id,
-					Object:  "model",
-					Created: now,
-					OwnedBy: antigravityAuthType,
-					Type:    antigravityAuthType,
+					ID:          id,
+					Name:        id,
+					Description: id,
+					DisplayName: id,
+					Version:     id,
+					Object:      "model",
+					Created:     now,
+					OwnedBy:     antigravityAuthType,
+					Type:        antigravityAuthType,
 				})
 			}
 		}
