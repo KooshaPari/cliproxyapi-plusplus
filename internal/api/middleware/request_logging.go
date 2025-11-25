@@ -6,6 +6,7 @@ package middleware
 import (
 	"bytes"
 	"io"
+	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -20,6 +21,11 @@ import (
 func RequestLoggingMiddleware(logger logging.RequestLogger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if logger == nil {
+			c.Next()
+			return
+		}
+
+		if c.Request.Method == http.MethodGet {
 			c.Next()
 			return
 		}
