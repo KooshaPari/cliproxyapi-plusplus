@@ -58,18 +58,24 @@ func (e *ClaudeExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, r
 		body, _ = sjson.SetBytes(body, "model", modelOverride)
 		modelForUpstream = modelOverride
 	}
+	// Inject thinking config based on model suffix for thinking variants
+	body = e.injectThinkingConfig(req.Model, body)
 
 	if !strings.HasPrefix(modelForUpstream, "claude-3-5-haiku") {
 		body, _ = sjson.SetRawBytes(body, "system", []byte(misc.ClaudeCodeInstructions))
 	}
 	body = applyPayloadConfig(e.cfg, req.Model, body)
 
+	// Extract betas from body and convert to header
+	var extraBetas []string
+	extraBetas, body = extractAndRemoveBetas(body)
+
 	url := fmt.Sprintf("%s/v1/messages?beta=true", baseURL)
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
 	if err != nil {
 		return resp, err
 	}
-	applyClaudeHeaders(httpReq, auth, apiKey, false)
+	applyClaudeHeaders(httpReq, auth, apiKey, false, extraBetas)
 	var authID, authLabel, authType, authValue string
 	if auth != nil {
 		authID = auth.ID
@@ -154,15 +160,21 @@ func (e *ClaudeExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.A
 	if modelOverride := e.resolveUpstreamModel(req.Model, auth); modelOverride != "" {
 		body, _ = sjson.SetBytes(body, "model", modelOverride)
 	}
+	// Inject thinking config based on model suffix for thinking variants
+	body = e.injectThinkingConfig(req.Model, body)
 	body, _ = sjson.SetRawBytes(body, "system", []byte(misc.ClaudeCodeInstructions))
 	body = applyPayloadConfig(e.cfg, req.Model, body)
+
+	// Extract betas from body and convert to header
+	var extraBetas []string
+	extraBetas, body = extractAndRemoveBetas(body)
 
 	url := fmt.Sprintf("%s/v1/messages?beta=true", baseURL)
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
 	if err != nil {
 		return nil, err
 	}
-	applyClaudeHeaders(httpReq, auth, apiKey, true)
+	applyClaudeHeaders(httpReq, auth, apiKey, true, extraBetas)
 	var authID, authLabel, authType, authValue string
 	if auth != nil {
 		authID = auth.ID
@@ -286,12 +298,16 @@ func (e *ClaudeExecutor) CountTokens(ctx context.Context, auth *cliproxyauth.Aut
 		body, _ = sjson.SetRawBytes(body, "system", []byte(misc.ClaudeCodeInstructions))
 	}
 
+	// Extract betas from body and convert to header (for count_tokens too)
+	var extraBetas []string
+	extraBetas, body = extractAndRemoveBetas(body)
+
 	url := fmt.Sprintf("%s/v1/messages/count_tokens?beta=true", baseURL)
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
 	if err != nil {
 		return cliproxyexecutor.Response{}, err
 	}
-	applyClaudeHeaders(httpReq, auth, apiKey, false)
+	applyClaudeHeaders(httpReq, auth, apiKey, false, extraBetas)
 	var authID, authLabel, authType, authValue string
 	if auth != nil {
 		authID = auth.ID
@@ -383,9 +399,64 @@ func (e *ClaudeExecutor) Refresh(ctx context.Context, auth *cliproxyauth.Auth) (
 	return auth, nil
 }
 
+// extractAndRemoveBetas extracts the "betas" array from the body and removes it.
+// Returns the extracted betas as a string slice and the modified body.
+func extractAndRemoveBetas(body []byte) ([]string, []byte) {
+	betasResult := gjson.GetBytes(body, "betas")
+	if !betasResult.Exists() {
+		return nil, body
+	}
+	var betas []string
+	if betasResult.IsArray() {
+		for _, item := range betasResult.Array() {
+			if s := strings.TrimSpace(item.String()); s != "" {
+				betas = append(betas, s)
+			}
+		}
+	} else if s := strings.TrimSpace(betasResult.String()); s != "" {
+		betas = append(betas, s)
+	}
+	body, _ = sjson.DeleteBytes(body, "betas")
+	return betas, body
+}
+
+// injectThinkingConfig adds thinking configuration based on model name suffix
+func (e *ClaudeExecutor) injectThinkingConfig(modelName string, body []byte) []byte {
+	// Only inject if thinking config is not already present
+	if gjson.GetBytes(body, "thinking").Exists() {
+		return body
+	}
+
+	var budgetTokens int
+	switch {
+	case strings.HasSuffix(modelName, "-thinking-low"):
+		budgetTokens = 1024
+	case strings.HasSuffix(modelName, "-thinking-medium"):
+		budgetTokens = 8192
+	case strings.HasSuffix(modelName, "-thinking-high"):
+		budgetTokens = 24576
+	case strings.HasSuffix(modelName, "-thinking"):
+		// Default thinking without suffix uses medium budget
+		budgetTokens = 8192
+	default:
+		return body
+	}
+
+	body, _ = sjson.SetBytes(body, "thinking.type", "enabled")
+	body, _ = sjson.SetBytes(body, "thinking.budget_tokens", budgetTokens)
+	return body
+}
+
 func (e *ClaudeExecutor) resolveUpstreamModel(alias string, auth *cliproxyauth.Auth) string {
 	if alias == "" {
 		return ""
+	}
+	// Hardcoded mappings for thinking models to actual Claude model names
+	switch alias {
+	case "claude-opus-4-5-thinking", "claude-opus-4-5-thinking-low", "claude-opus-4-5-thinking-medium", "claude-opus-4-5-thinking-high":
+		return "claude-opus-4-5-20251101"
+	case "claude-sonnet-4-5-thinking":
+		return "claude-sonnet-4-5-20250929"
 	}
 	entry := e.resolveClaudeConfig(auth)
 	if entry == nil {
@@ -530,7 +601,7 @@ func decodeResponseBody(body io.ReadCloser, contentEncoding string) (io.ReadClos
 	return body, nil
 }
 
-func applyClaudeHeaders(r *http.Request, auth *cliproxyauth.Auth, apiKey string, stream bool) {
+func applyClaudeHeaders(r *http.Request, auth *cliproxyauth.Auth, apiKey string, stream bool, extraBetas []string) {
 	r.Header.Set("Authorization", "Bearer "+apiKey)
 	r.Header.Set("Content-Type", "application/json")
 
@@ -539,14 +610,29 @@ func applyClaudeHeaders(r *http.Request, auth *cliproxyauth.Auth, apiKey string,
 		ginHeaders = ginCtx.Request.Header
 	}
 
+	baseBetas := "claude-code-20250219,oauth-2025-04-20,interleaved-thinking-2025-05-14,fine-grained-tool-streaming-2025-05-14"
 	if val := strings.TrimSpace(ginHeaders.Get("Anthropic-Beta")); val != "" {
+		baseBetas = val
 		if !strings.Contains(val, "oauth") {
-			val += ",oauth-2025-04-20"
+			baseBetas += ",oauth-2025-04-20"
 		}
-		r.Header.Set("Anthropic-Beta", val)
-	} else {
-		r.Header.Set("Anthropic-Beta", "claude-code-20250219,oauth-2025-04-20,interleaved-thinking-2025-05-14,fine-grained-tool-streaming-2025-05-14")
 	}
+
+	// Merge extra betas from request body
+	if len(extraBetas) > 0 {
+		existingSet := make(map[string]bool)
+		for _, b := range strings.Split(baseBetas, ",") {
+			existingSet[strings.TrimSpace(b)] = true
+		}
+		for _, beta := range extraBetas {
+			beta = strings.TrimSpace(beta)
+			if beta != "" && !existingSet[beta] {
+				baseBetas += "," + beta
+				existingSet[beta] = true
+			}
+		}
+	}
+	r.Header.Set("Anthropic-Beta", baseBetas)
 
 	misc.EnsureHeader(r.Header, ginHeaders, "Anthropic-Version", "2023-06-01")
 	misc.EnsureHeader(r.Header, ginHeaders, "Anthropic-Dangerous-Direct-Browser-Access", "true")

@@ -24,6 +24,60 @@ func GetClaudeModels() []*ModelInfo {
 			DisplayName: "Claude 4.5 Sonnet",
 		},
 		{
+			ID:          "claude-sonnet-4-5-thinking",
+			Object:      "model",
+			Created:     1759104000, // 2025-09-29
+			OwnedBy:     "anthropic",
+			Type:        "claude",
+			DisplayName: "Claude 4.5 Sonnet Thinking",
+			Thinking:    &ThinkingSupport{Min: 1024, Max: 100000, ZeroAllowed: false, DynamicAllowed: true},
+		},
+		{
+			ID:          "gemini-claude-sonnet-4-5-thinking",
+			Object:      "model",
+			Created:     1759104000, // 2025-09-29
+			OwnedBy:     "anthropic",
+			Type:        "claude",
+			DisplayName: "Gemini Claude 4.5 Sonnet Thinking",
+			Thinking:    &ThinkingSupport{Min: 1024, Max: 100000, ZeroAllowed: false, DynamicAllowed: true},
+		},
+		{
+			ID:          "claude-opus-4-5-thinking",
+			Object:      "model",
+			Created:     1761955200, // 2025-11-01
+			OwnedBy:     "anthropic",
+			Type:        "claude",
+			DisplayName: "Claude 4.5 Opus Thinking",
+			Thinking:    &ThinkingSupport{Min: 1024, Max: 100000, ZeroAllowed: false, DynamicAllowed: true},
+		},
+		{
+			ID:          "claude-opus-4-5-thinking-low",
+			Object:      "model",
+			Created:     1761955200, // 2025-11-01
+			OwnedBy:     "anthropic",
+			Type:        "claude",
+			DisplayName: "Claude 4.5 Opus Thinking Low",
+			Thinking:    &ThinkingSupport{Min: 1024, Max: 100000, ZeroAllowed: false, DynamicAllowed: true},
+		},
+		{
+			ID:          "claude-opus-4-5-thinking-medium",
+			Object:      "model",
+			Created:     1761955200, // 2025-11-01
+			OwnedBy:     "anthropic",
+			Type:        "claude",
+			DisplayName: "Claude 4.5 Opus Thinking Medium",
+			Thinking:    &ThinkingSupport{Min: 1024, Max: 100000, ZeroAllowed: false, DynamicAllowed: true},
+		},
+		{
+			ID:          "claude-opus-4-5-thinking-high",
+			Object:      "model",
+			Created:     1761955200, // 2025-11-01
+			OwnedBy:     "anthropic",
+			Type:        "claude",
+			DisplayName: "Claude 4.5 Opus Thinking High",
+			Thinking:    &ThinkingSupport{Min: 1024, Max: 100000, ZeroAllowed: false, DynamicAllowed: true},
+		},
+		{
 			ID:                  "claude-opus-4-5-20251101",
 			Object:              "model",
 			Created:             1761955200, // 2025-11-01
