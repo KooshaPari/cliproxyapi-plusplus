@@ -62,7 +62,7 @@ func (e *ClaudeExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, r
 	body = e.injectThinkingConfig(req.Model, body)
 
 	if !strings.HasPrefix(modelForUpstream, "claude-3-5-haiku") {
-		body, _ = sjson.SetRawBytes(body, "system", []byte(misc.ClaudeCodeInstructions))
+		// body, _ = sjson.SetRawBytes(body, "system", []byte(misc.ClaudeCodeInstructions))
 	}
 	body = applyPayloadConfig(e.cfg, req.Model, body)
 
@@ -162,7 +162,7 @@ func (e *ClaudeExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.A
 	}
 	// Inject thinking config based on model suffix for thinking variants
 	body = e.injectThinkingConfig(req.Model, body)
-	body, _ = sjson.SetRawBytes(body, "system", []byte(misc.ClaudeCodeInstructions))
+	// body, _ = sjson.SetRawBytes(body, "system", []byte(misc.ClaudeCodeInstructions))
 	body = applyPayloadConfig(e.cfg, req.Model, body)
 
 	// Extract betas from body and convert to header
@@ -295,7 +295,7 @@ func (e *ClaudeExecutor) CountTokens(ctx context.Context, auth *cliproxyauth.Aut
 	}
 
 	if !strings.HasPrefix(modelForUpstream, "claude-3-5-haiku") {
-		body, _ = sjson.SetRawBytes(body, "system", []byte(misc.ClaudeCodeInstructions))
+		// body, _ = sjson.SetRawBytes(body, "system", []byte(misc.ClaudeCodeInstructions))
 	}
 
 	// Extract betas from body and convert to header (for count_tokens too)
