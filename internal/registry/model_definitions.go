@@ -33,15 +33,6 @@ func GetClaudeModels() []*ModelInfo {
 			Thinking:    &ThinkingSupport{Min: 1024, Max: 100000, ZeroAllowed: false, DynamicAllowed: true},
 		},
 		{
-			ID:          "gemini-claude-sonnet-4-5-thinking",
-			Object:      "model",
-			Created:     1759104000, // 2025-09-29
-			OwnedBy:     "anthropic",
-			Type:        "claude",
-			DisplayName: "Gemini Claude 4.5 Sonnet Thinking",
-			Thinking:    &ThinkingSupport{Min: 1024, Max: 100000, ZeroAllowed: false, DynamicAllowed: true},
-		},
-		{
 			ID:          "claude-opus-4-5-thinking",
 			Object:      "model",
 			Created:     1761955200, // 2025-11-01
@@ -193,6 +184,20 @@ func GetGeminiModels() []*ModelInfo {
 			OutputTokenLimit:           65536,
 			SupportedGenerationMethods: []string{"generateContent", "countTokens", "createCachedContent", "batchGenerateContent"},
 			Thinking:                   &ThinkingSupport{Min: 128, Max: 32768, ZeroAllowed: false, DynamicAllowed: true},
+		},
+		{
+			ID:                         "gemini-3-pro-image-preview",
+			Object:                     "model",
+			Created:                    1737158400,
+			OwnedBy:                    "google",
+			Type:                       "gemini",
+			Name:                       "models/gemini-3-pro-image-preview",
+			Version:                    "3.0",
+			DisplayName:                "Gemini 3 Pro Image Preview",
+			Description:                "Gemini 3 Pro Image Preview",
+			InputTokenLimit:            1048576,
+			OutputTokenLimit:           65536,
+			SupportedGenerationMethods: []string{"generateContent", "countTokens", "createCachedContent", "batchGenerateContent"},
 		},
 	}
 }
