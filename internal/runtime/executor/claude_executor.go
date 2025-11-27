@@ -17,6 +17,7 @@ import (
 	claudeauth "github.com/router-for-me/CLIProxyAPI/v6/internal/auth/claude"
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/config"
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/misc"
+	"github.com/router-for-me/CLIProxyAPI/v6/internal/registry"
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/util"
 	cliproxyauth "github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/auth"
 	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/executor"
@@ -65,6 +66,9 @@ func (e *ClaudeExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, r
 		body = checkSystemInstructions(body)
 	}
 	body = applyPayloadConfig(e.cfg, req.Model, body)
+
+	// Ensure max_tokens > thinking.budget_tokens when thinking is enabled
+	body = ensureMaxTokensForThinking(req.Model, body)
 
 	// Extract betas from body and convert to header
 	var extraBetas []string
@@ -164,6 +168,9 @@ func (e *ClaudeExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.A
 	body = e.injectThinkingConfig(req.Model, body)
 	body = checkSystemInstructions(body)
 	body = applyPayloadConfig(e.cfg, req.Model, body)
+
+	// Ensure max_tokens > thinking.budget_tokens when thinking is enabled
+	body = ensureMaxTokensForThinking(req.Model, body)
 
 	// Extract betas from body and convert to header
 	var extraBetas []string
@@ -444,6 +451,42 @@ func (e *ClaudeExecutor) injectThinkingConfig(modelName string, body []byte) []b
 
 	body, _ = sjson.SetBytes(body, "thinking.type", "enabled")
 	body, _ = sjson.SetBytes(body, "thinking.budget_tokens", budgetTokens)
+	return body
+}
+
+// ensureMaxTokensForThinking ensures max_tokens > thinking.budget_tokens when thinking is enabled.
+// Anthropic API requires this constraint; violating it returns a 400 error.
+// This function should be called after all thinking configuration is finalized.
+// It looks up the model's MaxCompletionTokens from the registry to use as the cap.
+func ensureMaxTokensForThinking(modelName string, body []byte) []byte {
+	thinkingType := gjson.GetBytes(body, "thinking.type").String()
+	if thinkingType != "enabled" {
+		return body
+	}
+
+	budgetTokens := gjson.GetBytes(body, "thinking.budget_tokens").Int()
+	if budgetTokens <= 0 {
+		return body
+	}
+
+	maxTokens := gjson.GetBytes(body, "max_tokens").Int()
+
+	// Look up the model's max completion tokens from the registry
+	maxCompletionTokens := 0
+	if modelInfo := registry.GetGlobalRegistry().GetModelInfo(modelName); modelInfo != nil {
+		maxCompletionTokens = modelInfo.MaxCompletionTokens
+	}
+
+	// Fall back to budget + buffer if registry lookup fails or returns 0
+	const fallbackBuffer = 4000
+	requiredMaxTokens := budgetTokens + fallbackBuffer
+	if maxCompletionTokens > 0 {
+		requiredMaxTokens = int64(maxCompletionTokens)
+	}
+
+	if maxTokens < requiredMaxTokens {
+		body, _ = sjson.SetBytes(body, "max_tokens", requiredMaxTokens)
+	}
 	return body
 }
 
