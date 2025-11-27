@@ -640,6 +640,9 @@ func (s *Service) registerModelsForAuth(a *coreauth.Auth) {
 	switch provider {
 	case "gemini":
 		models = registry.GetGeminiModels()
+		if entry := s.resolveConfigGeminiKey(a); entry != nil {
+			models = applyModelBlacklist(models, entry.ModelBlacklist)
+		}
 	case "vertex":
 		// Vertex AI Gemini supports the same model identifiers as Gemini.
 		models = registry.GetGeminiVertexModels()
@@ -653,11 +656,17 @@ func (s *Service) registerModelsForAuth(a *coreauth.Auth) {
 		cancel()
 	case "claude":
 		models = registry.GetClaudeModels()
-		if entry := s.resolveConfigClaudeKey(a); entry != nil && len(entry.Models) > 0 {
-			models = buildClaudeConfigModels(entry)
+		if entry := s.resolveConfigClaudeKey(a); entry != nil {
+			if len(entry.Models) > 0 {
+				models = buildClaudeConfigModels(entry)
+			}
+			models = applyModelBlacklist(models, entry.ModelBlacklist)
 		}
 	case "codex":
 		models = registry.GetOpenAIModels()
+		if entry := s.resolveConfigCodexKey(a); entry != nil {
+			models = applyModelBlacklist(models, entry.ModelBlacklist)
+		}
 	case "qwen":
 		models = registry.GetQwenModels()
 	case "iflow":
@@ -749,7 +758,10 @@ func (s *Service) registerModelsForAuth(a *coreauth.Auth) {
 			key = strings.ToLower(strings.TrimSpace(a.Provider))
 		}
 		GlobalModelRegistry().RegisterClient(a.ID, key, models)
+		return
 	}
+
+	GlobalModelRegistry().UnregisterClient(a.ID)
 }
 
 func (s *Service) resolveConfigClaudeKey(auth *coreauth.Auth) *config.ClaudeKey {
@@ -789,6 +801,84 @@ func (s *Service) resolveConfigClaudeKey(auth *coreauth.Auth) *config.ClaudeKey 
 		}
 	}
 	return nil
+}
+
+func (s *Service) resolveConfigGeminiKey(auth *coreauth.Auth) *config.GeminiKey {
+	if auth == nil || s.cfg == nil {
+		return nil
+	}
+	var attrKey, attrBase string
+	if auth.Attributes != nil {
+		attrKey = strings.TrimSpace(auth.Attributes["api_key"])
+		attrBase = strings.TrimSpace(auth.Attributes["base_url"])
+	}
+	for i := range s.cfg.GeminiKey {
+		entry := &s.cfg.GeminiKey[i]
+		cfgKey := strings.TrimSpace(entry.APIKey)
+		cfgBase := strings.TrimSpace(entry.BaseURL)
+		if attrKey != "" && strings.EqualFold(cfgKey, attrKey) {
+			if cfgBase == "" || strings.EqualFold(cfgBase, attrBase) {
+				return entry
+			}
+			continue
+		}
+		if attrKey == "" && attrBase != "" && strings.EqualFold(cfgBase, attrBase) {
+			return entry
+		}
+	}
+	return nil
+}
+
+func (s *Service) resolveConfigCodexKey(auth *coreauth.Auth) *config.CodexKey {
+	if auth == nil || s.cfg == nil {
+		return nil
+	}
+	var attrKey, attrBase string
+	if auth.Attributes != nil {
+		attrKey = strings.TrimSpace(auth.Attributes["api_key"])
+		attrBase = strings.TrimSpace(auth.Attributes["base_url"])
+	}
+	for i := range s.cfg.CodexKey {
+		entry := &s.cfg.CodexKey[i]
+		cfgKey := strings.TrimSpace(entry.APIKey)
+		cfgBase := strings.TrimSpace(entry.BaseURL)
+		if attrKey != "" && strings.EqualFold(cfgKey, attrKey) {
+			if cfgBase == "" || strings.EqualFold(cfgBase, attrBase) {
+				return entry
+			}
+			continue
+		}
+		if attrKey == "" && attrBase != "" && strings.EqualFold(cfgBase, attrBase) {
+			return entry
+		}
+	}
+	return nil
+}
+
+func applyModelBlacklist(models []*ModelInfo, blacklist []string) []*ModelInfo {
+	if len(models) == 0 || len(blacklist) == 0 {
+		return models
+	}
+	blocked := make(map[string]struct{}, len(blacklist))
+	for _, item := range blacklist {
+		if trimmed := strings.TrimSpace(item); trimmed != "" {
+			blocked[strings.ToLower(trimmed)] = struct{}{}
+		}
+	}
+	if len(blocked) == 0 {
+		return models
+	}
+	filtered := make([]*ModelInfo, 0, len(models))
+	for _, model := range models {
+		if model == nil {
+			continue
+		}
+		if _, blockedModel := blocked[strings.ToLower(strings.TrimSpace(model.ID))]; blockedModel {
+			continue
+		}
+		filtered = append(filtered, model)
+	}
+	return filtered
 }
 
 func buildClaudeConfigModels(entry *config.ClaudeKey) []*ModelInfo {

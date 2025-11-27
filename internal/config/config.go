@@ -157,6 +157,9 @@ type ClaudeKey struct {
 
 	// Headers optionally adds extra HTTP headers for requests sent with this key.
 	Headers map[string]string `yaml:"headers,omitempty" json:"headers,omitempty"`
+
+	// ModelBlacklist lists model IDs that should be excluded for this provider.
+	ModelBlacklist []string `yaml:"model-blacklist,omitempty" json:"model-blacklist,omitempty"`
 }
 
 // ClaudeModel describes a mapping between an alias and the actual upstream model name.
@@ -183,6 +186,9 @@ type CodexKey struct {
 
 	// Headers optionally adds extra HTTP headers for requests sent with this key.
 	Headers map[string]string `yaml:"headers,omitempty" json:"headers,omitempty"`
+
+	// ModelBlacklist lists model IDs that should be excluded for this provider.
+	ModelBlacklist []string `yaml:"model-blacklist,omitempty" json:"model-blacklist,omitempty"`
 }
 
 // GeminiKey represents the configuration for a Gemini API key,
@@ -199,6 +205,9 @@ type GeminiKey struct {
 
 	// Headers optionally adds extra HTTP headers for requests sent with this key.
 	Headers map[string]string `yaml:"headers,omitempty" json:"headers,omitempty"`
+
+	// ModelBlacklist lists model IDs that should be excluded for this provider.
+	ModelBlacklist []string `yaml:"model-blacklist,omitempty" json:"model-blacklist,omitempty"`
 }
 
 // OpenAICompatibility represents the configuration for OpenAI API compatibility

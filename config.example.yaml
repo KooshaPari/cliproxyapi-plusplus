@@ -62,6 +62,8 @@ ws-auth: false
 #    headers:
 #      X-Custom-Header: "custom-value"
 #    proxy-url: "socks5://proxy.example.com:1080"
+#    model-blacklist:
+#      - "gemini-2.0-pro-exp" # exclude specific models from this provider
 #  - api-key: "AIzaSy...02"
 
 # API keys for official Generative Language API (legacy compatibility)
@@ -76,6 +78,8 @@ ws-auth: false
 #    headers:
 #      X-Custom-Header: "custom-value"
 #    proxy-url: "socks5://proxy.example.com:1080" # optional: per-key proxy override
+#    model-blacklist:
+#      - "gpt-5" # exclude specific models from this provider
 
 # Claude API keys
 #claude-api-key:
@@ -88,6 +92,8 @@ ws-auth: false
 #    models:
 #      - name: "claude-3-5-sonnet-20241022" # upstream model name
 #        alias: "claude-sonnet-latest" # client alias mapped to the upstream model
+#    model-blacklist:
+#      - "claude-3-5-sonnet-20241022" # exclude specific models from this provider
 
 # OpenAI compatibility providers
 #openai-compatibility:

@@ -450,6 +450,28 @@ func computeClaudeModelsHash(models []config.ClaudeModel) string {
 	return hex.EncodeToString(sum[:])
 }
 
+func computeModelBlacklistHash(blacklist []string) string {
+	if len(blacklist) == 0 {
+		return ""
+	}
+	normalized := make([]string, 0, len(blacklist))
+	for _, entry := range blacklist {
+		if trimmed := strings.TrimSpace(entry); trimmed != "" {
+			normalized = append(normalized, strings.ToLower(trimmed))
+		}
+	}
+	if len(normalized) == 0 {
+		return ""
+	}
+	sort.Strings(normalized)
+	data, err := json.Marshal(normalized)
+	if err != nil || len(data) == 0 {
+		return ""
+	}
+	sum := sha256.Sum256(data)
+	return hex.EncodeToString(sum[:])
+}
+
 // SetClients sets the file-based clients.
 // SetClients removed
 // SetAPIKeyClients removed
@@ -838,6 +860,9 @@ func (w *Watcher) SnapshotCoreAuths() []*coreauth.Auth {
 			if base != "" {
 				attrs["base_url"] = base
 			}
+			if hash := computeModelBlacklistHash(entry.ModelBlacklist); hash != "" {
+				attrs["model_blacklist_hash"] = hash
+			}
 			addConfigHeadersToAttrs(entry.Headers, attrs)
 			a := &coreauth.Auth{
 				ID:         id,
@@ -870,6 +895,9 @@ func (w *Watcher) SnapshotCoreAuths() []*coreauth.Auth {
 			if hash := computeClaudeModelsHash(ck.Models); hash != "" {
 				attrs["models_hash"] = hash
 			}
+			if hash := computeModelBlacklistHash(ck.ModelBlacklist); hash != "" {
+				attrs["model_blacklist_hash"] = hash
+			}
 			addConfigHeadersToAttrs(ck.Headers, attrs)
 			proxyURL := strings.TrimSpace(ck.ProxyURL)
 			a := &coreauth.Auth{
@@ -898,6 +926,9 @@ func (w *Watcher) SnapshotCoreAuths() []*coreauth.Auth {
 			}
 			if ck.BaseURL != "" {
 				attrs["base_url"] = ck.BaseURL
+			}
+			if hash := computeModelBlacklistHash(ck.ModelBlacklist); hash != "" {
+				attrs["model_blacklist_hash"] = hash
 			}
 			addConfigHeadersToAttrs(ck.Headers, attrs)
 			proxyURL := strings.TrimSpace(ck.ProxyURL)
