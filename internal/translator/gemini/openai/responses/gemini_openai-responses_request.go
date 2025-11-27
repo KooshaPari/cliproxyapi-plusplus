@@ -187,7 +187,7 @@ func ConvertOpenAIResponsesRequestToGemini(modelName string, inputRawJSON []byte
 				// Handle function call outputs - convert to function message with functionResponse
 				callID := item.Get("call_id").String()
 				// Use .Raw to preserve the JSON encoding (includes quotes for strings)
-				outputRaw := item.Get("output").Raw
+				outputRaw := item.Get("output").Str
 
 				functionContent := `{"role":"function","parts":[]}`
 				functionResponse := `{"functionResponse":{"name":"","response":{}}}`
@@ -212,13 +212,16 @@ func ConvertOpenAIResponsesRequestToGemini(modelName string, inputRawJSON []byte
 
 				// Set the raw JSON output directly (preserves string encoding)
 				if outputRaw != "" && outputRaw != "null" {
-					functionResponse, _ = sjson.SetRaw(functionResponse, "functionResponse.response.result", outputRaw)
+					output := gjson.Parse(outputRaw)
+					if output.Type == gjson.JSON {
+						functionResponse, _ = sjson.SetRaw(functionResponse, "functionResponse.response.result", output.Raw)
+					} else {
+						functionResponse, _ = sjson.Set(functionResponse, "functionResponse.response.result", outputRaw)
+					}
 				}
-
 				functionContent, _ = sjson.SetRaw(functionContent, "parts.-1", functionResponse)
 				out, _ = sjson.SetRaw(out, "contents.-1", functionContent)
 			}
-
 			return true
 		})
 	} else if input.Exists() && input.Type == gjson.String {
