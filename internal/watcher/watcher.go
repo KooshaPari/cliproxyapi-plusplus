@@ -472,6 +472,46 @@ func computeModelBlacklistHash(blacklist []string) string {
 	return hex.EncodeToString(sum[:])
 }
 
+func applyAuthModelBlacklistMeta(auth *coreauth.Auth, cfg *config.Config, perKey []string, authKind string) {
+	if auth == nil || cfg == nil {
+		return
+	}
+	authKindKey := strings.ToLower(strings.TrimSpace(authKind))
+	seen := make(map[string]struct{})
+	add := func(list []string) {
+		for _, entry := range list {
+			if trimmed := strings.TrimSpace(entry); trimmed != "" {
+				key := strings.ToLower(trimmed)
+				if _, exists := seen[key]; exists {
+					continue
+				}
+				seen[key] = struct{}{}
+			}
+		}
+	}
+	if authKindKey == "apikey" {
+		add(perKey)
+	} else if cfg.OAuthModelBlacklist != nil {
+		providerKey := strings.ToLower(strings.TrimSpace(auth.Provider))
+		add(cfg.OAuthModelBlacklist[providerKey])
+	}
+	combined := make([]string, 0, len(seen))
+	for k := range seen {
+		combined = append(combined, k)
+	}
+	sort.Strings(combined)
+	hash := computeModelBlacklistHash(combined)
+	if auth.Attributes == nil {
+		auth.Attributes = make(map[string]string)
+	}
+	if hash != "" {
+		auth.Attributes["model_blacklist_hash"] = hash
+	}
+	if authKind != "" {
+		auth.Attributes["auth_kind"] = authKind
+	}
+}
+
 // SetClients sets the file-based clients.
 // SetClients removed
 // SetAPIKeyClients removed
@@ -860,9 +900,6 @@ func (w *Watcher) SnapshotCoreAuths() []*coreauth.Auth {
 			if base != "" {
 				attrs["base_url"] = base
 			}
-			if hash := computeModelBlacklistHash(entry.ModelBlacklist); hash != "" {
-				attrs["model_blacklist_hash"] = hash
-			}
 			addConfigHeadersToAttrs(entry.Headers, attrs)
 			a := &coreauth.Auth{
 				ID:         id,
@@ -874,6 +911,7 @@ func (w *Watcher) SnapshotCoreAuths() []*coreauth.Auth {
 				CreatedAt:  now,
 				UpdatedAt:  now,
 			}
+			applyAuthModelBlacklistMeta(a, cfg, entry.ModelBlacklist, "apikey")
 			out = append(out, a)
 		}
 		// Claude API keys -> synthesize auths
@@ -895,9 +933,6 @@ func (w *Watcher) SnapshotCoreAuths() []*coreauth.Auth {
 			if hash := computeClaudeModelsHash(ck.Models); hash != "" {
 				attrs["models_hash"] = hash
 			}
-			if hash := computeModelBlacklistHash(ck.ModelBlacklist); hash != "" {
-				attrs["model_blacklist_hash"] = hash
-			}
 			addConfigHeadersToAttrs(ck.Headers, attrs)
 			proxyURL := strings.TrimSpace(ck.ProxyURL)
 			a := &coreauth.Auth{
@@ -910,6 +945,7 @@ func (w *Watcher) SnapshotCoreAuths() []*coreauth.Auth {
 				CreatedAt:  now,
 				UpdatedAt:  now,
 			}
+			applyAuthModelBlacklistMeta(a, cfg, ck.ModelBlacklist, "apikey")
 			out = append(out, a)
 		}
 		// Codex API keys -> synthesize auths
@@ -927,9 +963,6 @@ func (w *Watcher) SnapshotCoreAuths() []*coreauth.Auth {
 			if ck.BaseURL != "" {
 				attrs["base_url"] = ck.BaseURL
 			}
-			if hash := computeModelBlacklistHash(ck.ModelBlacklist); hash != "" {
-				attrs["model_blacklist_hash"] = hash
-			}
 			addConfigHeadersToAttrs(ck.Headers, attrs)
 			proxyURL := strings.TrimSpace(ck.ProxyURL)
 			a := &coreauth.Auth{
@@ -942,6 +975,7 @@ func (w *Watcher) SnapshotCoreAuths() []*coreauth.Auth {
 				CreatedAt:  now,
 				UpdatedAt:  now,
 			}
+			applyAuthModelBlacklistMeta(a, cfg, ck.ModelBlacklist, "apikey")
 			out = append(out, a)
 		}
 		for i := range cfg.OpenAICompatibility {
@@ -1102,8 +1136,12 @@ func (w *Watcher) SnapshotCoreAuths() []*coreauth.Auth {
 			CreatedAt: now,
 			UpdatedAt: now,
 		}
+		applyAuthModelBlacklistMeta(a, cfg, nil, "oauth")
 		if provider == "gemini-cli" {
 			if virtuals := synthesizeGeminiVirtualAuths(a, metadata, now); len(virtuals) > 0 {
+				for _, v := range virtuals {
+					applyAuthModelBlacklistMeta(v, cfg, nil, "oauth")
+				}
 				out = append(out, a)
 				out = append(out, virtuals...)
 				continue

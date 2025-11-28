@@ -83,6 +83,9 @@ type Config struct {
 
 	// Payload defines default and override rules for provider payload parameters.
 	Payload PayloadConfig `yaml:"payload" json:"payload"`
+
+	// OAuthModelBlacklist defines per-provider global model blacklists applied to OAuth/file-backed auth entries.
+	OAuthModelBlacklist map[string][]string `yaml:"oauth-model-blacklist,omitempty" json:"oauth-model-blacklist,omitempty"`
 }
 
 // TLSConfig holds HTTPS server settings.
