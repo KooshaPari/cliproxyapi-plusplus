@@ -146,6 +146,27 @@ func (s *Service) consumeAuthUpdates(ctx context.Context) {
 	}
 }
 
+func (s *Service) emitAuthUpdate(ctx context.Context, update watcher.AuthUpdate) {
+	if s == nil {
+		return
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if s.watcher != nil && s.watcher.DispatchRuntimeAuthUpdate(update) {
+		return
+	}
+	if s.authUpdates != nil {
+		select {
+		case s.authUpdates <- update:
+			return
+		default:
+			log.Debugf("auth update queue saturated, applying inline action=%v id=%s", update.Action, update.ID)
+		}
+	}
+	s.handleAuthUpdate(ctx, update)
+}
+
 func (s *Service) handleAuthUpdate(ctx context.Context, update watcher.AuthUpdate) {
 	if s == nil {
 		return
@@ -220,7 +241,11 @@ func (s *Service) wsOnConnected(channelID string) {
 		Metadata:   map[string]any{"email": channelID}, // metadata drives logging and usage tracking
 	}
 	log.Infof("websocket provider connected: %s", channelID)
-	s.applyCoreAuthAddOrUpdate(context.Background(), auth)
+	s.emitAuthUpdate(context.Background(), watcher.AuthUpdate{
+		Action: watcher.AuthUpdateActionAdd,
+		ID:     auth.ID,
+		Auth:   auth,
+	})
 }
 
 func (s *Service) wsOnDisconnected(channelID string, reason error) {
@@ -237,7 +262,10 @@ func (s *Service) wsOnDisconnected(channelID string, reason error) {
 		log.Infof("websocket provider disconnected: %s", channelID)
 	}
 	ctx := context.Background()
-	s.applyCoreAuthRemoval(ctx, channelID)
+	s.emitAuthUpdate(ctx, watcher.AuthUpdate{
+		Action: watcher.AuthUpdateActionDelete,
+		ID:     channelID,
+	})
 }
 
 func (s *Service) applyCoreAuthAddOrUpdate(ctx context.Context, auth *coreauth.Auth) {
