@@ -23,11 +23,13 @@ type Option func(*AmpModule)
 //   - Reverse proxy to Amp control plane for OAuth/management
 //   - Provider-specific route aliases (/api/provider/{provider}/...)
 //   - Automatic gzip decompression for misconfigured upstreams
+//   - Model mapping for routing unavailable models to alternatives
 type AmpModule struct {
 	secretSource    SecretSource
 	proxy           *httputil.ReverseProxy
 	accessManager   *sdkaccess.Manager
 	authMiddleware_ gin.HandlerFunc
+	modelMapper     *DefaultModelMapper
 	enabled         bool
 	registerOnce    sync.Once
 }
@@ -101,6 +103,9 @@ func (m *AmpModule) Register(ctx modules.Context) error {
 	// Use registerOnce to ensure routes are only registered once
 	var regErr error
 	m.registerOnce.Do(func() {
+		// Initialize model mapper from config (for routing unavailable models to alternatives)
+		m.modelMapper = NewModelMapper(ctx.Config.AmpModelMappings)
+
 		// Always register provider aliases - these work without an upstream
 		m.registerProviderAliases(ctx.Engine, ctx.BaseHandler, auth)
 
@@ -159,8 +164,13 @@ func (m *AmpModule) getAuthMiddleware(ctx modules.Context) gin.HandlerFunc {
 // OnConfigUpdated handles configuration updates.
 // Currently requires restart for URL changes (could be enhanced for dynamic updates).
 func (m *AmpModule) OnConfigUpdated(cfg *config.Config) error {
+	// Update model mappings (hot-reload supported)
+	if m.modelMapper != nil {
+		m.modelMapper.UpdateMappings(cfg.AmpModelMappings)
+	}
+
 	if !m.enabled {
-		log.Debug("Amp routing not enabled, skipping config update")
+		log.Debug("Amp routing not enabled, skipping other config updates")
 		return nil
 	}
 
@@ -180,4 +190,9 @@ func (m *AmpModule) OnConfigUpdated(cfg *config.Config) error {
 
 	log.Debug("Amp config updated (restart required for URL changes)")
 	return nil
+}
+
+// GetModelMapper returns the model mapper instance (for testing/debugging).
+func (m *AmpModule) GetModelMapper() *DefaultModelMapper {
+	return m.modelMapper
 }

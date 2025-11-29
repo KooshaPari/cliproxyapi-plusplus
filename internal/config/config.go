@@ -37,6 +37,12 @@ type Config struct {
 	// browser attacks and remote access to management endpoints. Default: true (recommended).
 	AmpRestrictManagementToLocalhost bool `yaml:"amp-restrict-management-to-localhost" json:"amp-restrict-management-to-localhost"`
 
+	// AmpModelMappings defines model name mappings for Amp CLI requests.
+	// When Amp requests a model that isn't available locally, these mappings
+	// allow routing to an alternative model that IS available.
+	// Example: Map "claude-opus-4.5" -> "claude-sonnet-4" when opus isn't available.
+	AmpModelMappings []AmpModelMapping `yaml:"amp-model-mappings" json:"amp-model-mappings"`
+
 	// AuthDir is the directory where authentication token files are stored.
 	AuthDir string `yaml:"auth-dir" json:"-"`
 
@@ -113,6 +119,18 @@ type QuotaExceeded struct {
 
 	// SwitchPreviewModel indicates whether to automatically switch to a preview model when a quota is exceeded.
 	SwitchPreviewModel bool `yaml:"switch-preview-model" json:"switch-preview-model"`
+}
+
+// AmpModelMapping defines a model name mapping for Amp CLI requests.
+// When Amp requests a model that isn't available locally, this mapping
+// allows routing to an alternative model that IS available.
+type AmpModelMapping struct {
+	// From is the model name that Amp CLI requests (e.g., "claude-opus-4.5").
+	From string `yaml:"from" json:"from"`
+
+	// To is the target model name to route to (e.g., "claude-sonnet-4").
+	// The target model must have available providers in the registry.
+	To string `yaml:"to" json:"to"`
 }
 
 // PayloadConfig defines default and override parameter rules applied to provider payloads.
