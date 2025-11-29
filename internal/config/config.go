@@ -84,8 +84,8 @@ type Config struct {
 	// Payload defines default and override rules for provider payload parameters.
 	Payload PayloadConfig `yaml:"payload" json:"payload"`
 
-	// OAuthModelBlacklist defines per-provider global model blacklists applied to OAuth/file-backed auth entries.
-	OAuthModelBlacklist map[string][]string `yaml:"oauth-model-blacklist,omitempty" json:"oauth-model-blacklist,omitempty"`
+	// OAuthExcludedModels defines per-provider global model exclusions applied to OAuth/file-backed auth entries.
+	OAuthExcludedModels map[string][]string `yaml:"oauth-excluded-models,omitempty" json:"oauth-excluded-models,omitempty"`
 }
 
 // TLSConfig holds HTTPS server settings.
@@ -161,8 +161,8 @@ type ClaudeKey struct {
 	// Headers optionally adds extra HTTP headers for requests sent with this key.
 	Headers map[string]string `yaml:"headers,omitempty" json:"headers,omitempty"`
 
-	// ModelBlacklist lists model IDs that should be excluded for this provider.
-	ModelBlacklist []string `yaml:"model-blacklist,omitempty" json:"model-blacklist,omitempty"`
+	// ExcludedModels lists model IDs that should be excluded for this provider.
+	ExcludedModels []string `yaml:"excluded-models,omitempty" json:"excluded-models,omitempty"`
 }
 
 // ClaudeModel describes a mapping between an alias and the actual upstream model name.
@@ -190,8 +190,8 @@ type CodexKey struct {
 	// Headers optionally adds extra HTTP headers for requests sent with this key.
 	Headers map[string]string `yaml:"headers,omitempty" json:"headers,omitempty"`
 
-	// ModelBlacklist lists model IDs that should be excluded for this provider.
-	ModelBlacklist []string `yaml:"model-blacklist,omitempty" json:"model-blacklist,omitempty"`
+	// ExcludedModels lists model IDs that should be excluded for this provider.
+	ExcludedModels []string `yaml:"excluded-models,omitempty" json:"excluded-models,omitempty"`
 }
 
 // GeminiKey represents the configuration for a Gemini API key,
@@ -209,8 +209,8 @@ type GeminiKey struct {
 	// Headers optionally adds extra HTTP headers for requests sent with this key.
 	Headers map[string]string `yaml:"headers,omitempty" json:"headers,omitempty"`
 
-	// ModelBlacklist lists model IDs that should be excluded for this provider.
-	ModelBlacklist []string `yaml:"model-blacklist,omitempty" json:"model-blacklist,omitempty"`
+	// ExcludedModels lists model IDs that should be excluded for this provider.
+	ExcludedModels []string `yaml:"excluded-models,omitempty" json:"excluded-models,omitempty"`
 }
 
 // OpenAICompatibility represents the configuration for OpenAI API compatibility

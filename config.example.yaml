@@ -62,7 +62,7 @@ ws-auth: false
 #    headers:
 #      X-Custom-Header: "custom-value"
 #    proxy-url: "socks5://proxy.example.com:1080"
-#    model-blacklist:
+#    excluded-models:
 #      - "gemini-2.0-pro-exp" # exclude specific models from this provider
 #  - api-key: "AIzaSy...02"
 
@@ -78,7 +78,7 @@ ws-auth: false
 #    headers:
 #      X-Custom-Header: "custom-value"
 #    proxy-url: "socks5://proxy.example.com:1080" # optional: per-key proxy override
-#    model-blacklist:
+#    excluded-models:
 #      - "gpt-5" # exclude specific models from this provider
 
 # Claude API keys
@@ -92,7 +92,7 @@ ws-auth: false
 #    models:
 #      - name: "claude-3-5-sonnet-20241022" # upstream model name
 #        alias: "claude-sonnet-latest" # client alias mapped to the upstream model
-#    model-blacklist:
+#    excluded-models:
 #      - "claude-3-5-sonnet-20241022" # exclude specific models from this provider
 
 # OpenAI compatibility providers
@@ -128,8 +128,8 @@ ws-auth: false
 #      params: # JSON path (gjson/sjson syntax) -> value
 #        "reasoning.effort": "high"
 
-# OAuth provider model blacklist
-#oauth-model-blacklist:
+# OAuth provider excluded models
+#oauth-excluded-models:
 #  gemini-cli:
 #    - "gemini-3-pro-preview"
 #  vertex:

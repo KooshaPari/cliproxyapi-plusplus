@@ -509,12 +509,12 @@ func computeClaudeModelsHash(models []config.ClaudeModel) string {
 	return hex.EncodeToString(sum[:])
 }
 
-func computeModelBlacklistHash(blacklist []string) string {
-	if len(blacklist) == 0 {
+func computeExcludedModelsHash(excluded []string) string {
+	if len(excluded) == 0 {
 		return ""
 	}
-	normalized := make([]string, 0, len(blacklist))
-	for _, entry := range blacklist {
+	normalized := make([]string, 0, len(excluded))
+	for _, entry := range excluded {
 		if trimmed := strings.TrimSpace(entry); trimmed != "" {
 			normalized = append(normalized, strings.ToLower(trimmed))
 		}
@@ -531,14 +531,14 @@ func computeModelBlacklistHash(blacklist []string) string {
 	return hex.EncodeToString(sum[:])
 }
 
-type modelBlacklistSummary struct {
+type excludedModelsSummary struct {
 	hash  string
 	count int
 }
 
-func summarizeModelBlacklist(list []string) modelBlacklistSummary {
+func summarizeExcludedModels(list []string) excludedModelsSummary {
 	if len(list) == 0 {
-		return modelBlacklistSummary{}
+		return excludedModelsSummary{}
 	}
 	seen := make(map[string]struct{}, len(list))
 	normalized := make([]string, 0, len(list))
@@ -552,30 +552,30 @@ func summarizeModelBlacklist(list []string) modelBlacklistSummary {
 		}
 	}
 	sort.Strings(normalized)
-	return modelBlacklistSummary{
-		hash:  computeModelBlacklistHash(normalized),
+	return excludedModelsSummary{
+		hash:  computeExcludedModelsHash(normalized),
 		count: len(normalized),
 	}
 }
 
-func summarizeOAuthBlacklistMap(entries map[string][]string) map[string]modelBlacklistSummary {
+func summarizeOAuthExcludedModels(entries map[string][]string) map[string]excludedModelsSummary {
 	if len(entries) == 0 {
 		return nil
 	}
-	out := make(map[string]modelBlacklistSummary, len(entries))
+	out := make(map[string]excludedModelsSummary, len(entries))
 	for k, v := range entries {
 		key := strings.ToLower(strings.TrimSpace(k))
 		if key == "" {
 			continue
 		}
-		out[key] = summarizeModelBlacklist(v)
+		out[key] = summarizeExcludedModels(v)
 	}
 	return out
 }
 
-func diffOAuthBlacklistChanges(oldMap, newMap map[string][]string) ([]string, []string) {
-	oldSummary := summarizeOAuthBlacklistMap(oldMap)
-	newSummary := summarizeOAuthBlacklistMap(newMap)
+func diffOAuthExcludedModelChanges(oldMap, newMap map[string][]string) ([]string, []string) {
+	oldSummary := summarizeOAuthExcludedModels(oldMap)
+	newSummary := summarizeOAuthExcludedModels(newMap)
 	keys := make(map[string]struct{}, len(oldSummary)+len(newSummary))
 	for k := range oldSummary {
 		keys[k] = struct{}{}
@@ -590,13 +590,13 @@ func diffOAuthBlacklistChanges(oldMap, newMap map[string][]string) ([]string, []
 		newInfo, okNew := newSummary[key]
 		switch {
 		case okOld && !okNew:
-			changes = append(changes, fmt.Sprintf("oauth-model-blacklist[%s]: removed", key))
+			changes = append(changes, fmt.Sprintf("oauth-excluded-models[%s]: removed", key))
 			affected = append(affected, key)
 		case !okOld && okNew:
-			changes = append(changes, fmt.Sprintf("oauth-model-blacklist[%s]: added (%d entries)", key, newInfo.count))
+			changes = append(changes, fmt.Sprintf("oauth-excluded-models[%s]: added (%d entries)", key, newInfo.count))
 			affected = append(affected, key)
 		case okOld && okNew && oldInfo.hash != newInfo.hash:
-			changes = append(changes, fmt.Sprintf("oauth-model-blacklist[%s]: updated (%d -> %d entries)", key, oldInfo.count, newInfo.count))
+			changes = append(changes, fmt.Sprintf("oauth-excluded-models[%s]: updated (%d -> %d entries)", key, oldInfo.count, newInfo.count))
 			affected = append(affected, key)
 		}
 	}
@@ -605,7 +605,7 @@ func diffOAuthBlacklistChanges(oldMap, newMap map[string][]string) ([]string, []
 	return changes, affected
 }
 
-func applyAuthModelBlacklistMeta(auth *coreauth.Auth, cfg *config.Config, perKey []string, authKind string) {
+func applyAuthExcludedModelsMeta(auth *coreauth.Auth, cfg *config.Config, perKey []string, authKind string) {
 	if auth == nil || cfg == nil {
 		return
 	}
@@ -624,21 +624,21 @@ func applyAuthModelBlacklistMeta(auth *coreauth.Auth, cfg *config.Config, perKey
 	}
 	if authKindKey == "apikey" {
 		add(perKey)
-	} else if cfg.OAuthModelBlacklist != nil {
+	} else if cfg.OAuthExcludedModels != nil {
 		providerKey := strings.ToLower(strings.TrimSpace(auth.Provider))
-		add(cfg.OAuthModelBlacklist[providerKey])
+		add(cfg.OAuthExcludedModels[providerKey])
 	}
 	combined := make([]string, 0, len(seen))
 	for k := range seen {
 		combined = append(combined, k)
 	}
 	sort.Strings(combined)
-	hash := computeModelBlacklistHash(combined)
+	hash := computeExcludedModelsHash(combined)
 	if auth.Attributes == nil {
 		auth.Attributes = make(map[string]string)
 	}
 	if hash != "" {
-		auth.Attributes["model_blacklist_hash"] = hash
+		auth.Attributes["excluded_models_hash"] = hash
 	}
 	if authKind != "" {
 		auth.Attributes["auth_kind"] = authKind
@@ -831,7 +831,7 @@ func (w *Watcher) reloadConfig() bool {
 
 	var affectedOAuthProviders []string
 	if oldConfig != nil {
-		_, affectedOAuthProviders = diffOAuthBlacklistChanges(oldConfig.OAuthModelBlacklist, newConfig.OAuthModelBlacklist)
+		_, affectedOAuthProviders = diffOAuthExcludedModelChanges(oldConfig.OAuthExcludedModels, newConfig.OAuthExcludedModels)
 	}
 
 	// Always apply the current log level based on the latest config.
@@ -891,7 +891,7 @@ func (w *Watcher) reloadClients(rescanAuth bool, affectedOAuthProviders []string
 				filtered[id] = auth
 			}
 			w.currentAuths = filtered
-			log.Debugf("applying oauth-model-blacklist to providers %v", affectedOAuthProviders)
+			log.Debugf("applying oauth-excluded-models to providers %v", affectedOAuthProviders)
 		} else {
 			w.currentAuths = nil
 		}
@@ -1071,7 +1071,7 @@ func (w *Watcher) SnapshotCoreAuths() []*coreauth.Auth {
 				CreatedAt:  now,
 				UpdatedAt:  now,
 			}
-			applyAuthModelBlacklistMeta(a, cfg, entry.ModelBlacklist, "apikey")
+			applyAuthExcludedModelsMeta(a, cfg, entry.ExcludedModels, "apikey")
 			out = append(out, a)
 		}
 		// Claude API keys -> synthesize auths
@@ -1105,7 +1105,7 @@ func (w *Watcher) SnapshotCoreAuths() []*coreauth.Auth {
 				CreatedAt:  now,
 				UpdatedAt:  now,
 			}
-			applyAuthModelBlacklistMeta(a, cfg, ck.ModelBlacklist, "apikey")
+			applyAuthExcludedModelsMeta(a, cfg, ck.ExcludedModels, "apikey")
 			out = append(out, a)
 		}
 		// Codex API keys -> synthesize auths
@@ -1135,7 +1135,7 @@ func (w *Watcher) SnapshotCoreAuths() []*coreauth.Auth {
 				CreatedAt:  now,
 				UpdatedAt:  now,
 			}
-			applyAuthModelBlacklistMeta(a, cfg, ck.ModelBlacklist, "apikey")
+			applyAuthExcludedModelsMeta(a, cfg, ck.ExcludedModels, "apikey")
 			out = append(out, a)
 		}
 		for i := range cfg.OpenAICompatibility {
@@ -1296,11 +1296,11 @@ func (w *Watcher) SnapshotCoreAuths() []*coreauth.Auth {
 			CreatedAt: now,
 			UpdatedAt: now,
 		}
-		applyAuthModelBlacklistMeta(a, cfg, nil, "oauth")
+		applyAuthExcludedModelsMeta(a, cfg, nil, "oauth")
 		if provider == "gemini-cli" {
 			if virtuals := synthesizeGeminiVirtualAuths(a, metadata, now); len(virtuals) > 0 {
 				for _, v := range virtuals {
-					applyAuthModelBlacklistMeta(v, cfg, nil, "oauth")
+					applyAuthExcludedModelsMeta(v, cfg, nil, "oauth")
 				}
 				out = append(out, a)
 				out = append(out, virtuals...)
@@ -1693,10 +1693,10 @@ func buildConfigChangeDetails(oldCfg, newCfg *config.Config) []string {
 			if !equalStringMap(o.Headers, n.Headers) {
 				changes = append(changes, fmt.Sprintf("gemini[%d].headers: updated", i))
 			}
-			oldBL := summarizeModelBlacklist(o.ModelBlacklist)
-			newBL := summarizeModelBlacklist(n.ModelBlacklist)
-			if oldBL.hash != newBL.hash {
-				changes = append(changes, fmt.Sprintf("gemini[%d].model-blacklist: updated (%d -> %d entries)", i, oldBL.count, newBL.count))
+			oldExcluded := summarizeExcludedModels(o.ExcludedModels)
+			newExcluded := summarizeExcludedModels(n.ExcludedModels)
+			if oldExcluded.hash != newExcluded.hash {
+				changes = append(changes, fmt.Sprintf("gemini[%d].excluded-models: updated (%d -> %d entries)", i, oldExcluded.count, newExcluded.count))
 			}
 		}
 		if !reflect.DeepEqual(trimStrings(oldCfg.GlAPIKey), trimStrings(newCfg.GlAPIKey)) {
@@ -1726,10 +1726,10 @@ func buildConfigChangeDetails(oldCfg, newCfg *config.Config) []string {
 			if !equalStringMap(o.Headers, n.Headers) {
 				changes = append(changes, fmt.Sprintf("claude[%d].headers: updated", i))
 			}
-			oldBL := summarizeModelBlacklist(o.ModelBlacklist)
-			newBL := summarizeModelBlacklist(n.ModelBlacklist)
-			if oldBL.hash != newBL.hash {
-				changes = append(changes, fmt.Sprintf("claude[%d].model-blacklist: updated (%d -> %d entries)", i, oldBL.count, newBL.count))
+			oldExcluded := summarizeExcludedModels(o.ExcludedModels)
+			newExcluded := summarizeExcludedModels(n.ExcludedModels)
+			if oldExcluded.hash != newExcluded.hash {
+				changes = append(changes, fmt.Sprintf("claude[%d].excluded-models: updated (%d -> %d entries)", i, oldExcluded.count, newExcluded.count))
 			}
 		}
 	}
@@ -1756,15 +1756,15 @@ func buildConfigChangeDetails(oldCfg, newCfg *config.Config) []string {
 			if !equalStringMap(o.Headers, n.Headers) {
 				changes = append(changes, fmt.Sprintf("codex[%d].headers: updated", i))
 			}
-			oldBL := summarizeModelBlacklist(o.ModelBlacklist)
-			newBL := summarizeModelBlacklist(n.ModelBlacklist)
-			if oldBL.hash != newBL.hash {
-				changes = append(changes, fmt.Sprintf("codex[%d].model-blacklist: updated (%d -> %d entries)", i, oldBL.count, newBL.count))
+			oldExcluded := summarizeExcludedModels(o.ExcludedModels)
+			newExcluded := summarizeExcludedModels(n.ExcludedModels)
+			if oldExcluded.hash != newExcluded.hash {
+				changes = append(changes, fmt.Sprintf("codex[%d].excluded-models: updated (%d -> %d entries)", i, oldExcluded.count, newExcluded.count))
 			}
 		}
 	}
 
-	if entries, _ := diffOAuthBlacklistChanges(oldCfg.OAuthModelBlacklist, newCfg.OAuthModelBlacklist); len(entries) > 0 {
+	if entries, _ := diffOAuthExcludedModelChanges(oldCfg.OAuthExcludedModels, newCfg.OAuthExcludedModels); len(entries) > 0 {
 		changes = append(changes, entries...)
 	}
 

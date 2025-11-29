@@ -665,32 +665,32 @@ func (s *Service) registerModelsForAuth(a *coreauth.Auth) {
 	if compatDetected {
 		provider = "openai-compatibility"
 	}
-	blacklist := s.oauthBlacklist(provider, authKind)
+	excluded := s.oauthExcludedModels(provider, authKind)
 	var models []*ModelInfo
 	switch provider {
 	case "gemini":
 		models = registry.GetGeminiModels()
 		if entry := s.resolveConfigGeminiKey(a); entry != nil {
 			if authKind == "apikey" {
-				blacklist = entry.ModelBlacklist
+				excluded = entry.ExcludedModels
 			}
 		}
-		models = applyModelBlacklist(models, blacklist)
+		models = applyExcludedModels(models, excluded)
 	case "vertex":
 		// Vertex AI Gemini supports the same model identifiers as Gemini.
 		models = registry.GetGeminiVertexModels()
-		models = applyModelBlacklist(models, blacklist)
+		models = applyExcludedModels(models, excluded)
 	case "gemini-cli":
 		models = registry.GetGeminiCLIModels()
-		models = applyModelBlacklist(models, blacklist)
+		models = applyExcludedModels(models, excluded)
 	case "aistudio":
 		models = registry.GetAIStudioModels()
-		models = applyModelBlacklist(models, blacklist)
+		models = applyExcludedModels(models, excluded)
 	case "antigravity":
 		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 		models = executor.FetchAntigravityModels(ctx, a, s.cfg)
 		cancel()
-		models = applyModelBlacklist(models, blacklist)
+		models = applyExcludedModels(models, excluded)
 	case "claude":
 		models = registry.GetClaudeModels()
 		if entry := s.resolveConfigClaudeKey(a); entry != nil {
@@ -698,24 +698,24 @@ func (s *Service) registerModelsForAuth(a *coreauth.Auth) {
 				models = buildClaudeConfigModels(entry)
 			}
 			if authKind == "apikey" {
-				blacklist = entry.ModelBlacklist
+				excluded = entry.ExcludedModels
 			}
 		}
-		models = applyModelBlacklist(models, blacklist)
+		models = applyExcludedModels(models, excluded)
 	case "codex":
 		models = registry.GetOpenAIModels()
 		if entry := s.resolveConfigCodexKey(a); entry != nil {
 			if authKind == "apikey" {
-				blacklist = entry.ModelBlacklist
+				excluded = entry.ExcludedModels
 			}
 		}
-		models = applyModelBlacklist(models, blacklist)
+		models = applyExcludedModels(models, excluded)
 	case "qwen":
 		models = registry.GetQwenModels()
-		models = applyModelBlacklist(models, blacklist)
+		models = applyExcludedModels(models, excluded)
 	case "iflow":
 		models = registry.GetIFlowModels()
-		models = applyModelBlacklist(models, blacklist)
+		models = applyExcludedModels(models, excluded)
 	default:
 		// Handle OpenAI-compatibility providers by name using config
 		if s.cfg != nil {
@@ -900,7 +900,7 @@ func (s *Service) resolveConfigCodexKey(auth *coreauth.Auth) *config.CodexKey {
 	return nil
 }
 
-func (s *Service) oauthBlacklist(provider, authKind string) []string {
+func (s *Service) oauthExcludedModels(provider, authKind string) []string {
 	cfg := s.cfg
 	if cfg == nil {
 		return nil
@@ -910,15 +910,15 @@ func (s *Service) oauthBlacklist(provider, authKind string) []string {
 	if authKindKey == "apikey" {
 		return nil
 	}
-	return cfg.OAuthModelBlacklist[providerKey]
+	return cfg.OAuthExcludedModels[providerKey]
 }
 
-func applyModelBlacklist(models []*ModelInfo, blacklist []string) []*ModelInfo {
-	if len(models) == 0 || len(blacklist) == 0 {
+func applyExcludedModels(models []*ModelInfo, excluded []string) []*ModelInfo {
+	if len(models) == 0 || len(excluded) == 0 {
 		return models
 	}
-	blocked := make(map[string]struct{}, len(blacklist))
-	for _, item := range blacklist {
+	blocked := make(map[string]struct{}, len(excluded))
+	for _, item := range excluded {
 		if trimmed := strings.TrimSpace(item); trimmed != "" {
 			blocked[strings.ToLower(trimmed)] = struct{}{}
 		}
