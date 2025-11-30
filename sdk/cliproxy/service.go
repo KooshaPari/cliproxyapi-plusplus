@@ -917,26 +917,79 @@ func applyExcludedModels(models []*ModelInfo, excluded []string) []*ModelInfo {
 	if len(models) == 0 || len(excluded) == 0 {
 		return models
 	}
-	blocked := make(map[string]struct{}, len(excluded))
+
+	patterns := make([]string, 0, len(excluded))
 	for _, item := range excluded {
 		if trimmed := strings.TrimSpace(item); trimmed != "" {
-			blocked[strings.ToLower(trimmed)] = struct{}{}
+			patterns = append(patterns, strings.ToLower(trimmed))
 		}
 	}
-	if len(blocked) == 0 {
+	if len(patterns) == 0 {
 		return models
 	}
+
 	filtered := make([]*ModelInfo, 0, len(models))
 	for _, model := range models {
 		if model == nil {
 			continue
 		}
-		if _, blockedModel := blocked[strings.ToLower(strings.TrimSpace(model.ID))]; blockedModel {
-			continue
+		modelID := strings.ToLower(strings.TrimSpace(model.ID))
+		blocked := false
+		for _, pattern := range patterns {
+			if matchWildcard(pattern, modelID) {
+				blocked = true
+				break
+			}
 		}
-		filtered = append(filtered, model)
+		if !blocked {
+			filtered = append(filtered, model)
+		}
 	}
 	return filtered
+}
+
+// matchWildcard performs case-insensitive wildcard matching where '*' matches any substring.
+func matchWildcard(pattern, value string) bool {
+	if pattern == "" {
+		return false
+	}
+
+	// Fast path for exact match (no wildcard present).
+	if !strings.Contains(pattern, "*") {
+		return pattern == value
+	}
+
+	parts := strings.Split(pattern, "*")
+	// Handle prefix.
+	if prefix := parts[0]; prefix != "" {
+		if !strings.HasPrefix(value, prefix) {
+			return false
+		}
+		value = value[len(prefix):]
+	}
+
+	// Handle suffix.
+	if suffix := parts[len(parts)-1]; suffix != "" {
+		if !strings.HasSuffix(value, suffix) {
+			return false
+		}
+		value = value[:len(value)-len(suffix)]
+	}
+
+	// Handle middle segments in order.
+	for i := 1; i < len(parts)-1; i++ {
+		segment := parts[i]
+		if segment == "" {
+			continue
+		}
+		idx := strings.Index(value, segment)
+		if idx < 0 {
+			return false
+		}
+		value = value[idx+len(segment):]
+	}
+
+	return true
 }
 
 func buildClaudeConfigModels(entry *config.ClaudeKey) []*ModelInfo {
