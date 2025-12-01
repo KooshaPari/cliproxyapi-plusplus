@@ -150,6 +150,9 @@ type Server struct {
 	// management handler
 	mgmt *managementHandlers.Handler
 
+	// ampModule is the Amp routing module for model mapping hot-reload
+	ampModule *ampmodule.AmpModule
+
 	// managementRoutesRegistered tracks whether the management routes have been attached to the engine.
 	managementRoutesRegistered atomic.Bool
 	// managementRoutesEnabled controls whether management endpoints serve real handlers.
@@ -268,14 +271,14 @@ func NewServer(cfg *config.Config, authManager *auth.Manager, accessManager *sdk
 	s.setupRoutes()
 
 	// Register Amp module using V2 interface with Context
-	ampModule := ampmodule.NewLegacy(accessManager, AuthMiddleware(accessManager))
+	s.ampModule = ampmodule.NewLegacy(accessManager, AuthMiddleware(accessManager))
 	ctx := modules.Context{
 		Engine:         engine,
 		BaseHandler:    s.handlers,
 		Config:         cfg,
 		AuthMiddleware: AuthMiddleware(accessManager),
 	}
-	if err := modules.RegisterModule(ctx, ampModule); err != nil {
+	if err := modules.RegisterModule(ctx, s.ampModule); err != nil {
 		log.Errorf("Failed to register Amp module: %v", err)
 	}
 
@@ -914,6 +917,16 @@ func (s *Server) UpdateClients(cfg *config.Config) {
 	if s.mgmt != nil {
 		s.mgmt.SetConfig(cfg)
 		s.mgmt.SetAuthManager(s.handlers.AuthManager)
+	}
+
+	// Notify Amp module of config changes (for model mapping hot-reload)
+	if s.ampModule != nil {
+		log.Debugf("triggering amp module config update")
+		if err := s.ampModule.OnConfigUpdated(cfg); err != nil {
+			log.Errorf("failed to update Amp module config: %v", err)
+		}
+	} else {
+		log.Warnf("amp module is nil, skipping config update")
 	}
 
 	// Count client sources from configuration and auth directory

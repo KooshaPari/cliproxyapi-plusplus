@@ -166,7 +166,10 @@ func (m *AmpModule) getAuthMiddleware(ctx modules.Context) gin.HandlerFunc {
 func (m *AmpModule) OnConfigUpdated(cfg *config.Config) error {
 	// Update model mappings (hot-reload supported)
 	if m.modelMapper != nil {
+		log.Infof("amp config updated: reloading %d model mapping(s)", len(cfg.AmpModelMappings))
 		m.modelMapper.UpdateMappings(cfg.AmpModelMappings)
+	} else {
+		log.Warnf("amp model mapper not initialized, skipping model mapping update")
 	}
 
 	if !m.enabled {
