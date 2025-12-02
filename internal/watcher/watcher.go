@@ -986,7 +986,7 @@ func (w *Watcher) reloadClients(rescanAuth bool, affectedOAuthProviders []string
 
 	w.refreshAuthState()
 
-	log.Infof("full client load complete - %d clients (%d auth files + %d Gemini API keys + %d Vertex-compat keys + %d Claude API keys + %d Codex keys + %d OpenAI-compat)",
+	log.Infof("full client load complete - %d clients (%d auth files + %d Gemini API keys + %d Vertex API keys + %d Claude API keys + %d Codex keys + %d OpenAI-compat)",
 		totalNewClients,
 		authFileCount,
 		geminiAPIKeyCount,
@@ -1273,18 +1273,18 @@ func (w *Watcher) SnapshotCoreAuths() []*coreauth.Auth {
 		}
 	}
 
-	// Process Vertex compatibility providers
+	// Process Vertex API key providers (Vertex-compatible endpoints)
 	for i := range cfg.VertexCompatAPIKey {
 		compat := &cfg.VertexCompatAPIKey[i]
-		providerName := "vertex-compat"
+		providerName := "vertex"
 		base := strings.TrimSpace(compat.BaseURL)
 
 		key := strings.TrimSpace(compat.APIKey)
 		proxyURL := strings.TrimSpace(compat.ProxyURL)
-		idKind := fmt.Sprintf("vertex-compatibility:%s", base)
+		idKind := fmt.Sprintf("vertex:apikey:%s", base)
 		id, token := idGen.next(idKind, key, base, proxyURL)
 		attrs := map[string]string{
-			"source":       fmt.Sprintf("config:vertex-compatibility[%s]", token),
+			"source":       fmt.Sprintf("config:vertex-apikey[%s]", token),
 			"base_url":     base,
 			"provider_key": providerName,
 		}
@@ -1298,13 +1298,14 @@ func (w *Watcher) SnapshotCoreAuths() []*coreauth.Auth {
 		a := &coreauth.Auth{
 			ID:         id,
 			Provider:   providerName,
-			Label:      "Vertex Compatibility",
+			Label:      "vertex-apikey",
 			Status:     coreauth.StatusActive,
 			ProxyURL:   proxyURL,
 			Attributes: attrs,
 			CreatedAt:  now,
 			UpdatedAt:  now,
 		}
+		applyAuthExcludedModelsMeta(a, cfg, nil, "apikey")
 		out = append(out, a)
 	}
 

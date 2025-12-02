@@ -55,7 +55,7 @@ func (cfg *Config) SanitizeVertexCompatKeys() {
 		}
 		entry.BaseURL = strings.TrimSpace(entry.BaseURL)
 		if entry.BaseURL == "" {
-			// BaseURL is required for vertex-compat keys
+			// BaseURL is required for Vertex API key entries
 			continue
 		}
 		entry.ProxyURL = strings.TrimSpace(entry.ProxyURL)

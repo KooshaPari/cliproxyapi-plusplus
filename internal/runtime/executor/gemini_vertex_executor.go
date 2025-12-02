@@ -44,22 +44,6 @@ func NewGeminiVertexExecutor(cfg *config.Config) *GeminiVertexExecutor {
 // Identifier returns provider key for manager routing.
 func (e *GeminiVertexExecutor) Identifier() string { return "vertex" }
 
-// GeminiVertexCompatExecutor is a thin wrapper around GeminiVertexExecutor
-// that provides the correct identifier for vertex-compat routing.
-type GeminiVertexCompatExecutor struct {
-	*GeminiVertexExecutor
-}
-
-// NewGeminiVertexCompatExecutor constructs the Vertex-compatible executor.
-func NewGeminiVertexCompatExecutor(cfg *config.Config) *GeminiVertexCompatExecutor {
-	return &GeminiVertexCompatExecutor{
-		GeminiVertexExecutor: NewGeminiVertexExecutor(cfg),
-	}
-}
-
-// Identifier returns provider key for manager routing.
-func (e *GeminiVertexCompatExecutor) Identifier() string { return "vertex-compat" }
-
 // PrepareRequest is a no-op for Vertex.
 func (e *GeminiVertexExecutor) PrepareRequest(_ *http.Request, _ *cliproxyauth.Auth) error {
 	return nil
@@ -393,7 +377,6 @@ func (e *GeminiVertexExecutor) executeWithServiceAccount(ctx context.Context, au
 }
 
 // executeWithAPIKey handles authentication using API key credentials.
-// This method follows the vertex-compat pattern for API key authentication.
 func (e *GeminiVertexExecutor) executeWithAPIKey(ctx context.Context, auth *cliproxyauth.Auth, req cliproxyexecutor.Request, opts cliproxyexecutor.Options, apiKey, baseURL string) (resp cliproxyexecutor.Response, err error) {
 	reporter := newUsageReporter(ctx, e.Identifier(), req.Model, auth)
 	defer reporter.trackFailure(ctx, &err)
