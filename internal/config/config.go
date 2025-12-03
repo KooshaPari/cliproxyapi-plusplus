@@ -58,9 +58,6 @@ type Config struct {
 	// GeminiKey defines Gemini API key configurations with optional routing overrides.
 	GeminiKey []GeminiKey `yaml:"gemini-api-key" json:"gemini-api-key"`
 
-	// GlAPIKey exposes the legacy generative language API key list for backward compatibility.
-	GlAPIKey []string `yaml:"generative-language-api-key" json:"generative-language-api-key"`
-
 	// Codex defines a list of Codex API key configurations as specified in the YAML configuration file.
 	CodexKey []CodexKey `yaml:"codex-api-key" json:"codex-api-key"`
 
@@ -170,6 +167,17 @@ type PayloadModelRule struct {
 	Protocol string `yaml:"protocol" json:"protocol"`
 }
 
+type legacyConfigData struct {
+	LegacyGeminiKeys []string                    `yaml:"generative-language-api-key"`
+	OpenAICompat     []legacyOpenAICompatibility `yaml:"openai-compatibility"`
+}
+
+type legacyOpenAICompatibility struct {
+	Name    string   `yaml:"name"`
+	BaseURL string   `yaml:"base-url"`
+	APIKeys []string `yaml:"api-keys"`
+}
+
 // ClaudeKey represents the configuration for a Claude API key,
 // including the API key itself and an optional base URL for the API endpoint.
 type ClaudeKey struct {
@@ -250,10 +258,6 @@ type OpenAICompatibility struct {
 	// BaseURL is the base URL for the external OpenAI-compatible API endpoint.
 	BaseURL string `yaml:"base-url" json:"base-url"`
 
-	// APIKeys are the authentication keys for accessing the external API services.
-	// Deprecated: Use APIKeyEntries instead to support per-key proxy configuration.
-	APIKeys []string `yaml:"api-keys,omitempty" json:"api-keys,omitempty"`
-
 	// APIKeyEntries defines API keys with optional per-key proxy configuration.
 	APIKeyEntries []OpenAICompatibilityAPIKey `yaml:"api-key-entries,omitempty" json:"api-key-entries,omitempty"`
 
@@ -331,6 +335,12 @@ func LoadConfigOptional(configFile string, optional bool) (*Config, error) {
 			return &Config{}, nil
 		}
 		return nil, fmt.Errorf("failed to parse config file: %w", err)
+	}
+
+	var legacy legacyConfigData
+	if errLegacy := yaml.Unmarshal(data, &legacy); errLegacy == nil {
+		cfg.migrateLegacyGeminiKeys(legacy.LegacyGeminiKeys)
+		cfg.migrateLegacyOpenAICompatibilityKeys(legacy.OpenAICompat)
 	}
 
 	// Hash remote management key if plaintext is detected (nested)
@@ -451,22 +461,94 @@ func (cfg *Config) SanitizeGeminiKeys() {
 		out = append(out, entry)
 	}
 	cfg.GeminiKey = out
+}
 
-	if len(cfg.GlAPIKey) > 0 {
-		for _, raw := range cfg.GlAPIKey {
-			key := strings.TrimSpace(raw)
-			if key == "" {
-				continue
-			}
-			if _, exists := seen[key]; exists {
-				continue
-			}
-			cfg.GeminiKey = append(cfg.GeminiKey, GeminiKey{APIKey: key})
-			seen[key] = struct{}{}
+func (cfg *Config) migrateLegacyGeminiKeys(legacy []string) {
+	if cfg == nil || len(legacy) == 0 {
+		return
+	}
+	seen := make(map[string]struct{}, len(cfg.GeminiKey))
+	for i := range cfg.GeminiKey {
+		key := strings.TrimSpace(cfg.GeminiKey[i].APIKey)
+		if key == "" {
+			continue
+		}
+		seen[key] = struct{}{}
+	}
+	for _, raw := range legacy {
+		key := strings.TrimSpace(raw)
+		if key == "" {
+			continue
+		}
+		if _, exists := seen[key]; exists {
+			continue
+		}
+		cfg.GeminiKey = append(cfg.GeminiKey, GeminiKey{APIKey: key})
+		seen[key] = struct{}{}
+	}
+}
+
+func (cfg *Config) migrateLegacyOpenAICompatibilityKeys(legacy []legacyOpenAICompatibility) {
+	if cfg == nil || len(cfg.OpenAICompatibility) == 0 || len(legacy) == 0 {
+		return
+	}
+	lookup := make(map[string]*OpenAICompatibility, len(cfg.OpenAICompatibility))
+	for i := range cfg.OpenAICompatibility {
+		if key := legacyOpenAICompatKey(cfg.OpenAICompatibility[i].Name, cfg.OpenAICompatibility[i].BaseURL); key != "" {
+			lookup[key] = &cfg.OpenAICompatibility[i]
 		}
 	}
+	for _, legacyEntry := range legacy {
+		if len(legacyEntry.APIKeys) == 0 {
+			continue
+		}
+		key := legacyOpenAICompatKey(legacyEntry.Name, legacyEntry.BaseURL)
+		if key == "" {
+			continue
+		}
+		target := lookup[key]
+		if target == nil {
+			continue
+		}
+		mergeLegacyOpenAICompatAPIKeys(target, legacyEntry.APIKeys)
+	}
+}
 
-	cfg.GlAPIKey = nil
+func mergeLegacyOpenAICompatAPIKeys(entry *OpenAICompatibility, keys []string) {
+	if entry == nil || len(keys) == 0 {
+		return
+	}
+	existing := make(map[string]struct{}, len(entry.APIKeyEntries))
+	for i := range entry.APIKeyEntries {
+		key := strings.TrimSpace(entry.APIKeyEntries[i].APIKey)
+		if key == "" {
+			continue
+		}
+		existing[key] = struct{}{}
+	}
+	for _, raw := range keys {
+		key := strings.TrimSpace(raw)
+		if key == "" {
+			continue
+		}
+		if _, ok := existing[key]; ok {
+			continue
+		}
+		entry.APIKeyEntries = append(entry.APIKeyEntries, OpenAICompatibilityAPIKey{APIKey: key})
+		existing[key] = struct{}{}
+	}
+}
+
+func legacyOpenAICompatKey(name, baseURL string) string {
+	trimmedName := strings.ToLower(strings.TrimSpace(name))
+	if trimmedName != "" {
+		return "name:" + trimmedName
+	}
+	trimmedBase := strings.ToLower(strings.TrimSpace(baseURL))
+	if trimmedBase != "" {
+		return "base:" + trimmedBase
+	}
+	return ""
 }
 
 func syncInlineAccessProvider(cfg *Config) {
@@ -605,6 +687,7 @@ func SaveConfigPreserveComments(configFile string, cfg *Config) error {
 	// Remove deprecated auth block before merging to avoid persisting it again.
 	removeMapKey(original.Content[0], "auth")
 	removeLegacyOpenAICompatAPIKeys(original.Content[0])
+	removeMapKey(original.Content[0], "generative-language-api-key")
 	pruneMappingToGeneratedKeys(original.Content[0], generated.Content[0], "oauth-excluded-models")
 
 	// Merge generated into original in-place, preserving comments/order of existing nodes.
