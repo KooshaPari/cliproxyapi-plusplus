@@ -376,9 +376,15 @@ func LoadConfigOptional(configFile string, optional bool) (*Config, error) {
 	// Normalize OAuth provider model exclusion map.
 	cfg.OAuthExcludedModels = NormalizeOAuthExcludedModels(cfg.OAuthExcludedModels)
 
-	if cfg.legacyMigrationPending && !optional && configFile != "" {
-		if err := SaveConfigPreserveComments(configFile, &cfg); err != nil {
-			return nil, fmt.Errorf("failed to persist migrated legacy config: %w", err)
+	if cfg.legacyMigrationPending {
+		fmt.Println("Detected legacy configuration keys, attempting to persist the normalized config...")
+		if !optional && configFile != "" {
+			if err := SaveConfigPreserveComments(configFile, &cfg); err != nil {
+				return nil, fmt.Errorf("failed to persist migrated legacy config: %w", err)
+			}
+			fmt.Println("Legacy configuration normalized and persisted.")
+		} else {
+			fmt.Println("Legacy configuration normalized in memory; persistence skipped.")
 		}
 	}
 
