@@ -588,8 +588,9 @@ func SaveConfigPreserveComments(configFile string, cfg *Config) error {
 
 	// Remove deprecated auth block before merging to avoid persisting it again.
 	removeMapKey(original.Content[0], "auth")
-	removeLegacyOpenAICompatAPIKeys(original.Content[0])
 	removeMapKey(original.Content[0], "generative-language-api-key")
+	removeLegacyOpenAICompatAPIKeys(original.Content[0])
+	removeLegacyAmpKeys(original.Content[0])
 	pruneMappingToGeneratedKeys(original.Content[0], generated.Content[0], "oauth-excluded-models")
 
 	// Merge generated into original in-place, preserving comments/order of existing nodes.
@@ -1069,6 +1070,16 @@ func removeLegacyOpenAICompatAPIKeys(root *yaml.Node) {
 			removeMapKey(seq.Content[i], "api-keys")
 		}
 	}
+}
+
+func removeLegacyAmpKeys(root *yaml.Node) {
+	if root == nil || root.Kind != yaml.MappingNode {
+		return
+	}
+	removeMapKey(root, "amp-upstream-url")
+	removeMapKey(root, "amp-upstream-api-key")
+	removeMapKey(root, "amp-restrict-management-to-localhost")
+	removeMapKey(root, "amp-model-mappings")
 }
 
 func pruneMappingToGeneratedKeys(dstRoot, srcRoot *yaml.Node, key string) {
