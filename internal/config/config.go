@@ -1211,21 +1211,11 @@ func (cfg *Config) migrateLegacyOpenAICompatibilityKeys(legacy []legacyOpenAICom
 		return false
 	}
 	changed := false
-	lookup := make(map[string]*OpenAICompatibility, len(cfg.OpenAICompatibility))
-	for i := range cfg.OpenAICompatibility {
-		if key := legacyOpenAICompatKey(cfg.OpenAICompatibility[i].Name, cfg.OpenAICompatibility[i].BaseURL); key != "" {
-			lookup[key] = &cfg.OpenAICompatibility[i]
-		}
-	}
 	for _, legacyEntry := range legacy {
 		if len(legacyEntry.APIKeys) == 0 {
 			continue
 		}
-		key := legacyOpenAICompatKey(legacyEntry.Name, legacyEntry.BaseURL)
-		if key == "" {
-			continue
-		}
-		target := lookup[key]
+		target := findOpenAICompatTarget(cfg.OpenAICompatibility, legacyEntry.Name, legacyEntry.BaseURL)
 		if target == nil {
 			continue
 		}
@@ -1264,16 +1254,32 @@ func mergeLegacyOpenAICompatAPIKeys(entry *OpenAICompatibility, keys []string) b
 	return changed
 }
 
-func legacyOpenAICompatKey(name, baseURL string) string {
-	trimmedName := strings.ToLower(strings.TrimSpace(name))
-	if trimmedName != "" {
-		return "name:" + trimmedName
+func findOpenAICompatTarget(entries []OpenAICompatibility, legacyName, legacyBase string) *OpenAICompatibility {
+	nameKey := strings.ToLower(strings.TrimSpace(legacyName))
+	baseKey := strings.ToLower(strings.TrimSpace(legacyBase))
+	if nameKey != "" && baseKey != "" {
+		for i := range entries {
+			if strings.ToLower(strings.TrimSpace(entries[i].Name)) == nameKey &&
+				strings.ToLower(strings.TrimSpace(entries[i].BaseURL)) == baseKey {
+				return &entries[i]
+			}
+		}
 	}
-	trimmedBase := strings.ToLower(strings.TrimSpace(baseURL))
-	if trimmedBase != "" {
-		return "base:" + trimmedBase
+	if baseKey != "" {
+		for i := range entries {
+			if strings.ToLower(strings.TrimSpace(entries[i].BaseURL)) == baseKey {
+				return &entries[i]
+			}
+		}
 	}
-	return ""
+	if nameKey != "" {
+		for i := range entries {
+			if strings.ToLower(strings.TrimSpace(entries[i].Name)) == nameKey {
+				return &entries[i]
+			}
+		}
+	}
+	return nil
 }
 
 func (cfg *Config) migrateLegacyAmpConfig(legacy *legacyConfigData) bool {
