@@ -95,7 +95,8 @@ func (m *AmpModule) Name() string {
 // This implements the RouteModuleV2 interface with Context.
 // Routes are registered only once via sync.Once for idempotent behavior.
 func (m *AmpModule) Register(ctx modules.Context) error {
-	upstreamURL := strings.TrimSpace(ctx.Config.AmpUpstreamURL)
+	settings := ctx.Config.AmpCode
+	upstreamURL := strings.TrimSpace(settings.UpstreamURL)
 
 	// Determine auth middleware (from module or context)
 	auth := m.getAuthMiddleware(ctx)
@@ -104,7 +105,7 @@ func (m *AmpModule) Register(ctx modules.Context) error {
 	var regErr error
 	m.registerOnce.Do(func() {
 		// Initialize model mapper from config (for routing unavailable models to alternatives)
-		m.modelMapper = NewModelMapper(ctx.Config.AmpModelMappings)
+		m.modelMapper = NewModelMapper(settings.ModelMappings)
 
 		// Always register provider aliases - these work without an upstream
 		m.registerProviderAliases(ctx.Engine, ctx.BaseHandler, auth)
@@ -120,7 +121,7 @@ func (m *AmpModule) Register(ctx modules.Context) error {
 		// Create secret source with precedence: config > env > file
 		// Cache secrets for 5 minutes to reduce file I/O
 		if m.secretSource == nil {
-			m.secretSource = NewMultiSourceSecret(ctx.Config.AmpUpstreamAPIKey, 0 /* default 5min */)
+			m.secretSource = NewMultiSourceSecret(settings.UpstreamAPIKey, 0 /* default 5min */)
 		}
 
 		// Create reverse proxy with gzip handling via ModifyResponse
@@ -136,7 +137,7 @@ func (m *AmpModule) Register(ctx modules.Context) error {
 		// Register management proxy routes (requires upstream)
 		// Restrict to localhost by default for security (prevents drive-by browser attacks)
 		handler := proxyHandler(proxy)
-		m.registerManagementRoutes(ctx.Engine, ctx.BaseHandler, handler, ctx.Config.AmpRestrictManagementToLocalhost)
+		m.registerManagementRoutes(ctx.Engine, ctx.BaseHandler, handler, settings.RestrictManagementToLocalhost)
 
 		log.Infof("Amp upstream proxy enabled for: %s", upstreamURL)
 		log.Debug("Amp provider alias routes registered")
@@ -166,8 +167,9 @@ func (m *AmpModule) getAuthMiddleware(ctx modules.Context) gin.HandlerFunc {
 func (m *AmpModule) OnConfigUpdated(cfg *config.Config) error {
 	// Update model mappings (hot-reload supported)
 	if m.modelMapper != nil {
-		log.Infof("amp config updated: reloading %d model mapping(s)", len(cfg.AmpModelMappings))
-		m.modelMapper.UpdateMappings(cfg.AmpModelMappings)
+		settings := cfg.AmpCode
+		log.Infof("amp config updated: reloading %d model mapping(s)", len(settings.ModelMappings))
+		m.modelMapper.UpdateMappings(settings.ModelMappings)
 	} else {
 		log.Warnf("amp model mapper not initialized, skipping model mapping update")
 	}
@@ -177,7 +179,7 @@ func (m *AmpModule) OnConfigUpdated(cfg *config.Config) error {
 		return nil
 	}
 
-	upstreamURL := strings.TrimSpace(cfg.AmpUpstreamURL)
+	upstreamURL := strings.TrimSpace(cfg.AmpCode.UpstreamURL)
 	if upstreamURL == "" {
 		log.Warn("Amp upstream URL removed from config, restart required to disable")
 		return nil

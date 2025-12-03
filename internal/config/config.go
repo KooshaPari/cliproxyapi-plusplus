@@ -26,22 +26,8 @@ type Config struct {
 	// TLS config controls HTTPS server settings.
 	TLS TLSConfig `yaml:"tls" json:"tls"`
 
-	// AmpUpstreamURL defines the upstream Amp control plane used for non-provider calls.
-	AmpUpstreamURL string `yaml:"amp-upstream-url" json:"amp-upstream-url"`
-
-	// AmpUpstreamAPIKey optionally overrides the Authorization header when proxying Amp upstream calls.
-	AmpUpstreamAPIKey string `yaml:"amp-upstream-api-key" json:"amp-upstream-api-key"`
-
-	// AmpRestrictManagementToLocalhost restricts Amp management routes (/api/user, /api/threads, etc.)
-	// to only accept connections from localhost (127.0.0.1, ::1). When true, prevents drive-by
-	// browser attacks and remote access to management endpoints. Default: true (recommended).
-	AmpRestrictManagementToLocalhost bool `yaml:"amp-restrict-management-to-localhost" json:"amp-restrict-management-to-localhost"`
-
-	// AmpModelMappings defines model name mappings for Amp CLI requests.
-	// When Amp requests a model that isn't available locally, these mappings
-	// allow routing to an alternative model that IS available.
-	// Example: Map "claude-opus-4.5" -> "claude-sonnet-4" when opus isn't available.
-	AmpModelMappings []AmpModelMapping `yaml:"amp-model-mappings" json:"amp-model-mappings"`
+	// RemoteManagement nests management-related options under 'remote-management'.
+	RemoteManagement RemoteManagement `yaml:"remote-management" json:"-"`
 
 	// AuthDir is the directory where authentication token files are stored.
 	AuthDir string `yaml:"auth-dir" json:"-"`
@@ -58,44 +44,44 @@ type Config struct {
 	// DisableCooling disables quota cooldown scheduling when true.
 	DisableCooling bool `yaml:"disable-cooling" json:"disable-cooling"`
 
+	// RequestRetry defines the retry times when the request failed.
+	RequestRetry int `yaml:"request-retry" json:"request-retry"`
+	// MaxRetryInterval defines the maximum wait time in seconds before retrying a cooled-down credential.
+	MaxRetryInterval int `yaml:"max-retry-interval" json:"max-retry-interval"`
+
 	// QuotaExceeded defines the behavior when a quota is exceeded.
 	QuotaExceeded QuotaExceeded `yaml:"quota-exceeded" json:"quota-exceeded"`
 
 	// WebsocketAuth enables or disables authentication for the WebSocket API.
 	WebsocketAuth bool `yaml:"ws-auth" json:"ws-auth"`
 
+	// GeminiKey defines Gemini API key configurations with optional routing overrides.
+	GeminiKey []GeminiKey `yaml:"gemini-api-key" json:"gemini-api-key"`
+
 	// GlAPIKey exposes the legacy generative language API key list for backward compatibility.
 	GlAPIKey []string `yaml:"generative-language-api-key" json:"generative-language-api-key"`
 
-	// GeminiKey defines Gemini API key configurations with optional routing overrides.
-	GeminiKey []GeminiKey `yaml:"gemini-api-key" json:"gemini-api-key"`
+	// Codex defines a list of Codex API key configurations as specified in the YAML configuration file.
+	CodexKey []CodexKey `yaml:"codex-api-key" json:"codex-api-key"`
+
+	// ClaudeKey defines a list of Claude API key configurations as specified in the YAML configuration file.
+	ClaudeKey []ClaudeKey `yaml:"claude-api-key" json:"claude-api-key"`
+
+	// OpenAICompatibility defines OpenAI API compatibility configurations for external providers.
+	OpenAICompatibility []OpenAICompatibility `yaml:"openai-compatibility" json:"openai-compatibility"`
 
 	// VertexCompatAPIKey defines Vertex AI-compatible API key configurations for third-party providers.
 	// Used for services that use Vertex AI-style paths but with simple API key authentication.
 	VertexCompatAPIKey []VertexCompatKey `yaml:"vertex-api-key" json:"vertex-api-key"`
 
-	// RequestRetry defines the retry times when the request failed.
-	RequestRetry int `yaml:"request-retry" json:"request-retry"`
-	// MaxRetryInterval defines the maximum wait time in seconds before retrying a cooled-down credential.
-	MaxRetryInterval int `yaml:"max-retry-interval" json:"max-retry-interval"`
-
-	// ClaudeKey defines a list of Claude API key configurations as specified in the YAML configuration file.
-	ClaudeKey []ClaudeKey `yaml:"claude-api-key" json:"claude-api-key"`
-
-	// Codex defines a list of Codex API key configurations as specified in the YAML configuration file.
-	CodexKey []CodexKey `yaml:"codex-api-key" json:"codex-api-key"`
-
-	// OpenAICompatibility defines OpenAI API compatibility configurations for external providers.
-	OpenAICompatibility []OpenAICompatibility `yaml:"openai-compatibility" json:"openai-compatibility"`
-
-	// RemoteManagement nests management-related options under 'remote-management'.
-	RemoteManagement RemoteManagement `yaml:"remote-management" json:"-"`
-
-	// Payload defines default and override rules for provider payload parameters.
-	Payload PayloadConfig `yaml:"payload" json:"payload"`
+	// AmpCode contains Amp CLI upstream configuration, management restrictions, and model mappings.
+	AmpCode AmpCode `yaml:"ampcode" json:"ampcode"`
 
 	// OAuthExcludedModels defines per-provider global model exclusions applied to OAuth/file-backed auth entries.
 	OAuthExcludedModels map[string][]string `yaml:"oauth-excluded-models,omitempty" json:"oauth-excluded-models,omitempty"`
+
+	// Payload defines default and override rules for provider payload parameters.
+	Payload PayloadConfig `yaml:"payload" json:"payload"`
 }
 
 // TLSConfig holds HTTPS server settings.
@@ -138,6 +124,26 @@ type AmpModelMapping struct {
 	// To is the target model name to route to (e.g., "claude-sonnet-4").
 	// The target model must have available providers in the registry.
 	To string `yaml:"to" json:"to"`
+}
+
+// AmpCode groups Amp CLI integration settings including upstream routing,
+// optional overrides, management route restrictions, and model fallback mappings.
+type AmpCode struct {
+	// UpstreamURL defines the upstream Amp control plane used for non-provider calls.
+	UpstreamURL string `yaml:"upstream-url" json:"upstream-url"`
+
+	// UpstreamAPIKey optionally overrides the Authorization header when proxying Amp upstream calls.
+	UpstreamAPIKey string `yaml:"upstream-api-key" json:"upstream-api-key"`
+
+	// RestrictManagementToLocalhost restricts Amp management routes (/api/user, /api/threads, etc.)
+	// to only accept connections from localhost (127.0.0.1, ::1). When true, prevents drive-by
+	// browser attacks and remote access to management endpoints. Default: true (recommended).
+	RestrictManagementToLocalhost bool `yaml:"restrict-management-to-localhost" json:"restrict-management-to-localhost"`
+
+	// ModelMappings defines model name mappings for Amp CLI requests.
+	// When Amp requests a model that isn't available locally, these mappings
+	// allow routing to an alternative model that IS available.
+	ModelMappings []AmpModelMapping `yaml:"model-mappings" json:"model-mappings"`
 }
 
 // PayloadConfig defines default and override parameter rules applied to provider payloads.
@@ -318,7 +324,7 @@ func LoadConfigOptional(configFile string, optional bool) (*Config, error) {
 	cfg.LoggingToFile = false
 	cfg.UsageStatisticsEnabled = false
 	cfg.DisableCooling = false
-	cfg.AmpRestrictManagementToLocalhost = true // Default to secure: only localhost access
+	cfg.AmpCode.RestrictManagementToLocalhost = true // Default to secure: only localhost access
 	if err = yaml.Unmarshal(data, &cfg); err != nil {
 		if optional {
 			// In cloud deploy mode, if YAML parsing fails, return empty config instead of error.
