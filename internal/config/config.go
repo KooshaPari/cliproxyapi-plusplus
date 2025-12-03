@@ -167,17 +167,6 @@ type PayloadModelRule struct {
 	Protocol string `yaml:"protocol" json:"protocol"`
 }
 
-type legacyConfigData struct {
-	LegacyGeminiKeys []string                    `yaml:"generative-language-api-key"`
-	OpenAICompat     []legacyOpenAICompatibility `yaml:"openai-compatibility"`
-}
-
-type legacyOpenAICompatibility struct {
-	Name    string   `yaml:"name"`
-	BaseURL string   `yaml:"base-url"`
-	APIKeys []string `yaml:"api-keys"`
-}
-
 // ClaudeKey represents the configuration for a Claude API key,
 // including the API key itself and an optional base URL for the API endpoint.
 type ClaudeKey struct {
@@ -341,6 +330,7 @@ func LoadConfigOptional(configFile string, optional bool) (*Config, error) {
 	if errLegacy := yaml.Unmarshal(data, &legacy); errLegacy == nil {
 		cfg.migrateLegacyGeminiKeys(legacy.LegacyGeminiKeys)
 		cfg.migrateLegacyOpenAICompatibilityKeys(legacy.OpenAICompat)
+		cfg.migrateLegacyAmpConfig(&legacy)
 	}
 
 	// Hash remote management key if plaintext is detected (nested)
@@ -461,94 +451,6 @@ func (cfg *Config) SanitizeGeminiKeys() {
 		out = append(out, entry)
 	}
 	cfg.GeminiKey = out
-}
-
-func (cfg *Config) migrateLegacyGeminiKeys(legacy []string) {
-	if cfg == nil || len(legacy) == 0 {
-		return
-	}
-	seen := make(map[string]struct{}, len(cfg.GeminiKey))
-	for i := range cfg.GeminiKey {
-		key := strings.TrimSpace(cfg.GeminiKey[i].APIKey)
-		if key == "" {
-			continue
-		}
-		seen[key] = struct{}{}
-	}
-	for _, raw := range legacy {
-		key := strings.TrimSpace(raw)
-		if key == "" {
-			continue
-		}
-		if _, exists := seen[key]; exists {
-			continue
-		}
-		cfg.GeminiKey = append(cfg.GeminiKey, GeminiKey{APIKey: key})
-		seen[key] = struct{}{}
-	}
-}
-
-func (cfg *Config) migrateLegacyOpenAICompatibilityKeys(legacy []legacyOpenAICompatibility) {
-	if cfg == nil || len(cfg.OpenAICompatibility) == 0 || len(legacy) == 0 {
-		return
-	}
-	lookup := make(map[string]*OpenAICompatibility, len(cfg.OpenAICompatibility))
-	for i := range cfg.OpenAICompatibility {
-		if key := legacyOpenAICompatKey(cfg.OpenAICompatibility[i].Name, cfg.OpenAICompatibility[i].BaseURL); key != "" {
-			lookup[key] = &cfg.OpenAICompatibility[i]
-		}
-	}
-	for _, legacyEntry := range legacy {
-		if len(legacyEntry.APIKeys) == 0 {
-			continue
-		}
-		key := legacyOpenAICompatKey(legacyEntry.Name, legacyEntry.BaseURL)
-		if key == "" {
-			continue
-		}
-		target := lookup[key]
-		if target == nil {
-			continue
-		}
-		mergeLegacyOpenAICompatAPIKeys(target, legacyEntry.APIKeys)
-	}
-}
-
-func mergeLegacyOpenAICompatAPIKeys(entry *OpenAICompatibility, keys []string) {
-	if entry == nil || len(keys) == 0 {
-		return
-	}
-	existing := make(map[string]struct{}, len(entry.APIKeyEntries))
-	for i := range entry.APIKeyEntries {
-		key := strings.TrimSpace(entry.APIKeyEntries[i].APIKey)
-		if key == "" {
-			continue
-		}
-		existing[key] = struct{}{}
-	}
-	for _, raw := range keys {
-		key := strings.TrimSpace(raw)
-		if key == "" {
-			continue
-		}
-		if _, ok := existing[key]; ok {
-			continue
-		}
-		entry.APIKeyEntries = append(entry.APIKeyEntries, OpenAICompatibilityAPIKey{APIKey: key})
-		existing[key] = struct{}{}
-	}
-}
-
-func legacyOpenAICompatKey(name, baseURL string) string {
-	trimmedName := strings.ToLower(strings.TrimSpace(name))
-	if trimmedName != "" {
-		return "name:" + trimmedName
-	}
-	trimmedBase := strings.ToLower(strings.TrimSpace(baseURL))
-	if trimmedBase != "" {
-		return "base:" + trimmedBase
-	}
-	return ""
 }
 
 func syncInlineAccessProvider(cfg *Config) {
@@ -1260,5 +1162,131 @@ func normalizeCollectionNodeStyles(node *yaml.Node) {
 		}
 	default:
 		// Scalars keep their existing style to preserve quoting
+	}
+}
+
+// Legacy migration helpers (move deprecated config keys into structured fields).
+type legacyConfigData struct {
+	LegacyGeminiKeys      []string                    `yaml:"generative-language-api-key"`
+	OpenAICompat          []legacyOpenAICompatibility `yaml:"openai-compatibility"`
+	AmpUpstreamURL        string                      `yaml:"amp-upstream-url"`
+	AmpUpstreamAPIKey     string                      `yaml:"amp-upstream-api-key"`
+	AmpRestrictManagement *bool                       `yaml:"amp-restrict-management-to-localhost"`
+	AmpModelMappings      []AmpModelMapping           `yaml:"amp-model-mappings"`
+}
+
+type legacyOpenAICompatibility struct {
+	Name    string   `yaml:"name"`
+	BaseURL string   `yaml:"base-url"`
+	APIKeys []string `yaml:"api-keys"`
+}
+
+func (cfg *Config) migrateLegacyGeminiKeys(legacy []string) {
+	if cfg == nil || len(legacy) == 0 {
+		return
+	}
+	seen := make(map[string]struct{}, len(cfg.GeminiKey))
+	for i := range cfg.GeminiKey {
+		key := strings.TrimSpace(cfg.GeminiKey[i].APIKey)
+		if key == "" {
+			continue
+		}
+		seen[key] = struct{}{}
+	}
+	for _, raw := range legacy {
+		key := strings.TrimSpace(raw)
+		if key == "" {
+			continue
+		}
+		if _, exists := seen[key]; exists {
+			continue
+		}
+		cfg.GeminiKey = append(cfg.GeminiKey, GeminiKey{APIKey: key})
+		seen[key] = struct{}{}
+	}
+}
+
+func (cfg *Config) migrateLegacyOpenAICompatibilityKeys(legacy []legacyOpenAICompatibility) {
+	if cfg == nil || len(cfg.OpenAICompatibility) == 0 || len(legacy) == 0 {
+		return
+	}
+	lookup := make(map[string]*OpenAICompatibility, len(cfg.OpenAICompatibility))
+	for i := range cfg.OpenAICompatibility {
+		if key := legacyOpenAICompatKey(cfg.OpenAICompatibility[i].Name, cfg.OpenAICompatibility[i].BaseURL); key != "" {
+			lookup[key] = &cfg.OpenAICompatibility[i]
+		}
+	}
+	for _, legacyEntry := range legacy {
+		if len(legacyEntry.APIKeys) == 0 {
+			continue
+		}
+		key := legacyOpenAICompatKey(legacyEntry.Name, legacyEntry.BaseURL)
+		if key == "" {
+			continue
+		}
+		target := lookup[key]
+		if target == nil {
+			continue
+		}
+		mergeLegacyOpenAICompatAPIKeys(target, legacyEntry.APIKeys)
+	}
+}
+
+func mergeLegacyOpenAICompatAPIKeys(entry *OpenAICompatibility, keys []string) {
+	if entry == nil || len(keys) == 0 {
+		return
+	}
+	existing := make(map[string]struct{}, len(entry.APIKeyEntries))
+	for i := range entry.APIKeyEntries {
+		key := strings.TrimSpace(entry.APIKeyEntries[i].APIKey)
+		if key == "" {
+			continue
+		}
+		existing[key] = struct{}{}
+	}
+	for _, raw := range keys {
+		key := strings.TrimSpace(raw)
+		if key == "" {
+			continue
+		}
+		if _, ok := existing[key]; ok {
+			continue
+		}
+		entry.APIKeyEntries = append(entry.APIKeyEntries, OpenAICompatibilityAPIKey{APIKey: key})
+		existing[key] = struct{}{}
+	}
+}
+
+func legacyOpenAICompatKey(name, baseURL string) string {
+	trimmedName := strings.ToLower(strings.TrimSpace(name))
+	if trimmedName != "" {
+		return "name:" + trimmedName
+	}
+	trimmedBase := strings.ToLower(strings.TrimSpace(baseURL))
+	if trimmedBase != "" {
+		return "base:" + trimmedBase
+	}
+	return ""
+}
+
+func (cfg *Config) migrateLegacyAmpConfig(legacy *legacyConfigData) {
+	if cfg == nil || legacy == nil {
+		return
+	}
+	if cfg.AmpCode.UpstreamURL == "" {
+		if val := strings.TrimSpace(legacy.AmpUpstreamURL); val != "" {
+			cfg.AmpCode.UpstreamURL = val
+		}
+	}
+	if cfg.AmpCode.UpstreamAPIKey == "" {
+		if val := strings.TrimSpace(legacy.AmpUpstreamAPIKey); val != "" {
+			cfg.AmpCode.UpstreamAPIKey = val
+		}
+	}
+	if legacy.AmpRestrictManagement != nil {
+		cfg.AmpCode.RestrictManagementToLocalhost = *legacy.AmpRestrictManagement
+	}
+	if len(cfg.AmpCode.ModelMappings) == 0 && len(legacy.AmpModelMappings) > 0 {
+		cfg.AmpCode.ModelMappings = append([]AmpModelMapping(nil), legacy.AmpModelMappings...)
 	}
 }
