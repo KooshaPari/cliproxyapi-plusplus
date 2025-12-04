@@ -32,6 +32,10 @@ type AmpModule struct {
 	modelMapper     *DefaultModelMapper
 	enabled         bool
 	registerOnce    sync.Once
+
+	// configMu protects lastConfig for partial reload comparison
+	configMu   sync.RWMutex
+	lastConfig *config.AmpCode
 }
 
 // New creates a new Amp routing module with the given options.
@@ -107,6 +111,10 @@ func (m *AmpModule) Register(ctx modules.Context) error {
 		// Initialize model mapper from config (for routing unavailable models to alternatives)
 		m.modelMapper = NewModelMapper(settings.ModelMappings)
 
+		// Store initial config for partial reload comparison
+		settingsCopy := settings
+		m.lastConfig = &settingsCopy
+
 		// Always register provider aliases - these work without an upstream
 		m.registerProviderAliases(ctx.Engine, ctx.BaseHandler, auth)
 
@@ -162,42 +170,121 @@ func (m *AmpModule) getAuthMiddleware(ctx modules.Context) gin.HandlerFunc {
 	}
 }
 
-// OnConfigUpdated handles configuration updates.
-// Currently requires restart for URL changes (could be enhanced for dynamic updates).
+// OnConfigUpdated handles configuration updates with partial reload support.
+// Only updates components that have actually changed to avoid unnecessary work.
+// URL changes still require restart (logged as warning).
 func (m *AmpModule) OnConfigUpdated(cfg *config.Config) error {
-	settings := cfg.AmpCode
+	newSettings := cfg.AmpCode
 
-	// Update model mappings (hot-reload supported)
-	if m.modelMapper != nil {
-		m.modelMapper.UpdateMappings(settings.ModelMappings)
-		if m.enabled {
-			log.Infof("amp config updated: reloading %d model mapping(s)", len(settings.ModelMappings))
-		}
-	} else if m.enabled {
-		log.Warnf("amp model mapper not initialized, skipping model mapping update")
-	}
+	// Get previous config for comparison
+	m.configMu.RLock()
+	oldSettings := m.lastConfig
+	m.configMu.RUnlock()
 
-	if !m.enabled {
-		return nil
-	}
+	// Track what changed for logging
+	var changes []string
 
-	upstreamURL := strings.TrimSpace(settings.UpstreamURL)
-	if upstreamURL == "" {
-		log.Warn("amp upstream URL removed from config, restart required to disable")
-		return nil
-	}
-
-	// If API key changed, invalidate the cache
-	if m.secretSource != nil {
-		if ms, ok := m.secretSource.(*MultiSourceSecret); ok {
-			ms.UpdateExplicitKey(settings.UpstreamAPIKey)
-			ms.InvalidateCache()
-			log.Debug("amp secret cache invalidated due to config update")
+	// Check model mappings change
+	modelMappingsChanged := m.hasModelMappingsChanged(oldSettings, &newSettings)
+	if modelMappingsChanged {
+		if m.modelMapper != nil {
+			m.modelMapper.UpdateMappings(newSettings.ModelMappings)
+			changes = append(changes, "model-mappings")
+			if m.enabled {
+				log.Infof("amp config partial reload: model mappings updated (%d entries)", len(newSettings.ModelMappings))
+			}
+		} else if m.enabled {
+			log.Warnf("amp model mapper not initialized, skipping model mapping update")
 		}
 	}
 
-	log.Debug("amp config updated (restart required for URL changes)")
+	if m.enabled {
+		// Check upstream URL change (requires restart)
+		newUpstreamURL := strings.TrimSpace(newSettings.UpstreamURL)
+		oldUpstreamURL := ""
+		if oldSettings != nil {
+			oldUpstreamURL = strings.TrimSpace(oldSettings.UpstreamURL)
+		}
+
+		if newUpstreamURL == "" && oldUpstreamURL != "" {
+			log.Warn("amp upstream URL removed from config, restart required to disable")
+		} else if newUpstreamURL != oldUpstreamURL {
+			changes = append(changes, "upstream-url(restart required)")
+			log.Warnf("amp config: upstream-url changed (%s -> %s), restart required", oldUpstreamURL, newUpstreamURL)
+		}
+
+		// Check API key change
+		apiKeyChanged := m.hasAPIKeyChanged(oldSettings, &newSettings)
+		if apiKeyChanged {
+			if m.secretSource != nil {
+				if ms, ok := m.secretSource.(*MultiSourceSecret); ok {
+					ms.UpdateExplicitKey(newSettings.UpstreamAPIKey)
+					ms.InvalidateCache()
+					changes = append(changes, "upstream-api-key")
+					log.Debug("amp config partial reload: secret cache invalidated")
+				}
+			}
+		}
+
+		// Check restrict-management-to-localhost change (requires restart)
+		if oldSettings != nil && oldSettings.RestrictManagementToLocalhost != newSettings.RestrictManagementToLocalhost {
+			changes = append(changes, "restrict-management-to-localhost(restart required)")
+			log.Warnf("amp config: restrict-management-to-localhost changed (%t -> %t), restart required",
+				oldSettings.RestrictManagementToLocalhost, newSettings.RestrictManagementToLocalhost)
+		}
+	}
+
+	// Store current config for next comparison
+	m.configMu.Lock()
+	settingsCopy := newSettings // copy struct
+	m.lastConfig = &settingsCopy
+	m.configMu.Unlock()
+
+	// Log summary if any changes detected
+	if len(changes) > 0 {
+		log.Debugf("amp config partial reload completed: %v", changes)
+	} else {
+		log.Debug("amp config checked: no changes detected")
+	}
+
 	return nil
+}
+
+// hasModelMappingsChanged compares old and new model mappings.
+func (m *AmpModule) hasModelMappingsChanged(old *config.AmpCode, new *config.AmpCode) bool {
+	if old == nil {
+		return len(new.ModelMappings) > 0
+	}
+
+	if len(old.ModelMappings) != len(new.ModelMappings) {
+		return true
+	}
+
+	// Build map for efficient comparison
+	oldMap := make(map[string]string, len(old.ModelMappings))
+	for _, mapping := range old.ModelMappings {
+		oldMap[strings.TrimSpace(mapping.From)] = strings.TrimSpace(mapping.To)
+	}
+
+	for _, mapping := range new.ModelMappings {
+		from := strings.TrimSpace(mapping.From)
+		to := strings.TrimSpace(mapping.To)
+		if oldTo, exists := oldMap[from]; !exists || oldTo != to {
+			return true
+		}
+	}
+
+	return false
+}
+
+// hasAPIKeyChanged compares old and new API keys.
+func (m *AmpModule) hasAPIKeyChanged(old *config.AmpCode, new *config.AmpCode) bool {
+	oldKey := ""
+	if old != nil {
+		oldKey = strings.TrimSpace(old.UpstreamAPIKey)
+	}
+	newKey := strings.TrimSpace(new.UpstreamAPIKey)
+	return oldKey != newKey
 }
 
 // GetModelMapper returns the model mapper instance (for testing/debugging).
