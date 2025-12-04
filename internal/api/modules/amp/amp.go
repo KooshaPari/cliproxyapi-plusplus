@@ -214,7 +214,7 @@ func (m *AmpModule) OnConfigUpdated(cfg *config.Config) error {
 		}
 
 		if newUpstreamURL == "" && oldUpstreamURL != "" {
-			log.Warn("amp upstream URL removed from config, proxy disabled until restart")
+			log.Warn("amp upstream URL removed from config, proxy has been disabled")
 			m.setProxy(nil)
 			changes = append(changes, "upstream-url(disabled)")
 		} else if newUpstreamURL != oldUpstreamURL && newUpstreamURL != "" {
