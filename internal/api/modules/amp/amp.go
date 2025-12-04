@@ -190,6 +190,7 @@ func (m *AmpModule) OnConfigUpdated(cfg *config.Config) error {
 	// If API key changed, invalidate the cache
 	if m.secretSource != nil {
 		if ms, ok := m.secretSource.(*MultiSourceSecret); ok {
+			ms.UpdateExplicitKey(settings.UpstreamAPIKey)
 			ms.InvalidateCache()
 			log.Debug("amp secret cache invalidated due to config update")
 		}
