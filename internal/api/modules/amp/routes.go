@@ -128,6 +128,7 @@ func (m *AmpModule) registerManagementRoutes(engine *gin.Engine, baseHandler *ha
 	// Root-level routes that AMP CLI expects without /api prefix
 	// These need the same security middleware as the /api/* routes (dynamic for hot-reload)
 	rootMiddleware := []gin.HandlerFunc{noCORSMiddleware(), m.localhostOnlyMiddleware()}
+	engine.GET("/threads/*path", append(rootMiddleware, proxyHandler)...)
 	engine.GET("/threads.rss", append(rootMiddleware, proxyHandler)...)
 
 	// Root-level auth routes for CLI login flow
