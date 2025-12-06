@@ -95,6 +95,10 @@ Browser-based tool to translate SRT subtitles using your Gemini subscription via
 
 CLI wrapper for instant switching between multiple Claude accounts and alternative models (Gemini, Codex, Antigravity) via CLIProxyAPI OAuth - no API keys needed
 
+### [ProxyPal](https://github.com/heyhuynhgiabuu/proxypal)
+
+Native macOS app with GUI to manage CLIProxyAPI - configure providers, model mappings, and multiple OpenAI-compatible endpoints with a modern interface
+
 > [!NOTE]  
 > If you developed a project based on CLIProxyAPI, please open a PR to add it to this list.
 
