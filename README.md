@@ -97,7 +97,7 @@ CLI wrapper for instant switching between multiple Claude accounts and alternati
 
 ### [ProxyPal](https://github.com/heyhuynhgiabuu/proxypal)
 
-Native macOS app with GUI to manage CLIProxyAPI - configure providers, model mappings, and multiple OpenAI-compatible endpoints with a modern interface
+Native macOS GUI for managing CLIProxyAPI: configure providers, model mappings, and endpoints via OAuth - no API keys needed.
 
 > [!NOTE]  
 > If you developed a project based on CLIProxyAPI, please open a PR to add it to this list.
