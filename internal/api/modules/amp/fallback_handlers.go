@@ -199,6 +199,7 @@ func (fh *FallbackHandler) WrapHandler(handler gin.HandlerFunc) gin.HandlerFunc 
 			handler(c)
 		} else {
 			// No provider, no mapping, no proxy: fall back to the wrapped handler so it can return an error response
+			c.Request.Body = io.NopCloser(bytes.NewReader(bodyBytes))
 			handler(c)
 		}
 	}
