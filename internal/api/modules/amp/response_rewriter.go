@@ -1,9 +1,7 @@
 package amp
 
 import (
-	"bufio"
 	"bytes"
-	"net"
 	"net/http"
 	"strings"
 
@@ -97,12 +95,4 @@ func (rw *ResponseRewriter) rewriteStreamChunk(chunk []byte) []byte {
 	}
 
 	return bytes.Join(lines, []byte("\n"))
-}
-
-// Hijack implements http.Hijacker for WebSocket support
-func (rw *ResponseRewriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
-	if hijacker, ok := rw.ResponseWriter.(http.Hijacker); ok {
-		return hijacker.Hijack()
-	}
-	return nil, nil, http.ErrNotSupported
 }

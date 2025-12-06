@@ -180,6 +180,7 @@ func (fh *FallbackHandler) WrapHandler(handler gin.HandlerFunc) gin.HandlerFunc 
 
 		if usedMapping {
 			// Log: Model was mapped to another model
+			log.Debugf("amp model mapping: request %s -> %s", normalizedModel, resolvedModel)
 			logAmpRouting(RouteTypeModelMapping, modelName, resolvedModel, providerName, requestPath)
 			rewriter := NewResponseRewriter(c.Writer, normalizedModel)
 			c.Writer = rewriter
@@ -188,7 +189,7 @@ func (fh *FallbackHandler) WrapHandler(handler gin.HandlerFunc) gin.HandlerFunc 
 			c.Request.Body = io.NopCloser(bytes.NewReader(bodyBytes))
 			handler(c)
 			rewriter.Flush()
-			log.Debugf("amp response rewriter: rewrote model %s -> %s in response", resolvedModel, normalizedModel)
+			log.Debugf("amp model mapping: response %s -> %s", resolvedModel, normalizedModel)
 		} else if len(providers) > 0 {
 			// Log: Using local provider (free)
 			logAmpRouting(RouteTypeLocalProvider, modelName, resolvedModel, providerName, requestPath)
