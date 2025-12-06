@@ -188,14 +188,10 @@ func (m *AmpModule) registerManagementRoutes(engine *gin.Engine, baseHandler *ha
 				if modelPart != "" {
 					normalized, _ := util.NormalizeGeminiThinkingModel(modelPart)
 					// Only handle locally when we have a provider or a valid mapping; otherwise fall back to proxy
-					hasProvider := false
-					if providers := util.GetProviderName(normalized); len(providers) > 0 {
-						hasProvider = true
-					} else if m.modelMapper != nil {
+					hasProvider := len(util.GetProviderName(normalized)) > 0
+					if !hasProvider && m.modelMapper != nil {
 						// Check if mapped model has provider (MapModel returns target only if it has providers)
-						if mapped := m.modelMapper.MapModel(normalized); mapped != "" {
-							hasProvider = true
-						}
+						hasProvider = m.modelMapper.MapModel(normalized) != ""
 					}
 
 					if hasProvider {
