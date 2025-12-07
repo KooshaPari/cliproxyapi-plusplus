@@ -8,6 +8,7 @@ package claude
 import (
 	"bytes"
 	"encoding/json"
+	"strings"
 
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
@@ -245,8 +246,12 @@ func convertClaudeContentPart(part gjson.Result) (string, bool) {
 		if !part.Get("text").Exists() {
 			return "", false
 		}
+		text := part.Get("text").String()
+		if strings.TrimSpace(text) == "" {
+			return "", false
+		}
 		textContent := `{"type":"text","text":""}`
-		textContent, _ = sjson.Set(textContent, "text", part.Get("text").String())
+		textContent, _ = sjson.Set(textContent, "text", text)
 		return textContent, true
 
 	case "image":
