@@ -169,7 +169,7 @@ func (m *AmpModule) registerManagementRoutes(engine *gin.Engine, baseHandler *ha
 	// We bridge these to our standard Gemini handler to enable local OAuth.
 	// If no local OAuth is available, falls back to ampcode.com proxy.
 	geminiHandlers := gemini.NewGeminiAPIHandler(baseHandler)
-	geminiBridge := createGeminiBridgeHandler(geminiHandlers)
+	geminiBridge := createGeminiBridgeHandler(geminiHandlers.GeminiHandler)
 	geminiV1Beta1Fallback := NewFallbackHandlerWithMapper(func() *httputil.ReverseProxy {
 		return m.getProxy()
 	}, m.modelMapper)

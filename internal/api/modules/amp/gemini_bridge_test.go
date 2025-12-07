@@ -3,12 +3,9 @@ package amp
 import (
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	"github.com/router-for-me/CLIProxyAPI/v6/sdk/api/handlers"
-	"github.com/router-for-me/CLIProxyAPI/v6/sdk/api/handlers/gemini"
 )
 
 func TestCreateGeminiBridgeHandler_ActionParameterExtraction(t *testing.T) {
@@ -38,12 +35,6 @@ func TestCreateGeminiBridgeHandler_ActionParameterExtraction(t *testing.T) {
 			mappedModel:    "gemini-flash",
 			expectedAction: "gemini-flash:streamGenerateContent",
 		},
-		{
-			name:           "empty_mapped_model_ignored",
-			path:           "/publishers/google/models/gemini-pro:generateContent",
-			mappedModel:    "",
-			expectedAction: "gemini-pro:generateContent",
-		},
 	}
 
 	for _, tt := range tests {
@@ -55,27 +46,8 @@ func TestCreateGeminiBridgeHandler_ActionParameterExtraction(t *testing.T) {
 				c.JSON(http.StatusOK, gin.H{"captured": capturedAction})
 			}
 
-			// Mirror the bridge logic from gemini_bridge.go
-			bridgeHandler := func(c *gin.Context) {
-				path := c.Param("path")
-				if idx := strings.Index(path, "/models/"); idx >= 0 {
-					actionPart := path[idx+8:]
-
-					if mappedModel, exists := c.Get(MappedModelContextKey); exists {
-						if strModel, ok := mappedModel.(string); ok && strModel != "" {
-							if colonIdx := strings.Index(actionPart, ":"); colonIdx > 0 {
-								method := actionPart[colonIdx:]
-								actionPart = strModel + method
-							}
-						}
-					}
-
-					c.Params = append(c.Params, gin.Param{Key: "action", Value: actionPart})
-					mockGeminiHandler(c)
-					return
-				}
-				c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid path"})
-			}
+			// Use the actual createGeminiBridgeHandler function
+			bridgeHandler := createGeminiBridgeHandler(mockGeminiHandler)
 
 			r := gin.New()
 			if tt.mappedModel != "" {
@@ -103,9 +75,10 @@ func TestCreateGeminiBridgeHandler_ActionParameterExtraction(t *testing.T) {
 func TestCreateGeminiBridgeHandler_InvalidPath(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	base := &handlers.BaseAPIHandler{}
-	geminiHandlers := gemini.NewGeminiAPIHandler(base)
-	bridgeHandler := createGeminiBridgeHandler(geminiHandlers)
+	mockHandler := func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"ok": true})
+	}
+	bridgeHandler := createGeminiBridgeHandler(mockHandler)
 
 	r := gin.New()
 	r.POST("/api/provider/google/v1beta1/*path", bridgeHandler)
