@@ -243,9 +243,6 @@ func convertClaudeContentPart(part gjson.Result) (string, bool) {
 
 	switch partType {
 	case "text":
-		if !part.Get("text").Exists() {
-			return "", false
-		}
 		text := part.Get("text").String()
 		if strings.TrimSpace(text) == "" {
 			return "", false
