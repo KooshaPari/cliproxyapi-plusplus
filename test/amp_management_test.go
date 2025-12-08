@@ -18,6 +18,7 @@ func init() {
 	gin.SetMode(gin.TestMode)
 }
 
+// newAmpTestHandler creates a test handler with default ampcode configuration.
 func newAmpTestHandler(t *testing.T) (*management.Handler, string) {
 	t.Helper()
 	tmpDir := t.TempDir()
@@ -43,6 +44,7 @@ func newAmpTestHandler(t *testing.T) (*management.Handler, string) {
 	return h, configPath
 }
 
+// setupAmpRouter creates a test router with all ampcode management endpoints.
 func setupAmpRouter(h *management.Handler) *gin.Engine {
 	r := gin.New()
 	mgmt := r.Group("/v0/management")
@@ -66,6 +68,7 @@ func setupAmpRouter(h *management.Handler) *gin.Engine {
 	return r
 }
 
+// TestGetAmpCode verifies GET /v0/management/ampcode returns full ampcode config.
 func TestGetAmpCode(t *testing.T) {
 	h, _ := newAmpTestHandler(t)
 	r := setupAmpRouter(h)
@@ -92,6 +95,7 @@ func TestGetAmpCode(t *testing.T) {
 	}
 }
 
+// TestGetAmpUpstreamURL verifies GET /v0/management/ampcode/upstream-url returns the upstream URL.
 func TestGetAmpUpstreamURL(t *testing.T) {
 	h, _ := newAmpTestHandler(t)
 	r := setupAmpRouter(h)
@@ -114,6 +118,7 @@ func TestGetAmpUpstreamURL(t *testing.T) {
 	}
 }
 
+// TestPutAmpUpstreamURL verifies PUT /v0/management/ampcode/upstream-url updates the upstream URL.
 func TestPutAmpUpstreamURL(t *testing.T) {
 	h, _ := newAmpTestHandler(t)
 	r := setupAmpRouter(h)
@@ -129,6 +134,7 @@ func TestPutAmpUpstreamURL(t *testing.T) {
 	}
 }
 
+// TestDeleteAmpUpstreamURL verifies DELETE /v0/management/ampcode/upstream-url clears the upstream URL.
 func TestDeleteAmpUpstreamURL(t *testing.T) {
 	h, _ := newAmpTestHandler(t)
 	r := setupAmpRouter(h)
@@ -142,6 +148,7 @@ func TestDeleteAmpUpstreamURL(t *testing.T) {
 	}
 }
 
+// TestGetAmpUpstreamAPIKey verifies GET /v0/management/ampcode/upstream-api-key returns the API key.
 func TestGetAmpUpstreamAPIKey(t *testing.T) {
 	h, _ := newAmpTestHandler(t)
 	r := setupAmpRouter(h)
@@ -165,6 +172,7 @@ func TestGetAmpUpstreamAPIKey(t *testing.T) {
 	}
 }
 
+// TestPutAmpUpstreamAPIKey verifies PUT /v0/management/ampcode/upstream-api-key updates the API key.
 func TestPutAmpUpstreamAPIKey(t *testing.T) {
 	h, _ := newAmpTestHandler(t)
 	r := setupAmpRouter(h)
@@ -180,6 +188,7 @@ func TestPutAmpUpstreamAPIKey(t *testing.T) {
 	}
 }
 
+// TestDeleteAmpUpstreamAPIKey verifies DELETE /v0/management/ampcode/upstream-api-key clears the API key.
 func TestDeleteAmpUpstreamAPIKey(t *testing.T) {
 	h, _ := newAmpTestHandler(t)
 	r := setupAmpRouter(h)
@@ -193,6 +202,7 @@ func TestDeleteAmpUpstreamAPIKey(t *testing.T) {
 	}
 }
 
+// TestGetAmpRestrictManagementToLocalhost verifies GET returns the localhost restriction setting.
 func TestGetAmpRestrictManagementToLocalhost(t *testing.T) {
 	h, _ := newAmpTestHandler(t)
 	r := setupAmpRouter(h)
@@ -215,6 +225,7 @@ func TestGetAmpRestrictManagementToLocalhost(t *testing.T) {
 	}
 }
 
+// TestPutAmpRestrictManagementToLocalhost verifies PUT updates the localhost restriction setting.
 func TestPutAmpRestrictManagementToLocalhost(t *testing.T) {
 	h, _ := newAmpTestHandler(t)
 	r := setupAmpRouter(h)
@@ -230,6 +241,7 @@ func TestPutAmpRestrictManagementToLocalhost(t *testing.T) {
 	}
 }
 
+// TestGetAmpModelMappings verifies GET /v0/management/ampcode/model-mappings returns all mappings.
 func TestGetAmpModelMappings(t *testing.T) {
 	h, _ := newAmpTestHandler(t)
 	r := setupAmpRouter(h)
@@ -256,6 +268,7 @@ func TestGetAmpModelMappings(t *testing.T) {
 	}
 }
 
+// TestPutAmpModelMappings verifies PUT /v0/management/ampcode/model-mappings replaces all mappings.
 func TestPutAmpModelMappings(t *testing.T) {
 	h, _ := newAmpTestHandler(t)
 	r := setupAmpRouter(h)
@@ -271,6 +284,7 @@ func TestPutAmpModelMappings(t *testing.T) {
 	}
 }
 
+// TestPatchAmpModelMappings verifies PATCH updates existing mappings and adds new ones.
 func TestPatchAmpModelMappings(t *testing.T) {
 	h, _ := newAmpTestHandler(t)
 	r := setupAmpRouter(h)
@@ -286,6 +300,7 @@ func TestPatchAmpModelMappings(t *testing.T) {
 	}
 }
 
+// TestDeleteAmpModelMappings_Specific verifies DELETE removes specified mappings by "from" field.
 func TestDeleteAmpModelMappings_Specific(t *testing.T) {
 	h, _ := newAmpTestHandler(t)
 	r := setupAmpRouter(h)
@@ -301,6 +316,7 @@ func TestDeleteAmpModelMappings_Specific(t *testing.T) {
 	}
 }
 
+// TestDeleteAmpModelMappings_All verifies DELETE with empty body removes all mappings.
 func TestDeleteAmpModelMappings_All(t *testing.T) {
 	h, _ := newAmpTestHandler(t)
 	r := setupAmpRouter(h)
@@ -314,6 +330,7 @@ func TestDeleteAmpModelMappings_All(t *testing.T) {
 	}
 }
 
+// TestGetAmpForceModelMappings verifies GET returns the force-model-mappings setting.
 func TestGetAmpForceModelMappings(t *testing.T) {
 	h, _ := newAmpTestHandler(t)
 	r := setupAmpRouter(h)
@@ -336,6 +353,7 @@ func TestGetAmpForceModelMappings(t *testing.T) {
 	}
 }
 
+// TestPutAmpForceModelMappings verifies PUT updates the force-model-mappings setting.
 func TestPutAmpForceModelMappings(t *testing.T) {
 	h, _ := newAmpTestHandler(t)
 	r := setupAmpRouter(h)
@@ -351,6 +369,7 @@ func TestPutAmpForceModelMappings(t *testing.T) {
 	}
 }
 
+// TestPutAmpModelMappings_VerifyState verifies PUT replaces mappings and state is persisted.
 func TestPutAmpModelMappings_VerifyState(t *testing.T) {
 	h, _ := newAmpTestHandler(t)
 	r := setupAmpRouter(h)
@@ -387,6 +406,7 @@ func TestPutAmpModelMappings_VerifyState(t *testing.T) {
 	}
 }
 
+// TestPatchAmpModelMappings_VerifyState verifies PATCH merges mappings correctly.
 func TestPatchAmpModelMappings_VerifyState(t *testing.T) {
 	h, _ := newAmpTestHandler(t)
 	r := setupAmpRouter(h)
@@ -428,6 +448,7 @@ func TestPatchAmpModelMappings_VerifyState(t *testing.T) {
 	}
 }
 
+// TestDeleteAmpModelMappings_VerifyState verifies DELETE removes specific mappings and keeps others.
 func TestDeleteAmpModelMappings_VerifyState(t *testing.T) {
 	h, _ := newAmpTestHandler(t)
 	r := setupAmpRouter(h)
@@ -466,6 +487,7 @@ func TestDeleteAmpModelMappings_VerifyState(t *testing.T) {
 	}
 }
 
+// TestDeleteAmpModelMappings_NonExistent verifies DELETE with non-existent mapping doesn't affect existing ones.
 func TestDeleteAmpModelMappings_NonExistent(t *testing.T) {
 	h, _ := newAmpTestHandler(t)
 	r := setupAmpRouter(h)
@@ -494,6 +516,7 @@ func TestDeleteAmpModelMappings_NonExistent(t *testing.T) {
 	}
 }
 
+// TestPutAmpModelMappings_Empty verifies PUT with empty array clears all mappings.
 func TestPutAmpModelMappings_Empty(t *testing.T) {
 	h, _ := newAmpTestHandler(t)
 	r := setupAmpRouter(h)
@@ -522,6 +545,7 @@ func TestPutAmpModelMappings_Empty(t *testing.T) {
 	}
 }
 
+// TestPutAmpUpstreamURL_VerifyState verifies PUT updates upstream URL and persists state.
 func TestPutAmpUpstreamURL_VerifyState(t *testing.T) {
 	h, _ := newAmpTestHandler(t)
 	r := setupAmpRouter(h)
@@ -550,6 +574,7 @@ func TestPutAmpUpstreamURL_VerifyState(t *testing.T) {
 	}
 }
 
+// TestDeleteAmpUpstreamURL_VerifyState verifies DELETE clears upstream URL.
 func TestDeleteAmpUpstreamURL_VerifyState(t *testing.T) {
 	h, _ := newAmpTestHandler(t)
 	r := setupAmpRouter(h)
@@ -576,6 +601,7 @@ func TestDeleteAmpUpstreamURL_VerifyState(t *testing.T) {
 	}
 }
 
+// TestPutAmpUpstreamAPIKey_VerifyState verifies PUT updates API key and persists state.
 func TestPutAmpUpstreamAPIKey_VerifyState(t *testing.T) {
 	h, _ := newAmpTestHandler(t)
 	r := setupAmpRouter(h)
@@ -604,6 +630,7 @@ func TestPutAmpUpstreamAPIKey_VerifyState(t *testing.T) {
 	}
 }
 
+// TestDeleteAmpUpstreamAPIKey_VerifyState verifies DELETE clears API key.
 func TestDeleteAmpUpstreamAPIKey_VerifyState(t *testing.T) {
 	h, _ := newAmpTestHandler(t)
 	r := setupAmpRouter(h)
@@ -630,6 +657,7 @@ func TestDeleteAmpUpstreamAPIKey_VerifyState(t *testing.T) {
 	}
 }
 
+// TestPutAmpRestrictManagementToLocalhost_VerifyState verifies PUT updates localhost restriction.
 func TestPutAmpRestrictManagementToLocalhost_VerifyState(t *testing.T) {
 	h, _ := newAmpTestHandler(t)
 	r := setupAmpRouter(h)
@@ -658,6 +686,7 @@ func TestPutAmpRestrictManagementToLocalhost_VerifyState(t *testing.T) {
 	}
 }
 
+// TestPutAmpForceModelMappings_VerifyState verifies PUT updates force-model-mappings setting.
 func TestPutAmpForceModelMappings_VerifyState(t *testing.T) {
 	h, _ := newAmpTestHandler(t)
 	r := setupAmpRouter(h)
@@ -686,6 +715,23 @@ func TestPutAmpForceModelMappings_VerifyState(t *testing.T) {
 	}
 }
 
+// TestPutBoolField_EmptyObject verifies PUT with empty object returns 400.
+func TestPutBoolField_EmptyObject(t *testing.T) {
+	h, _ := newAmpTestHandler(t)
+	r := setupAmpRouter(h)
+
+	body := `{}`
+	req := httptest.NewRequest(http.MethodPut, "/v0/management/ampcode/force-model-mappings", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected status %d for empty object, got %d", http.StatusBadRequest, w.Code)
+	}
+}
+
+// TestComplexMappingsWorkflow tests a full workflow: PUT, PATCH, DELETE, and GET.
 func TestComplexMappingsWorkflow(t *testing.T) {
 	h, _ := newAmpTestHandler(t)
 	r := setupAmpRouter(h)
@@ -735,6 +781,7 @@ func TestComplexMappingsWorkflow(t *testing.T) {
 	}
 }
 
+// TestNilHandlerGetAmpCode verifies handler works with empty config.
 func TestNilHandlerGetAmpCode(t *testing.T) {
 	cfg := &config.Config{}
 	h := management.NewHandler(cfg, "", nil)
@@ -749,6 +796,7 @@ func TestNilHandlerGetAmpCode(t *testing.T) {
 	}
 }
 
+// TestEmptyConfigGetAmpModelMappings verifies GET returns empty array for fresh config.
 func TestEmptyConfigGetAmpModelMappings(t *testing.T) {
 	cfg := &config.Config{}
 	tmpDir := t.TempDir()

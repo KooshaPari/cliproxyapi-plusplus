@@ -785,12 +785,8 @@ func (h *Handler) PutAmpModelMappings(c *gin.Context) {
 		Value []config.AmpModelMapping `json:"value"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
-		var mappings []config.AmpModelMapping
-		if err2 := c.ShouldBindJSON(&mappings); err2 != nil {
-			c.JSON(400, gin.H{"error": "invalid body"})
-			return
-		}
-		body.Value = mappings
+		c.JSON(400, gin.H{"error": "invalid body"})
+		return
 	}
 	h.cfg.AmpCode.ModelMappings = body.Value
 	h.persist(c)
@@ -802,12 +798,8 @@ func (h *Handler) PatchAmpModelMappings(c *gin.Context) {
 		Value []config.AmpModelMapping `json:"value"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
-		var mappings []config.AmpModelMapping
-		if err2 := c.ShouldBindJSON(&mappings); err2 != nil {
-			c.JSON(400, gin.H{"error": "invalid body"})
-			return
-		}
-		body.Value = mappings
+		c.JSON(400, gin.H{"error": "invalid body"})
+		return
 	}
 
 	existing := make(map[string]int)
@@ -832,17 +824,7 @@ func (h *Handler) DeleteAmpModelMappings(c *gin.Context) {
 	var body struct {
 		Value []string `json:"value"`
 	}
-	if err := c.ShouldBindJSON(&body); err != nil {
-		var fromList []string
-		if err2 := c.ShouldBindJSON(&fromList); err2 != nil {
-			h.cfg.AmpCode.ModelMappings = nil
-			h.persist(c)
-			return
-		}
-		body.Value = fromList
-	}
-
-	if len(body.Value) == 0 {
+	if err := c.ShouldBindJSON(&body); err != nil || len(body.Value) == 0 {
 		h.cfg.AmpCode.ModelMappings = nil
 		h.persist(c)
 		return
