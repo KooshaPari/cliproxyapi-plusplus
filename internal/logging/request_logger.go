@@ -814,7 +814,6 @@ func (w *FileStreamingLogWriter) Close() error {
 	}
 
 	// 3. Write RESPONSE section (status, headers, buffered chunks)
-	content.WriteString("========================================\n")
 	content.WriteString("=== RESPONSE ===\n")
 	if w.statusWritten {
 		content.WriteString(fmt.Sprintf("Status: %d\n", w.responseStatus))
