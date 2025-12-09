@@ -207,6 +207,47 @@ func GeminiThinkingFromMetadata(metadata map[string]any) (*int, *bool, bool) {
 	return budgetPtr, includePtr, matched
 }
 
+// modelsWithDefaultThinking lists models that should have thinking enabled by default
+// when no explicit thinkingConfig is provided.
+var modelsWithDefaultThinking = map[string]bool{
+	"gemini-3-pro-preview": true,
+}
+
+// ModelHasDefaultThinking returns true if the model should have thinking enabled by default.
+func ModelHasDefaultThinking(model string) bool {
+	return modelsWithDefaultThinking[model]
+}
+
+// ApplyDefaultThinkingIfNeeded injects default thinkingConfig for models that require it.
+// For standard Gemini API format (generationConfig.thinkingConfig path).
+// Returns the modified body if thinkingConfig was added, otherwise returns the original.
+func ApplyDefaultThinkingIfNeeded(model string, body []byte) []byte {
+	if !ModelHasDefaultThinking(model) {
+		return body
+	}
+	if gjson.GetBytes(body, "generationConfig.thinkingConfig").Exists() {
+		return body
+	}
+	updated, _ := sjson.SetBytes(body, "generationConfig.thinkingConfig.thinkingBudget", -1)
+	updated, _ = sjson.SetBytes(updated, "generationConfig.thinkingConfig.include_thoughts", true)
+	return updated
+}
+
+// ApplyDefaultThinkingIfNeededCLI injects default thinkingConfig for models that require it.
+// For Gemini CLI API format (request.generationConfig.thinkingConfig path).
+// Returns the modified body if thinkingConfig was added, otherwise returns the original.
+func ApplyDefaultThinkingIfNeededCLI(model string, body []byte) []byte {
+	if !ModelHasDefaultThinking(model) {
+		return body
+	}
+	if gjson.GetBytes(body, "request.generationConfig.thinkingConfig").Exists() {
+		return body
+	}
+	updated, _ := sjson.SetBytes(body, "request.generationConfig.thinkingConfig.thinkingBudget", -1)
+	updated, _ = sjson.SetBytes(updated, "request.generationConfig.thinkingConfig.include_thoughts", true)
+	return updated
+}
+
 // StripThinkingConfigIfUnsupported removes thinkingConfig from the request body
 // when the target model does not advertise Thinking capability. It cleans both
 // standard Gemini and Gemini CLI JSON envelopes. This acts as a final safety net

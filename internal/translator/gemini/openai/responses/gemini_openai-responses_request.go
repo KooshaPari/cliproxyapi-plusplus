@@ -437,16 +437,6 @@ func ConvertOpenAIResponsesRequestToGemini(modelName string, inputRawJSON []byte
 		}
 	}
 
-	// For gemini-3-pro-preview, always send default thinkingConfig when none specified.
-	// This matches the official Gemini CLI behavior which always sends:
-	// { thinkingBudget: -1, includeThoughts: true }
-	// See: ai-gemini-cli/packages/core/src/config/defaultModelConfigs.ts
-	if !gjson.Get(out, "generationConfig.thinkingConfig").Exists() && modelName == "gemini-3-pro-preview" {
-		out, _ = sjson.Set(out, "generationConfig.thinkingConfig.thinkingBudget", -1)
-		out, _ = sjson.Set(out, "generationConfig.thinkingConfig.include_thoughts", true)
-		// log.Debugf("Applied default thinkingConfig for gemini-3-pro-preview (matches Gemini CLI): thinkingBudget=-1, include_thoughts=true")
-	}
-
 	result := []byte(out)
 	result = common.AttachDefaultSafetySettings(result, "safetySettings")
 	return result

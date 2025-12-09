@@ -309,6 +309,7 @@ func (e *AIStudioExecutor) translateRequest(req cliproxyexecutor.Request, opts c
 	to := sdktranslator.FromString("gemini")
 	payload := sdktranslator.TranslateRequest(from, to, req.Model, bytes.Clone(req.Payload), stream)
 	payload = applyThinkingMetadata(payload, req.Metadata, req.Model)
+	payload = util.ApplyDefaultThinkingIfNeeded(req.Model, payload)
 	payload = util.ConvertThinkingLevelToBudget(payload)
 	payload = util.NormalizeGeminiThinkingBudget(req.Model, payload)
 	payload = util.StripThinkingConfigIfUnsupported(req.Model, payload)
