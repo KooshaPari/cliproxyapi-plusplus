@@ -373,9 +373,14 @@ func FetchAntigravityModels(ctx context.Context, auth *cliproxyauth.Auth, cfg *c
 		for originalName := range result.Map() {
 			aliasName := modelName2Alias(originalName)
 			if aliasName != "" {
+				cfg := modelConfig[aliasName]
+				modelName := aliasName
+				if cfg != nil && cfg.Name != "" {
+					modelName = cfg.Name
+				}
 				modelInfo := &registry.ModelInfo{
 					ID:          aliasName,
-					Name:        aliasName,
+					Name:        modelName,
 					Description: aliasName,
 					DisplayName: aliasName,
 					Version:     aliasName,
@@ -385,7 +390,7 @@ func FetchAntigravityModels(ctx context.Context, auth *cliproxyauth.Auth, cfg *c
 					Type:        antigravityAuthType,
 				}
 				// Look up Thinking support from static config using alias name
-				if cfg, ok := modelConfig[aliasName]; ok {
+				if cfg != nil {
 					if cfg.Thinking != nil {
 						modelInfo.Thinking = cfg.Thinking
 					}
