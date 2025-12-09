@@ -223,6 +223,32 @@ func StripThinkingConfigIfUnsupported(model string, body []byte) []byte {
 	return updated
 }
 
+// NormalizeGeminiThinkingBudget normalizes the thinkingBudget value in a standard Gemini
+// request body (generationConfig.thinkingConfig.thinkingBudget path).
+func NormalizeGeminiThinkingBudget(model string, body []byte) []byte {
+	const budgetPath = "generationConfig.thinkingConfig.thinkingBudget"
+	budget := gjson.GetBytes(body, budgetPath)
+	if !budget.Exists() {
+		return body
+	}
+	normalized := NormalizeThinkingBudget(model, int(budget.Int()))
+	updated, _ := sjson.SetBytes(body, budgetPath, normalized)
+	return updated
+}
+
+// NormalizeGeminiCLIThinkingBudget normalizes the thinkingBudget value in a Gemini CLI
+// request body (request.generationConfig.thinkingConfig.thinkingBudget path).
+func NormalizeGeminiCLIThinkingBudget(model string, body []byte) []byte {
+	const budgetPath = "request.generationConfig.thinkingConfig.thinkingBudget"
+	budget := gjson.GetBytes(body, budgetPath)
+	if !budget.Exists() {
+		return body
+	}
+	normalized := NormalizeThinkingBudget(model, int(budget.Int()))
+	updated, _ := sjson.SetBytes(body, budgetPath, normalized)
+	return updated
+}
+
 // ConvertThinkingLevelToBudget checks for "generationConfig.thinkingConfig.thinkingLevel"
 // and converts it to "thinkingBudget".
 // "high" -> 32768

@@ -296,6 +296,7 @@ func (e *GeminiVertexExecutor) executeWithServiceAccount(ctx context.Context, au
 		}
 		body = util.ApplyGeminiThinkingConfig(body, budgetOverride, includeOverride)
 	}
+	body = util.NormalizeGeminiThinkingBudget(req.Model, body)
 	body = util.StripThinkingConfigIfUnsupported(req.Model, body)
 	body = fixGeminiImageAspectRatio(req.Model, body)
 	body = applyPayloadConfig(e.cfg, req.Model, body)
@@ -391,6 +392,7 @@ func (e *GeminiVertexExecutor) executeWithAPIKey(ctx context.Context, auth *clip
 		}
 		body = util.ApplyGeminiThinkingConfig(body, budgetOverride, includeOverride)
 	}
+	body = util.NormalizeGeminiThinkingBudget(req.Model, body)
 	body = util.StripThinkingConfigIfUnsupported(req.Model, body)
 	body = fixGeminiImageAspectRatio(req.Model, body)
 	body = applyPayloadConfig(e.cfg, req.Model, body)
@@ -487,6 +489,7 @@ func (e *GeminiVertexExecutor) executeStreamWithServiceAccount(ctx context.Conte
 		}
 		body = util.ApplyGeminiThinkingConfig(body, budgetOverride, includeOverride)
 	}
+	body = util.NormalizeGeminiThinkingBudget(req.Model, body)
 	body = util.StripThinkingConfigIfUnsupported(req.Model, body)
 	body = fixGeminiImageAspectRatio(req.Model, body)
 	body = applyPayloadConfig(e.cfg, req.Model, body)
@@ -599,6 +602,7 @@ func (e *GeminiVertexExecutor) executeStreamWithAPIKey(ctx context.Context, auth
 		}
 		body = util.ApplyGeminiThinkingConfig(body, budgetOverride, includeOverride)
 	}
+	body = util.NormalizeGeminiThinkingBudget(req.Model, body)
 	body = util.StripThinkingConfigIfUnsupported(req.Model, body)
 	body = fixGeminiImageAspectRatio(req.Model, body)
 	body = applyPayloadConfig(e.cfg, req.Model, body)
