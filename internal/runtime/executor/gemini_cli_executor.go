@@ -1,3 +1,6 @@
+// Package executor provides runtime execution capabilities for various AI service providers.
+// This file implements the Gemini CLI executor that talks to Cloud Code Assist endpoints
+// using OAuth credentials from auth metadata.
 package executor
 
 import (
@@ -44,12 +47,21 @@ type GeminiCLIExecutor struct {
 	cfg *config.Config
 }
 
+// NewGeminiCLIExecutor creates a new Gemini CLI executor instance.
+//
+// Parameters:
+//   - cfg: The application configuration
+//
+// Returns:
+//   - *GeminiCLIExecutor: A new Gemini CLI executor instance
 func NewGeminiCLIExecutor(cfg *config.Config) *GeminiCLIExecutor {
 	return &GeminiCLIExecutor{cfg: cfg}
 }
 
+// Identifier returns the executor identifier.
 func (e *GeminiCLIExecutor) Identifier() string { return "gemini-cli" }
 
+// PrepareRequest prepares the HTTP request for execution (no-op for Gemini CLI).
 func (e *GeminiCLIExecutor) PrepareRequest(_ *http.Request, _ *cliproxyauth.Auth) error { return nil }
 
 func (e *GeminiCLIExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, req cliproxyexecutor.Request, opts cliproxyexecutor.Options) (resp cliproxyexecutor.Response, err error) {
@@ -309,7 +321,7 @@ func (e *GeminiCLIExecutor) ExecuteStream(ctx context.Context, auth *cliproxyaut
 			}()
 			if opts.Alt == "" {
 				scanner := bufio.NewScanner(resp.Body)
-				scanner.Buffer(nil, 52_428_800) // 50MB
+				scanner.Buffer(nil, streamScannerBuffer)
 				var param any
 				for scanner.Scan() {
 					line := scanner.Bytes()
@@ -471,9 +483,8 @@ func (e *GeminiCLIExecutor) CountTokens(ctx context.Context, auth *cliproxyauth.
 	return cliproxyexecutor.Response{}, newGeminiStatusErr(lastStatus, lastBody)
 }
 
-func (e *GeminiCLIExecutor) Refresh(ctx context.Context, auth *cliproxyauth.Auth) (*cliproxyauth.Auth, error) {
-	log.Debugf("gemini cli executor: refresh called")
-	_ = ctx
+// Refresh refreshes the authentication credentials (no-op for Gemini CLI).
+func (e *GeminiCLIExecutor) Refresh(_ context.Context, auth *cliproxyauth.Auth) (*cliproxyauth.Auth, error) {
 	return auth, nil
 }
 

@@ -1,3 +1,6 @@
+// Package executor provides runtime execution capabilities for various AI service providers.
+// This file implements the AI Studio executor that routes requests through a websocket-backed
+// transport for the AI Studio provider.
 package executor
 
 import (
@@ -26,15 +29,23 @@ type AIStudioExecutor struct {
 	cfg      *config.Config
 }
 
-// NewAIStudioExecutor constructs a websocket executor for the provider name.
+// NewAIStudioExecutor creates a new AI Studio executor instance.
+//
+// Parameters:
+//   - cfg: The application configuration
+//   - provider: The provider name
+//   - relay: The websocket relay manager
+//
+// Returns:
+//   - *AIStudioExecutor: A new AI Studio executor instance
 func NewAIStudioExecutor(cfg *config.Config, provider string, relay *wsrelay.Manager) *AIStudioExecutor {
 	return &AIStudioExecutor{provider: strings.ToLower(provider), relay: relay, cfg: cfg}
 }
 
-// Identifier returns the logical provider key for routing.
+// Identifier returns the executor identifier.
 func (e *AIStudioExecutor) Identifier() string { return "aistudio" }
 
-// PrepareRequest is a no-op because websocket transport already injects headers.
+// PrepareRequest prepares the HTTP request for execution (no-op for AI Studio).
 func (e *AIStudioExecutor) PrepareRequest(_ *http.Request, _ *cliproxyauth.Auth) error {
 	return nil
 }
@@ -293,8 +304,8 @@ func (e *AIStudioExecutor) CountTokens(ctx context.Context, auth *cliproxyauth.A
 	return cliproxyexecutor.Response{Payload: []byte(translated)}, nil
 }
 
-func (e *AIStudioExecutor) Refresh(ctx context.Context, auth *cliproxyauth.Auth) (*cliproxyauth.Auth, error) {
-	_ = ctx
+// Refresh refreshes the authentication credentials (no-op for AI Studio).
+func (e *AIStudioExecutor) Refresh(_ context.Context, auth *cliproxyauth.Auth) (*cliproxyauth.Auth, error) {
 	return auth, nil
 }
 

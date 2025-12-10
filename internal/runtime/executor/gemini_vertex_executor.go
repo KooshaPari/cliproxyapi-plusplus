@@ -1,6 +1,6 @@
-// Package executor contains provider executors. This file implements the Vertex AI
-// Gemini executor that talks to Google Vertex AI endpoints using service account
-// credentials imported by the CLI.
+// Package executor provides runtime execution capabilities for various AI service providers.
+// This file implements the Vertex AI Gemini executor that talks to Google Vertex AI
+// endpoints using service account credentials or API keys.
 package executor
 
 import (
@@ -36,15 +36,21 @@ type GeminiVertexExecutor struct {
 	cfg *config.Config
 }
 
-// NewGeminiVertexExecutor constructs the Vertex executor.
+// NewGeminiVertexExecutor creates a new Vertex AI Gemini executor instance.
+//
+// Parameters:
+//   - cfg: The application configuration
+//
+// Returns:
+//   - *GeminiVertexExecutor: A new Vertex AI Gemini executor instance
 func NewGeminiVertexExecutor(cfg *config.Config) *GeminiVertexExecutor {
 	return &GeminiVertexExecutor{cfg: cfg}
 }
 
-// Identifier returns provider key for manager routing.
+// Identifier returns the executor identifier.
 func (e *GeminiVertexExecutor) Identifier() string { return "vertex" }
 
-// PrepareRequest is a no-op for Vertex.
+// PrepareRequest prepares the HTTP request for execution (no-op for Vertex).
 func (e *GeminiVertexExecutor) PrepareRequest(_ *http.Request, _ *cliproxyauth.Auth) error {
 	return nil
 }
@@ -281,7 +287,7 @@ func (e *GeminiVertexExecutor) countTokensWithAPIKey(ctx context.Context, auth *
 	return cliproxyexecutor.Response{Payload: []byte(out)}, nil
 }
 
-// Refresh is a no-op for service account based credentials.
+// Refresh refreshes the authentication credentials (no-op for Vertex).
 func (e *GeminiVertexExecutor) Refresh(_ context.Context, auth *cliproxyauth.Auth) (*cliproxyauth.Auth, error) {
 	return auth, nil
 }
@@ -579,7 +585,7 @@ func (e *GeminiVertexExecutor) executeStreamWithServiceAccount(ctx context.Conte
 			}
 		}()
 		scanner := bufio.NewScanner(httpResp.Body)
-		scanner.Buffer(nil, 52_428_800) // 50MB
+		scanner.Buffer(nil, streamScannerBuffer)
 		var param any
 		for scanner.Scan() {
 			line := scanner.Bytes()
@@ -696,7 +702,7 @@ func (e *GeminiVertexExecutor) executeStreamWithAPIKey(ctx context.Context, auth
 			}
 		}()
 		scanner := bufio.NewScanner(httpResp.Body)
-		scanner.Buffer(nil, 52_428_800) // 50MB
+		scanner.Buffer(nil, streamScannerBuffer)
 		var param any
 		for scanner.Scan() {
 			line := scanner.Bytes()
