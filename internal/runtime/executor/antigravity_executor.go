@@ -67,7 +67,7 @@ func (e *AntigravityExecutor) Identifier() string { return antigravityAuthType }
 // PrepareRequest prepares the HTTP request for execution (no-op for Antigravity).
 func (e *AntigravityExecutor) PrepareRequest(_ *http.Request, _ *cliproxyauth.Auth) error { return nil }
 
-// Execute handles non-streaming requests via the antigravity generate endpoint.
+// Execute performs a non-streaming request to the Antigravity API.
 func (e *AntigravityExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, req cliproxyexecutor.Request, opts cliproxyexecutor.Options) (resp cliproxyexecutor.Response, err error) {
 	token, updatedAuth, errToken := e.ensureAccessToken(ctx, auth)
 	if errToken != nil {
@@ -160,7 +160,7 @@ func (e *AntigravityExecutor) Execute(ctx context.Context, auth *cliproxyauth.Au
 	return resp, err
 }
 
-// ExecuteStream handles streaming requests via the antigravity upstream.
+// ExecuteStream performs a streaming request to the Antigravity API.
 func (e *AntigravityExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.Auth, req cliproxyexecutor.Request, opts cliproxyexecutor.Options) (stream <-chan cliproxyexecutor.StreamChunk, err error) {
 	ctx = context.WithValue(ctx, "alt", "")
 
@@ -312,7 +312,7 @@ func (e *AntigravityExecutor) Refresh(ctx context.Context, auth *cliproxyauth.Au
 	return updated, nil
 }
 
-// CountTokens is not supported for the antigravity provider.
+// CountTokens counts tokens for the given request (not supported for Antigravity).
 func (e *AntigravityExecutor) CountTokens(context.Context, *cliproxyauth.Auth, cliproxyexecutor.Request, cliproxyexecutor.Options) (cliproxyexecutor.Response, error) {
 	return cliproxyexecutor.Response{}, statusErr{code: http.StatusNotImplemented, msg: "count tokens not supported"}
 }

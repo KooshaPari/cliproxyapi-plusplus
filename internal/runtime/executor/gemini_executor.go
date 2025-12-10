@@ -166,6 +166,7 @@ func (e *GeminiExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, r
 	return resp, nil
 }
 
+// ExecuteStream performs a streaming request to the Gemini API.
 func (e *GeminiExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.Auth, req cliproxyexecutor.Request, opts cliproxyexecutor.Options) (stream <-chan cliproxyexecutor.StreamChunk, err error) {
 	apiKey, bearer := geminiCreds(auth)
 
@@ -282,6 +283,7 @@ func (e *GeminiExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.A
 	return stream, nil
 }
 
+// CountTokens counts tokens for the given request using the Gemini API.
 func (e *GeminiExecutor) CountTokens(ctx context.Context, auth *cliproxyauth.Auth, req cliproxyexecutor.Request, opts cliproxyexecutor.Options) (cliproxyexecutor.Response, error) {
 	apiKey, bearer := geminiCreds(auth)
 

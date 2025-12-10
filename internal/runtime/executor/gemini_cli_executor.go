@@ -32,11 +32,11 @@ import (
 const (
 	codeAssistEndpoint      = "https://cloudcode-pa.googleapis.com"
 	codeAssistVersion       = "v1internal"
-	geminiOauthClientID     = "681255809395-oo8ft2oprdrnp9e3aqf6av3hmdib135j.apps.googleusercontent.com"
-	geminiOauthClientSecret = "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"
+	geminiOAuthClientID     = "681255809395-oo8ft2oprdrnp9e3aqf6av3hmdib135j.apps.googleusercontent.com"
+	geminiOAuthClientSecret = "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"
 )
 
-var geminiOauthScopes = []string{
+var geminiOAuthScopes = []string{
 	"https://www.googleapis.com/auth/cloud-platform",
 	"https://www.googleapis.com/auth/userinfo.email",
 	"https://www.googleapis.com/auth/userinfo.profile",
@@ -64,6 +64,7 @@ func (e *GeminiCLIExecutor) Identifier() string { return "gemini-cli" }
 // PrepareRequest prepares the HTTP request for execution (no-op for Gemini CLI).
 func (e *GeminiCLIExecutor) PrepareRequest(_ *http.Request, _ *cliproxyauth.Auth) error { return nil }
 
+// Execute performs a non-streaming request to the Gemini CLI API.
 func (e *GeminiCLIExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, req cliproxyexecutor.Request, opts cliproxyexecutor.Options) (resp cliproxyexecutor.Response, err error) {
 	tokenSource, baseTokenData, err := prepareGeminiCLITokenSource(ctx, e.cfg, auth)
 	if err != nil {
@@ -201,6 +202,7 @@ func (e *GeminiCLIExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth
 	return resp, err
 }
 
+// ExecuteStream performs a streaming request to the Gemini CLI API.
 func (e *GeminiCLIExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.Auth, req cliproxyexecutor.Request, opts cliproxyexecutor.Options) (stream <-chan cliproxyexecutor.StreamChunk, err error) {
 	tokenSource, baseTokenData, err := prepareGeminiCLITokenSource(ctx, e.cfg, auth)
 	if err != nil {
@@ -383,6 +385,7 @@ func (e *GeminiCLIExecutor) ExecuteStream(ctx context.Context, auth *cliproxyaut
 	return nil, err
 }
 
+// CountTokens counts tokens for the given request using the Gemini CLI API.
 func (e *GeminiCLIExecutor) CountTokens(ctx context.Context, auth *cliproxyauth.Auth, req cliproxyexecutor.Request, opts cliproxyexecutor.Options) (cliproxyexecutor.Response, error) {
 	tokenSource, baseTokenData, err := prepareGeminiCLITokenSource(ctx, e.cfg, auth)
 	if err != nil {
@@ -526,9 +529,9 @@ func prepareGeminiCLITokenSource(ctx context.Context, cfg *config.Config, auth *
 	}
 
 	conf := &oauth2.Config{
-		ClientID:     geminiOauthClientID,
-		ClientSecret: geminiOauthClientSecret,
-		Scopes:       geminiOauthScopes,
+		ClientID:     geminiOAuthClientID,
+		ClientSecret: geminiOAuthClientSecret,
+		Scopes:       geminiOAuthScopes,
 		Endpoint:     google.Endpoint,
 	}
 

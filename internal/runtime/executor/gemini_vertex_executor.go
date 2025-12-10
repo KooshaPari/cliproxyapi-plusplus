@@ -55,7 +55,7 @@ func (e *GeminiVertexExecutor) PrepareRequest(_ *http.Request, _ *cliproxyauth.A
 	return nil
 }
 
-// Execute handles non-streaming requests.
+// Execute performs a non-streaming request to the Vertex AI API.
 func (e *GeminiVertexExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, req cliproxyexecutor.Request, opts cliproxyexecutor.Options) (resp cliproxyexecutor.Response, err error) {
 	// Try API key authentication first
 	apiKey, baseURL := vertexAPICreds(auth)
@@ -73,7 +73,7 @@ func (e *GeminiVertexExecutor) Execute(ctx context.Context, auth *cliproxyauth.A
 	return e.executeWithAPIKey(ctx, auth, req, opts, apiKey, baseURL)
 }
 
-// ExecuteStream handles SSE streaming for Vertex.
+// ExecuteStream performs a streaming request to the Vertex AI API.
 func (e *GeminiVertexExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.Auth, req cliproxyexecutor.Request, opts cliproxyexecutor.Options) (stream <-chan cliproxyexecutor.StreamChunk, err error) {
 	// Try API key authentication first
 	apiKey, baseURL := vertexAPICreds(auth)
@@ -91,7 +91,7 @@ func (e *GeminiVertexExecutor) ExecuteStream(ctx context.Context, auth *cliproxy
 	return e.executeStreamWithAPIKey(ctx, auth, req, opts, apiKey, baseURL)
 }
 
-// CountTokens calls Vertex countTokens endpoint.
+// CountTokens counts tokens for the given request using the Vertex AI API.
 func (e *GeminiVertexExecutor) CountTokens(ctx context.Context, auth *cliproxyauth.Auth, req cliproxyexecutor.Request, opts cliproxyexecutor.Options) (cliproxyexecutor.Response, error) {
 	// Try API key authentication first
 	apiKey, baseURL := vertexAPICreds(auth)
