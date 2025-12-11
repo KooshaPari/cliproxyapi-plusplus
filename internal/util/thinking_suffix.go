@@ -52,6 +52,11 @@ func NormalizeThinkingModel(modelName string) (string, map[string]any) {
 		matched = true
 	default:
 		if idx := strings.LastIndex(lower, "-thinking-"); idx != -1 {
+			// Skip stripping if the original model is a registered thinking model.
+			// This prevents "-thinking-2507" in "qwen3-235b-a22b-thinking-2507" from being parsed.
+			if ModelSupportsThinking(modelName) {
+				break
+			}
 			value := modelName[idx+len("-thinking-"):]
 			if value != "" {
 				if parsed, ok := parseIntPrefix(value); ok {
@@ -95,10 +100,16 @@ func NormalizeThinkingModel(modelName string) (string, map[string]any) {
 				}
 			}
 		} else if strings.HasSuffix(lower, "-thinking") {
-			baseModel = modelName[:len(modelName)-len("-thinking")]
-			effort := "medium"
-			reasoningEffort = &effort
-			matched = true
+			candidateBase := modelName[:len(modelName)-len("-thinking")]
+			// Only strip the suffix if the original model is NOT a registered thinking model.
+			// This prevents stripping "-thinking" from models like "kimi-k2-thinking" where
+			// the suffix is part of the model's actual name.
+			if !ModelSupportsThinking(modelName) {
+				baseModel = candidateBase
+				effort := "medium"
+				reasoningEffort = &effort
+				matched = true
+			}
 		}
 	}
 
