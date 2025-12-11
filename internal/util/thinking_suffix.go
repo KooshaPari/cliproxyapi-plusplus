@@ -14,100 +14,57 @@ const (
 )
 
 // NormalizeThinkingModel parses dynamic thinking suffixes on model names and returns
-// the normalized base model with extracted metadata. Supported patterns:
-//   - "-thinking-<number>" extracts a numeric budget
-//   - "-thinking-<level>" extracts a reasoning effort level (minimal/low/medium/high/xhigh/auto/none)
-//   - "-thinking" maps to a default reasoning effort of "medium"
-//   - "-reasoning" maps to dynamic budget (-1) and include_thoughts=true
-//   - "-nothinking" maps to budget=0 and include_thoughts=false
+// the normalized base model with extracted metadata. Supported pattern:
+//   - "[<value>]" where value can be:
+//   - A numeric budget (e.g., "[8192]", "[16384]")
+//   - A reasoning effort level (e.g., "[high]", "[medium]", "[low]")
+//
+// Examples:
+//   - "claude-sonnet-4-5-20250929[16384]" → budget=16384
+//   - "gpt-5.1[high]" → reasoning_effort="high"
+//   - "gemini-2.5-pro[32768]" → budget=32768
+//
+// Note: Empty brackets "[]" are not supported and will be ignored.
 func NormalizeThinkingModel(modelName string) (string, map[string]any) {
 	if modelName == "" {
 		return modelName, nil
 	}
 
-	lower := strings.ToLower(modelName)
 	baseModel := modelName
 
 	var (
 		budgetOverride  *int
-		includeThoughts *bool
 		reasoningEffort *string
 		matched         bool
 	)
 
-	switch {
-	case strings.HasSuffix(lower, "-nothinking"):
-		baseModel = modelName[:len(modelName)-len("-nothinking")]
-		budget := 0
-		include := false
-		budgetOverride = &budget
-		includeThoughts = &include
-		matched = true
-	case strings.HasSuffix(lower, "-reasoning"):
-		baseModel = modelName[:len(modelName)-len("-reasoning")]
-		budget := -1
-		include := true
-		budgetOverride = &budget
-		includeThoughts = &include
-		matched = true
-	default:
-		if idx := strings.LastIndex(lower, "-thinking-"); idx != -1 {
-			// Skip stripping if the original model is a registered thinking model.
-			// This prevents "-thinking-2507" in "qwen3-235b-a22b-thinking-2507" from being parsed.
-			if ModelSupportsThinking(modelName) {
-				break
-			}
-			value := modelName[idx+len("-thinking-"):]
-			if value != "" {
-				if parsed, ok := parseIntPrefix(value); ok {
-					candidateBase := modelName[:idx]
-					if ModelUsesThinkingLevels(candidateBase) {
-						baseModel = candidateBase
-						// Numeric suffix on level-aware models should still surface as reasoning effort metadata.
-						raw := strings.ToLower(strings.TrimSpace(value))
-						if raw != "" {
-							reasoningEffort = &raw
-						}
-						matched = true
-					} else {
-						baseModel = candidateBase
-						budgetOverride = &parsed
-						matched = true
-					}
-				} else {
-					baseModel = modelName[:idx]
-					if normalized, ok := NormalizeReasoningEffortLevel(baseModel, value); ok {
-						reasoningEffort = &normalized
-						matched = true
-					} else if !ModelUsesThinkingLevels(baseModel) {
-						// Keep unknown effort tokens so callers can honor user intent even without normalization.
-						raw := strings.ToLower(strings.TrimSpace(value))
-						if raw != "" {
-							reasoningEffort = &raw
-							matched = true
-						} else {
-							baseModel = modelName
-						}
-					} else {
-						raw := strings.ToLower(strings.TrimSpace(value))
-						if raw != "" {
-							reasoningEffort = &raw
-							matched = true
-						} else {
-							baseModel = modelName
-						}
-					}
-				}
-			}
-		} else if strings.HasSuffix(lower, "-thinking") {
-			candidateBase := modelName[:len(modelName)-len("-thinking")]
-			// Only strip the suffix if the original model is NOT a registered thinking model.
-			// This prevents stripping "-thinking" from models like "kimi-k2-thinking" where
-			// the suffix is part of the model's actual name.
-			if !ModelSupportsThinking(modelName) {
-				baseModel = candidateBase
-				effort := "medium"
-				reasoningEffort = &effort
+	// Match "[value]" pattern at the end of the model name
+	if idx := strings.LastIndex(modelName, "["); idx != -1 {
+		if !strings.HasSuffix(modelName, "]") {
+			// Incomplete bracket, ignore
+			return baseModel, nil
+		}
+
+		value := modelName[idx+1 : len(modelName)-1] // Extract content between [ and ]
+		if value == "" {
+			// Empty brackets not supported
+			return baseModel, nil
+		}
+
+		candidateBase := modelName[:idx]
+
+		// Auto-detect: pure numeric → budget, string → reasoning effort level
+		if parsed, ok := parseIntPrefix(value); ok {
+			// Numeric value: treat as thinking budget
+			baseModel = candidateBase
+			budgetOverride = &parsed
+			matched = true
+		} else {
+			// String value: treat as reasoning effort level
+			baseModel = candidateBase
+			raw := strings.ToLower(strings.TrimSpace(value))
+			if raw != "" {
+				reasoningEffort = &raw
 				matched = true
 			}
 		}
@@ -122,9 +79,6 @@ func NormalizeThinkingModel(modelName string) (string, map[string]any) {
 	}
 	if budgetOverride != nil {
 		metadata[ThinkingBudgetMetadataKey] = *budgetOverride
-	}
-	if includeThoughts != nil {
-		metadata[ThinkingIncludeThoughtsMetadataKey] = *includeThoughts
 	}
 	if reasoningEffort != nil {
 		metadata[ReasoningEffortMetadataKey] = *reasoningEffort

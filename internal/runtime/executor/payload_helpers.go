@@ -11,7 +11,7 @@ import (
 	"github.com/tidwall/sjson"
 )
 
-// applyThinkingMetadata applies thinking config from model suffix metadata (e.g., -reasoning, -thinking-N)
+// applyThinkingMetadata applies thinking config from model suffix metadata (e.g., [high], [8192])
 // for standard Gemini format payloads. It normalizes the budget when the model supports thinking.
 func applyThinkingMetadata(payload []byte, metadata map[string]any, model string) []byte {
 	budgetOverride, includeOverride, ok := util.ResolveThinkingConfigFromMetadata(model, metadata)
@@ -28,7 +28,7 @@ func applyThinkingMetadata(payload []byte, metadata map[string]any, model string
 	return util.ApplyGeminiThinkingConfig(payload, budgetOverride, includeOverride)
 }
 
-// applyThinkingMetadataCLI applies thinking config from model suffix metadata (e.g., -reasoning, -thinking-N)
+// applyThinkingMetadataCLI applies thinking config from model suffix metadata (e.g., [high], [8192])
 // for Gemini CLI format payloads (nested under "request"). It normalizes the budget when the model supports thinking.
 func applyThinkingMetadataCLI(payload []byte, metadata map[string]any, model string) []byte {
 	budgetOverride, includeOverride, ok := util.ResolveThinkingConfigFromMetadata(model, metadata)
