@@ -91,8 +91,7 @@ func ModelUsesThinkingLevels(model string) bool {
 }
 
 // NormalizeReasoningEffortLevel validates and normalizes a reasoning effort
-// level for the given model. If the level is not supported, it returns the
-// first (lowest) level from the model's supported levels.
+// level for the given model. Returns false when the level is not supported.
 func NormalizeReasoningEffortLevel(model, effort string) (string, bool) {
 	levels := GetModelThinkingLevels(model)
 	if len(levels) == 0 {
@@ -104,12 +103,5 @@ func NormalizeReasoningEffortLevel(model, effort string) (string, bool) {
 			return lvl, true
 		}
 	}
-	return defaultReasoningLevel(levels), true
-}
-
-func defaultReasoningLevel(levels []string) string {
-	if len(levels) > 0 {
-		return levels[0]
-	}
-	return ""
+	return "", false
 }

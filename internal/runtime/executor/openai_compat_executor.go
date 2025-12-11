@@ -64,6 +64,9 @@ func (e *OpenAICompatExecutor) Execute(ctx context.Context, auth *cliproxyauth.A
 		translated, _ = sjson.SetBytes(translated, "model", upstreamModel)
 	}
 	translated = normalizeThinkingConfig(translated, upstreamModel)
+	if errValidate := validateThinkingConfig(translated, upstreamModel); errValidate != nil {
+		return resp, errValidate
+	}
 
 	url := strings.TrimSuffix(baseURL, "/") + "/chat/completions"
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(translated))
@@ -155,6 +158,9 @@ func (e *OpenAICompatExecutor) ExecuteStream(ctx context.Context, auth *cliproxy
 		translated, _ = sjson.SetBytes(translated, "model", upstreamModel)
 	}
 	translated = normalizeThinkingConfig(translated, upstreamModel)
+	if errValidate := validateThinkingConfig(translated, upstreamModel); errValidate != nil {
+		return nil, errValidate
+	}
 
 	url := strings.TrimSuffix(baseURL, "/") + "/chat/completions"
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(translated))

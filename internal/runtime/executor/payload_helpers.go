@@ -1,6 +1,8 @@
 package executor
 
 import (
+	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/config"
@@ -288,4 +290,37 @@ func normalizeReasoningEffortLevel(payload []byte, model string) []byte {
 	}
 
 	return out
+}
+
+// validateThinkingConfig checks for unsupported reasoning levels on level-based models.
+// Returns a statusErr with 400 when an unsupported level is supplied to avoid silently
+// downgrading requests.
+func validateThinkingConfig(payload []byte, model string) error {
+	if len(payload) == 0 || model == "" {
+		return nil
+	}
+	if !util.ModelSupportsThinking(model) || !util.ModelUsesThinkingLevels(model) {
+		return nil
+	}
+
+	levels := util.GetModelThinkingLevels(model)
+	checkField := func(path string) error {
+		if effort := gjson.GetBytes(payload, path); effort.Exists() {
+			if _, ok := util.NormalizeReasoningEffortLevel(model, effort.String()); !ok {
+				return statusErr{
+					code: http.StatusBadRequest,
+					msg:  fmt.Sprintf("unsupported reasoning effort level %q for model %s (supported: %s)", effort.String(), model, strings.Join(levels, ", ")),
+				}
+			}
+		}
+		return nil
+	}
+
+	if err := checkField("reasoning_effort"); err != nil {
+		return err
+	}
+	if err := checkField("reasoning.effort"); err != nil {
+		return err
+	}
+	return nil
 }
