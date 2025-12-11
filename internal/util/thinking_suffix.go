@@ -58,8 +58,9 @@ func NormalizeThinkingModel(modelName string) (string, map[string]any) {
 					baseModel = modelName[:idx]
 					budgetOverride = &parsed
 					matched = true
-				} else if effort, okEffort := normalizeReasoningEffort(value); okEffort {
+				} else if IsValidReasoningEffort(value) {
 					baseModel = modelName[:idx]
+					effort := strings.ToLower(strings.TrimSpace(value))
 					reasoningEffort = &effort
 					matched = true
 				}
@@ -185,7 +186,9 @@ func ReasoningEffortFromMetadata(metadata map[string]any) (string, bool) {
 		return "", false
 	}
 	if effort != nil && *effort != "" {
-		return *effort, true
+		if IsValidReasoningEffort(*effort) {
+			return strings.ToLower(strings.TrimSpace(*effort)), true
+		}
 	}
 	if budget != nil {
 		switch *budget {
@@ -207,7 +210,11 @@ func ThinkingEffortToBudget(model, effort string) (int, bool) {
 	if effort == "" {
 		return 0, false
 	}
-	switch strings.ToLower(effort) {
+	normalized, ok := NormalizeReasoningEffort(model, effort)
+	if !ok {
+		return 0, false
+	}
+	switch normalized {
 	case "none":
 		return 0, true
 	case "auto":
@@ -311,17 +318,4 @@ func parseNumberToInt(raw any) (int, bool) {
 		}
 	}
 	return 0, false
-}
-
-func normalizeReasoningEffort(value string) (string, bool) {
-	if value == "" {
-		return "", false
-	}
-	effort := strings.ToLower(strings.TrimSpace(value))
-	switch effort {
-	case "minimal", "low", "medium", "high", "xhigh", "auto", "none":
-		return effort, true
-	default:
-		return "", false
-	}
 }

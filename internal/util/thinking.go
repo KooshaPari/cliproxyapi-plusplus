@@ -113,3 +113,45 @@ func defaultReasoningLevel(levels []string) string {
 	}
 	return ""
 }
+
+// standardReasoningEfforts defines the canonical set of reasoning effort levels.
+// This serves as the single source of truth for valid effort values.
+var standardReasoningEfforts = []string{"none", "auto", "minimal", "low", "medium", "high", "xhigh"}
+
+// IsValidReasoningEffort checks if the given effort string is a valid reasoning effort level.
+// This is a registry-independent check against the standard effort levels.
+func IsValidReasoningEffort(effort string) bool {
+	if effort == "" {
+		return false
+	}
+	lowered := strings.ToLower(strings.TrimSpace(effort))
+	for _, e := range standardReasoningEfforts {
+		if e == lowered {
+			return true
+		}
+	}
+	return false
+}
+
+// NormalizeReasoningEffort normalizes a reasoning effort string to its canonical form.
+// It first tries registry-based normalization if a model is provided, then falls back
+// to the standard effort levels. Returns empty string and false if invalid.
+func NormalizeReasoningEffort(model, effort string) (string, bool) {
+	if effort == "" {
+		return "", false
+	}
+	lowered := strings.ToLower(strings.TrimSpace(effort))
+
+	if model != "" {
+		if normalized, ok := NormalizeReasoningEffortLevel(model, effort); ok {
+			return normalized, true
+		}
+	}
+
+	for _, e := range standardReasoningEfforts {
+		if e == lowered {
+			return e, true
+		}
+	}
+	return "", false
+}
