@@ -55,6 +55,7 @@ func (e *CodexExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, re
 	to := sdktranslator.FromString("codex")
 	body := sdktranslator.TranslateRequest(from, to, req.Model, bytes.Clone(req.Payload), false)
 	body = applyReasoningEffortMetadata(body, req.Metadata, req.Model)
+	body = normalizeThinkingConfig(body, upstreamModel)
 	body = applyPayloadConfig(e.cfg, req.Model, body)
 	body, _ = sjson.SetBytes(body, "model", upstreamModel)
 	body, _ = sjson.SetBytes(body, "stream", true)
@@ -149,6 +150,7 @@ func (e *CodexExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.Au
 	body := sdktranslator.TranslateRequest(from, to, req.Model, bytes.Clone(req.Payload), true)
 
 	body = applyReasoningEffortMetadata(body, req.Metadata, req.Model)
+	body = normalizeThinkingConfig(body, upstreamModel)
 	body = applyPayloadConfig(e.cfg, req.Model, body)
 	body, _ = sjson.DeleteBytes(body, "previous_response_id")
 	body, _ = sjson.SetBytes(body, "model", upstreamModel)

@@ -232,3 +232,60 @@ func matchModelPattern(pattern, model string) bool {
 	}
 	return pi == len(pattern)
 }
+
+// normalizeThinkingConfig normalizes thinking-related fields in the payload
+// based on model capabilities. For models without thinking support, it strips
+// reasoning fields. For models with level-based thinking, it validates and
+// normalizes the reasoning effort level.
+func normalizeThinkingConfig(payload []byte, model string) []byte {
+	if len(payload) == 0 || model == "" {
+		return payload
+	}
+
+	if !util.ModelSupportsThinking(model) {
+		return stripThinkingFields(payload)
+	}
+
+	if util.ModelUsesThinkingLevels(model) {
+		return normalizeReasoningEffortLevel(payload, model)
+	}
+
+	return payload
+}
+
+// stripThinkingFields removes thinking-related fields from the payload for
+// models that do not support thinking.
+func stripThinkingFields(payload []byte) []byte {
+	fieldsToRemove := []string{
+		"reasoning",
+		"reasoning_effort",
+		"reasoning.effort",
+	}
+	out := payload
+	for _, field := range fieldsToRemove {
+		if gjson.GetBytes(out, field).Exists() {
+			out, _ = sjson.DeleteBytes(out, field)
+		}
+	}
+	return out
+}
+
+// normalizeReasoningEffortLevel validates and normalizes the reasoning_effort
+// or reasoning.effort field for level-based thinking models.
+func normalizeReasoningEffortLevel(payload []byte, model string) []byte {
+	out := payload
+
+	if effort := gjson.GetBytes(out, "reasoning_effort"); effort.Exists() {
+		if normalized, ok := util.NormalizeReasoningEffortLevel(model, effort.String()); ok {
+			out, _ = sjson.SetBytes(out, "reasoning_effort", normalized)
+		}
+	}
+
+	if effort := gjson.GetBytes(out, "reasoning.effort"); effort.Exists() {
+		if normalized, ok := util.NormalizeReasoningEffortLevel(model, effort.String()); ok {
+			out, _ = sjson.SetBytes(out, "reasoning.effort", normalized)
+		}
+	}
+
+	return out
+}

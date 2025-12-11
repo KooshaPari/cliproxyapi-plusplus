@@ -59,9 +59,11 @@ func (e *OpenAICompatExecutor) Execute(ctx context.Context, auth *cliproxyauth.A
 	}
 	translated = applyPayloadConfigWithRoot(e.cfg, req.Model, to.String(), "", translated)
 	translated = applyReasoningEffortMetadataChatCompletions(translated, req.Metadata, req.Model)
-	if upstreamModel := util.ResolveOriginalModel(req.Model, req.Metadata); upstreamModel != "" {
+	upstreamModel := util.ResolveOriginalModel(req.Model, req.Metadata)
+	if upstreamModel != "" {
 		translated, _ = sjson.SetBytes(translated, "model", upstreamModel)
 	}
+	translated = normalizeThinkingConfig(translated, upstreamModel)
 
 	url := strings.TrimSuffix(baseURL, "/") + "/chat/completions"
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(translated))
@@ -148,9 +150,11 @@ func (e *OpenAICompatExecutor) ExecuteStream(ctx context.Context, auth *cliproxy
 	}
 	translated = applyPayloadConfigWithRoot(e.cfg, req.Model, to.String(), "", translated)
 	translated = applyReasoningEffortMetadataChatCompletions(translated, req.Metadata, req.Model)
-	if upstreamModel := util.ResolveOriginalModel(req.Model, req.Metadata); upstreamModel != "" {
+	upstreamModel := util.ResolveOriginalModel(req.Model, req.Metadata)
+	if upstreamModel != "" {
 		translated, _ = sjson.SetBytes(translated, "model", upstreamModel)
 	}
+	translated = normalizeThinkingConfig(translated, upstreamModel)
 
 	url := strings.TrimSuffix(baseURL, "/") + "/chat/completions"
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(translated))
