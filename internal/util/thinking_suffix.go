@@ -15,16 +15,16 @@ const (
 
 // NormalizeThinkingModel parses dynamic thinking suffixes on model names and returns
 // the normalized base model with extracted metadata. Supported pattern:
-//   - "[<value>]" where value can be:
-//   - A numeric budget (e.g., "[8192]", "[16384]")
-//   - A reasoning effort level (e.g., "[high]", "[medium]", "[low]")
+//   - "(<value>)" where value can be:
+//   - A numeric budget (e.g., "(8192)", "(16384)")
+//   - A reasoning effort level (e.g., "(high)", "(medium)", "(low)")
 //
 // Examples:
-//   - "claude-sonnet-4-5-20250929[16384]" → budget=16384
-//   - "gpt-5.1[high]" → reasoning_effort="high"
-//   - "gemini-2.5-pro[32768]" → budget=32768
+//   - "claude-sonnet-4-5-20250929(16384)" → budget=16384
+//   - "gpt-5.1(high)" → reasoning_effort="high"
+//   - "gemini-2.5-pro(32768)" → budget=32768
 //
-// Note: Empty brackets "[]" are not supported and will be ignored.
+// Note: Empty parentheses "()" are not supported and will be ignored.
 func NormalizeThinkingModel(modelName string) (string, map[string]any) {
 	if modelName == "" {
 		return modelName, nil
@@ -38,16 +38,16 @@ func NormalizeThinkingModel(modelName string) (string, map[string]any) {
 		matched         bool
 	)
 
-	// Match "[value]" pattern at the end of the model name
-	if idx := strings.LastIndex(modelName, "["); idx != -1 {
-		if !strings.HasSuffix(modelName, "]") {
-			// Incomplete bracket, ignore
+	// Match "(<value>)" pattern at the end of the model name
+	if idx := strings.LastIndex(modelName, "("); idx != -1 {
+		if !strings.HasSuffix(modelName, ")") {
+			// Incomplete parenthesis, ignore
 			return baseModel, nil
 		}
 
-		value := modelName[idx+1 : len(modelName)-1] // Extract content between [ and ]
+		value := modelName[idx+1 : len(modelName)-1] // Extract content between ( and )
 		if value == "" {
-			// Empty brackets not supported
+			// Empty parentheses not supported
 			return baseModel, nil
 		}
 
