@@ -16,6 +16,7 @@ func GetClaudeModels() []*ModelInfo {
 			DisplayName:         "Claude 4.5 Haiku",
 			ContextLength:       200000,
 			MaxCompletionTokens: 64000,
+			// Thinking: not supported for Haiku models
 		},
 		{
 			ID:                  "claude-sonnet-4-5-20250929",
@@ -49,6 +50,7 @@ func GetClaudeModels() []*ModelInfo {
 			DisplayName:         "Claude 4.1 Opus",
 			ContextLength:       200000,
 			MaxCompletionTokens: 32000,
+			Thinking:            &ThinkingSupport{Min: 1024, Max: 100000, ZeroAllowed: false, DynamicAllowed: true},
 		},
 		{
 			ID:                  "claude-opus-4-20250514",
@@ -59,6 +61,7 @@ func GetClaudeModels() []*ModelInfo {
 			DisplayName:         "Claude 4 Opus",
 			ContextLength:       200000,
 			MaxCompletionTokens: 32000,
+			Thinking:            &ThinkingSupport{Min: 1024, Max: 100000, ZeroAllowed: false, DynamicAllowed: true},
 		},
 		{
 			ID:                  "claude-sonnet-4-20250514",
@@ -69,6 +72,7 @@ func GetClaudeModels() []*ModelInfo {
 			DisplayName:         "Claude 4 Sonnet",
 			ContextLength:       200000,
 			MaxCompletionTokens: 64000,
+			Thinking:            &ThinkingSupport{Min: 1024, Max: 100000, ZeroAllowed: false, DynamicAllowed: true},
 		},
 		{
 			ID:                  "claude-3-7-sonnet-20250219",
@@ -79,6 +83,7 @@ func GetClaudeModels() []*ModelInfo {
 			DisplayName:         "Claude 3.7 Sonnet",
 			ContextLength:       128000,
 			MaxCompletionTokens: 8192,
+			Thinking:            &ThinkingSupport{Min: 1024, Max: 100000, ZeroAllowed: false, DynamicAllowed: true},
 		},
 		{
 			ID:                  "claude-3-5-haiku-20241022",
@@ -89,6 +94,7 @@ func GetClaudeModels() []*ModelInfo {
 			DisplayName:         "Claude 3.5 Haiku",
 			ContextLength:       128000,
 			MaxCompletionTokens: 8192,
+			// Thinking: not supported for Haiku models
 		},
 	}
 }
@@ -476,6 +482,7 @@ func GetOpenAIModels() []*ModelInfo {
 			ContextLength:       400000,
 			MaxCompletionTokens: 128000,
 			SupportedParameters: []string{"tools"},
+			Thinking:            &ThinkingSupport{Levels: []string{"minimal", "low", "medium", "high"}},
 		},
 		{
 			ID:                  "gpt-5-codex",
@@ -489,6 +496,7 @@ func GetOpenAIModels() []*ModelInfo {
 			ContextLength:       400000,
 			MaxCompletionTokens: 128000,
 			SupportedParameters: []string{"tools"},
+			Thinking:            &ThinkingSupport{Levels: []string{"low", "medium", "high"}},
 		},
 		{
 			ID:                  "gpt-5-codex-mini",
@@ -502,6 +510,7 @@ func GetOpenAIModels() []*ModelInfo {
 			ContextLength:       400000,
 			MaxCompletionTokens: 128000,
 			SupportedParameters: []string{"tools"},
+			Thinking:            &ThinkingSupport{Levels: []string{"low", "medium", "high"}},
 		},
 		{
 			ID:                  "gpt-5.1",
@@ -515,6 +524,7 @@ func GetOpenAIModels() []*ModelInfo {
 			ContextLength:       400000,
 			MaxCompletionTokens: 128000,
 			SupportedParameters: []string{"tools"},
+			Thinking:            &ThinkingSupport{Levels: []string{"none", "low", "medium", "high"}},
 		},
 		{
 			ID:                  "gpt-5.1-codex",
@@ -528,6 +538,7 @@ func GetOpenAIModels() []*ModelInfo {
 			ContextLength:       400000,
 			MaxCompletionTokens: 128000,
 			SupportedParameters: []string{"tools"},
+			Thinking:            &ThinkingSupport{Levels: []string{"low", "medium", "high"}},
 		},
 		{
 			ID:                  "gpt-5.1-codex-mini",
@@ -541,6 +552,7 @@ func GetOpenAIModels() []*ModelInfo {
 			ContextLength:       400000,
 			MaxCompletionTokens: 128000,
 			SupportedParameters: []string{"tools"},
+			Thinking:            &ThinkingSupport{Levels: []string{"low", "medium", "high"}},
 		},
 		{
 			ID:                  "gpt-5.1-codex-max",
@@ -554,6 +566,7 @@ func GetOpenAIModels() []*ModelInfo {
 			ContextLength:       400000,
 			MaxCompletionTokens: 128000,
 			SupportedParameters: []string{"tools"},
+			Thinking:            &ThinkingSupport{Levels: []string{"low", "medium", "high", "xhigh"}},
 		},
 	}
 }
