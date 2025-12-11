@@ -58,8 +58,13 @@ func (e *IFlowExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, re
 	to := sdktranslator.FromString("openai")
 	body := sdktranslator.TranslateRequest(from, to, req.Model, bytes.Clone(req.Payload), false)
 	body = applyReasoningEffortMetadata(body, req.Metadata, req.Model, "reasoning_effort")
-	if upstreamModel := util.ResolveOriginalModel(req.Model, req.Metadata); upstreamModel != "" {
+	upstreamModel := util.ResolveOriginalModel(req.Model, req.Metadata)
+	if upstreamModel != "" {
 		body, _ = sjson.SetBytes(body, "model", upstreamModel)
+	}
+	body = normalizeThinkingConfig(body, upstreamModel)
+	if errValidate := validateThinkingConfig(body, upstreamModel); errValidate != nil {
+		return resp, errValidate
 	}
 	body = applyPayloadConfig(e.cfg, req.Model, body)
 
@@ -144,8 +149,13 @@ func (e *IFlowExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.Au
 	body := sdktranslator.TranslateRequest(from, to, req.Model, bytes.Clone(req.Payload), true)
 
 	body = applyReasoningEffortMetadata(body, req.Metadata, req.Model, "reasoning_effort")
-	if upstreamModel := util.ResolveOriginalModel(req.Model, req.Metadata); upstreamModel != "" {
+	upstreamModel := util.ResolveOriginalModel(req.Model, req.Metadata)
+	if upstreamModel != "" {
 		body, _ = sjson.SetBytes(body, "model", upstreamModel)
+	}
+	body = normalizeThinkingConfig(body, upstreamModel)
+	if errValidate := validateThinkingConfig(body, upstreamModel); errValidate != nil {
+		return nil, errValidate
 	}
 	// Ensure tools array exists to avoid provider quirks similar to Qwen's behaviour.
 	toolsResult := gjson.GetBytes(body, "tools")
