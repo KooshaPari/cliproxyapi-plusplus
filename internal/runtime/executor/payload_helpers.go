@@ -45,40 +45,20 @@ func applyThinkingMetadataCLI(payload []byte, metadata map[string]any, model str
 	return util.ApplyGeminiCLIThinkingConfig(payload, budgetOverride, includeOverride)
 }
 
-// applyReasoningEffortMetadata applies reasoning effort overrides (reasoning.effort) when present in metadata.
-// It avoids overwriting an existing reasoning.effort field and only applies to models that support thinking.
-func applyReasoningEffortMetadata(payload []byte, metadata map[string]any, model string) []byte {
+// applyReasoningEffortMetadata applies reasoning effort overrides from metadata to the given JSON path.
+// Metadata values take precedence over any existing field when the model supports thinking.
+func applyReasoningEffortMetadata(payload []byte, metadata map[string]any, model, field string) []byte {
 	if len(metadata) == 0 {
 		return payload
 	}
 	if !util.ModelSupportsThinking(model) {
 		return payload
 	}
-	if gjson.GetBytes(payload, "reasoning.effort").Exists() {
+	if field == "" {
 		return payload
 	}
 	if effort, ok := util.ReasoningEffortFromMetadata(metadata); ok && effort != "" {
-		if updated, err := sjson.SetBytes(payload, "reasoning.effort", effort); err == nil {
-			return updated
-		}
-	}
-	return payload
-}
-
-// applyReasoningEffortMetadataChatCompletions applies reasoning_effort (OpenAI chat completions field)
-// when present in metadata. It avoids overwriting an existing reasoning_effort field.
-func applyReasoningEffortMetadataChatCompletions(payload []byte, metadata map[string]any, model string) []byte {
-	if len(metadata) == 0 {
-		return payload
-	}
-	if !util.ModelSupportsThinking(model) {
-		return payload
-	}
-	if gjson.GetBytes(payload, "reasoning_effort").Exists() {
-		return payload
-	}
-	if effort, ok := util.ReasoningEffortFromMetadata(metadata); ok && effort != "" {
-		if updated, err := sjson.SetBytes(payload, "reasoning_effort", effort); err == nil {
+		if updated, err := sjson.SetBytes(payload, field, effort); err == nil {
 			return updated
 		}
 	}

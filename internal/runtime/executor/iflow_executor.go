@@ -57,7 +57,7 @@ func (e *IFlowExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, re
 	from := opts.SourceFormat
 	to := sdktranslator.FromString("openai")
 	body := sdktranslator.TranslateRequest(from, to, req.Model, bytes.Clone(req.Payload), false)
-	body = applyReasoningEffortMetadataChatCompletions(body, req.Metadata, req.Model)
+	body = applyReasoningEffortMetadata(body, req.Metadata, req.Model, "reasoning_effort")
 	if upstreamModel := util.ResolveOriginalModel(req.Model, req.Metadata); upstreamModel != "" {
 		body, _ = sjson.SetBytes(body, "model", upstreamModel)
 	}
@@ -143,7 +143,7 @@ func (e *IFlowExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.Au
 	to := sdktranslator.FromString("openai")
 	body := sdktranslator.TranslateRequest(from, to, req.Model, bytes.Clone(req.Payload), true)
 
-	body = applyReasoningEffortMetadataChatCompletions(body, req.Metadata, req.Model)
+	body = applyReasoningEffortMetadata(body, req.Metadata, req.Model, "reasoning_effort")
 	if upstreamModel := util.ResolveOriginalModel(req.Model, req.Metadata); upstreamModel != "" {
 		body, _ = sjson.SetBytes(body, "model", upstreamModel)
 	}

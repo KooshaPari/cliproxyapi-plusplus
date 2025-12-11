@@ -54,7 +54,7 @@ func (e *CodexExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, re
 	from := opts.SourceFormat
 	to := sdktranslator.FromString("codex")
 	body := sdktranslator.TranslateRequest(from, to, req.Model, bytes.Clone(req.Payload), false)
-	body = applyReasoningEffortMetadata(body, req.Metadata, req.Model)
+	body = applyReasoningEffortMetadata(body, req.Metadata, req.Model, "reasoning.effort")
 	body = normalizeThinkingConfig(body, upstreamModel)
 	if errValidate := validateThinkingConfig(body, upstreamModel); errValidate != nil {
 		return resp, errValidate
@@ -152,7 +152,7 @@ func (e *CodexExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.Au
 	to := sdktranslator.FromString("codex")
 	body := sdktranslator.TranslateRequest(from, to, req.Model, bytes.Clone(req.Payload), true)
 
-	body = applyReasoningEffortMetadata(body, req.Metadata, req.Model)
+	body = applyReasoningEffortMetadata(body, req.Metadata, req.Model, "reasoning.effort")
 	body = normalizeThinkingConfig(body, upstreamModel)
 	if errValidate := validateThinkingConfig(body, upstreamModel); errValidate != nil {
 		return nil, errValidate
@@ -254,7 +254,7 @@ func (e *CodexExecutor) CountTokens(ctx context.Context, auth *cliproxyauth.Auth
 
 	modelForCounting := req.Model
 
-	body = applyReasoningEffortMetadata(body, req.Metadata, req.Model)
+	body = applyReasoningEffortMetadata(body, req.Metadata, req.Model, "reasoning.effort")
 	body, _ = sjson.SetBytes(body, "model", upstreamModel)
 	body, _ = sjson.DeleteBytes(body, "previous_response_id")
 	body, _ = sjson.SetBytes(body, "stream", false)

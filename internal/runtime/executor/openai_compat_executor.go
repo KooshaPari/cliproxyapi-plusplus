@@ -58,7 +58,7 @@ func (e *OpenAICompatExecutor) Execute(ctx context.Context, auth *cliproxyauth.A
 		translated = e.overrideModel(translated, modelOverride)
 	}
 	translated = applyPayloadConfigWithRoot(e.cfg, req.Model, to.String(), "", translated)
-	translated = applyReasoningEffortMetadataChatCompletions(translated, req.Metadata, req.Model)
+	translated = applyReasoningEffortMetadata(translated, req.Metadata, req.Model, "reasoning_effort")
 	upstreamModel := util.ResolveOriginalModel(req.Model, req.Metadata)
 	if upstreamModel != "" {
 		translated, _ = sjson.SetBytes(translated, "model", upstreamModel)
@@ -152,7 +152,7 @@ func (e *OpenAICompatExecutor) ExecuteStream(ctx context.Context, auth *cliproxy
 		translated = e.overrideModel(translated, modelOverride)
 	}
 	translated = applyPayloadConfigWithRoot(e.cfg, req.Model, to.String(), "", translated)
-	translated = applyReasoningEffortMetadataChatCompletions(translated, req.Metadata, req.Model)
+	translated = applyReasoningEffortMetadata(translated, req.Metadata, req.Model, "reasoning_effort")
 	upstreamModel := util.ResolveOriginalModel(req.Model, req.Metadata)
 	if upstreamModel != "" {
 		translated, _ = sjson.SetBytes(translated, "model", upstreamModel)

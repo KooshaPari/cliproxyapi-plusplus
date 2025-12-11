@@ -55,16 +55,42 @@ func NormalizeThinkingModel(modelName string) (string, map[string]any) {
 			value := modelName[idx+len("-thinking-"):]
 			if value != "" {
 				if parsed, ok := parseIntPrefix(value); ok {
-					baseModel = modelName[:idx]
-					budgetOverride = &parsed
-					matched = true
+					candidateBase := modelName[:idx]
+					if ModelUsesThinkingLevels(candidateBase) {
+						baseModel = candidateBase
+						// Numeric suffix on level-aware models should still surface as reasoning effort metadata.
+						raw := strings.ToLower(strings.TrimSpace(value))
+						if raw != "" {
+							reasoningEffort = &raw
+						}
+						matched = true
+					} else {
+						baseModel = candidateBase
+						budgetOverride = &parsed
+						matched = true
+					}
 				} else {
 					baseModel = modelName[:idx]
 					if normalized, ok := NormalizeReasoningEffortLevel(baseModel, value); ok {
 						reasoningEffort = &normalized
 						matched = true
+					} else if !ModelUsesThinkingLevels(baseModel) {
+						// Keep unknown effort tokens so callers can honor user intent even without normalization.
+						raw := strings.ToLower(strings.TrimSpace(value))
+						if raw != "" {
+							reasoningEffort = &raw
+							matched = true
+						} else {
+							baseModel = modelName
+						}
 					} else {
-						baseModel = modelName
+						raw := strings.ToLower(strings.TrimSpace(value))
+						if raw != "" {
+							reasoningEffort = &raw
+							matched = true
+						} else {
+							baseModel = modelName
+						}
 					}
 				}
 			}
