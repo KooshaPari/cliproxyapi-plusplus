@@ -46,7 +46,8 @@ func applyThinkingMetadataCLI(payload []byte, metadata map[string]any, model str
 }
 
 // applyReasoningEffortMetadata applies reasoning effort overrides from metadata to the given JSON path.
-// Metadata values take precedence over any existing field when the model supports thinking.
+// Metadata values take precedence over any existing field when the model supports thinking, intentionally
+// overwriting caller-provided values to honor suffix/default metadata priority.
 func applyReasoningEffortMetadata(payload []byte, metadata map[string]any, model, field string) []byte {
 	if len(metadata) == 0 {
 		return payload
