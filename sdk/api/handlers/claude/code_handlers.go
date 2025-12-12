@@ -250,10 +250,7 @@ func (h *ClaudeCodeAPIHandler) forwardClaudeStream(c *gin.Context, flusher http.
 
 				// An error occurred: emit as a proper SSE error event
 				errorBytes, _ := json.Marshal(h.toClaudeError(errMsg))
-				_, _ = c.Writer.Write([]byte("event: error\n"))
-				_, _ = c.Writer.Write([]byte("data: "))
-				_, _ = c.Writer.Write(errorBytes)
-				_, _ = c.Writer.Write([]byte("\n\n"))
+				_, _ = fmt.Fprintf(c.Writer, "event: error\ndata: %s\n\n", errorBytes)
 				flusher.Flush()
 			}
 
