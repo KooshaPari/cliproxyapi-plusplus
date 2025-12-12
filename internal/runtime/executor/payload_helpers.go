@@ -59,8 +59,20 @@ func applyReasoningEffortMetadata(payload []byte, metadata map[string]any, model
 		return payload
 	}
 	if effort, ok := util.ReasoningEffortFromMetadata(metadata); ok && effort != "" {
-		if updated, err := sjson.SetBytes(payload, field, effort); err == nil {
-			return updated
+		if util.ModelUsesThinkingLevels(model) {
+			if updated, err := sjson.SetBytes(payload, field, effort); err == nil {
+				return updated
+			}
+		}
+	}
+	// Fallback: numeric thinking_budget suffix for level-based (OpenAI-style) models.
+	if util.ModelUsesThinkingLevels(model) {
+		if budget, _, _, matched := util.ThinkingFromMetadata(metadata); matched && budget != nil {
+			if effort, ok := util.OpenAIThinkingBudgetToEffort(model, *budget); ok && effort != "" {
+				if updated, err := sjson.SetBytes(payload, field, effort); err == nil {
+					return updated
+				}
+			}
 		}
 	}
 	return payload
@@ -219,30 +231,36 @@ func matchModelPattern(pattern, model string) bool {
 // normalizeThinkingConfig normalizes thinking-related fields in the payload
 // based on model capabilities. For models without thinking support, it strips
 // reasoning fields. For models with level-based thinking, it validates and
-// normalizes the reasoning effort level.
+// normalizes the reasoning effort level. For models with numeric budget thinking,
+// it strips the effort string fields.
 func normalizeThinkingConfig(payload []byte, model string) []byte {
 	if len(payload) == 0 || model == "" {
 		return payload
 	}
 
 	if !util.ModelSupportsThinking(model) {
-		return stripThinkingFields(payload)
+		return stripThinkingFields(payload, false)
 	}
 
 	if util.ModelUsesThinkingLevels(model) {
 		return normalizeReasoningEffortLevel(payload, model)
 	}
 
-	return payload
+	// Model supports thinking but uses numeric budgets, not levels.
+	// Strip effort string fields since they are not applicable.
+	return stripThinkingFields(payload, true)
 }
 
 // stripThinkingFields removes thinking-related fields from the payload for
-// models that do not support thinking.
-func stripThinkingFields(payload []byte) []byte {
+// models that do not support thinking. If effortOnly is true, only removes
+// effort string fields (for models using numeric budgets).
+func stripThinkingFields(payload []byte, effortOnly bool) []byte {
 	fieldsToRemove := []string{
-		"reasoning",
 		"reasoning_effort",
 		"reasoning.effort",
+	}
+	if !effortOnly {
+		fieldsToRemove = append([]string{"reasoning"}, fieldsToRemove...)
 	}
 	out := payload
 	for _, field := range fieldsToRemove {
