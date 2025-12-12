@@ -48,7 +48,7 @@ func applyThinkingMetadataCLI(payload []byte, metadata map[string]any, model str
 // applyReasoningEffortMetadata applies reasoning effort overrides from metadata to the given JSON path.
 // Metadata values take precedence over any existing field when the model supports thinking, intentionally
 // overwriting caller-provided values to honor suffix/default metadata priority.
-func applyReasoningEffortMetadata(payload []byte, metadata map[string]any, model, field string) []byte {
+func applyReasoningEffortMetadata(payload []byte, metadata map[string]any, model, field string, allowCompat bool) []byte {
 	if len(metadata) == 0 {
 		return payload
 	}
@@ -59,20 +59,20 @@ func applyReasoningEffortMetadata(payload []byte, metadata map[string]any, model
 	if baseModel == "" {
 		baseModel = model
 	}
-	if !util.ModelSupportsThinking(baseModel) && !util.IsOpenAICompatibilityModel(baseModel) {
+	if !util.ModelSupportsThinking(baseModel) && !allowCompat {
 		return payload
 	}
 	if effort, ok := util.ReasoningEffortFromMetadata(metadata); ok && effort != "" {
-		if util.ModelUsesThinkingLevels(model) {
+		if util.ModelUsesThinkingLevels(baseModel) || allowCompat {
 			if updated, err := sjson.SetBytes(payload, field, effort); err == nil {
 				return updated
 			}
 		}
 	}
 	// Fallback: numeric thinking_budget suffix for level-based (OpenAI-style) models.
-	if util.ModelUsesThinkingLevels(model) {
+	if util.ModelUsesThinkingLevels(baseModel) || allowCompat {
 		if budget, _, _, matched := util.ThinkingFromMetadata(metadata); matched && budget != nil {
-			if effort, ok := util.OpenAIThinkingBudgetToEffort(model, *budget); ok && effort != "" {
+			if effort, ok := util.OpenAIThinkingBudgetToEffort(baseModel, *budget); ok && effort != "" {
 				if updated, err := sjson.SetBytes(payload, field, effort); err == nil {
 					return updated
 				}
@@ -237,13 +237,13 @@ func matchModelPattern(pattern, model string) bool {
 // reasoning fields. For models with level-based thinking, it validates and
 // normalizes the reasoning effort level. For models with numeric budget thinking,
 // it strips the effort string fields.
-func normalizeThinkingConfig(payload []byte, model string) []byte {
+func normalizeThinkingConfig(payload []byte, model string, allowCompat bool) []byte {
 	if len(payload) == 0 || model == "" {
 		return payload
 	}
 
 	if !util.ModelSupportsThinking(model) {
-		if util.IsOpenAICompatibilityModel(model) {
+		if allowCompat {
 			return payload
 		}
 		return stripThinkingFields(payload, false)
