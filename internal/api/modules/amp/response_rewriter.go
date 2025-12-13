@@ -40,8 +40,10 @@ func (rw *ResponseRewriter) Write(data []byte) (int, error) {
 
 	if rw.isStreaming {
 		n, err := rw.ResponseWriter.Write(rw.rewriteStreamChunk(data))
-		if flusher, ok := rw.ResponseWriter.(http.Flusher); ok {
-			flusher.Flush()
+		if err == nil {
+			if flusher, ok := rw.ResponseWriter.(http.Flusher); ok {
+				flusher.Flush()
+			}
 		}
 		return n, err
 	}
