@@ -73,6 +73,12 @@ func applyReasoningEffortMetadata(payload []byte, metadata map[string]any, model
 	if util.ModelUsesThinkingLevels(baseModel) || allowCompat {
 		if budget, _, _, matched := util.ThinkingFromMetadata(metadata); matched && budget != nil {
 			if effort, ok := util.OpenAIThinkingBudgetToEffort(baseModel, *budget); ok && effort != "" {
+				if *budget == 0 && effort == "none" && util.ModelUsesThinkingLevels(baseModel) {
+					if _, supported := util.NormalizeReasoningEffortLevel(baseModel, effort); !supported {
+						return stripThinkingFields(payload, false)
+					}
+				}
+
 				if updated, err := sjson.SetBytes(payload, field, effort); err == nil {
 					return updated
 				}
