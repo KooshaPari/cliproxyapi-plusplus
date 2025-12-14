@@ -183,7 +183,27 @@ func fixCLIToolResponse(input string) (string, error) {
 						var responseMap map[string]interface{}
 						errUnmarshal := json.Unmarshal([]byte(response.Raw), &responseMap)
 						if errUnmarshal != nil {
-							log.Warnf("failed to unmarshal function response: %v\n", errUnmarshal)
+							log.Debugf("unmarshal function response failed, using fallback: %v", errUnmarshal)
+							funcResp := response.Get("functionResponse")
+							if funcResp.Exists() {
+								fr := map[string]interface{}{
+									"name": funcResp.Get("name").String(),
+									"response": map[string]interface{}{
+										"result": funcResp.Get("response").String(),
+									},
+								}
+								if id := funcResp.Get("id").String(); id != "" {
+									fr["id"] = id
+								}
+								responseParts = append(responseParts, map[string]interface{}{"functionResponse": fr})
+								continue
+							}
+							responseParts = append(responseParts, map[string]interface{}{
+								"functionResponse": map[string]interface{}{
+									"name":     "unknown",
+									"response": map[string]interface{}{"result": response.String()},
+								},
+							})
 							continue
 						}
 						responseParts = append(responseParts, responseMap)
@@ -268,7 +288,27 @@ func fixCLIToolResponse(input string) (string, error) {
 				var responseMap map[string]interface{}
 				errUnmarshal := json.Unmarshal([]byte(response.Raw), &responseMap)
 				if errUnmarshal != nil {
-					log.Warnf("failed to unmarshal function response: %v\n", errUnmarshal)
+					log.Debugf("unmarshal function response failed, using fallback: %v", errUnmarshal)
+					funcResp := response.Get("functionResponse")
+					if funcResp.Exists() {
+						fr := map[string]interface{}{
+							"name": funcResp.Get("name").String(),
+							"response": map[string]interface{}{
+								"result": funcResp.Get("response").String(),
+							},
+						}
+						if id := funcResp.Get("id").String(); id != "" {
+							fr["id"] = id
+						}
+						responseParts = append(responseParts, map[string]interface{}{"functionResponse": fr})
+						continue
+					}
+					responseParts = append(responseParts, map[string]interface{}{
+						"functionResponse": map[string]interface{}{
+							"name":     "unknown",
+							"response": map[string]interface{}{"result": response.String()},
+						},
+					})
 					continue
 				}
 				responseParts = append(responseParts, responseMap)
