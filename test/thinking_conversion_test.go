@@ -28,7 +28,7 @@ func (e statusErr) Error() string { return e.msg }
 // model that should have reasoning effort passed through even if not in registry.
 // This simulates the allowCompat behavior from OpenAICompatExecutor.
 func isOpenAICompatModel(model string) bool {
-	return model == "custom-thinking-model"
+	return model == "openai-compat"
 }
 
 // registerCoreModels loads representative models across providers into the registry
@@ -47,12 +47,12 @@ func registerCoreModels(t *testing.T) func() {
 	// The allowCompat flag should preserve reasoning effort for such models.
 	customOpenAIModels := []*registry.ModelInfo{
 		{
-			ID:          "custom-thinking-model",
+			ID:          "openai-compat",
 			Object:      "model",
 			Created:     1700000000,
 			OwnedBy:     "custom-provider",
 			Type:        "openai",
-			DisplayName: "Custom Thinking Model",
+			DisplayName: "OpenAI Compatible Model",
 			Description: "OpenAI-compatible model with forced thinking suffix support",
 		},
 	}
@@ -321,10 +321,10 @@ func TestThinkingConversionsAcrossProtocolsAndModels(t *testing.T) {
 	defer cleanup()
 
 	models := []string{
-		"gpt-5",                 // supports levels (low/medium/high)
-		"gemini-2.5-pro",        // supports numeric budget
-		"qwen3-coder-flash",     // no thinking support
-		"custom-thinking-model", // openai-compatible model with forced thinking suffix
+		"gpt-5",           // supports levels (level-based thinking)
+		"gemini-2.5-pro",  // supports numeric budget
+		"qwen3-code-plus", // no thinking support
+		"openai-compat",   // openai-compatible channel (allowCompat=true)
 	}
 	fromProtocols := []string{"openai", "claude", "gemini", "openai-response"}
 	toProtocols := []string{"gemini", "claude", "openai", "codex"}
@@ -357,12 +357,7 @@ func TestThinkingConversionsAcrossProtocolsAndModels(t *testing.T) {
 	}
 
 	for _, model := range models {
-		info := registry.GetGlobalRegistry().GetModelInfo(model)
-		min, max := 0, 0
-		if info != nil && info.Thinking != nil {
-			min = info.Thinking.Min
-			max = info.Thinking.Max
-		}
+		_ = registry.GetGlobalRegistry().GetModelInfo(model)
 
 		for _, from := range fromProtocols {
 			// Scenario selection follows protocol semantics:
@@ -372,29 +367,29 @@ func TestThinkingConversionsAcrossProtocolsAndModels(t *testing.T) {
 				{name: "no-suffix", modelSuffix: model, expectFn: func(_ *registry.ModelInfo) (bool, int64) { return false, 0 }},
 			}
 			if from == "openai" || from == "openai-response" {
+				// Level-based test cases: auto, none, minimal, low, medium, high, xhigh, foo(invalid)
+				// Maps to numeric: -1, 0, 512, 1024, 8192, 24576, 32768, invalid
 				cases = append(cases,
-					scenario{name: "level-low", modelSuffix: fmt.Sprintf("%s(low)", model), expectFn: levelBudgetFn("low")},
-					scenario{name: "level-high", modelSuffix: fmt.Sprintf("%s(high)", model), expectFn: levelBudgetFn("high")},
 					scenario{name: "level-auto", modelSuffix: fmt.Sprintf("%s(auto)", model), expectFn: levelBudgetFn("auto")},
+					scenario{name: "level-none", modelSuffix: fmt.Sprintf("%s(none)", model), expectFn: levelBudgetFn("none")},
+					scenario{name: "level-minimal", modelSuffix: fmt.Sprintf("%s(minimal)", model), expectFn: levelBudgetFn("minimal")},
+					scenario{name: "level-low", modelSuffix: fmt.Sprintf("%s(low)", model), expectFn: levelBudgetFn("low")},
+					scenario{name: "level-medium", modelSuffix: fmt.Sprintf("%s(medium)", model), expectFn: levelBudgetFn("medium")},
+					scenario{name: "level-high", modelSuffix: fmt.Sprintf("%s(high)", model), expectFn: levelBudgetFn("high")},
+					scenario{name: "level-xhigh", modelSuffix: fmt.Sprintf("%s(xhigh)", model), expectFn: levelBudgetFn("xhigh")},
+					scenario{name: "level-invalid", modelSuffix: fmt.Sprintf("%s(invalid)", model), expectFn: levelBudgetFn("invalid")},
 				)
 			} else { // claude or gemini
-				if util.ModelUsesThinkingLevels(model) {
-					// Numeric budgets for level-based models are mapped into levels when needed.
-					cases = append(cases,
-						scenario{name: "numeric-0", modelSuffix: fmt.Sprintf("%s(0)", model), expectFn: buildBudgetFn(0)},
-						scenario{name: "numeric-1024", modelSuffix: fmt.Sprintf("%s(1024)", model), expectFn: buildBudgetFn(1024)},
-						scenario{name: "numeric-1025", modelSuffix: fmt.Sprintf("%s(1025)", model), expectFn: buildBudgetFn(1025)},
-						scenario{name: "numeric-8192", modelSuffix: fmt.Sprintf("%s(8192)", model), expectFn: buildBudgetFn(8192)},
-						scenario{name: "numeric-8193", modelSuffix: fmt.Sprintf("%s(8193)", model), expectFn: buildBudgetFn(8193)},
-						scenario{name: "numeric-24576", modelSuffix: fmt.Sprintf("%s(24576)", model), expectFn: buildBudgetFn(24576)},
-						scenario{name: "numeric-24577", modelSuffix: fmt.Sprintf("%s(24577)", model), expectFn: buildBudgetFn(24577)},
-					)
-				} else {
-					cases = append(cases,
-						scenario{name: "numeric-below-min", modelSuffix: fmt.Sprintf("%s(%d)", model, min-10), expectFn: buildBudgetFn(min - 10)},
-						scenario{name: "numeric-above-max", modelSuffix: fmt.Sprintf("%s(%d)", model, max+10), expectFn: buildBudgetFn(max + 10)},
-					)
-				}
+				// Numeric test cases: -1, 0, 1023, 1025, 8193, 24577
+				// Maps to levels: auto, none, low, medium, high, xhigh
+				cases = append(cases,
+					scenario{name: "numeric-neg1", modelSuffix: fmt.Sprintf("%s(-1)", model), expectFn: buildBudgetFn(-1)},
+					scenario{name: "numeric-0", modelSuffix: fmt.Sprintf("%s(0)", model), expectFn: buildBudgetFn(0)},
+					scenario{name: "numeric-1023", modelSuffix: fmt.Sprintf("%s(1023)", model), expectFn: buildBudgetFn(1023)},
+					scenario{name: "numeric-1025", modelSuffix: fmt.Sprintf("%s(1025)", model), expectFn: buildBudgetFn(1025)},
+					scenario{name: "numeric-8193", modelSuffix: fmt.Sprintf("%s(8193)", model), expectFn: buildBudgetFn(8193)},
+					scenario{name: "numeric-24577", modelSuffix: fmt.Sprintf("%s(24577)", model), expectFn: buildBudgetFn(24577)},
+				)
 			}
 
 			for _, to := range toProtocols {
@@ -642,10 +637,10 @@ func TestRawPayloadThinkingConversions(t *testing.T) {
 	defer cleanup()
 
 	models := []string{
-		"gpt-5",                 // supports levels (low/medium/high)
-		"gemini-2.5-pro",        // supports numeric budget
-		"qwen3-coder-flash",     // no thinking support
-		"custom-thinking-model", // openai-compatible model with forced thinking suffix
+		"gpt-5",           // supports levels (level-based thinking)
+		"gemini-2.5-pro",  // supports numeric budget
+		"qwen3-code-plus", // no thinking support
+		"openai-compat",   // openai-compatible channel (allowCompat=true)
 	}
 	fromProtocols := []string{"openai", "claude", "gemini", "openai-response"}
 	toProtocols := []string{"gemini", "claude", "openai", "codex"}
@@ -664,27 +659,28 @@ func TestRawPayloadThinkingConversions(t *testing.T) {
 			var cases []scenario
 			switch from {
 			case "openai", "openai-response":
+				// Level-based test cases: auto, none, minimal, low, medium, high, xhigh, foo(invalid)
 				cases = []scenario{
 					{name: "no-thinking", thinkingParam: nil},
+					{name: "effort-auto", thinkingParam: "auto"},
+					{name: "effort-none", thinkingParam: "none"},
+					{name: "effort-minimal", thinkingParam: "minimal"},
 					{name: "effort-low", thinkingParam: "low"},
 					{name: "effort-medium", thinkingParam: "medium"},
 					{name: "effort-high", thinkingParam: "high"},
 					{name: "effort-xhigh", thinkingParam: "xhigh"},
-					{name: "effort-invalid-foo", thinkingParam: "foo"},
+					{name: "effort-invalid", thinkingParam: "invalid"},
 				}
-			case "gemini":
+			case "gemini", "claude":
+				// Numeric test cases: -1, 0, 1023, 1025, 8193, 24577
 				cases = []scenario{
 					{name: "no-thinking", thinkingParam: nil},
-					{name: "budget-1024", thinkingParam: 1024},
-					{name: "budget-8192", thinkingParam: 8192},
-					{name: "budget-16384", thinkingParam: 16384},
-				}
-			case "claude":
-				cases = []scenario{
-					{name: "no-thinking", thinkingParam: nil},
-					{name: "budget-1024", thinkingParam: 1024},
-					{name: "budget-8192", thinkingParam: 8192},
-					{name: "budget-16384", thinkingParam: 16384},
+					{name: "budget-neg1", thinkingParam: -1},
+					{name: "budget-0", thinkingParam: 0},
+					{name: "budget-1023", thinkingParam: 1023},
+					{name: "budget-1025", thinkingParam: 1025},
+					{name: "budget-8193", thinkingParam: 8193},
+					{name: "budget-24577", thinkingParam: 24577},
 				}
 			}
 
@@ -723,12 +719,16 @@ func TestRawPayloadThinkingConversions(t *testing.T) {
 								}
 								// Convert effort level to budget for non-level models only
 								if effort, ok := cs.thinkingParam.(string); ok && effort != "" {
+									// "none" disables thinking - no thinkingBudget in output
+									if strings.ToLower(effort) == "none" {
+										return false, "", false
+									}
 									if budget, okB := util.ThinkingEffortToBudget(model, effort); okB {
 										// ThinkingEffortToBudget already returns normalized budget
 										return true, fmt.Sprintf("%d", budget), false
 									}
-									// Invalid effort maps to default/fallback
-									return true, fmt.Sprintf("%d", -1), false
+									// Invalid effort maps to default auto (-1)
+									return true, "-1", false
 								}
 								return false, "", false
 							case "claude":
@@ -742,6 +742,11 @@ func TestRawPayloadThinkingConversions(t *testing.T) {
 								}
 								// Convert effort level to budget for non-level models only
 								if effort, ok := cs.thinkingParam.(string); ok && effort != "" {
+									// "none" and "auto" don't produce budget_tokens
+									lower := strings.ToLower(effort)
+									if lower == "none" || lower == "auto" {
+										return false, "", false
+									}
 									if budget, okB := util.ThinkingEffortToBudget(model, effort); okB {
 										// ThinkingEffortToBudget already returns normalized budget
 										return true, fmt.Sprintf("%d", budget), false
@@ -780,6 +785,10 @@ func TestRawPayloadThinkingConversions(t *testing.T) {
 								}
 								if budget, ok := cs.thinkingParam.(int); ok {
 									if mapped, okM := util.OpenAIThinkingBudgetToEffort(model, budget); okM && mapped != "" {
+										// Check if the mapped effort is valid for this model
+										if _, validLevel := util.NormalizeReasoningEffortLevel(model, mapped); !validLevel {
+											return true, mapped, true // expect validation error
+										}
 										return true, mapped, false
 									}
 								}
@@ -797,6 +806,10 @@ func TestRawPayloadThinkingConversions(t *testing.T) {
 								}
 								if budget, ok := cs.thinkingParam.(int); ok {
 									if mapped, okM := util.OpenAIThinkingBudgetToEffort(model, budget); okM && mapped != "" {
+										// Check if the mapped effort is valid for this model
+										if _, validLevel := util.NormalizeReasoningEffortLevel(model, mapped); !validLevel {
+											return true, mapped, true // expect validation error
+										}
 										return true, mapped, false
 									}
 								}
