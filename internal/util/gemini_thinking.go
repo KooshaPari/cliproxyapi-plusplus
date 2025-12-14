@@ -167,20 +167,26 @@ var ReasoningEffortBudgetMapping = map[string]int{
 // for standard Gemini API format (generationConfig.thinkingConfig path).
 // Returns the modified body with thinkingBudget and include_thoughts set.
 func ApplyReasoningEffortToGemini(body []byte, effort string) []byte {
-	budget, ok := ReasoningEffortBudgetMapping[effort]
-	if !ok {
-		budget = -1 // default to auto
+	normalized := strings.ToLower(strings.TrimSpace(effort))
+	if normalized == "" {
+		return body
 	}
 
 	budgetPath := "generationConfig.thinkingConfig.thinkingBudget"
 	includePath := "generationConfig.thinkingConfig.include_thoughts"
 
-	if effort == "none" {
+	if normalized == "none" {
 		body, _ = sjson.DeleteBytes(body, "generationConfig.thinkingConfig")
-	} else {
-		body, _ = sjson.SetBytes(body, budgetPath, budget)
-		body, _ = sjson.SetBytes(body, includePath, true)
+		return body
 	}
+
+	budget, ok := ReasoningEffortBudgetMapping[normalized]
+	if !ok {
+		return body
+	}
+
+	body, _ = sjson.SetBytes(body, budgetPath, budget)
+	body, _ = sjson.SetBytes(body, includePath, true)
 	return body
 }
 
@@ -188,20 +194,26 @@ func ApplyReasoningEffortToGemini(body []byte, effort string) []byte {
 // for Gemini CLI API format (request.generationConfig.thinkingConfig path).
 // Returns the modified body with thinkingBudget and include_thoughts set.
 func ApplyReasoningEffortToGeminiCLI(body []byte, effort string) []byte {
-	budget, ok := ReasoningEffortBudgetMapping[effort]
-	if !ok {
-		budget = -1 // default to auto
+	normalized := strings.ToLower(strings.TrimSpace(effort))
+	if normalized == "" {
+		return body
 	}
 
 	budgetPath := "request.generationConfig.thinkingConfig.thinkingBudget"
 	includePath := "request.generationConfig.thinkingConfig.include_thoughts"
 
-	if effort == "none" {
+	if normalized == "none" {
 		body, _ = sjson.DeleteBytes(body, "request.generationConfig.thinkingConfig")
-	} else {
-		body, _ = sjson.SetBytes(body, budgetPath, budget)
-		body, _ = sjson.SetBytes(body, includePath, true)
+		return body
 	}
+
+	budget, ok := ReasoningEffortBudgetMapping[normalized]
+	if !ok {
+		return body
+	}
+
+	body, _ = sjson.SetBytes(body, budgetPath, budget)
+	body, _ = sjson.SetBytes(body, includePath, true)
 	return body
 }
 

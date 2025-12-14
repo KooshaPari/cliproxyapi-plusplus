@@ -66,6 +66,37 @@ func registerCoreModels(t *testing.T) func() {
 	}
 }
 
+var (
+	thinkingTestModels = []string{
+		"gpt-5",           // level-based thinking model
+		"gemini-2.5-pro",  // numeric-budget thinking model
+		"qwen3-code-plus", // no thinking support
+		"openai-compat",   // allowCompat=true (OpenAI-compatible channel)
+	}
+	thinkingTestFromProtocols = []string{"openai", "claude", "gemini", "openai-response"}
+	thinkingTestToProtocols   = []string{"gemini", "claude", "openai", "codex"}
+
+	// Numeric budgets and their level equivalents:
+	// -1 -> auto
+	// 0 -> none
+	// 1..1024 -> low
+	// 1025..8192 -> medium
+	// 8193..24576 -> high
+	// >24576 -> model highest level (right-most in Levels)
+	thinkingNumericSamples = []int{-1, 0, 1023, 1025, 8193, 64000}
+
+	// Levels and their numeric equivalents:
+	// auto -> -1
+	// none -> 0
+	// minimal -> 512
+	// low -> 1024
+	// medium -> 8192
+	// high -> 24576
+	// xhigh -> 32768
+	// invalid -> invalid (no mapping)
+	thinkingLevelSamples = []string{"auto", "none", "minimal", "low", "medium", "high", "xhigh", "invalid"}
+)
+
 func buildRawPayload(fromProtocol, modelWithSuffix string) []byte {
 	switch fromProtocol {
 	case "gemini":
@@ -101,19 +132,30 @@ func applyReasoningEffortMetadataLocal(payload []byte, metadata map[string]any, 
 	if field == "" {
 		return payload
 	}
-	if !util.ModelSupportsThinking(model) && !allowCompat {
+	baseModel := util.ResolveOriginalModel(model, metadata)
+	if baseModel == "" {
+		baseModel = model
+	}
+	if !util.ModelSupportsThinking(baseModel) && !allowCompat {
 		return payload
 	}
 	if effort, ok := util.ReasoningEffortFromMetadata(metadata); ok && effort != "" {
-		if util.ModelUsesThinkingLevels(model) || allowCompat {
+		if util.ModelUsesThinkingLevels(baseModel) || allowCompat {
 			if updated, err := sjson.SetBytes(payload, field, effort); err == nil {
 				return updated
 			}
 		}
 	}
-	if util.ModelUsesThinkingLevels(model) || allowCompat {
+	// Fallback: numeric thinking_budget suffix for level-based (OpenAI-style) models.
+	if util.ModelUsesThinkingLevels(baseModel) || allowCompat {
 		if budget, _, _, matched := util.ThinkingFromMetadata(metadata); matched && budget != nil {
-			if effort, ok := util.OpenAIThinkingBudgetToEffort(model, *budget); ok && effort != "" {
+			if effort, ok := util.OpenAIThinkingBudgetToEffort(baseModel, *budget); ok && effort != "" {
+				if *budget == 0 && effort == "none" && util.ModelUsesThinkingLevels(baseModel) {
+					if _, supported := util.NormalizeReasoningEffortLevel(baseModel, effort); !supported {
+						return stripThinkingFieldsLocal(payload, false)
+					}
+				}
+
 				if updated, err := sjson.SetBytes(payload, field, effort); err == nil {
 					return updated
 				}
@@ -320,79 +362,46 @@ func TestThinkingConversionsAcrossProtocolsAndModels(t *testing.T) {
 	cleanup := registerCoreModels(t)
 	defer cleanup()
 
-	models := []string{
-		"gpt-5",           // supports levels (level-based thinking)
-		"gemini-2.5-pro",  // supports numeric budget
-		"qwen3-code-plus", // no thinking support
-		"openai-compat",   // openai-compatible channel (allowCompat=true)
-	}
-	fromProtocols := []string{"openai", "claude", "gemini", "openai-response"}
-	toProtocols := []string{"gemini", "claude", "openai", "codex"}
-
 	type scenario struct {
 		name        string
 		modelSuffix string
-		expectFn    func(info *registry.ModelInfo) (present bool, budget int64)
 	}
 
-	buildBudgetFn := func(raw int) func(info *registry.ModelInfo) (bool, int64) {
-		return func(info *registry.ModelInfo) (bool, int64) {
-			if info == nil || info.Thinking == nil {
-				return false, 0
-			}
-			return true, int64(util.NormalizeThinkingBudget(info.ID, raw))
+	numericName := func(budget int) string {
+		if budget < 0 {
+			return "numeric-neg1"
 		}
+		return fmt.Sprintf("numeric-%d", budget)
 	}
 
-	levelBudgetFn := func(level string) func(info *registry.ModelInfo) (bool, int64) {
-		return func(info *registry.ModelInfo) (bool, int64) {
-			if info == nil || info.Thinking == nil {
-				return false, 0
-			}
-			if b, ok := util.ThinkingEffortToBudget(info.ID, level); ok {
-				return true, int64(b)
-			}
-			return false, 0
-		}
-	}
-
-	for _, model := range models {
+	for _, model := range thinkingTestModels {
 		_ = registry.GetGlobalRegistry().GetModelInfo(model)
 
-		for _, from := range fromProtocols {
+		for _, from := range thinkingTestFromProtocols {
 			// Scenario selection follows protocol semantics:
 			// - OpenAI-style protocols (openai/openai-response) express thinking as levels.
 			// - Claude/Gemini-style protocols express thinking as numeric budgets.
 			cases := []scenario{
-				{name: "no-suffix", modelSuffix: model, expectFn: func(_ *registry.ModelInfo) (bool, int64) { return false, 0 }},
+				{name: "no-suffix", modelSuffix: model},
 			}
 			if from == "openai" || from == "openai-response" {
-				// Level-based test cases: auto, none, minimal, low, medium, high, xhigh, foo(invalid)
-				// Maps to numeric: -1, 0, 512, 1024, 8192, 24576, 32768, invalid
-				cases = append(cases,
-					scenario{name: "level-auto", modelSuffix: fmt.Sprintf("%s(auto)", model), expectFn: levelBudgetFn("auto")},
-					scenario{name: "level-none", modelSuffix: fmt.Sprintf("%s(none)", model), expectFn: levelBudgetFn("none")},
-					scenario{name: "level-minimal", modelSuffix: fmt.Sprintf("%s(minimal)", model), expectFn: levelBudgetFn("minimal")},
-					scenario{name: "level-low", modelSuffix: fmt.Sprintf("%s(low)", model), expectFn: levelBudgetFn("low")},
-					scenario{name: "level-medium", modelSuffix: fmt.Sprintf("%s(medium)", model), expectFn: levelBudgetFn("medium")},
-					scenario{name: "level-high", modelSuffix: fmt.Sprintf("%s(high)", model), expectFn: levelBudgetFn("high")},
-					scenario{name: "level-xhigh", modelSuffix: fmt.Sprintf("%s(xhigh)", model), expectFn: levelBudgetFn("xhigh")},
-					scenario{name: "level-invalid", modelSuffix: fmt.Sprintf("%s(invalid)", model), expectFn: levelBudgetFn("invalid")},
-				)
+				for _, lvl := range thinkingLevelSamples {
+					cases = append(cases, scenario{
+						name:        "level-" + lvl,
+						modelSuffix: fmt.Sprintf("%s(%s)", model, lvl),
+					})
+				}
 			} else { // claude or gemini
-				// Numeric test cases: -1, 0, 1023, 1025, 8193, 24577
-				// Maps to levels: auto, none, low, medium, high, xhigh
-				cases = append(cases,
-					scenario{name: "numeric-neg1", modelSuffix: fmt.Sprintf("%s(-1)", model), expectFn: buildBudgetFn(-1)},
-					scenario{name: "numeric-0", modelSuffix: fmt.Sprintf("%s(0)", model), expectFn: buildBudgetFn(0)},
-					scenario{name: "numeric-1023", modelSuffix: fmt.Sprintf("%s(1023)", model), expectFn: buildBudgetFn(1023)},
-					scenario{name: "numeric-1025", modelSuffix: fmt.Sprintf("%s(1025)", model), expectFn: buildBudgetFn(1025)},
-					scenario{name: "numeric-8193", modelSuffix: fmt.Sprintf("%s(8193)", model), expectFn: buildBudgetFn(8193)},
-					scenario{name: "numeric-24577", modelSuffix: fmt.Sprintf("%s(24577)", model), expectFn: buildBudgetFn(24577)},
-				)
+				for _, budget := range thinkingNumericSamples {
+					budget := budget
+					cases = append(cases, scenario{
+						name:        numericName(budget),
+						modelSuffix: fmt.Sprintf("%s(%d)", model, budget),
+					})
+				}
 			}
 
-			for _, to := range toProtocols {
+			for _, to := range thinkingTestToProtocols {
 				if from == to {
 					continue
 				}
@@ -585,7 +594,7 @@ func buildRawPayloadWithThinking(fromProtocol, model string, thinkingParam any) 
 		return []byte(base)
 	case "claude":
 		base := fmt.Sprintf(`{"model":"%s","messages":[{"role":"user","content":"hi"}]}`, model)
-		if budget, ok := thinkingParam.(int); ok && budget > 0 {
+		if budget, ok := thinkingParam.(int); ok {
 			base, _ = sjson.Set(base, "thinking.type", "enabled")
 			base, _ = sjson.Set(base, "thinking.budget_tokens", budget)
 		}
@@ -636,55 +645,50 @@ func TestRawPayloadThinkingConversions(t *testing.T) {
 	cleanup := registerCoreModels(t)
 	defer cleanup()
 
-	models := []string{
-		"gpt-5",           // supports levels (level-based thinking)
-		"gemini-2.5-pro",  // supports numeric budget
-		"qwen3-code-plus", // no thinking support
-		"openai-compat",   // openai-compatible channel (allowCompat=true)
-	}
-	fromProtocols := []string{"openai", "claude", "gemini", "openai-response"}
-	toProtocols := []string{"gemini", "claude", "openai", "codex"}
-
 	type scenario struct {
 		name          string
 		thinkingParam any // int for budget, string for effort level
 	}
 
-	for _, model := range models {
+	numericName := func(budget int) string {
+		if budget < 0 {
+			return "budget-neg1"
+		}
+		return fmt.Sprintf("budget-%d", budget)
+	}
+
+	for _, model := range thinkingTestModels {
 		supportsThinking := util.ModelSupportsThinking(model)
 		usesLevels := util.ModelUsesThinkingLevels(model)
 		allowCompat := isOpenAICompatModel(model)
 
-		for _, from := range fromProtocols {
+		for _, from := range thinkingTestFromProtocols {
 			var cases []scenario
 			switch from {
 			case "openai", "openai-response":
-				// Level-based test cases: auto, none, minimal, low, medium, high, xhigh, foo(invalid)
 				cases = []scenario{
 					{name: "no-thinking", thinkingParam: nil},
-					{name: "effort-auto", thinkingParam: "auto"},
-					{name: "effort-none", thinkingParam: "none"},
-					{name: "effort-minimal", thinkingParam: "minimal"},
-					{name: "effort-low", thinkingParam: "low"},
-					{name: "effort-medium", thinkingParam: "medium"},
-					{name: "effort-high", thinkingParam: "high"},
-					{name: "effort-xhigh", thinkingParam: "xhigh"},
-					{name: "effort-invalid", thinkingParam: "invalid"},
+				}
+				for _, lvl := range thinkingLevelSamples {
+					cases = append(cases, scenario{
+						name:          "effort-" + lvl,
+						thinkingParam: lvl,
+					})
 				}
 			case "gemini", "claude":
-				// Numeric test cases: -1, 0, 1023, 1025, 8193, 24577
 				cases = []scenario{
 					{name: "no-thinking", thinkingParam: nil},
-					{name: "budget-neg1", thinkingParam: -1},
-					{name: "budget-0", thinkingParam: 0},
-					{name: "budget-1023", thinkingParam: 1023},
-					{name: "budget-1025", thinkingParam: 1025},
-					{name: "budget-8193", thinkingParam: 8193},
-					{name: "budget-24577", thinkingParam: 24577},
+				}
+				for _, budget := range thinkingNumericSamples {
+					budget := budget
+					cases = append(cases, scenario{
+						name:          numericName(budget),
+						thinkingParam: budget,
+					})
 				}
 			}
 
-			for _, to := range toProtocols {
+			for _, to := range thinkingTestToProtocols {
 				if from == to {
 					continue
 				}
@@ -727,8 +731,8 @@ func TestRawPayloadThinkingConversions(t *testing.T) {
 										// ThinkingEffortToBudget already returns normalized budget
 										return true, fmt.Sprintf("%d", budget), false
 									}
-									// Invalid effort maps to default auto (-1)
-									return true, "-1", false
+									// Invalid effort does not map to a budget
+									return false, "", false
 								}
 								return false, "", false
 							case "claude":
@@ -758,14 +762,8 @@ func TestRawPayloadThinkingConversions(t *testing.T) {
 							case "openai":
 								if allowCompat {
 									if effort, ok := cs.thinkingParam.(string); ok && strings.TrimSpace(effort) != "" {
-										// For allowCompat models, invalid effort values are normalized to "auto"
 										normalized := strings.ToLower(strings.TrimSpace(effort))
-										switch normalized {
-										case "none", "auto", "low", "medium", "high", "xhigh":
-											return true, normalized, false
-										default:
-											return true, "auto", false
-										}
+										return true, normalized, false
 									}
 									if budget, ok := cs.thinkingParam.(int); ok {
 										if mapped, okM := util.OpenAIThinkingBudgetToEffort(model, budget); okM && mapped != "" {
@@ -891,6 +889,7 @@ func TestOpenAIThinkingBudgetToEffortRanges(t *testing.T) {
 		want   string
 		ok     bool
 	}{
+		{name: "dynamic-auto", model: "gpt-5", budget: -1, want: "auto", ok: true},
 		{name: "zero-none", model: "gpt-5", budget: 0, want: "none", ok: true},
 		{name: "low-min", model: "gpt-5", budget: 1, want: "low", ok: true},
 		{name: "low-max", model: "gpt-5", budget: 1024, want: "low", ok: true},
@@ -898,7 +897,7 @@ func TestOpenAIThinkingBudgetToEffortRanges(t *testing.T) {
 		{name: "medium-max", model: "gpt-5", budget: 8192, want: "medium", ok: true},
 		{name: "high-min", model: "gpt-5", budget: 8193, want: "high", ok: true},
 		{name: "high-max", model: "gpt-5", budget: 24576, want: "high", ok: true},
-		{name: "over-max-clamps-to-highest", model: "gpt-5", budget: 24577, want: "high", ok: true},
+		{name: "over-max-clamps-to-highest", model: "gpt-5", budget: 64000, want: "high", ok: true},
 		{name: "over-max-xhigh-model", model: "gpt-5.2", budget: 50000, want: "xhigh", ok: true},
 		{name: "negative-unsupported", model: "gpt-5", budget: -5, want: "", ok: false},
 	}
