@@ -118,6 +118,16 @@ func (h *BaseAPIHandler) GetContextWithCancel(handler interfaces.APIHandler, c *
 	newCtx = context.WithValue(newCtx, "handler", handler)
 	return newCtx, func(params ...interface{}) {
 		if h.Cfg.RequestLog && len(params) == 1 {
+			if existing, exists := c.Get("API_RESPONSE"); exists {
+				if existingBytes, ok := existing.([]byte); ok && len(bytes.TrimSpace(existingBytes)) > 0 {
+					switch params[0].(type) {
+					case error, string:
+						cancel()
+						return
+					}
+				}
+			}
+
 			var payload []byte
 			switch data := params[0].(type) {
 			case []byte:
@@ -477,11 +487,14 @@ func (h *BaseAPIHandler) WriteErrorResponse(c *gin.Context, msg *interfaces.Erro
 		return payload
 	}
 
+	body := buildJSONBody()
+	c.Set("API_RESPONSE", bytes.Clone(body))
+
 	if !c.Writer.Written() {
 		c.Writer.Header().Set("Content-Type", "application/json")
 	}
 	c.Status(status)
-	_, _ = c.Writer.Write(buildJSONBody())
+	_, _ = c.Writer.Write(body)
 }
 
 func (h *BaseAPIHandler) LoggingAPIResponseError(ctx context.Context, err *interfaces.ErrorMessage) {
