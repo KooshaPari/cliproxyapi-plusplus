@@ -267,7 +267,7 @@ func (w *ResponseWriterWrapper) Finalize(c *gin.Context) error {
 		return nil
 	}
 
-	if w.isStreaming {
+	if w.isStreaming && w.streamWriter != nil {
 		if w.chunkChannel != nil {
 			close(w.chunkChannel)
 			w.chunkChannel = nil
@@ -279,24 +279,19 @@ func (w *ResponseWriterWrapper) Finalize(c *gin.Context) error {
 		}
 
 		// Write API Request and Response to the streaming log before closing
-		if w.streamWriter != nil {
-			apiRequest := w.extractAPIRequest(c)
-			if len(apiRequest) > 0 {
-				_ = w.streamWriter.WriteAPIRequest(apiRequest)
-			}
-			apiResponse := w.extractAPIResponse(c)
-			if len(apiResponse) > 0 {
-				_ = w.streamWriter.WriteAPIResponse(apiResponse)
-			}
-			if err := w.streamWriter.Close(); err != nil {
-				w.streamWriter = nil
-				return err
-			}
+		apiRequest := w.extractAPIRequest(c)
+		if len(apiRequest) > 0 {
+			_ = w.streamWriter.WriteAPIRequest(apiRequest)
+		}
+		apiResponse := w.extractAPIResponse(c)
+		if len(apiResponse) > 0 {
+			_ = w.streamWriter.WriteAPIResponse(apiResponse)
+		}
+		if err := w.streamWriter.Close(); err != nil {
 			w.streamWriter = nil
+			return err
 		}
-		if forceLog {
-			return w.logRequest(finalStatusCode, w.cloneHeaders(), w.body.Bytes(), w.extractAPIRequest(c), w.extractAPIResponse(c), slicesAPIResponseError, forceLog)
-		}
+		w.streamWriter = nil
 		return nil
 	}
 
