@@ -1150,7 +1150,7 @@ func (w *Watcher) SnapshotCoreAuths() []*coreauth.Auth {
 
 		key := strings.TrimSpace(compat.APIKey)
 		proxyURL := strings.TrimSpace(compat.ProxyURL)
-		idKind := fmt.Sprintf("vertex:apikey:%s", base)
+		idKind := "vertex:apikey"
 		id, token := idGen.next(idKind, key, base, proxyURL)
 		attrs := map[string]string{
 			"source":       fmt.Sprintf("config:vertex-apikey[%s]", token),
