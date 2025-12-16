@@ -330,8 +330,8 @@ func (s *Server) setupRoutes() {
 	v1beta.Use(AuthMiddleware(s.accessManager))
 	{
 		v1beta.GET("/models", geminiHandlers.GeminiModels)
-		v1beta.POST("/models/:action", geminiHandlers.GeminiHandler)
-		v1beta.GET("/models/:action", geminiHandlers.GeminiGetHandler)
+		v1beta.POST("/models/*action", geminiHandlers.GeminiHandler)
+		v1beta.GET("/models/*action", geminiHandlers.GeminiGetHandler)
 	}
 
 	// Root endpoint
