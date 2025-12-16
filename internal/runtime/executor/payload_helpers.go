@@ -273,7 +273,7 @@ func StripThinkingFields(payload []byte, effortOnly bool) []byte {
 		"reasoning.effort",
 	}
 	if !effortOnly {
-		fieldsToRemove = append([]string{"reasoning"}, fieldsToRemove...)
+		fieldsToRemove = append([]string{"reasoning", "thinking"}, fieldsToRemove...)
 	}
 	out := payload
 	for _, field := range fieldsToRemove {
