@@ -1,6 +1,8 @@
 package diff
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"sort"
 	"strings"
@@ -120,5 +122,62 @@ func openAICompatKey(entry config.OpenAICompatibility, index int) (string, strin
 			return "alias:" + alias, alias
 		}
 	}
-	return fmt.Sprintf("index:%d", index), fmt.Sprintf("entry-%d", index+1)
+	sig := openAICompatSignature(entry)
+	if sig == "" {
+		return fmt.Sprintf("index:%d", index), fmt.Sprintf("entry-%d", index+1)
+	}
+	short := sig
+	if len(short) > 8 {
+		short = short[:8]
+	}
+	return "sig:" + sig, "compat-" + short
+}
+
+func openAICompatSignature(entry config.OpenAICompatibility) string {
+	var parts []string
+
+	if v := strings.TrimSpace(entry.Name); v != "" {
+		parts = append(parts, "name="+strings.ToLower(v))
+	}
+	if v := strings.TrimSpace(entry.BaseURL); v != "" {
+		parts = append(parts, "base="+v)
+	}
+
+	models := make([]string, 0, len(entry.Models))
+	for _, model := range entry.Models {
+		name := strings.TrimSpace(model.Name)
+		alias := strings.TrimSpace(model.Alias)
+		if name == "" && alias == "" {
+			continue
+		}
+		models = append(models, strings.ToLower(name)+"|"+strings.ToLower(alias))
+	}
+	if len(models) > 0 {
+		sort.Strings(models)
+		parts = append(parts, "models="+strings.Join(models, ","))
+	}
+
+	if len(entry.Headers) > 0 {
+		keys := make([]string, 0, len(entry.Headers))
+		for k := range entry.Headers {
+			if trimmed := strings.TrimSpace(k); trimmed != "" {
+				keys = append(keys, strings.ToLower(trimmed))
+			}
+		}
+		if len(keys) > 0 {
+			sort.Strings(keys)
+			parts = append(parts, "headers="+strings.Join(keys, ","))
+		}
+	}
+
+	// Intentionally exclude API key material; only count non-empty entries.
+	if count := countAPIKeys(entry); count > 0 {
+		parts = append(parts, fmt.Sprintf("api_keys=%d", count))
+	}
+
+	if len(parts) == 0 {
+		return ""
+	}
+	sum := sha256.Sum256([]byte(strings.Join(parts, "|")))
+	return hex.EncodeToString(sum[:])
 }

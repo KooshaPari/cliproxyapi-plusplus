@@ -1,6 +1,7 @@
 package diff
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/config"
@@ -86,6 +87,79 @@ func TestOpenAICompatKeyFallbacks(t *testing.T) {
 	key, label = openAICompatKey(entry, 2)
 	if key != "index:2" || label != "entry-3" {
 		t.Fatalf("expected index fallback, got %s/%s", key, label)
+	}
+}
+
+func TestOpenAICompatKey_UsesName(t *testing.T) {
+	entry := config.OpenAICompatibility{Name: "My-Provider"}
+	key, label := openAICompatKey(entry, 0)
+	if key != "name:My-Provider" || label != "My-Provider" {
+		t.Fatalf("expected name key, got %s/%s", key, label)
+	}
+}
+
+func TestOpenAICompatKey_SignatureFallbackWhenOnlyAPIKeys(t *testing.T) {
+	entry := config.OpenAICompatibility{
+		APIKeyEntries: []config.OpenAICompatibilityAPIKey{{APIKey: "k1"}, {APIKey: "k2"}},
+	}
+	key, label := openAICompatKey(entry, 0)
+	if !strings.HasPrefix(key, "sig:") || !strings.HasPrefix(label, "compat-") {
+		t.Fatalf("expected signature key, got %s/%s", key, label)
+	}
+}
+
+func TestOpenAICompatSignature_EmptyReturnsEmpty(t *testing.T) {
+	if got := openAICompatSignature(config.OpenAICompatibility{}); got != "" {
+		t.Fatalf("expected empty signature, got %q", got)
+	}
+}
+
+func TestOpenAICompatSignature_StableAndNormalized(t *testing.T) {
+	a := config.OpenAICompatibility{
+		Name:    "  Provider  ",
+		BaseURL: "http://base",
+		Models: []config.OpenAICompatibilityModel{
+			{Name: "m1"},
+			{Name: "  "},
+			{Alias: "A1"},
+		},
+		Headers: map[string]string{
+			"X-Test": "1",
+			"  ":     "ignored",
+		},
+		APIKeyEntries: []config.OpenAICompatibilityAPIKey{
+			{APIKey: "k1"},
+			{APIKey: " "},
+		},
+	}
+	b := config.OpenAICompatibility{
+		Name:    "provider",
+		BaseURL: "http://base",
+		Models: []config.OpenAICompatibilityModel{
+			{Alias: "a1"},
+			{Name: "m1"},
+		},
+		Headers: map[string]string{
+			"x-test": "2",
+		},
+		APIKeyEntries: []config.OpenAICompatibilityAPIKey{
+			{APIKey: "k2"},
+		},
+	}
+
+	sigA := openAICompatSignature(a)
+	sigB := openAICompatSignature(b)
+	if sigA == "" || sigB == "" {
+		t.Fatalf("expected non-empty signatures, got %q / %q", sigA, sigB)
+	}
+	if sigA != sigB {
+		t.Fatalf("expected normalized signatures to match, got %s / %s", sigA, sigB)
+	}
+
+	c := b
+	c.Models = append(c.Models, config.OpenAICompatibilityModel{Name: "m2"})
+	if sigC := openAICompatSignature(c); sigC == sigB {
+		t.Fatalf("expected signature to change when models change, got %s", sigC)
 	}
 }
 

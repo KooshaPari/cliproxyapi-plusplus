@@ -13,32 +13,47 @@ import (
 // ComputeOpenAICompatModelsHash returns a stable hash for OpenAI-compat models.
 // Used to detect model list changes during hot reload.
 func ComputeOpenAICompatModelsHash(models []config.OpenAICompatibilityModel) string {
-	if len(models) == 0 {
-		return ""
-	}
-	data, _ := json.Marshal(models)
-	sum := sha256.Sum256(data)
-	return hex.EncodeToString(sum[:])
+	keys := normalizeModelPairs(func(out func(key string)) {
+		for _, model := range models {
+			name := strings.TrimSpace(model.Name)
+			alias := strings.TrimSpace(model.Alias)
+			if name == "" && alias == "" {
+				continue
+			}
+			out(strings.ToLower(name) + "|" + strings.ToLower(alias))
+		}
+	})
+	return hashJoined(keys)
 }
 
 // ComputeVertexCompatModelsHash returns a stable hash for Vertex-compatible models.
 func ComputeVertexCompatModelsHash(models []config.VertexCompatModel) string {
-	if len(models) == 0 {
-		return ""
-	}
-	data, _ := json.Marshal(models)
-	sum := sha256.Sum256(data)
-	return hex.EncodeToString(sum[:])
+	keys := normalizeModelPairs(func(out func(key string)) {
+		for _, model := range models {
+			name := strings.TrimSpace(model.Name)
+			alias := strings.TrimSpace(model.Alias)
+			if name == "" && alias == "" {
+				continue
+			}
+			out(strings.ToLower(name) + "|" + strings.ToLower(alias))
+		}
+	})
+	return hashJoined(keys)
 }
 
 // ComputeClaudeModelsHash returns a stable hash for Claude model aliases.
 func ComputeClaudeModelsHash(models []config.ClaudeModel) string {
-	if len(models) == 0 {
-		return ""
-	}
-	data, _ := json.Marshal(models)
-	sum := sha256.Sum256(data)
-	return hex.EncodeToString(sum[:])
+	keys := normalizeModelPairs(func(out func(key string)) {
+		for _, model := range models {
+			name := strings.TrimSpace(model.Name)
+			alias := strings.TrimSpace(model.Alias)
+			if name == "" && alias == "" {
+				continue
+			}
+			out(strings.ToLower(name) + "|" + strings.ToLower(alias))
+		}
+	})
+	return hashJoined(keys)
 }
 
 // ComputeExcludedModelsHash returns a normalized hash for excluded model lists.
@@ -58,5 +73,30 @@ func ComputeExcludedModelsHash(excluded []string) string {
 	sort.Strings(normalized)
 	data, _ := json.Marshal(normalized)
 	sum := sha256.Sum256(data)
+	return hex.EncodeToString(sum[:])
+}
+
+func normalizeModelPairs(collect func(out func(key string))) []string {
+	seen := make(map[string]struct{})
+	keys := make([]string, 0)
+	collect(func(key string) {
+		if _, exists := seen[key]; exists {
+			return
+		}
+		seen[key] = struct{}{}
+		keys = append(keys, key)
+	})
+	if len(keys) == 0 {
+		return nil
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+func hashJoined(keys []string) string {
+	if len(keys) == 0 {
+		return ""
+	}
+	sum := sha256.Sum256([]byte(strings.Join(keys, "\n")))
 	return hex.EncodeToString(sum[:])
 }

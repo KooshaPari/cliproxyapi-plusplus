@@ -416,6 +416,30 @@ func TestBuildConfigChangeDetails_AllBranches(t *testing.T) {
 	expectContains(t, changes, "openai-compatibility:")
 }
 
+func TestFormatProxyURL(t *testing.T) {
+	tests := []struct {
+		name string
+		in   string
+		want string
+	}{
+		{name: "empty", in: "", want: "<none>"},
+		{name: "invalid", in: "http://[::1", want: "<redacted>"},
+		{name: "fullURLRedactsUserinfoAndPath", in: "http://user:pass@example.com:8080/path?x=1#frag", want: "http://example.com:8080"},
+		{name: "socks5RedactsUserinfoAndPath", in: "socks5://user:pass@192.168.1.1:1080/path?x=1", want: "socks5://192.168.1.1:1080"},
+		{name: "socks5HostPort", in: "socks5://proxy.example.com:1080/", want: "socks5://proxy.example.com:1080"},
+		{name: "hostPortNoScheme", in: "example.com:1234/path?x=1", want: "example.com:1234"},
+		{name: "relativePathRedacted", in: "/just/path", want: "<redacted>"},
+		{name: "schemeAndHost", in: "https://example.com", want: "https://example.com"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := formatProxyURL(tt.in); got != tt.want {
+				t.Fatalf("expected %q, got %q", tt.want, got)
+			}
+		})
+	}
+}
+
 func TestBuildConfigChangeDetails_SecretAndUpstreamUpdates(t *testing.T) {
 	oldCfg := &config.Config{
 		AmpCode: config.AmpCode{
