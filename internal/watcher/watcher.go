@@ -184,7 +184,7 @@ func (w *Watcher) Start(ctx context.Context) error {
 	go w.processEvents(ctx)
 
 	// Perform an initial full reload based on current config and auth dir
-	w.reloadClients(true, nil)
+	w.reloadClients(true, nil, false)
 	return nil
 }
 
@@ -277,7 +277,7 @@ func (w *Watcher) DispatchRuntimeAuthUpdate(update AuthUpdate) bool {
 	return true
 }
 
-func (w *Watcher) refreshAuthState() {
+func (w *Watcher) refreshAuthState(force bool) {
 	auths := w.SnapshotCoreAuths()
 	w.clientsMutex.Lock()
 	if len(w.runtimeAuths) > 0 {
@@ -287,12 +287,12 @@ func (w *Watcher) refreshAuthState() {
 			}
 		}
 	}
-	updates := w.prepareAuthUpdatesLocked(auths)
+	updates := w.prepareAuthUpdatesLocked(auths, force)
 	w.clientsMutex.Unlock()
 	w.dispatchAuthUpdates(updates)
 }
 
-func (w *Watcher) prepareAuthUpdatesLocked(auths []*coreauth.Auth) []AuthUpdate {
+func (w *Watcher) prepareAuthUpdatesLocked(auths []*coreauth.Auth, force bool) []AuthUpdate {
 	newState := make(map[string]*coreauth.Auth, len(auths))
 	for _, auth := range auths {
 		if auth == nil || auth.ID == "" {
@@ -319,7 +319,7 @@ func (w *Watcher) prepareAuthUpdatesLocked(auths []*coreauth.Auth) []AuthUpdate 
 	for id, auth := range newState {
 		if existing, ok := w.currentAuths[id]; !ok {
 			updates = append(updates, AuthUpdate{Action: AuthUpdateActionAdd, ID: id, Auth: auth.Clone()})
-		} else if !authEqual(existing, auth) {
+		} else if force || !authEqual(existing, auth) {
 			updates = append(updates, AuthUpdate{Action: AuthUpdateActionModify, ID: id, Auth: auth.Clone()})
 		}
 	}
@@ -786,15 +786,16 @@ func (w *Watcher) reloadConfig() bool {
 	}
 
 	authDirChanged := oldConfig == nil || oldConfig.AuthDir != newConfig.AuthDir
+	forceAuthRefresh := oldConfig != nil && oldConfig.ForceModelPrefix != newConfig.ForceModelPrefix
 
 	log.Infof("config successfully reloaded, triggering client reload")
 	// Reload clients with new config
-	w.reloadClients(authDirChanged, affectedOAuthProviders)
+	w.reloadClients(authDirChanged, affectedOAuthProviders, forceAuthRefresh)
 	return true
 }
 
 // reloadClients performs a full scan and reload of all clients.
-func (w *Watcher) reloadClients(rescanAuth bool, affectedOAuthProviders []string) {
+func (w *Watcher) reloadClients(rescanAuth bool, affectedOAuthProviders []string, forceAuthRefresh bool) {
 	log.Debugf("starting full client load process")
 
 	w.clientsMutex.RLock()
@@ -885,7 +886,7 @@ func (w *Watcher) reloadClients(rescanAuth bool, affectedOAuthProviders []string
 		w.reloadCallback(cfg)
 	}
 
-	w.refreshAuthState()
+	w.refreshAuthState(forceAuthRefresh)
 
 	log.Infof("full client load complete - %d clients (%d auth files + %d Gemini API keys + %d Vertex API keys + %d Claude API keys + %d Codex keys + %d OpenAI-compat)",
 		totalNewClients,
@@ -936,7 +937,7 @@ func (w *Watcher) addOrUpdateClient(path string) {
 
 	w.clientsMutex.Unlock() // Unlock before the callback
 
-	w.refreshAuthState()
+	w.refreshAuthState(false)
 
 	if w.reloadCallback != nil {
 		log.Debugf("triggering server update callback after add/update")
@@ -955,7 +956,7 @@ func (w *Watcher) removeClient(path string) {
 
 	w.clientsMutex.Unlock() // Release the lock before the callback
 
-	w.refreshAuthState()
+	w.refreshAuthState(false)
 
 	if w.reloadCallback != nil {
 		log.Debugf("triggering server update callback after removal")
@@ -984,6 +985,7 @@ func (w *Watcher) SnapshotCoreAuths() []*coreauth.Auth {
 			if key == "" {
 				continue
 			}
+			prefix := strings.TrimSpace(entry.Prefix)
 			base := strings.TrimSpace(entry.BaseURL)
 			proxyURL := strings.TrimSpace(entry.ProxyURL)
 			id, token := idGen.next("gemini:apikey", key, base)
@@ -999,6 +1001,7 @@ func (w *Watcher) SnapshotCoreAuths() []*coreauth.Auth {
 				ID:         id,
 				Provider:   "gemini",
 				Label:      "gemini-apikey",
+				Prefix:     prefix,
 				Status:     coreauth.StatusActive,
 				ProxyURL:   proxyURL,
 				Attributes: attrs,
@@ -1016,6 +1019,7 @@ func (w *Watcher) SnapshotCoreAuths() []*coreauth.Auth {
 			if key == "" {
 				continue
 			}
+			prefix := strings.TrimSpace(ck.Prefix)
 			base := strings.TrimSpace(ck.BaseURL)
 			id, token := idGen.next("claude:apikey", key, base)
 			attrs := map[string]string{
@@ -1034,6 +1038,7 @@ func (w *Watcher) SnapshotCoreAuths() []*coreauth.Auth {
 				ID:         id,
 				Provider:   "claude",
 				Label:      "claude-apikey",
+				Prefix:     prefix,
 				Status:     coreauth.StatusActive,
 				ProxyURL:   proxyURL,
 				Attributes: attrs,
@@ -1050,6 +1055,7 @@ func (w *Watcher) SnapshotCoreAuths() []*coreauth.Auth {
 			if key == "" {
 				continue
 			}
+			prefix := strings.TrimSpace(ck.Prefix)
 			id, token := idGen.next("codex:apikey", key, ck.BaseURL)
 			attrs := map[string]string{
 				"source":  fmt.Sprintf("config:codex[%s]", token),
@@ -1064,6 +1070,7 @@ func (w *Watcher) SnapshotCoreAuths() []*coreauth.Auth {
 				ID:         id,
 				Provider:   "codex",
 				Label:      "codex-apikey",
+				Prefix:     prefix,
 				Status:     coreauth.StatusActive,
 				ProxyURL:   proxyURL,
 				Attributes: attrs,
@@ -1075,6 +1082,7 @@ func (w *Watcher) SnapshotCoreAuths() []*coreauth.Auth {
 		}
 		for i := range cfg.OpenAICompatibility {
 			compat := &cfg.OpenAICompatibility[i]
+			prefix := strings.TrimSpace(compat.Prefix)
 			providerName := strings.ToLower(strings.TrimSpace(compat.Name))
 			if providerName == "" {
 				providerName = "openai-compatibility"
@@ -1106,6 +1114,7 @@ func (w *Watcher) SnapshotCoreAuths() []*coreauth.Auth {
 					ID:         id,
 					Provider:   providerName,
 					Label:      compat.Name,
+					Prefix:     prefix,
 					Status:     coreauth.StatusActive,
 					ProxyURL:   proxyURL,
 					Attributes: attrs,
@@ -1132,6 +1141,7 @@ func (w *Watcher) SnapshotCoreAuths() []*coreauth.Auth {
 					ID:         id,
 					Provider:   providerName,
 					Label:      compat.Name,
+					Prefix:     prefix,
 					Status:     coreauth.StatusActive,
 					Attributes: attrs,
 					CreatedAt:  now,
@@ -1149,6 +1159,7 @@ func (w *Watcher) SnapshotCoreAuths() []*coreauth.Auth {
 		base := strings.TrimSpace(compat.BaseURL)
 
 		key := strings.TrimSpace(compat.APIKey)
+		prefix := strings.TrimSpace(compat.Prefix)
 		proxyURL := strings.TrimSpace(compat.ProxyURL)
 		idKind := "vertex:apikey"
 		id, token := idGen.next(idKind, key, base, proxyURL)
@@ -1168,6 +1179,7 @@ func (w *Watcher) SnapshotCoreAuths() []*coreauth.Auth {
 			ID:         id,
 			Provider:   providerName,
 			Label:      "vertex-apikey",
+			Prefix:     prefix,
 			Status:     coreauth.StatusActive,
 			ProxyURL:   proxyURL,
 			Attributes: attrs,
@@ -1220,10 +1232,20 @@ func (w *Watcher) SnapshotCoreAuths() []*coreauth.Auth {
 			proxyURL = p
 		}
 
+		prefix := ""
+		if rawPrefix, ok := metadata["prefix"].(string); ok {
+			trimmed := strings.TrimSpace(rawPrefix)
+			trimmed = strings.Trim(trimmed, "/")
+			if trimmed != "" && !strings.Contains(trimmed, "/") {
+				prefix = trimmed
+			}
+		}
+
 		a := &coreauth.Auth{
 			ID:       id,
 			Provider: provider,
 			Label:    label,
+			Prefix:   prefix,
 			Status:   coreauth.StatusActive,
 			Attributes: map[string]string{
 				"source": full,
@@ -1310,6 +1332,7 @@ func synthesizeGeminiVirtualAuths(primary *coreauth.Auth, metadata map[string]an
 			Attributes: attrs,
 			Metadata:   metadataCopy,
 			ProxyURL:   primary.ProxyURL,
+			Prefix:     primary.Prefix,
 			CreatedAt:  now,
 			UpdatedAt:  now,
 			Runtime:    geminicli.NewVirtualCredential(projectID, shared),

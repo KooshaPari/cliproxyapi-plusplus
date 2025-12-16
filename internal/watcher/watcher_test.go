@@ -497,7 +497,7 @@ func TestReloadClientsCachesAuthHashes(t *testing.T) {
 		config:  &config.Config{AuthDir: tmpDir},
 	}
 
-	w.reloadClients(true, nil)
+	w.reloadClients(true, nil, false)
 
 	w.clientsMutex.RLock()
 	defer w.clientsMutex.RUnlock()
@@ -522,7 +522,7 @@ func TestReloadClientsLogsConfigDiffs(t *testing.T) {
 	w.config = newCfg
 	w.clientsMutex.Unlock()
 
-	w.reloadClients(false, nil)
+	w.reloadClients(false, nil, false)
 }
 
 func TestSetAuthUpdateQueueNilResetsDispatch(t *testing.T) {
