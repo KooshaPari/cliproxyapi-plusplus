@@ -10,15 +10,15 @@ import (
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/config"
 )
 
-type excludedModelsSummary struct {
+type ExcludedModelsSummary struct {
 	hash  string
 	count int
 }
 
 // SummarizeExcludedModels normalizes and hashes an excluded-model list.
-func SummarizeExcludedModels(list []string) excludedModelsSummary {
+func SummarizeExcludedModels(list []string) ExcludedModelsSummary {
 	if len(list) == 0 {
-		return excludedModelsSummary{}
+		return ExcludedModelsSummary{}
 	}
 	seen := make(map[string]struct{}, len(list))
 	normalized := make([]string, 0, len(list))
@@ -32,18 +32,18 @@ func SummarizeExcludedModels(list []string) excludedModelsSummary {
 		}
 	}
 	sort.Strings(normalized)
-	return excludedModelsSummary{
+	return ExcludedModelsSummary{
 		hash:  ComputeExcludedModelsHash(normalized),
 		count: len(normalized),
 	}
 }
 
 // SummarizeOAuthExcludedModels summarizes OAuth excluded models per provider.
-func SummarizeOAuthExcludedModels(entries map[string][]string) map[string]excludedModelsSummary {
+func SummarizeOAuthExcludedModels(entries map[string][]string) map[string]ExcludedModelsSummary {
 	if len(entries) == 0 {
 		return nil
 	}
-	out := make(map[string]excludedModelsSummary, len(entries))
+	out := make(map[string]ExcludedModelsSummary, len(entries))
 	for k, v := range entries {
 		key := strings.ToLower(strings.TrimSpace(k))
 		if key == "" {
@@ -87,15 +87,15 @@ func DiffOAuthExcludedModelChanges(oldMap, newMap map[string][]string) ([]string
 	return changes, affected
 }
 
-type ampModelMappingsSummary struct {
+type AmpModelMappingsSummary struct {
 	hash  string
 	count int
 }
 
 // SummarizeAmpModelMappings hashes Amp model mappings for change detection.
-func SummarizeAmpModelMappings(mappings []config.AmpModelMapping) ampModelMappingsSummary {
+func SummarizeAmpModelMappings(mappings []config.AmpModelMapping) AmpModelMappingsSummary {
 	if len(mappings) == 0 {
-		return ampModelMappingsSummary{}
+		return AmpModelMappingsSummary{}
 	}
 	entries := make([]string, 0, len(mappings))
 	for _, mapping := range mappings {
@@ -107,25 +107,25 @@ func SummarizeAmpModelMappings(mappings []config.AmpModelMapping) ampModelMappin
 		entries = append(entries, from+"->"+to)
 	}
 	if len(entries) == 0 {
-		return ampModelMappingsSummary{}
+		return AmpModelMappingsSummary{}
 	}
 	sort.Strings(entries)
 	sum := sha256.Sum256([]byte(strings.Join(entries, "|")))
-	return ampModelMappingsSummary{
+	return AmpModelMappingsSummary{
 		hash:  hex.EncodeToString(sum[:]),
 		count: len(entries),
 	}
 }
 
-type vertexModelsSummary struct {
+type VertexModelsSummary struct {
 	hash  string
 	count int
 }
 
 // SummarizeVertexModels hashes vertex-compatible models for change detection.
-func SummarizeVertexModels(models []config.VertexCompatModel) vertexModelsSummary {
+func SummarizeVertexModels(models []config.VertexCompatModel) VertexModelsSummary {
 	if len(models) == 0 {
-		return vertexModelsSummary{}
+		return VertexModelsSummary{}
 	}
 	names := make([]string, 0, len(models))
 	for _, m := range models {
@@ -140,11 +140,11 @@ func SummarizeVertexModels(models []config.VertexCompatModel) vertexModelsSummar
 		names = append(names, name)
 	}
 	if len(names) == 0 {
-		return vertexModelsSummary{}
+		return VertexModelsSummary{}
 	}
 	sort.Strings(names)
 	sum := sha256.Sum256([]byte(strings.Join(names, "|")))
-	return vertexModelsSummary{
+	return VertexModelsSummary{
 		hash:  hex.EncodeToString(sum[:]),
 		count: len(names),
 	}
