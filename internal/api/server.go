@@ -230,13 +230,9 @@ func NewServer(cfg *config.Config, authManager *auth.Manager, accessManager *sdk
 	envManagementSecret := envAdminPasswordSet && envAdminPassword != ""
 
 	// Create server instance
-	providerNames := make([]string, 0, len(cfg.OpenAICompatibility))
-	for _, p := range cfg.OpenAICompatibility {
-		providerNames = append(providerNames, p.Name)
-	}
 	s := &Server{
 		engine:              engine,
-		handlers:            handlers.NewBaseAPIHandlers(&cfg.SDKConfig, authManager, providerNames),
+		handlers:            handlers.NewBaseAPIHandlers(&cfg.SDKConfig, authManager),
 		cfg:                 cfg,
 		accessManager:       accessManager,
 		requestLogger:       requestLogger,
@@ -918,12 +914,6 @@ func (s *Server) UpdateClients(cfg *config.Config) {
 	managementasset.SetCurrentConfig(cfg)
 	// Save YAML snapshot for next comparison
 	s.oldConfigYaml, _ = yaml.Marshal(cfg)
-
-	providerNames := make([]string, 0, len(cfg.OpenAICompatibility))
-	for _, p := range cfg.OpenAICompatibility {
-		providerNames = append(providerNames, p.Name)
-	}
-	s.handlers.OpenAICompatProviders = providerNames
 
 	s.handlers.UpdateClients(&cfg.SDKConfig)
 
