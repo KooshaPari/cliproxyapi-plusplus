@@ -138,6 +138,43 @@ func TestBuildConfigChangeDetails_GeminiVertexHeadersAndForceMappings(t *testing
 	expectContains(t, details, "ampcode.force-model-mappings: false -> true")
 }
 
+func TestBuildConfigChangeDetails_ModelPrefixes(t *testing.T) {
+	oldCfg := &config.Config{
+		GeminiKey: []config.GeminiKey{
+			{APIKey: "g1", Prefix: "old-g", BaseURL: "http://g", ProxyURL: "http://gp"},
+		},
+		ClaudeKey: []config.ClaudeKey{
+			{APIKey: "c1", Prefix: "old-c", BaseURL: "http://c", ProxyURL: "http://cp"},
+		},
+		CodexKey: []config.CodexKey{
+			{APIKey: "x1", Prefix: "old-x", BaseURL: "http://x", ProxyURL: "http://xp"},
+		},
+		VertexCompatAPIKey: []config.VertexCompatKey{
+			{APIKey: "v1", Prefix: "old-v", BaseURL: "http://v", ProxyURL: "http://vp"},
+		},
+	}
+	newCfg := &config.Config{
+		GeminiKey: []config.GeminiKey{
+			{APIKey: "g1", Prefix: "new-g", BaseURL: "http://g", ProxyURL: "http://gp"},
+		},
+		ClaudeKey: []config.ClaudeKey{
+			{APIKey: "c1", Prefix: "new-c", BaseURL: "http://c", ProxyURL: "http://cp"},
+		},
+		CodexKey: []config.CodexKey{
+			{APIKey: "x1", Prefix: "new-x", BaseURL: "http://x", ProxyURL: "http://xp"},
+		},
+		VertexCompatAPIKey: []config.VertexCompatKey{
+			{APIKey: "v1", Prefix: "new-v", BaseURL: "http://v", ProxyURL: "http://vp"},
+		},
+	}
+
+	changes := BuildConfigChangeDetails(oldCfg, newCfg)
+	expectContains(t, changes, "gemini[0].prefix: old-g -> new-g")
+	expectContains(t, changes, "claude[0].prefix: old-c -> new-c")
+	expectContains(t, changes, "codex[0].prefix: old-x -> new-x")
+	expectContains(t, changes, "vertex[0].prefix: old-v -> new-v")
+}
+
 func TestBuildConfigChangeDetails_NilSafe(t *testing.T) {
 	if details := BuildConfigChangeDetails(nil, &config.Config{}); len(details) != 0 {
 		t.Fatalf("expected empty change list when old nil, got %v", details)
