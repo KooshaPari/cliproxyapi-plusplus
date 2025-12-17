@@ -33,9 +33,8 @@ func Walk(value gjson.Result, path, field string, paths *[]string) {
 			// . -> \.
 			// * -> \*
 			// ? -> \?
-			safeKey := strings.ReplaceAll(key.String(), ".", "\\.")
-			safeKey = strings.ReplaceAll(safeKey, "*", "\\*")
-			safeKey = strings.ReplaceAll(safeKey, "?", "\\?")
+			var keyReplacer = strings.NewReplacer(".", "\\.", "*", "\\*", "?", "\\?")
+			safeKey := keyReplacer.Replace(key.String())
 
 			if path == "" {
 				childPath = safeKey
