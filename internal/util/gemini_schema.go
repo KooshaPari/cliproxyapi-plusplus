@@ -10,6 +10,8 @@ import (
 	"github.com/tidwall/sjson"
 )
 
+var gjsonPathKeyReplacer = strings.NewReplacer(".", "\\.", "*", "\\*", "?", "\\?")
+
 // CleanJSONSchemaForGemini transforms a JSON schema to be compatible with Gemini/Antigravity API.
 // It handles unsupported keywords, type flattening, and schema simplification while preserving
 // semantic information as description hints.
@@ -47,11 +49,12 @@ func convertRefsToHints(jsonStr string) string {
 
 		parentPath := trimSuffix(p, ".$ref")
 		hint := fmt.Sprintf("See: %s", defName)
-		if existing := gjson.Get(jsonStr, parentPath+".description").String(); existing != "" {
+		if existing := gjson.Get(jsonStr, descriptionPath(parentPath)).String(); existing != "" {
 			hint = fmt.Sprintf("%s (%s)", existing, hint)
 		}
 
-		replacement := fmt.Sprintf(`{"type":"object","description":"%s"}`, hint)
+		replacement := `{"type":"object","description":""}`
+		replacement, _ = sjson.Set(replacement, "description", hint)
 		jsonStr = setRawAt(jsonStr, parentPath, replacement)
 	}
 	return jsonStr
@@ -136,7 +139,7 @@ func mergeAllOf(jsonStr string) string {
 		for _, item := range allOf.Array() {
 			if props := item.Get("properties"); props.IsObject() {
 				props.ForEach(func(key, value gjson.Result) bool {
-					destPath := joinPath(parentPath, "properties."+key.String())
+					destPath := joinPath(parentPath, "properties."+escapeGJSONPathKey(key.String()))
 					jsonStr, _ = sjson.SetRaw(jsonStr, destPath, value.Raw)
 					return true
 				})
@@ -168,16 +171,23 @@ func flattenAnyOfOneOf(jsonStr string) string {
 				continue
 			}
 
+			parentPath := trimSuffix(p, "."+key)
+			parentDesc := gjson.Get(jsonStr, descriptionPath(parentPath)).String()
+
 			items := arr.Array()
 			bestIdx, allTypes := selectBest(items)
 			selected := items[bestIdx].Raw
+
+			if parentDesc != "" {
+				selected = mergeDescriptionRaw(selected, parentDesc)
+			}
 
 			if len(allTypes) > 1 {
 				hint := "Accepts: " + strings.Join(allTypes, " | ")
 				selected = appendHintRaw(selected, hint)
 			}
 
-			jsonStr = setRawAt(jsonStr, trimSuffix(p, "."+key), selected)
+			jsonStr = setRawAt(jsonStr, parentPath, selected)
 		}
 	}
 	return jsonStr
@@ -247,13 +257,14 @@ func flattenTypeArrays(jsonStr string) string {
 		}
 
 		if hasNull {
-			parts := strings.Split(p, ".")
+			parts := splitGJSONPath(p)
 			if len(parts) >= 3 && parts[len(parts)-3] == "properties" {
-				fieldName := parts[len(parts)-2]
+				fieldNameEscaped := parts[len(parts)-2]
+				fieldName := unescapeGJSONPathKey(fieldNameEscaped)
 				objectPath := strings.Join(parts[:len(parts)-3], ".")
 				nullableFields[objectPath] = append(nullableFields[objectPath], fieldName)
 
-				propPath := joinPath(objectPath, "properties."+fieldName)
+				propPath := joinPath(objectPath, "properties."+fieldNameEscaped)
 				jsonStr = appendHint(jsonStr, propPath, "(nullable)")
 			}
 		}
@@ -310,8 +321,9 @@ func cleanupRequiredFields(jsonStr string) string {
 
 		var valid []string
 		for _, r := range req.Array() {
-			if props.Get(r.String()).Exists() {
-				valid = append(valid, r.String())
+			key := r.String()
+			if props.Get(escapeGJSONPathKey(key)).Exists() {
+				valid = append(valid, key)
 			}
 		}
 
@@ -364,6 +376,13 @@ func isPropertyDefinition(path string) bool {
 	return path == "properties" || strings.HasSuffix(path, ".properties")
 }
 
+func descriptionPath(parentPath string) string {
+	if parentPath == "" || parentPath == "@this" {
+		return "description"
+	}
+	return parentPath + ".description"
+}
+
 func appendHint(jsonStr, parentPath, hint string) string {
 	descPath := parentPath + ".description"
 	if parentPath == "" || parentPath == "@this" {
@@ -410,4 +429,68 @@ func orDefault(val, def string) string {
 		return def
 	}
 	return val
+}
+
+func escapeGJSONPathKey(key string) string {
+	return gjsonPathKeyReplacer.Replace(key)
+}
+
+func unescapeGJSONPathKey(key string) string {
+	if !strings.Contains(key, "\\") {
+		return key
+	}
+	var b strings.Builder
+	b.Grow(len(key))
+	for i := 0; i < len(key); i++ {
+		if key[i] == '\\' && i+1 < len(key) {
+			i++
+			b.WriteByte(key[i])
+			continue
+		}
+		b.WriteByte(key[i])
+	}
+	return b.String()
+}
+
+func splitGJSONPath(path string) []string {
+	if path == "" {
+		return nil
+	}
+
+	parts := make([]string, 0, strings.Count(path, ".")+1)
+	var b strings.Builder
+	b.Grow(len(path))
+
+	for i := 0; i < len(path); i++ {
+		c := path[i]
+		if c == '\\' && i+1 < len(path) {
+			b.WriteByte('\\')
+			i++
+			b.WriteByte(path[i])
+			continue
+		}
+		if c == '.' {
+			parts = append(parts, b.String())
+			b.Reset()
+			continue
+		}
+		b.WriteByte(c)
+	}
+	parts = append(parts, b.String())
+	return parts
+}
+
+func mergeDescriptionRaw(schemaRaw, parentDesc string) string {
+	childDesc := gjson.Get(schemaRaw, "description").String()
+	switch {
+	case childDesc == "":
+		schemaRaw, _ = sjson.Set(schemaRaw, "description", parentDesc)
+		return schemaRaw
+	case childDesc == parentDesc:
+		return schemaRaw
+	default:
+		combined := fmt.Sprintf("%s (%s)", parentDesc, childDesc)
+		schemaRaw, _ = sjson.Set(schemaRaw, "description", combined)
+		return schemaRaw
+	}
 }

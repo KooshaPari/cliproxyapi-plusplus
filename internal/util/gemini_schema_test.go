@@ -224,6 +224,39 @@ func TestCleanJSONSchemaForGemini_RefHandling(t *testing.T) {
 	compareJSON(t, expected, result)
 }
 
+func TestCleanJSONSchemaForGemini_RefHandling_DescriptionEscaping(t *testing.T) {
+	input := `{
+		"definitions": {
+			"User": {
+				"type": "object",
+				"properties": {
+					"name": { "type": "string" }
+				}
+			}
+		},
+		"type": "object",
+		"properties": {
+			"customer": {
+				"description": "He said \"hi\"\\nsecond line",
+				"$ref": "#/definitions/User"
+			}
+		}
+	}`
+
+	expected := `{
+		"type": "object",
+		"properties": {
+			"customer": {
+				"type": "object",
+				"description": "He said \"hi\"\\nsecond line (See: User)"
+			}
+		}
+	}`
+
+	result := CleanJSONSchemaForGemini(input)
+	compareJSON(t, expected, result)
+}
+
 func TestCleanJSONSchemaForGemini_CyclicRefDefaults(t *testing.T) {
 	input := `{
 		"definitions": {
@@ -269,6 +302,38 @@ func TestCleanJSONSchemaForGemini_RequiredCleanup(t *testing.T) {
 			"b": {"type": "string"}
 		},
 		"required": ["a", "b"]
+	}`
+
+	result := CleanJSONSchemaForGemini(input)
+	compareJSON(t, expected, result)
+}
+
+func TestCleanJSONSchemaForGemini_AllOfMerging_DotKeys(t *testing.T) {
+	input := `{
+		"type": "object",
+		"allOf": [
+			{
+				"properties": {
+					"my.param": { "type": "string" }
+				},
+				"required": ["my.param"]
+			},
+			{
+				"properties": {
+					"b": { "type": "integer" }
+				},
+				"required": ["b"]
+			}
+		]
+	}`
+
+	expected := `{
+		"type": "object",
+		"properties": {
+			"my.param": { "type": "string" },
+			"b": { "type": "integer" }
+		},
+		"required": ["my.param", "b"]
 	}`
 
 	result := CleanJSONSchemaForGemini(input)
@@ -395,6 +460,38 @@ func TestCleanJSONSchemaForGemini_NullableHint(t *testing.T) {
 	}
 }
 
+func TestCleanJSONSchemaForGemini_TypeFlattening_Nullable_DotKey(t *testing.T) {
+	input := `{
+		"type": "object",
+		"properties": {
+			"my.param": {
+				"type": ["string", "null"]
+			},
+			"other": {
+				"type": "string"
+			}
+		},
+		"required": ["my.param", "other"]
+	}`
+
+	expected := `{
+		"type": "object",
+		"properties": {
+			"my.param": {
+				"type": "string",
+				"description": "(nullable)"
+			},
+			"other": {
+				"type": "string"
+			}
+		},
+		"required": ["other"]
+	}`
+
+	result := CleanJSONSchemaForGemini(input)
+	compareJSON(t, expected, result)
+}
+
 func TestCleanJSONSchemaForGemini_EnumHint(t *testing.T) {
 	input := `{
 		"type": "object",
@@ -431,6 +528,34 @@ func TestCleanJSONSchemaForGemini_AdditionalPropertiesHint(t *testing.T) {
 	if !strings.Contains(result, "No extra properties allowed") {
 		t.Errorf("Expected additionalProperties hint, got: %s", result)
 	}
+}
+
+func TestCleanJSONSchemaForGemini_AnyOfFlattening_PreservesDescription(t *testing.T) {
+	input := `{
+		"type": "object",
+		"properties": {
+			"config": {
+				"description": "Parent desc",
+				"anyOf": [
+					{ "type": "string", "description": "Child desc" },
+					{ "type": "integer" }
+				]
+			}
+		}
+	}`
+
+	expected := `{
+		"type": "object",
+		"properties": {
+			"config": {
+				"type": "string",
+				"description": "Parent desc (Child desc) (Accepts: string | integer)"
+			}
+		}
+	}`
+
+	result := CleanJSONSchemaForGemini(input)
+	compareJSON(t, expected, result)
 }
 
 func TestCleanJSONSchemaForGemini_SingleEnumNoHint(t *testing.T) {
