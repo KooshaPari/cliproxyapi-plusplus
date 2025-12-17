@@ -274,6 +274,42 @@ func ApplyDefaultThinkingIfNeeded(model string, body []byte) []byte {
 	return updated
 }
 
+// ApplyGemini3ThinkingLevelFromMetadata applies thinkingLevel from metadata for Gemini 3 models.
+// For standard Gemini API format (generationConfig.thinkingConfig path).
+// This handles the case where reasoning_effort is specified via model name suffix (e.g., model(minimal)).
+func ApplyGemini3ThinkingLevelFromMetadata(model string, metadata map[string]any, body []byte) []byte {
+	if !IsGemini3Model(model) {
+		return body
+	}
+	effort, ok := ReasoningEffortFromMetadata(metadata)
+	if !ok || effort == "" {
+		return body
+	}
+	// Validate and apply the thinkingLevel
+	if level, valid := ValidateGemini3ThinkingLevel(model, effort); valid {
+		return ApplyGeminiThinkingLevel(body, level, nil)
+	}
+	return body
+}
+
+// ApplyGemini3ThinkingLevelFromMetadataCLI applies thinkingLevel from metadata for Gemini 3 models.
+// For Gemini CLI API format (request.generationConfig.thinkingConfig path).
+// This handles the case where reasoning_effort is specified via model name suffix (e.g., model(minimal)).
+func ApplyGemini3ThinkingLevelFromMetadataCLI(model string, metadata map[string]any, body []byte) []byte {
+	if !IsGemini3Model(model) {
+		return body
+	}
+	effort, ok := ReasoningEffortFromMetadata(metadata)
+	if !ok || effort == "" {
+		return body
+	}
+	// Validate and apply the thinkingLevel
+	if level, valid := ValidateGemini3ThinkingLevel(model, effort); valid {
+		return ApplyGeminiCLIThinkingLevel(body, level, nil)
+	}
+	return body
+}
+
 // ApplyDefaultThinkingIfNeededCLI injects default thinkingConfig for models that require it.
 // For Gemini CLI API format (request.generationConfig.thinkingConfig path).
 // Returns the modified body if thinkingConfig was added, otherwise returns the original.
