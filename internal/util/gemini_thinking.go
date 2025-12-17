@@ -19,7 +19,7 @@ var (
 	gemini3Pattern      = regexp.MustCompile(`(?i)^gemini[_-]?3[_-]`)
 	gemini3ProPattern   = regexp.MustCompile(`(?i)^gemini[_-]?3[_-]pro`)
 	gemini3FlashPattern = regexp.MustCompile(`(?i)^gemini[_-]?3[_-]flash`)
-	gemini25Pattern     = regexp.MustCompile(`(?i)^gemini[_-]?2\.?5[_-]`)
+	gemini25Pattern     = regexp.MustCompile(`(?i)^gemini[_-]?2\.5[_-]`)
 )
 
 // IsGemini3Model returns true if the model is a Gemini 3 family model.
