@@ -451,6 +451,26 @@ func TestCleanJSONSchemaForGemini_SingleEnumNoHint(t *testing.T) {
 	}
 }
 
+func TestCleanJSONSchemaForGemini_MultipleNonNullTypes(t *testing.T) {
+	input := `{
+		"type": "object",
+		"properties": {
+			"value": {
+				"type": ["string", "integer", "boolean"]
+			}
+		}
+	}`
+
+	result := CleanJSONSchemaForGemini(input)
+
+	if !strings.Contains(result, "Accepts:") {
+		t.Errorf("Expected multiple types hint, got: %s", result)
+	}
+	if !strings.Contains(result, "string") || !strings.Contains(result, "integer") || !strings.Contains(result, "boolean") {
+		t.Errorf("Expected all types in hint, got: %s", result)
+	}
+}
+
 func compareJSON(t *testing.T, expectedJSON, actualJSON string) {
 	var expMap, actMap map[string]interface{}
 	errExp := json.Unmarshal([]byte(expectedJSON), &expMap)

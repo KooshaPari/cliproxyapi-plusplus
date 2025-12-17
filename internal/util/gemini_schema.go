@@ -222,20 +222,29 @@ func flattenTypeArrays(jsonStr string) string {
 			continue
 		}
 
-		hasNull, firstType := false, ""
+		hasNull := false
+		var nonNullTypes []string
 		for _, item := range res.Array() {
 			s := item.String()
 			if s == "null" {
 				hasNull = true
-			} else if firstType == "" {
-				firstType = s
+			} else if s != "" {
+				nonNullTypes = append(nonNullTypes, s)
 			}
 		}
-		if firstType == "" {
-			firstType = "string"
+
+		firstType := "string"
+		if len(nonNullTypes) > 0 {
+			firstType = nonNullTypes[0]
 		}
 
 		jsonStr, _ = sjson.Set(jsonStr, p, firstType)
+
+		parentPath := trimSuffix(p, ".type")
+		if len(nonNullTypes) > 1 {
+			hint := "Accepts: " + strings.Join(nonNullTypes, " | ")
+			jsonStr = appendHint(jsonStr, parentPath, hint)
+		}
 
 		if hasNull {
 			parts := strings.Split(p, ".")

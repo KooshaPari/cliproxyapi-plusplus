@@ -25,8 +25,7 @@ type Params struct {
 	HasFirstResponse bool
 	ResponseType     int
 	ResponseIndex    int
-	HasContent       bool   // Tracks whether any content (text, thinking, or tool use) has been output
-	CurrentToolName  string // Tracks the current function name for streaming limits
+	HasContent bool // Tracks whether any content (text, thinking, or tool use) has been output
 }
 
 // toolUseIDCounter provides a process-wide unique counter for tool use identifiers.
@@ -234,7 +233,6 @@ func ConvertGeminiResponseToClaude(_ context.Context, _ string, originalRequestR
 				}
 				(*param).(*Params).ResponseType = 3
 				(*param).(*Params).HasContent = true
-				(*param).(*Params).CurrentToolName = fcName
 			}
 		}
 	}
