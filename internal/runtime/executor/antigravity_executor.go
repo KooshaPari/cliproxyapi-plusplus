@@ -545,27 +545,9 @@ func (e *AntigravityExecutor) buildRequest(ctx context.Context, auth *cliproxyau
 			strJSON, _ = util.RenameKey(strJSON, p, p[:len(p)-len("parametersJsonSchema")]+"parameters")
 		}
 
-		strJSON = util.DeleteKey(strJSON, "$schema")
-		strJSON = util.DeleteKey(strJSON, "maxItems")
-		strJSON = util.DeleteKey(strJSON, "minItems")
-		strJSON = util.DeleteKey(strJSON, "minLength")
-		strJSON = util.DeleteKey(strJSON, "maxLength")
-		strJSON = util.DeleteKey(strJSON, "exclusiveMinimum")
-		strJSON = util.DeleteKey(strJSON, "exclusiveMaximum")
-		strJSON = util.DeleteKey(strJSON, "$ref")
-		strJSON = util.DeleteKey(strJSON, "$defs")
-
-		paths = make([]string, 0)
-		util.Walk(gjson.Parse(strJSON), "", "anyOf", &paths)
-		for _, p := range paths {
-			anyOf := gjson.Get(strJSON, p)
-			if anyOf.IsArray() {
-				anyOfItems := anyOf.Array()
-				if len(anyOfItems) > 0 {
-					strJSON, _ = sjson.SetRaw(strJSON, p[:len(p)-len(".anyOf")], anyOfItems[0].Raw)
-				}
-			}
-		}
+		// Use the centralized schema cleaner to handle unsupported keywords,
+		// const->enum conversion, and flattening of types/anyOf.
+		strJSON = util.CleanJSONSchemaForGemini(strJSON)
 
 		payload = []byte(strJSON)
 	}

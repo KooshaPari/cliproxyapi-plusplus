@@ -25,7 +25,8 @@ type Params struct {
 	HasFirstResponse bool
 	ResponseType     int
 	ResponseIndex    int
-	HasContent       bool // Tracks whether any content (text, thinking, or tool use) has been output
+	HasContent       bool   // Tracks whether any content (text, thinking, or tool use) has been output
+	CurrentToolName  string // Tracks the current function name for streaming limits
 }
 
 // toolUseIDCounter provides a process-wide unique counter for tool use identifiers.
@@ -179,6 +180,18 @@ func ConvertGeminiResponseToClaude(_ context.Context, _ string, originalRequestR
 				usedTool = true
 				fcName := functionCallResult.Get("name").String()
 
+				// FIX: Handle streaming split/delta where name might be empty in subsequent chunks.
+				// If we are already in tool use mode and name is empty, treat as continuation (delta).
+				if (*param).(*Params).ResponseType == 3 && fcName == "" {
+					if fcArgsResult := functionCallResult.Get("args"); fcArgsResult.Exists() {
+						output = output + "event: content_block_delta\n"
+						data, _ := sjson.Set(fmt.Sprintf(`{"type":"content_block_delta","index":%d,"delta":{"type":"input_json_delta","partial_json":""}}`, (*param).(*Params).ResponseIndex), "delta.partial_json", fcArgsResult.Raw)
+						output = output + fmt.Sprintf("data: %s\n\n\n", data)
+					}
+					// Continue to next part without closing/opening logic
+					continue
+				}
+
 				// Handle state transitions when switching to function calls
 				// Close any existing function call block first
 				if (*param).(*Params).ResponseType == 3 {
@@ -221,6 +234,7 @@ func ConvertGeminiResponseToClaude(_ context.Context, _ string, originalRequestR
 				}
 				(*param).(*Params).ResponseType = 3
 				(*param).(*Params).HasContent = true
+				(*param).(*Params).CurrentToolName = fcName
 			}
 		}
 	}
