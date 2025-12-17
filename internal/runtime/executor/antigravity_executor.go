@@ -77,6 +77,25 @@ func (e *AntigravityExecutor) Execute(ctx context.Context, auth *cliproxyauth.Au
 		auth = updatedAuth
 	}
 
+	if strings.Contains(req.Model, "claude") {
+		stream, errExecuteStream := e.ExecuteStream(ctx, auth, req, opts)
+		if errExecuteStream != nil {
+			return resp, errExecuteStream
+		}
+
+		var buffer bytes.Buffer
+		for chunk := range stream {
+			if chunk.Err != nil {
+				return resp, chunk.Err
+			}
+			if len(chunk.Payload) > 0 {
+				_, _ = buffer.Write(chunk.Payload)
+			}
+		}
+		resp = cliproxyexecutor.Response{Payload: buffer.Bytes()}
+		return resp, nil
+	}
+
 	reporter := newUsageReporter(ctx, e.Identifier(), req.Model, auth)
 	defer reporter.trackFailure(ctx, &err)
 
