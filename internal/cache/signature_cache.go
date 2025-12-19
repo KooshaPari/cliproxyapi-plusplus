@@ -3,6 +3,7 @@ package cache
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"sort"
 	"sync"
 	"time"
 )
@@ -89,20 +90,17 @@ func CacheSignature(sessionID, text, signature string) {
 					ts  time.Time
 				}{key, entry.Timestamp})
 			}
-			// Simple approach: remove first quarter of entries
+			// Sort by timestamp (oldest first) using sort.Slice
+			sort.Slice(oldest, func(i, j int) bool {
+				return oldest[i].ts.Before(oldest[j].ts)
+			})
+
 			toRemove := len(oldest) / 4
 			if toRemove < 1 {
 				toRemove = 1
 			}
-			// Sort by timestamp (oldest first) - simple bubble for small N
+
 			for i := 0; i < toRemove; i++ {
-				minIdx := i
-				for j := i + 1; j < len(oldest); j++ {
-					if oldest[j].ts.Before(oldest[minIdx].ts) {
-						minIdx = j
-					}
-				}
-				oldest[i], oldest[minIdx] = oldest[minIdx], oldest[i]
 				delete(sc.entries, oldest[i].key)
 			}
 		}

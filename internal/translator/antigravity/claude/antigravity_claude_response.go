@@ -9,8 +9,6 @@ package claude
 import (
 	"bytes"
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"strings"
 	"sync/atomic"
@@ -46,27 +44,6 @@ type Params struct {
 	CurrentThinkingText strings.Builder // Accumulates thinking text for signature caching
 }
 
-// deriveSessionIDFromRequest generates a stable session ID from the request JSON.
-func deriveSessionIDFromRequest(rawJSON []byte) string {
-	messages := gjson.GetBytes(rawJSON, "messages")
-	if !messages.IsArray() {
-		return ""
-	}
-	for _, msg := range messages.Array() {
-		if msg.Get("role").String() == "user" {
-			content := msg.Get("content").String()
-			if content == "" {
-				content = msg.Get("content.0.text").String()
-			}
-			if content != "" {
-				h := sha256.Sum256([]byte(content))
-				return hex.EncodeToString(h[:16])
-			}
-		}
-	}
-	return ""
-}
-
 // toolUseIDCounter provides a process-wide unique counter for tool use identifiers.
 var toolUseIDCounter uint64
 
@@ -92,7 +69,7 @@ func ConvertAntigravityResponseToClaude(_ context.Context, _ string, originalReq
 			HasFirstResponse: false,
 			ResponseType:     0,
 			ResponseIndex:    0,
-			SessionID:        deriveSessionIDFromRequest(originalRequestRawJSON),
+			SessionID:        deriveSessionID(originalRequestRawJSON),
 		}
 	}
 
