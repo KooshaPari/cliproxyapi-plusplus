@@ -32,6 +32,7 @@ type Params struct {
 	CandidatesTokenCount int64  // Cached candidate token count from usage metadata
 	ThoughtsTokenCount   int64  // Cached thinking token count from usage metadata
 	TotalTokenCount      int64  // Cached total token count from usage metadata
+	CachedTokenCount     int64  // Cached content token count (indicates prompt caching)
 	HasSentFinalEvents   bool   // Indicates if final content/message events have been sent
 	HasToolUse           bool   // Indicates if tool use was observed in the stream
 	HasContent           bool   // Tracks whether any content (text, thinking, or tool use) has been output
@@ -254,6 +255,7 @@ func ConvertAntigravityResponseToClaude(_ context.Context, _ string, originalReq
 		params.CandidatesTokenCount = usageResult.Get("candidatesTokenCount").Int()
 		params.ThoughtsTokenCount = usageResult.Get("thoughtsTokenCount").Int()
 		params.TotalTokenCount = usageResult.Get("totalTokenCount").Int()
+		params.CachedTokenCount = usageResult.Get("cachedContentTokenCount").Int()
 		if params.CandidatesTokenCount == 0 && params.TotalTokenCount > 0 {
 			params.CandidatesTokenCount = params.TotalTokenCount - params.PromptTokenCount - params.ThoughtsTokenCount
 			if params.CandidatesTokenCount < 0 {
@@ -302,6 +304,10 @@ func appendFinalEvents(params *Params, output *string, force bool) {
 	*output = *output + "event: message_delta\n"
 	*output = *output + "data: "
 	delta := fmt.Sprintf(`{"type":"message_delta","delta":{"stop_reason":"%s","stop_sequence":null},"usage":{"input_tokens":%d,"output_tokens":%d}}`, stopReason, params.PromptTokenCount, usageOutputTokens)
+	// Add cache_read_input_tokens if cached tokens are present (indicates prompt caching is working)
+	if params.CachedTokenCount > 0 {
+		delta, _ = sjson.Set(delta, "usage.cache_read_input_tokens", params.CachedTokenCount)
+	}
 	*output = *output + delta + "\n\n\n"
 
 	params.HasSentFinalEvents = true
@@ -341,6 +347,7 @@ func ConvertAntigravityResponseToClaudeNonStream(_ context.Context, _ string, or
 	candidateTokens := root.Get("response.usageMetadata.candidatesTokenCount").Int()
 	thoughtTokens := root.Get("response.usageMetadata.thoughtsTokenCount").Int()
 	totalTokens := root.Get("response.usageMetadata.totalTokenCount").Int()
+	cachedTokens := root.Get("response.usageMetadata.cachedContentTokenCount").Int()
 	outputTokens := candidateTokens + thoughtTokens
 	if outputTokens == 0 && totalTokens > 0 {
 		outputTokens = totalTokens - promptTokens
@@ -354,6 +361,10 @@ func ConvertAntigravityResponseToClaudeNonStream(_ context.Context, _ string, or
 	responseJSON, _ = sjson.Set(responseJSON, "model", root.Get("response.modelVersion").String())
 	responseJSON, _ = sjson.Set(responseJSON, "usage.input_tokens", promptTokens)
 	responseJSON, _ = sjson.Set(responseJSON, "usage.output_tokens", outputTokens)
+	// Add cache_read_input_tokens if cached tokens are present (indicates prompt caching is working)
+	if cachedTokens > 0 {
+		responseJSON, _ = sjson.Set(responseJSON, "usage.cache_read_input_tokens", cachedTokens)
+	}
 
 	contentArrayInitialized := false
 	ensureContentArray := func() {

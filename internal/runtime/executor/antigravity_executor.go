@@ -39,7 +39,7 @@ const (
 	antigravityModelsPath      = "/v1internal:fetchAvailableModels"
 	antigravityClientID        = "1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.googleusercontent.com"
 	antigravityClientSecret    = "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"
-	defaultAntigravityAgent    = "antigravity/1.11.5 windows/amd64"
+	defaultAntigravityAgent    = "antigravity/1.104.0 darwin/arm64"
 	antigravityAuthType        = "antigravity"
 	refreshSkew                = 3000 * time.Second
 )
@@ -1145,10 +1145,11 @@ func antigravityBaseURLFallbackOrder(auth *cliproxyauth.Auth) []string {
 	if base := resolveCustomAntigravityBaseURL(auth); base != "" {
 		return []string{base}
 	}
+	// Production endpoint first (matches antigravity.js plugin behavior)
+	// Production may have better caching support
 	return []string{
-		antigravityBaseURLDaily,
-		// antigravityBaseURLAutopush,
 		antigravityBaseURLProd,
+		antigravityBaseURLDaily,
 	}
 }
 
@@ -1183,7 +1184,6 @@ func geminiToAntigravity(modelName string, payload []byte, projectID string) []b
 		template, _ = sjson.Set(template, "project", generateProjectID())
 	}
 	template, _ = sjson.Set(template, "requestId", generateRequestID())
-	template, _ = sjson.Set(template, "request.sessionId", generateSessionID())
 
 	template, _ = sjson.Delete(template, "request.safetySettings")
 	template, _ = sjson.Set(template, "request.toolConfig.functionCallingConfig.mode", "VALIDATED")
@@ -1216,11 +1216,6 @@ func geminiToAntigravity(modelName string, payload []byte, projectID string) []b
 
 func generateRequestID() string {
 	return "agent-" + uuid.NewString()
-}
-
-func generateSessionID() string {
-	n := randSource.Int63n(9_000_000_000_000_000_000)
-	return "-" + strconv.FormatInt(n, 10)
 }
 
 func generateProjectID() string {
