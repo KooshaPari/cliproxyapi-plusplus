@@ -14,6 +14,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
 )
@@ -104,7 +105,11 @@ func ConvertGeminiResponseToOpenAI(_ context.Context, _ string, originalRequestR
 		}
 		// Include cached token count if present (indicates prompt caching is working)
 		if cachedTokenCount > 0 {
-			template, _ = sjson.Set(template, "usage.prompt_tokens_details.cached_tokens", cachedTokenCount)
+			var err error
+			template, err = sjson.Set(template, "usage.prompt_tokens_details.cached_tokens", cachedTokenCount)
+			if err != nil {
+				log.Warnf("gemini openai response: failed to set cached_tokens in streaming: %v", err)
+			}
 		}
 	}
 
@@ -260,7 +265,11 @@ func ConvertGeminiResponseToOpenAINonStream(_ context.Context, _ string, origina
 		}
 		// Include cached token count if present (indicates prompt caching is working)
 		if cachedTokenCount > 0 {
-			template, _ = sjson.Set(template, "usage.prompt_tokens_details.cached_tokens", cachedTokenCount)
+			var err error
+			template, err = sjson.Set(template, "usage.prompt_tokens_details.cached_tokens", cachedTokenCount)
+			if err != nil {
+				log.Warnf("gemini openai response: failed to set cached_tokens in non-streaming: %v", err)
+			}
 		}
 	}
 
