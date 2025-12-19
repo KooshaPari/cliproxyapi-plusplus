@@ -2182,7 +2182,7 @@ func checkCloudAPIIsEnabled(ctx context.Context, httpClient *http.Client, projec
 func (h *Handler) GetAuthStatus(c *gin.Context) {
 	state := strings.TrimSpace(c.Query("state"))
 	if state == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "error": "state is required"})
+		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 		return
 	}
 	if err := ValidateOAuthState(state); err != nil {
