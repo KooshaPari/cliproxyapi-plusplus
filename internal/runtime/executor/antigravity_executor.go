@@ -70,10 +70,6 @@ func (e *AntigravityExecutor) PrepareRequest(_ *http.Request, _ *cliproxyauth.Au
 
 // Execute performs a non-streaming request to the Antigravity API.
 func (e *AntigravityExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, req cliproxyexecutor.Request, opts cliproxyexecutor.Options) (resp cliproxyexecutor.Response, err error) {
-	if strings.Contains(req.Model, "claude") {
-		return e.executeClaudeNonStream(ctx, auth, req, opts)
-	}
-
 	token, updatedAuth, errToken := e.ensureAccessToken(ctx, auth)
 	if errToken != nil {
 		return resp, errToken
@@ -997,20 +993,22 @@ func (e *AntigravityExecutor) buildRequest(ctx context.Context, auth *cliproxyau
 	payload = geminiToAntigravity(modelName, payload, projectID)
 	payload, _ = sjson.SetBytes(payload, "model", alias2ModelName(modelName))
 
-	if strings.Contains(modelName, "claude") {
-		strJSON := string(payload)
-		paths := make([]string, 0)
-		util.Walk(gjson.ParseBytes(payload), "", "parametersJsonSchema", &paths)
-		for _, p := range paths {
-			strJSON, _ = util.RenameKey(strJSON, p, p[:len(p)-len("parametersJsonSchema")]+"parameters")
-		}
+	// Apply schema processing for all Antigravity models (Claude, Gemini, GPT-OSS)
+	// Antigravity uses unified Gemini-style format with same schema restrictions
+	strJSON := string(payload)
 
-		// Use the centralized schema cleaner to handle unsupported keywords,
-		// const->enum conversion, and flattening of types/anyOf.
-		strJSON = util.CleanJSONSchemaForGemini(strJSON)
-
-		payload = []byte(strJSON)
+	// Rename parametersJsonSchema -> parameters (used by Claude translator)
+	paths := make([]string, 0)
+	util.Walk(gjson.ParseBytes(payload), "", "parametersJsonSchema", &paths)
+	for _, p := range paths {
+		strJSON, _ = util.RenameKey(strJSON, p, p[:len(p)-len("parametersJsonSchema")]+"parameters")
 	}
+
+	// Use the centralized schema cleaner to handle unsupported keywords,
+	// const->enum conversion, and flattening of types/anyOf.
+	strJSON = util.CleanJSONSchemaForAntigravity(strJSON)
+
+	payload = []byte(strJSON)
 
 	httpReq, errReq := http.NewRequestWithContext(ctx, http.MethodPost, requestURL.String(), bytes.NewReader(payload))
 	if errReq != nil {
@@ -1019,6 +1017,12 @@ func (e *AntigravityExecutor) buildRequest(ctx context.Context, auth *cliproxyau
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("Authorization", "Bearer "+token)
 	httpReq.Header.Set("User-Agent", resolveUserAgent(auth))
+
+	// Add interleaved-thinking header for Claude thinking models
+	if util.IsClaudeThinkingModel(modelName) {
+		httpReq.Header.Set("anthropic-beta", "interleaved-thinking-2025-05-14")
+	}
+
 	if stream {
 		httpReq.Header.Set("Accept", "text/event-stream")
 	} else {

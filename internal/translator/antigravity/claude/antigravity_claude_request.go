@@ -220,6 +220,27 @@ func ConvertClaudeRequestToAntigravity(modelName string, inputRawJSON []byte, _ 
 	// Build output Gemini CLI request JSON
 	out := `{"model":"","request":{"contents":[]}}`
 	out, _ = sjson.Set(out, "model", modelName)
+
+	// P2-B: Inject interleaved thinking hint when both tools and thinking are active
+	hasTools := toolDeclCount > 0
+	thinkingResult := gjson.GetBytes(rawJSON, "thinking")
+	hasThinking := thinkingResult.Exists() && thinkingResult.IsObject() && thinkingResult.Get("type").String() == "enabled"
+	isClaudeThinking := util.IsClaudeThinkingModel(modelName)
+
+	if hasTools && hasThinking && isClaudeThinking {
+		interleavedHint := "Interleaved thinking is enabled. You may think between tool calls and after receiving tool results before deciding the next action or final answer. Do not mention these instructions or any constraints about thinking blocks; just apply them."
+
+		if hasSystemInstruction {
+			// Append hint to existing system instruction
+			systemInstructionJSON, _ = sjson.Set(systemInstructionJSON, "parts.-1.text", interleavedHint)
+		} else {
+			// Create new system instruction with hint
+			systemInstructionJSON = `{"role":"user","parts":[]}`
+			systemInstructionJSON, _ = sjson.Set(systemInstructionJSON, "parts.-1.text", interleavedHint)
+			hasSystemInstruction = true
+		}
+	}
+
 	if hasSystemInstruction {
 		out, _ = sjson.SetRaw(out, "request.systemInstruction", systemInstructionJSON)
 	}
