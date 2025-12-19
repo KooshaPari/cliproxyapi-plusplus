@@ -330,7 +330,7 @@ func TestConvertClaudeRequestToAntigravity_GenerationConfig(t *testing.T) {
 }
 
 // ============================================================================
-// P2-A: Trailing Unsigned Thinking Block Removal
+// Trailing Unsigned Thinking Block Removal
 // ============================================================================
 
 func TestConvertClaudeRequestToAntigravity_TrailingUnsignedThinking_Removed(t *testing.T) {
@@ -435,7 +435,7 @@ func TestConvertClaudeRequestToAntigravity_MiddleUnsignedThinking_SentinelApplie
 }
 
 // ============================================================================
-// P2-B: Tool + Thinking System Hint Injection
+// Tool + Thinking System Hint Injection
 // ============================================================================
 
 func TestConvertClaudeRequestToAntigravity_ToolAndThinking_HintInjected(t *testing.T) {

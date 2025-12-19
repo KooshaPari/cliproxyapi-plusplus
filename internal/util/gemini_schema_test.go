@@ -631,7 +631,7 @@ func compareJSON(t *testing.T, expectedJSON, actualJSON string) {
 }
 
 // ============================================================================
-// P0-1: Empty Schema Placeholder Tests
+// Empty Schema Placeholder Tests
 // ============================================================================
 
 func TestCleanJSONSchemaForAntigravity_EmptySchemaPlaceholder(t *testing.T) {
@@ -732,7 +732,7 @@ func TestCleanJSONSchemaForAntigravity_EmptySchemaWithDescription(t *testing.T) 
 }
 
 // ============================================================================
-// P0-2: Format field handling (ad-hoc patch removal)
+// Format field handling (ad-hoc patch removal)
 // ============================================================================
 
 func TestCleanJSONSchemaForAntigravity_FormatFieldRemoval(t *testing.T) {

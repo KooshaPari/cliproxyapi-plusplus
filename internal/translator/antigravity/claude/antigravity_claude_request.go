@@ -14,6 +14,7 @@ import (
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/cache"
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/translator/gemini/common"
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/util"
+	log "github.com/sirupsen/logrus"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
 )
@@ -124,7 +125,7 @@ func ConvertClaudeRequestToAntigravity(modelName string, inputRawJSON []byte, _ 
 							signature = signatureResult.String()
 						}
 
-						// P3: Try to restore signature from cache for unsigned thinking blocks
+						// Try to restore signature from cache for unsigned thinking blocks
 						if !cache.HasValidSignature(signature) && sessionID != "" && thinkingText != "" {
 							if cachedSig := cache.GetCachedSignature(sessionID, thinkingText); cachedSig != "" {
 								signature = cachedSig
@@ -132,7 +133,7 @@ func ConvertClaudeRequestToAntigravity(modelName string, inputRawJSON []byte, _ 
 							}
 						}
 
-						// P2-A: Skip trailing unsigned thinking blocks on last assistant message
+						// Skip trailing unsigned thinking blocks on last assistant message
 						isLastMessage := (i == numMessages-1)
 						isLastContent := (j == numContents-1)
 						isAssistant := (originalRole == "assistant")
@@ -278,7 +279,7 @@ func ConvertClaudeRequestToAntigravity(modelName string, inputRawJSON []byte, _ 
 	out := `{"model":"","request":{"contents":[]}}`
 	out, _ = sjson.Set(out, "model", modelName)
 
-	// P2-B: Inject interleaved thinking hint when both tools and thinking are active
+	// Inject interleaved thinking hint when both tools and thinking are active
 	hasTools := toolDeclCount > 0
 	thinkingResult := gjson.GetBytes(rawJSON, "thinking")
 	hasThinking := thinkingResult.Exists() && thinkingResult.IsObject() && thinkingResult.Get("type").String() == "enabled"

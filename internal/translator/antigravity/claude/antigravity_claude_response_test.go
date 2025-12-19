@@ -82,7 +82,7 @@ func TestConvertBashCommandToCmdField(t *testing.T) {
 }
 
 // ============================================================================
-// P3: Signature Caching Tests
+// Signature Caching Tests
 // ============================================================================
 
 func TestConvertAntigravityResponseToClaude_SessionIDDerived(t *testing.T) {

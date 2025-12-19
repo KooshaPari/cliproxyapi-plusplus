@@ -41,7 +41,7 @@ type Params struct {
 	HasToolUse           bool   // Indicates if tool use was observed in the stream
 	HasContent           bool   // Tracks whether any content (text, thinking, or tool use) has been output
 
-	// P3: Signature caching support
+	// Signature caching support
 	SessionID           string          // Session ID derived from request for signature caching
 	CurrentThinkingText strings.Builder // Accumulates thinking text for signature caching
 }
@@ -192,7 +192,7 @@ func ConvertAntigravityResponseToClaude(_ context.Context, _ string, originalReq
 						output = output + fmt.Sprintf("data: %s\n\n\n", data)
 						params.ResponseType = 2 // Set state to thinking
 						params.HasContent = true
-						// P3: Start accumulating thinking text for signature caching
+						// Start accumulating thinking text for signature caching
 						params.CurrentThinkingText.Reset()
 						params.CurrentThinkingText.WriteString(partTextResult.String())
 					}
@@ -276,8 +276,13 @@ func ConvertAntigravityResponseToClaude(_ context.Context, _ string, originalReq
 				output = output + fmt.Sprintf("data: %s\n\n\n", data)
 
 				if fcArgsResult := functionCallResult.Get("args"); fcArgsResult.Exists() {
+					argsRaw := fcArgsResult.Raw
+					// Convert command → cmd for Bash tools using proper JSON parsing
+					if fcName == "Bash" || fcName == "bash" || fcName == "bash_20241022" {
+						argsRaw = convertBashCommandToCmdField(argsRaw)
+					}
 					output = output + "event: content_block_delta\n"
-					data, _ = sjson.Set(fmt.Sprintf(`{"type":"content_block_delta","index":%d,"delta":{"type":"input_json_delta","partial_json":""}}`, params.ResponseIndex), "delta.partial_json", fcArgsResult.Raw)
+					data, _ = sjson.Set(fmt.Sprintf(`{"type":"content_block_delta","index":%d,"delta":{"type":"input_json_delta","partial_json":""}}`, params.ResponseIndex), "delta.partial_json", argsRaw)
 					output = output + fmt.Sprintf("data: %s\n\n\n", data)
 				}
 				params.ResponseType = 3
@@ -363,6 +368,36 @@ func resolveStopReason(params *Params) string {
 	}
 
 	return "end_turn"
+}
+
+// convertBashCommandToCmdField converts "command" field to "cmd" field for Bash tools.
+// Amp expects "cmd" but Gemini sends "command". This uses proper JSON parsing
+// to avoid accidentally replacing "command" that appears in values.
+func convertBashCommandToCmdField(argsRaw string) string {
+	// Only process valid JSON
+	if !gjson.Valid(argsRaw) {
+		return argsRaw
+	}
+
+	// Check if "command" key exists and "cmd" doesn't
+	commandVal := gjson.Get(argsRaw, "command")
+	cmdVal := gjson.Get(argsRaw, "cmd")
+
+	if commandVal.Exists() && !cmdVal.Exists() {
+		// Set "cmd" to the value of "command", preserve the raw value type
+		result, err := sjson.SetRaw(argsRaw, "cmd", commandVal.Raw)
+		if err != nil {
+			return argsRaw
+		}
+		// Delete "command" key
+		result, err = sjson.Delete(result, "command")
+		if err != nil {
+			return argsRaw
+		}
+		return result
+	}
+
+	return argsRaw
 }
 
 // ConvertAntigravityResponseToClaudeNonStream converts a non-streaming Gemini CLI response to a non-streaming Claude response.
@@ -476,7 +511,12 @@ func ConvertAntigravityResponseToClaudeNonStream(_ context.Context, _ string, or
 				toolBlock, _ = sjson.Set(toolBlock, "name", name)
 
 				if args := functionCall.Get("args"); args.Exists() && args.Raw != "" && gjson.Valid(args.Raw) {
-					toolBlock, _ = sjson.SetRaw(toolBlock, "input", args.Raw)
+					argsRaw := args.Raw
+					// Convert command → cmd for Bash tools
+					if name == "Bash" || name == "bash" || name == "bash_20241022" {
+						argsRaw = convertBashCommandToCmdField(argsRaw)
+					}
+					toolBlock, _ = sjson.SetRaw(toolBlock, "input", argsRaw)
 				}
 
 				ensureContentArray()
