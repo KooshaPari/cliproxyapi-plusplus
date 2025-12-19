@@ -7,8 +7,11 @@ package claude
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"strings"
 
+	"github.com/router-for-me/CLIProxyAPI/v6/internal/cache"
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/translator/gemini/common"
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/util"
 	"github.com/tidwall/gjson"
@@ -16,6 +19,29 @@ import (
 )
 
 const geminiCLIClaudeThoughtSignature = "skip_thought_signature_validator"
+
+// deriveSessionID generates a stable session ID from the request.
+// Uses the hash of the first user message to identify the conversation.
+func deriveSessionID(rawJSON []byte) string {
+	messages := gjson.GetBytes(rawJSON, "messages")
+	if !messages.IsArray() {
+		return ""
+	}
+	for _, msg := range messages.Array() {
+		if msg.Get("role").String() == "user" {
+			content := msg.Get("content").String()
+			if content == "" {
+				// Try to get text from content array
+				content = msg.Get("content.0.text").String()
+			}
+			if content != "" {
+				h := sha256.Sum256([]byte(content))
+				return hex.EncodeToString(h[:16])
+			}
+		}
+	}
+	return ""
+}
 
 // ConvertClaudeRequestToAntigravity parses and transforms a Claude Code API request into Gemini CLI API format.
 // It extracts the model name, system instruction, message contents, and tool declarations
@@ -37,7 +63,9 @@ const geminiCLIClaudeThoughtSignature = "skip_thought_signature_validator"
 //   - []byte: The transformed request data in Gemini CLI API format
 func ConvertClaudeRequestToAntigravity(modelName string, inputRawJSON []byte, _ bool) []byte {
 	rawJSON := bytes.Clone(inputRawJSON)
-	rawJSON = bytes.Replace(rawJSON, []byte(`"url":{"type":"string","format":"uri",`), []byte(`"url":{"type":"string",`), -1)
+
+	// Derive session ID for signature caching
+	sessionID := deriveSessionID(rawJSON)
 
 	// system instruction
 	systemInstructionJSON := ""
@@ -67,13 +95,15 @@ func ConvertClaudeRequestToAntigravity(modelName string, inputRawJSON []byte, _ 
 	messagesResult := gjson.GetBytes(rawJSON, "messages")
 	if messagesResult.IsArray() {
 		messageResults := messagesResult.Array()
-		for i := 0; i < len(messageResults); i++ {
+		numMessages := len(messageResults)
+		for i := 0; i < numMessages; i++ {
 			messageResult := messageResults[i]
 			roleResult := messageResult.Get("role")
 			if roleResult.Type != gjson.String {
 				continue
 			}
-			role := roleResult.String()
+			originalRole := roleResult.String()
+			role := originalRole
 			if role == "assistant" {
 				role = "model"
 			}
@@ -82,20 +112,47 @@ func ConvertClaudeRequestToAntigravity(modelName string, inputRawJSON []byte, _ 
 			contentsResult := messageResult.Get("content")
 			if contentsResult.IsArray() {
 				contentResults := contentsResult.Array()
-				for j := 0; j < len(contentResults); j++ {
+				numContents := len(contentResults)
+				for j := 0; j < numContents; j++ {
 					contentResult := contentResults[j]
 					contentTypeResult := contentResult.Get("type")
 					if contentTypeResult.Type == gjson.String && contentTypeResult.String() == "thinking" {
-						prompt := contentResult.Get("thinking").String()
+						thinkingText := contentResult.Get("thinking").String()
 						signatureResult := contentResult.Get("signature")
-						signature := geminiCLIClaudeThoughtSignature
-						if signatureResult.Exists() {
+						signature := ""
+						if signatureResult.Exists() && signatureResult.String() != "" {
 							signature = signatureResult.String()
 						}
+
+						// P3: Try to restore signature from cache for unsigned thinking blocks
+						if !cache.HasValidSignature(signature) && sessionID != "" && thinkingText != "" {
+							if cachedSig := cache.GetCachedSignature(sessionID, thinkingText); cachedSig != "" {
+								signature = cachedSig
+								log.Debugf("Restored cached signature for thinking block")
+							}
+						}
+
+						// P2-A: Skip trailing unsigned thinking blocks on last assistant message
+						isLastMessage := (i == numMessages-1)
+						isLastContent := (j == numContents-1)
+						isAssistant := (originalRole == "assistant")
+						isUnsigned := !cache.HasValidSignature(signature)
+
+						if isLastMessage && isLastContent && isAssistant && isUnsigned {
+							// Skip this trailing unsigned thinking block
+							continue
+						}
+
+						// Apply sentinel for unsigned thinking blocks that are not trailing
+						// (includes empty string and short/invalid signatures < 50 chars)
+						if isUnsigned {
+							signature = geminiCLIClaudeThoughtSignature
+						}
+
 						partJSON := `{}`
 						partJSON, _ = sjson.Set(partJSON, "thought", true)
-						if prompt != "" {
-							partJSON, _ = sjson.Set(partJSON, "text", prompt)
+						if thinkingText != "" {
+							partJSON, _ = sjson.Set(partJSON, "text", thinkingText)
 						}
 						if signature != "" {
 							partJSON, _ = sjson.Set(partJSON, "thoughtSignature", signature)
