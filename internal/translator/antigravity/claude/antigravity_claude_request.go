@@ -118,7 +118,8 @@ func ConvertClaudeRequestToAntigravity(modelName string, inputRawJSON []byte, _ 
 					contentResult := contentResults[j]
 					contentTypeResult := contentResult.Get("type")
 					if contentTypeResult.Type == gjson.String && contentTypeResult.String() == "thinking" {
-						thinkingText := contentResult.Get("thinking").String()
+						// Use GetThinkingText to handle wrapped thinking objects
+						thinkingText := util.GetThinkingText(contentResult)
 						signatureResult := contentResult.Get("signature")
 						signature := ""
 						if signatureResult.Exists() && signatureResult.String() != "" {
