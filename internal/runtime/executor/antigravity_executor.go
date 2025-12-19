@@ -1145,8 +1145,6 @@ func antigravityBaseURLFallbackOrder(auth *cliproxyauth.Auth) []string {
 	if base := resolveCustomAntigravityBaseURL(auth); base != "" {
 		return []string{base}
 	}
-	// Production endpoint first (matches antigravity.js plugin behavior)
-	// Production may have better caching support
 	return []string{
 		antigravityBaseURLProd,
 		antigravityBaseURLDaily,
