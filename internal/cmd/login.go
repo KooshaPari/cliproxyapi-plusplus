@@ -58,14 +58,19 @@ func DoLogin(cfg *config.Config, projectID string, options *LoginOptions) {
 	promptFn := options.Prompt
 	if promptFn == nil {
 		promptFn = defaultProjectPrompt()
-		options.Prompt = promptFn
+	}
+
+	trimmedProjectID := strings.TrimSpace(projectID)
+	callbackPrompt := promptFn
+	if trimmedProjectID == "" {
+		callbackPrompt = nil
 	}
 
 	loginOpts := &sdkAuth.LoginOptions{
 		NoBrowser: options.NoBrowser,
-		ProjectID: strings.TrimSpace(projectID),
+		ProjectID: trimmedProjectID,
 		Metadata:  map[string]string{},
-		Prompt:    promptFn,
+		Prompt:    callbackPrompt,
 	}
 
 	authenticator := sdkAuth.NewGeminiAuthenticator()
@@ -84,7 +89,7 @@ func DoLogin(cfg *config.Config, projectID string, options *LoginOptions) {
 	geminiAuth := gemini.NewGeminiAuth()
 	httpClient, errClient := geminiAuth.GetAuthenticatedClient(ctx, storage, cfg, &gemini.WebLoginOptions{
 		NoBrowser: options.NoBrowser,
-		Prompt:    promptFn,
+		Prompt:    callbackPrompt,
 	})
 	if errClient != nil {
 		log.Errorf("Gemini authentication failed: %v", errClient)
@@ -99,7 +104,7 @@ func DoLogin(cfg *config.Config, projectID string, options *LoginOptions) {
 		return
 	}
 
-	selectedProjectID := promptForProjectSelection(projects, strings.TrimSpace(projectID), promptFn)
+	selectedProjectID := promptForProjectSelection(projects, trimmedProjectID, promptFn)
 	projectSelections, errSelection := resolveProjectSelections(selectedProjectID, projects)
 	if errSelection != nil {
 		log.Errorf("Invalid project selection: %v", errSelection)
