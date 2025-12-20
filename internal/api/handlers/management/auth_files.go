@@ -1093,7 +1093,9 @@ func (h *Handler) RequestGeminiCLIToken(c *gin.Context) {
 
 		// Initialize authenticated HTTP client via GeminiAuth to honor proxy settings
 		gemAuth := geminiAuth.NewGeminiAuth()
-		gemClient, errGetClient := gemAuth.GetAuthenticatedClient(ctx, &ts, h.cfg, true)
+		gemClient, errGetClient := gemAuth.GetAuthenticatedClient(ctx, &ts, h.cfg, &geminiAuth.WebLoginOptions{
+			NoBrowser: true,
+		})
 		if errGetClient != nil {
 			log.Errorf("failed to get authenticated client: %v", errGetClient)
 			SetOAuthSessionError(state, "Failed to get authenticated client")

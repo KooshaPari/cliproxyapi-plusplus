@@ -99,9 +99,18 @@ func (AntigravityAuthenticator) Login(ctx context.Context, cfg *config.Config, o
 	fmt.Println("Waiting for antigravity authentication callback...")
 
 	var cbRes callbackResult
+	manualCh, manualErrCh := promptForOAuthCallback(opts.Prompt, "antigravity")
 	select {
 	case res := <-cbChan:
 		cbRes = res
+	case manual := <-manualCh:
+		cbRes = callbackResult{
+			Code:  manual.Code,
+			State: manual.State,
+			Error: manual.Error,
+		}
+	case err = <-manualErrCh:
+		return nil, err
 	case <-time.After(5 * time.Minute):
 		return nil, fmt.Errorf("antigravity: authentication timed out")
 	}

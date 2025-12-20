@@ -97,16 +97,41 @@ func (a *CodexAuthenticator) Login(ctx context.Context, cfg *config.Config, opts
 
 	fmt.Println("Waiting for Codex authentication callback...")
 
-	result, err := oauthServer.WaitForCallback(5 * time.Minute)
-	if err != nil {
+	callbackCh := make(chan *codex.OAuthResult, 1)
+	callbackErrCh := make(chan error, 1)
+	manualCh, manualErrCh := promptForOAuthCallback(opts.Prompt, "Codex")
+	manualDescription := ""
+
+	go func() {
+		result, errWait := oauthServer.WaitForCallback(5 * time.Minute)
+		if errWait != nil {
+			callbackErrCh <- errWait
+			return
+		}
+		callbackCh <- result
+	}()
+
+	var result *codex.OAuthResult
+	select {
+	case result = <-callbackCh:
+	case err = <-callbackErrCh:
 		if strings.Contains(err.Error(), "timeout") {
 			return nil, codex.NewAuthenticationError(codex.ErrCallbackTimeout, err)
 		}
 		return nil, err
+	case manual := <-manualCh:
+		manualDescription = manual.ErrorDescription
+		result = &codex.OAuthResult{
+			Code:  manual.Code,
+			State: manual.State,
+			Error: manual.Error,
+		}
+	case err = <-manualErrCh:
+		return nil, err
 	}
 
 	if result.Error != "" {
-		return nil, codex.NewOAuthError(result.Error, "", http.StatusBadRequest)
+		return nil, codex.NewOAuthError(result.Error, manualDescription, http.StatusBadRequest)
 	}
 
 	if result.State != state {

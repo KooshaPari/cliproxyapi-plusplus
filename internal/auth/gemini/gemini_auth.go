@@ -18,6 +18,7 @@ import (
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/auth/codex"
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/browser"
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/config"
+	"github.com/router-for-me/CLIProxyAPI/v6/internal/misc"
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/util"
 	log "github.com/sirupsen/logrus"
 	"github.com/tidwall/gjson"
@@ -46,6 +47,12 @@ var (
 type GeminiAuth struct {
 }
 
+// WebLoginOptions customizes the interactive OAuth flow.
+type WebLoginOptions struct {
+	NoBrowser bool
+	Prompt    func(string) (string, error)
+}
+
 // NewGeminiAuth creates a new instance of GeminiAuth.
 func NewGeminiAuth() *GeminiAuth {
 	return &GeminiAuth{}
@@ -59,12 +66,12 @@ func NewGeminiAuth() *GeminiAuth {
 //   - ctx: The context for the HTTP client
 //   - ts: The Gemini token storage containing authentication tokens
 //   - cfg: The configuration containing proxy settings
-//   - noBrowser: Optional parameter to disable browser opening
+//   - opts: Optional parameters to customize browser and prompt behavior
 //
 // Returns:
 //   - *http.Client: An HTTP client configured with authentication
 //   - error: An error if the client configuration fails, nil otherwise
-func (g *GeminiAuth) GetAuthenticatedClient(ctx context.Context, ts *GeminiTokenStorage, cfg *config.Config, noBrowser ...bool) (*http.Client, error) {
+func (g *GeminiAuth) GetAuthenticatedClient(ctx context.Context, ts *GeminiTokenStorage, cfg *config.Config, opts *WebLoginOptions) (*http.Client, error) {
 	// Configure proxy settings for the HTTP client if a proxy URL is provided.
 	proxyURL, err := url.Parse(cfg.ProxyURL)
 	if err == nil {
@@ -109,7 +116,7 @@ func (g *GeminiAuth) GetAuthenticatedClient(ctx context.Context, ts *GeminiToken
 	// If no token is found in storage, initiate the web-based OAuth flow.
 	if ts.Token == nil {
 		fmt.Printf("Could not load token from file, starting OAuth flow.\n")
-		token, err = g.getTokenFromWeb(ctx, conf, noBrowser...)
+		token, err = g.getTokenFromWeb(ctx, conf, opts)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get token from web: %w", err)
 		}
@@ -205,12 +212,12 @@ func (g *GeminiAuth) createTokenStorage(ctx context.Context, config *oauth2.Conf
 // Parameters:
 //   - ctx: The context for the HTTP client
 //   - config: The OAuth2 configuration
-//   - noBrowser: Optional parameter to disable browser opening
+//   - opts: Optional parameters to customize browser and prompt behavior
 //
 // Returns:
 //   - *oauth2.Token: The OAuth2 token obtained from the authorization flow
 //   - error: An error if the token acquisition fails, nil otherwise
-func (g *GeminiAuth) getTokenFromWeb(ctx context.Context, config *oauth2.Config, noBrowser ...bool) (*oauth2.Token, error) {
+func (g *GeminiAuth) getTokenFromWeb(ctx context.Context, config *oauth2.Config, opts *WebLoginOptions) (*oauth2.Token, error) {
 	// Use a channel to pass the authorization code from the HTTP handler to the main function.
 	codeChan := make(chan string)
 	errChan := make(chan error)
@@ -250,7 +257,12 @@ func (g *GeminiAuth) getTokenFromWeb(ctx context.Context, config *oauth2.Config,
 	// Open the authorization URL in the user's browser.
 	authURL := config.AuthCodeURL("state-token", oauth2.AccessTypeOffline, oauth2.SetAuthURLParam("prompt", "consent"))
 
-	if len(noBrowser) == 1 && !noBrowser[0] {
+	noBrowser := false
+	if opts != nil {
+		noBrowser = opts.NoBrowser
+	}
+
+	if !noBrowser {
 		fmt.Println("Opening browser for authentication...")
 
 		// Check if browser is available
@@ -281,10 +293,46 @@ func (g *GeminiAuth) getTokenFromWeb(ctx context.Context, config *oauth2.Config,
 
 	// Wait for the authorization code or an error.
 	var authCode string
+	manualCodeChan := make(chan string, 1)
+	manualErrChan := make(chan error, 1)
+	if opts != nil && opts.Prompt != nil {
+		go func() {
+			input, err := opts.Prompt("Paste the Gemini callback URL (or press Enter to keep waiting): ")
+			if err != nil {
+				manualErrChan <- err
+				return
+			}
+			parsed, err := misc.ParseOAuthCallback(input)
+			if err != nil {
+				manualErrChan <- err
+				return
+			}
+			if parsed == nil {
+				return
+			}
+			if parsed.Error != "" {
+				manualErrChan <- fmt.Errorf("authentication failed via callback: %s", parsed.Error)
+				return
+			}
+			if parsed.Code == "" {
+				manualErrChan <- fmt.Errorf("code not found in callback")
+				return
+			}
+			manualCodeChan <- parsed.Code
+		}()
+	} else {
+		manualCodeChan = nil
+		manualErrChan = nil
+	}
+
 	select {
 	case code := <-codeChan:
 		authCode = code
 	case err := <-errChan:
+		return nil, err
+	case code := <-manualCodeChan:
+		authCode = code
+	case err := <-manualErrChan:
 		return nil, err
 	case <-time.After(5 * time.Minute): // Timeout
 		return nil, fmt.Errorf("oauth flow timed out")

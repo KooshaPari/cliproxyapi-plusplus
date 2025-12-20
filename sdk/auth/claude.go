@@ -98,16 +98,41 @@ func (a *ClaudeAuthenticator) Login(ctx context.Context, cfg *config.Config, opt
 
 	fmt.Println("Waiting for Claude authentication callback...")
 
-	result, err := oauthServer.WaitForCallback(5 * time.Minute)
-	if err != nil {
+	callbackCh := make(chan *claude.OAuthResult, 1)
+	callbackErrCh := make(chan error, 1)
+	manualCh, manualErrCh := promptForOAuthCallback(opts.Prompt, "Claude")
+	manualDescription := ""
+
+	go func() {
+		result, errWait := oauthServer.WaitForCallback(5 * time.Minute)
+		if errWait != nil {
+			callbackErrCh <- errWait
+			return
+		}
+		callbackCh <- result
+	}()
+
+	var result *claude.OAuthResult
+	select {
+	case result = <-callbackCh:
+	case err = <-callbackErrCh:
 		if strings.Contains(err.Error(), "timeout") {
 			return nil, claude.NewAuthenticationError(claude.ErrCallbackTimeout, err)
 		}
 		return nil, err
+	case manual := <-manualCh:
+		manualDescription = manual.ErrorDescription
+		result = &claude.OAuthResult{
+			Code:  manual.Code,
+			State: manual.State,
+			Error: manual.Error,
+		}
+	case err = <-manualErrCh:
+		return nil, err
 	}
 
 	if result.Error != "" {
-		return nil, claude.NewOAuthError(result.Error, "", http.StatusBadRequest)
+		return nil, claude.NewOAuthError(result.Error, manualDescription, http.StatusBadRequest)
 	}
 
 	if result.State != state {
