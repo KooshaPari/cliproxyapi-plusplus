@@ -100,7 +100,6 @@ func (a *ClaudeAuthenticator) Login(ctx context.Context, cfg *config.Config, opt
 
 	callbackCh := make(chan *claude.OAuthResult, 1)
 	callbackErrCh := make(chan error, 1)
-	manualCh, manualErrCh := promptForOAuthCallback(opts.Prompt, "Claude")
 	manualDescription := ""
 
 	go func() {
@@ -113,22 +112,58 @@ func (a *ClaudeAuthenticator) Login(ctx context.Context, cfg *config.Config, opt
 	}()
 
 	var result *claude.OAuthResult
-	select {
-	case result = <-callbackCh:
-	case err = <-callbackErrCh:
-		if strings.Contains(err.Error(), "timeout") {
-			return nil, claude.NewAuthenticationError(claude.ErrCallbackTimeout, err)
+	var manualPromptTimer *time.Timer
+	var manualPromptC <-chan time.Time
+	if opts.Prompt != nil {
+		manualPromptTimer = time.NewTimer(15 * time.Second)
+		manualPromptC = manualPromptTimer.C
+		defer manualPromptTimer.Stop()
+	}
+
+waitForCallback:
+	for {
+		select {
+		case result = <-callbackCh:
+			break waitForCallback
+		case err = <-callbackErrCh:
+			if strings.Contains(err.Error(), "timeout") {
+				return nil, claude.NewAuthenticationError(claude.ErrCallbackTimeout, err)
+			}
+			return nil, err
+		case <-manualPromptC:
+			manualPromptC = nil
+			if manualPromptTimer != nil {
+				manualPromptTimer.Stop()
+			}
+			select {
+			case result = <-callbackCh:
+				break waitForCallback
+			case err = <-callbackErrCh:
+				if strings.Contains(err.Error(), "timeout") {
+					return nil, claude.NewAuthenticationError(claude.ErrCallbackTimeout, err)
+				}
+				return nil, err
+			default:
+			}
+			input, errPrompt := opts.Prompt("Paste the Claude callback URL (or press Enter to keep waiting): ")
+			if errPrompt != nil {
+				return nil, errPrompt
+			}
+			parsed, errParse := misc.ParseOAuthCallback(input)
+			if errParse != nil {
+				return nil, errParse
+			}
+			if parsed == nil {
+				continue
+			}
+			manualDescription = parsed.ErrorDescription
+			result = &claude.OAuthResult{
+				Code:  parsed.Code,
+				State: parsed.State,
+				Error: parsed.Error,
+			}
+			break waitForCallback
 		}
-		return nil, err
-	case manual := <-manualCh:
-		manualDescription = manual.ErrorDescription
-		result = &claude.OAuthResult{
-			Code:  manual.Code,
-			State: manual.State,
-			Error: manual.Error,
-		}
-	case err = <-manualErrCh:
-		return nil, err
 	}
 
 	if result.Error != "" {
