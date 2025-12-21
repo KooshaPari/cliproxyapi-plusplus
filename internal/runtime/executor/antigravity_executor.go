@@ -1021,12 +1021,6 @@ func (e *AntigravityExecutor) buildRequest(ctx context.Context, auth *cliproxyau
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("Authorization", "Bearer "+token)
 	httpReq.Header.Set("User-Agent", resolveUserAgent(auth))
-
-	// Add interleaved-thinking header for Claude thinking models
-	if util.IsClaudeThinkingModel(modelName) {
-		httpReq.Header.Set("anthropic-beta", "interleaved-thinking-2025-05-14")
-	}
-
 	if stream {
 		httpReq.Header.Set("Accept", "text/event-stream")
 	} else {
