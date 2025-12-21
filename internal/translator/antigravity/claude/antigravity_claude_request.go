@@ -19,8 +19,6 @@ import (
 	"github.com/tidwall/sjson"
 )
 
-const geminiCLIClaudeThoughtSignature = "skip_thought_signature_validator"
-
 // deriveSessionID generates a stable session ID from the request.
 // Uses the hash of the first user message to identify the conversation.
 func deriveSessionID(rawJSON []byte) string {
@@ -93,6 +91,12 @@ func ConvertClaudeRequestToAntigravity(modelName string, inputRawJSON []byte, _ 
 	// contents
 	contentsJSON := "[]"
 	hasContents := false
+
+	// Track if we need to disable thinking (LiteLLM approach)
+	// If the last assistant message with tool_use has no valid thinking block before it,
+	// we need to disable thinkingConfig to avoid "Expected thinking but found tool_use" error
+	lastAssistantHasToolWithoutThinking := false
+
 	messagesResult := gjson.GetBytes(rawJSON, "messages")
 	if messagesResult.IsArray() {
 		messageResults := messagesResult.Array()
@@ -114,6 +118,7 @@ func ConvertClaudeRequestToAntigravity(modelName string, inputRawJSON []byte, _ 
 			if contentsResult.IsArray() {
 				contentResults := contentsResult.Array()
 				numContents := len(contentResults)
+				var currentMessageThinkingSignature string
 				for j := 0; j < numContents; j++ {
 					contentResult := contentResults[j]
 					contentTypeResult := contentResult.Get("type")
@@ -121,36 +126,46 @@ func ConvertClaudeRequestToAntigravity(modelName string, inputRawJSON []byte, _ 
 						// Use GetThinkingText to handle wrapped thinking objects
 						thinkingText := util.GetThinkingText(contentResult)
 						signatureResult := contentResult.Get("signature")
-						signature := ""
-						if signatureResult.Exists() && signatureResult.String() != "" {
-							signature = signatureResult.String()
-						}
+					clientSignature := ""
+					if signatureResult.Exists() && signatureResult.String() != "" {
+						clientSignature = signatureResult.String()
+					}
 
-						// Try to restore signature from cache for unsigned thinking blocks
-						if !cache.HasValidSignature(signature) && sessionID != "" && thinkingText != "" {
-							if cachedSig := cache.GetCachedSignature(sessionID, thinkingText); cachedSig != "" {
-								signature = cachedSig
-								log.Debugf("Restored cached signature for thinking block")
-							}
+					// Always try cached signature first (more reliable than client-provided)
+					// Client may send stale or invalid signatures from different sessions
+					signature := ""
+					if sessionID != "" && thinkingText != "" {
+						if cachedSig := cache.GetCachedSignature(sessionID, thinkingText); cachedSig != "" {
+							signature = cachedSig
+							log.Debugf("Using cached signature for thinking block")
 						}
+					}
+
+					// Fallback to client signature only if cache miss and client signature is valid
+					if signature == "" && cache.HasValidSignature(clientSignature) {
+						signature = clientSignature
+						log.Debugf("Using client-provided signature for thinking block")
+					}
+
+					// Store for subsequent tool_use in the same message
+					if cache.HasValidSignature(signature) {
+						currentMessageThinkingSignature = signature
+					}
+
 
 						// Skip trailing unsigned thinking blocks on last assistant message
-						isLastMessage := (i == numMessages-1)
-						isLastContent := (j == numContents-1)
-						isAssistant := (originalRole == "assistant")
 						isUnsigned := !cache.HasValidSignature(signature)
 
-						if isLastMessage && isLastContent && isAssistant && isUnsigned {
-							// Skip this trailing unsigned thinking block
+						// If unsigned, skip entirely (don't convert to text)
+						// Claude requires assistant messages to start with thinking blocks when thinking is enabled
+						// Converting to text would break this requirement
+						if isUnsigned {
+							// TypeScript plugin approach: drop unsigned thinking blocks entirely
+							log.Debugf("Dropping unsigned thinking block (no valid signature)")
 							continue
 						}
 
-						// Apply sentinel for unsigned thinking blocks that are not trailing
-						// (includes empty string and short/invalid signatures < 50 chars)
-						if isUnsigned {
-							signature = geminiCLIClaudeThoughtSignature
-						}
-
+						// Valid signature, send as thought block
 						partJSON := `{}`
 						partJSON, _ = sjson.Set(partJSON, "thought", true)
 						if thinkingText != "" {
@@ -168,6 +183,10 @@ func ConvertClaudeRequestToAntigravity(modelName string, inputRawJSON []byte, _ 
 						}
 						clientContentJSON, _ = sjson.SetRaw(clientContentJSON, "parts.-1", partJSON)
 					} else if contentTypeResult.Type == gjson.String && contentTypeResult.String() == "tool_use" {
+						// NOTE: Do NOT inject dummy thinking blocks here.
+						// Antigravity API validates signatures, so dummy values are rejected.
+						// The TypeScript plugin removes unsigned thinking blocks instead of injecting dummies.
+
 						functionName := contentResult.Get("name").String()
 						functionArgs := contentResult.Get("input").String()
 						functionID := contentResult.Get("id").String()
@@ -175,9 +194,18 @@ func ConvertClaudeRequestToAntigravity(modelName string, inputRawJSON []byte, _ 
 							argsResult := gjson.Parse(functionArgs)
 							if argsResult.IsObject() {
 								partJSON := `{}`
-								if !strings.Contains(modelName, "claude") {
-									partJSON, _ = sjson.Set(partJSON, "thoughtSignature", geminiCLIClaudeThoughtSignature)
+
+								// Use skip_thought_signature_validator for tool calls without valid thinking signature
+								// This is the approach used in opencode-google-antigravity-auth for Gemini
+								// and also works for Claude through Antigravity API
+								const skipSentinel = "skip_thought_signature_validator"
+								if cache.HasValidSignature(currentMessageThinkingSignature) {
+									partJSON, _ = sjson.Set(partJSON, "thoughtSignature", currentMessageThinkingSignature)
+								} else {
+									// No valid signature - use skip sentinel to bypass validation
+									partJSON, _ = sjson.Set(partJSON, "thoughtSignature", skipSentinel)
 								}
+
 								if functionID != "" {
 									partJSON, _ = sjson.Set(partJSON, "functionCall.id", functionID)
 								}
@@ -239,6 +267,64 @@ func ConvertClaudeRequestToAntigravity(modelName string, inputRawJSON []byte, _ 
 						}
 					}
 				}
+
+				// Reorder parts for 'model' role to ensure thinking block is first
+				if role == "model" {
+					partsResult := gjson.Get(clientContentJSON, "parts")
+					if partsResult.IsArray() {
+						parts := partsResult.Array()
+						var thinkingParts []gjson.Result
+						var otherParts []gjson.Result
+						for _, part := range parts {
+							if part.Get("thought").Bool() {
+								thinkingParts = append(thinkingParts, part)
+							} else {
+								otherParts = append(otherParts, part)
+							}
+						}
+						if len(thinkingParts) > 0 {
+							firstPartIsThinking := parts[0].Get("thought").Bool()
+							if !firstPartIsThinking || len(thinkingParts) > 1 {
+								var newParts []interface{}
+								for _, p := range thinkingParts {
+									newParts = append(newParts, p.Value())
+								}
+								for _, p := range otherParts {
+									newParts = append(newParts, p.Value())
+								}
+								clientContentJSON, _ = sjson.Set(clientContentJSON, "parts", newParts)
+							}
+						}
+					}
+				}
+
+				// Check if this assistant message has tool_use without valid thinking
+				if role == "model" {
+					partsResult := gjson.Get(clientContentJSON, "parts")
+					if partsResult.IsArray() {
+						parts := partsResult.Array()
+						hasValidThinking := false
+						hasToolUse := false
+
+						for _, part := range parts {
+							if part.Get("thought").Bool() {
+								hasValidThinking = true
+							}
+							if part.Get("functionCall").Exists() {
+								hasToolUse = true
+							}
+						}
+
+						// If this message has tool_use but no valid thinking, mark it
+						// This will be used to disable thinking mode if needed
+						if hasToolUse && !hasValidThinking {
+							lastAssistantHasToolWithoutThinking = true
+						} else {
+							lastAssistantHasToolWithoutThinking = false
+						}
+					}
+				}
+
 				contentsJSON, _ = sjson.SetRaw(contentsJSON, "-1", clientContentJSON)
 				hasContents = true
 			} else if contentsResult.Type == gjson.String {
@@ -332,6 +418,13 @@ func ConvertClaudeRequestToAntigravity(modelName string, inputRawJSON []byte, _ 
 	if v := gjson.GetBytes(rawJSON, "max_tokens"); v.Exists() && v.Type == gjson.Number {
 		out, _ = sjson.Set(out, "request.generationConfig.maxOutputTokens", v.Num)
 	}
+
+	// Note: We do NOT drop thinkingConfig here anymore.
+	// Instead, we:
+	// 1. Remove unsigned thinking blocks (done during message processing)
+	// 2. Add skip_thought_signature_validator to tool_use without valid thinking signature
+	// This approach keeps thinking mode enabled while handling the signature requirements.
+	_ = lastAssistantHasToolWithoutThinking // Variable is tracked but not used to drop thinkingConfig
 
 	outBytes := []byte(out)
 	outBytes = common.AttachDefaultSafetySettings(outBytes, "request.safetySettings")

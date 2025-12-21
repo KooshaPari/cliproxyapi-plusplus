@@ -8,79 +8,6 @@ import (
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/cache"
 )
 
-func TestConvertBashCommandToCmdField(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    string
-		expected string
-	}{
-		{
-			name:     "basic command to cmd conversion",
-			input:    `{"command": "git diff"}`,
-			expected: `{"cmd":"git diff"}`,
-		},
-		{
-			name:     "already has cmd field - no change",
-			input:    `{"cmd": "git diff"}`,
-			expected: `{"cmd": "git diff"}`,
-		},
-		{
-			name:     "both cmd and command - keep cmd only",
-			input:    `{"command": "git diff", "cmd": "ls"}`,
-			expected: `{"command": "git diff", "cmd": "ls"}`, // no change when cmd exists
-		},
-		{
-			name:     "command with special characters in value",
-			input:    `{"command": "echo \"command\": test"}`,
-			expected: `{"cmd":"echo \"command\": test"}`,
-		},
-		{
-			name:     "command with nested quotes",
-			input:    `{"command": "bash -c 'echo \"hello\"'"}`,
-			expected: `{"cmd":"bash -c 'echo \"hello\"'"}`,
-		},
-		{
-			name:     "command with newlines",
-			input:    `{"command": "echo hello\necho world"}`,
-			expected: `{"cmd":"echo hello\necho world"}`,
-		},
-		{
-			name:     "empty command value",
-			input:    `{"command": ""}`,
-			expected: `{"cmd":""}`,
-		},
-		{
-			name:     "command with other fields - preserves them",
-			input:    `{"command": "git diff", "timeout": 30}`,
-			expected: `{ "timeout": 30,"cmd":"git diff"}`,
-		},
-		{
-			name:     "invalid JSON - returns unchanged",
-			input:    `{invalid json`,
-			expected: `{invalid json`,
-		},
-		{
-			name:     "empty object",
-			input:    `{}`,
-			expected: `{}`,
-		},
-		{
-			name:     "no command field",
-			input:    `{"restart": true}`,
-			expected: `{"restart": true}`,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := convertBashCommandToCmdField(tt.input)
-			if result != tt.expected {
-				t.Errorf("convertBashCommandToCmdField(%q) = %q, want %q", tt.input, result, tt.expected)
-			}
-		})
-	}
-}
-
 // ============================================================================
 // Signature Caching Tests
 // ============================================================================
@@ -354,7 +281,7 @@ func TestDeriveSessionIDFromRequest(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := deriveSessionIDFromRequest(tt.input)
+			result := deriveSessionID(tt.input)
 			if tt.wantEmpty && result != "" {
 				t.Errorf("Expected empty session ID, got '%s'", result)
 			}
@@ -368,8 +295,8 @@ func TestDeriveSessionIDFromRequest(t *testing.T) {
 func TestDeriveSessionIDFromRequest_Deterministic(t *testing.T) {
 	input := []byte(`{"messages": [{"role": "user", "content": "Same message"}]}`)
 
-	id1 := deriveSessionIDFromRequest(input)
-	id2 := deriveSessionIDFromRequest(input)
+	id1 := deriveSessionID(input)
+	id2 := deriveSessionID(input)
 
 	if id1 != id2 {
 		t.Errorf("Session ID should be deterministic: '%s' != '%s'", id1, id2)
@@ -380,8 +307,8 @@ func TestDeriveSessionIDFromRequest_DifferentMessages(t *testing.T) {
 	input1 := []byte(`{"messages": [{"role": "user", "content": "Message A"}]}`)
 	input2 := []byte(`{"messages": [{"role": "user", "content": "Message B"}]}`)
 
-	id1 := deriveSessionIDFromRequest(input1)
-	id2 := deriveSessionIDFromRequest(input2)
+	id1 := deriveSessionID(input1)
+	id2 := deriveSessionID(input2)
 
 	if id1 == id2 {
 		t.Error("Different messages should produce different session IDs")

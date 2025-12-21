@@ -105,6 +105,7 @@ func TestConvertClaudeRequestToAntigravity_ThinkingBlocks(t *testing.T) {
 }
 
 func TestConvertClaudeRequestToAntigravity_ThinkingBlockWithoutSignature(t *testing.T) {
+	// Unsigned thinking blocks should be removed entirely (not converted to text)
 	inputJSON := []byte(`{
 		"model": "claude-sonnet-4-5-thinking",
 		"messages": [
@@ -121,11 +122,18 @@ func TestConvertClaudeRequestToAntigravity_ThinkingBlockWithoutSignature(t *test
 	output := ConvertClaudeRequestToAntigravity("claude-sonnet-4-5-thinking", inputJSON, false)
 	outputStr := string(output)
 
-	// Without signature, should use sentinel value
-	firstPart := gjson.Get(outputStr, "request.contents.0.parts.0")
-	if firstPart.Get("thoughtSignature").String() != geminiCLIClaudeThoughtSignature {
-		t.Errorf("Expected sentinel signature '%s', got '%s'",
-			geminiCLIClaudeThoughtSignature, firstPart.Get("thoughtSignature").String())
+	// Without signature, thinking block should be removed (not converted to text)
+	parts := gjson.Get(outputStr, "request.contents.0.parts").Array()
+	if len(parts) != 1 {
+		t.Fatalf("Expected 1 part (thinking removed), got %d", len(parts))
+	}
+
+	// Only text part should remain
+	if parts[0].Get("thought").Bool() {
+		t.Error("Thinking block should be removed, not preserved")
+	}
+	if parts[0].Get("text").String() != "Answer" {
+		t.Errorf("Expected text 'Answer', got '%s'", parts[0].Get("text").String())
 	}
 }
 
@@ -192,16 +200,94 @@ func TestConvertClaudeRequestToAntigravity_ToolUse(t *testing.T) {
 	output := ConvertClaudeRequestToAntigravity("claude-sonnet-4-5", inputJSON, false)
 	outputStr := string(output)
 
-	// Check function call conversion
-	funcCall := gjson.Get(outputStr, "request.contents.0.parts.0.functionCall")
+	// Now we expect only 1 part (tool_use), no dummy thinking block injected
+	parts := gjson.Get(outputStr, "request.contents.0.parts").Array()
+	if len(parts) != 1 {
+		t.Fatalf("Expected 1 part (tool only, no dummy injection), got %d", len(parts))
+	}
+
+	// Check function call conversion at parts[0]
+	funcCall := parts[0].Get("functionCall")
 	if !funcCall.Exists() {
-		t.Error("functionCall should exist")
+		t.Error("functionCall should exist at parts[0]")
 	}
 	if funcCall.Get("name").String() != "get_weather" {
 		t.Errorf("Expected function name 'get_weather', got '%s'", funcCall.Get("name").String())
 	}
 	if funcCall.Get("id").String() != "call_123" {
 		t.Errorf("Expected function id 'call_123', got '%s'", funcCall.Get("id").String())
+	}
+	// Verify skip_thought_signature_validator is added (bypass for tools without valid thinking)
+	expectedSig := "skip_thought_signature_validator"
+	actualSig := parts[0].Get("thoughtSignature").String()
+	if actualSig != expectedSig {
+		t.Errorf("Expected thoughtSignature '%s', got '%s'", expectedSig, actualSig)
+	}
+}
+
+func TestConvertClaudeRequestToAntigravity_ToolUse_WithSignature(t *testing.T) {
+	validSignature := "abc123validSignature1234567890123456789012345678901234567890"
+	inputJSON := []byte(`{
+		"model": "claude-sonnet-4-5-thinking",
+		"messages": [
+			{
+				"role": "assistant",
+				"content": [
+					{"type": "thinking", "thinking": "Let me think...", "signature": "` + validSignature + `"},
+					{
+						"type": "tool_use",
+						"id": "call_123",
+						"name": "get_weather",
+						"input": "{\"location\": \"Paris\"}"
+					}
+				]
+			}
+		]
+	}`)
+
+	output := ConvertClaudeRequestToAntigravity("claude-sonnet-4-5-thinking", inputJSON, false)
+	outputStr := string(output)
+
+	// Check function call has the signature from the preceding thinking block
+	part := gjson.Get(outputStr, "request.contents.0.parts.1")
+	if part.Get("functionCall.name").String() != "get_weather" {
+		t.Errorf("Expected functionCall, got %s", part.Raw)
+	}
+	if part.Get("thoughtSignature").String() != validSignature {
+		t.Errorf("Expected thoughtSignature '%s' on tool_use, got '%s'", validSignature, part.Get("thoughtSignature").String())
+	}
+}
+
+func TestConvertClaudeRequestToAntigravity_ReorderThinking(t *testing.T) {
+	// Case: text block followed by thinking block -> should be reordered to thinking first
+	validSignature := "abc123validSignature1234567890123456789012345678901234567890"
+	inputJSON := []byte(`{
+		"model": "claude-sonnet-4-5-thinking",
+		"messages": [
+			{
+				"role": "assistant",
+				"content": [
+					{"type": "text", "text": "Here is the plan."},
+					{"type": "thinking", "thinking": "Planning...", "signature": "` + validSignature + `"}
+				]
+			}
+		]
+	}`)
+
+	output := ConvertClaudeRequestToAntigravity("claude-sonnet-4-5-thinking", inputJSON, false)
+	outputStr := string(output)
+
+	// Verify order: Thinking block MUST be first
+	parts := gjson.Get(outputStr, "request.contents.0.parts").Array()
+	if len(parts) != 2 {
+		t.Fatalf("Expected 2 parts, got %d", len(parts))
+	}
+
+	if !parts[0].Get("thought").Bool() {
+		t.Error("First part should be thinking block after reordering")
+	}
+	if parts[1].Get("text").String() != "Here is the plan." {
+		t.Error("Second part should be text block")
 	}
 }
 
@@ -402,8 +488,8 @@ func TestConvertClaudeRequestToAntigravity_TrailingSignedThinking_Kept(t *testin
 	}
 }
 
-func TestConvertClaudeRequestToAntigravity_MiddleUnsignedThinking_SentinelApplied(t *testing.T) {
-	// Middle message has unsigned thinking - should use sentinel (existing behavior)
+func TestConvertClaudeRequestToAntigravity_MiddleUnsignedThinking_Removed(t *testing.T) {
+	// Middle message has unsigned thinking - should be removed entirely
 	inputJSON := []byte(`{
 		"model": "claude-sonnet-4-5-thinking",
 		"messages": [
@@ -424,13 +510,18 @@ func TestConvertClaudeRequestToAntigravity_MiddleUnsignedThinking_SentinelApplie
 	output := ConvertClaudeRequestToAntigravity("claude-sonnet-4-5-thinking", inputJSON, false)
 	outputStr := string(output)
 
-	// Middle unsigned thinking should have sentinel applied
-	thinkingPart := gjson.Get(outputStr, "request.contents.0.parts.0")
-	if !thinkingPart.Get("thought").Bool() {
-		t.Error("Middle thinking block should be preserved with sentinel")
+	// Unsigned thinking should be removed entirely
+	parts := gjson.Get(outputStr, "request.contents.0.parts").Array()
+	if len(parts) != 1 {
+		t.Fatalf("Expected 1 part (thinking removed), got %d", len(parts))
 	}
-	if thinkingPart.Get("thoughtSignature").String() != geminiCLIClaudeThoughtSignature {
-		t.Errorf("Middle unsigned thinking should use sentinel signature, got: %s", thinkingPart.Get("thoughtSignature").String())
+
+	// Only text part should remain
+	if parts[0].Get("thought").Bool() {
+		t.Error("Thinking block should be removed, not preserved")
+	}
+	if parts[0].Get("text").String() != "Answer" {
+		t.Errorf("Expected text 'Answer', got '%s'", parts[0].Get("text").String())
 	}
 }
 
