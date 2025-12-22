@@ -94,7 +94,12 @@ func TestExecuteStreamWithAuthManager_RetriesBeforeFirstByte(t *testing.T) {
 		registry.GetGlobalRegistry().UnregisterClient(auth2.ID)
 	})
 
-	handler := NewBaseAPIHandlers(&sdkconfig.SDKConfig{}, manager, nil)
+	bootstrapRetries := 1
+	handler := NewBaseAPIHandlers(&sdkconfig.SDKConfig{
+		Streaming: sdkconfig.StreamingConfig{
+			BootstrapRetries: &bootstrapRetries,
+		},
+	}, manager, nil)
 	dataChan, errChan := handler.ExecuteStreamWithAuthManager(context.Background(), "openai", "test-model", []byte(`{"model":"test-model"}`), "")
 	if dataChan == nil || errChan == nil {
 		t.Fatalf("expected non-nil channels")

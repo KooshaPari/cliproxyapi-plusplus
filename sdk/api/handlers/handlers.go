@@ -45,8 +45,8 @@ type ErrorDetail struct {
 const idempotencyKeyMetadataKey = "idempotency_key"
 
 const (
-	defaultStreamingKeepAliveSeconds = 15
-	defaultStreamingBootstrapRetries = 2
+	defaultStreamingKeepAliveSeconds = 0
+	defaultStreamingBootstrapRetries = 0
 )
 
 // BuildErrorResponseBody builds an OpenAI-compatible JSON error response body.
@@ -100,7 +100,7 @@ func BuildErrorResponseBody(status int, errText string) []byte {
 }
 
 // StreamingKeepAliveInterval returns the SSE keep-alive interval for this server.
-// Returning 0 disables keep-alives.
+// Returning 0 disables keep-alives (default when unset).
 func StreamingKeepAliveInterval(cfg *config.SDKConfig) time.Duration {
 	seconds := defaultStreamingKeepAliveSeconds
 	if cfg != nil && cfg.Streaming.KeepAliveSeconds != nil {
@@ -125,6 +125,8 @@ func StreamingBootstrapRetries(cfg *config.SDKConfig) int {
 }
 
 func requestExecutionMetadata(ctx context.Context) map[string]any {
+	// Idempotency-Key is an optional client-supplied header used to correlate retries.
+	// It is forwarded as execution metadata; when absent we generate a UUID.
 	key := ""
 	if ctx != nil {
 		if ginCtx, ok := ctx.Value("gin").(*gin.Context); ok && ginCtx != nil && ginCtx.Request != nil {
