@@ -205,10 +205,10 @@ func (b *Builder) Build() (*Service, error) {
 		}
 		var selector coreauth.Selector
 		switch strategy {
-		case "round-robin", "roundrobin", "rr":
-			selector = &coreauth.RoundRobinSelector{}
-		default:
+		case "fill-first", "fillfirst", "ff":
 			selector = &coreauth.FillFirstSelector{}
+		default:
+			selector = &coreauth.RoundRobinSelector{}
 		}
 
 		coreManager = coreauth.NewManager(tokenStore, selector, nil)

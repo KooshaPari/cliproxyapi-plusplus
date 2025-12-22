@@ -120,7 +120,7 @@ type Manager struct {
 // NewManager constructs a manager with optional custom selector and hook.
 func NewManager(store Store, selector Selector, hook Hook) *Manager {
 	if selector == nil {
-		selector = &FillFirstSelector{}
+		selector = &RoundRobinSelector{}
 	}
 	if hook == nil {
 		hook = NoopHook{}
