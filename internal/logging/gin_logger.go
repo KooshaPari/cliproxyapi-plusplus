@@ -18,12 +18,20 @@ const skipGinLogKey = "__gin_skip_request_logging__"
 
 // GinLogrusLogger returns a Gin middleware handler that logs HTTP requests and responses
 // using logrus. It captures request details including method, path, status code, latency,
-// client IP, and any error messages, formatting them in a Gin-style log format.
+// client IP, and any error messages, formatted with request ID for correlation.
+//
+// Output format: [2025-12-23 20:14:10] [info ] [a1b2c3d4] 200 |       23.559s |  144.34.236.116 | POST    "/v1/messages?beta=true"
 //
 // Returns:
 //   - gin.HandlerFunc: A middleware handler for request logging
 func GinLogrusLogger() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		requestID := GenerateRequestID()
+		SetGinRequestID(c, requestID)
+
+		ctx := WithRequestID(c.Request.Context(), requestID)
+		c.Request = c.Request.WithContext(ctx)
+
 		start := time.Now()
 		path := c.Request.URL.Path
 		raw := util.MaskSensitiveQuery(c.Request.URL.RawQuery)
@@ -49,19 +57,20 @@ func GinLogrusLogger() gin.HandlerFunc {
 		clientIP := c.ClientIP()
 		method := c.Request.Method
 		errorMessage := c.Errors.ByType(gin.ErrorTypePrivate).String()
-		timestamp := time.Now().Format("2006/01/02 - 15:04:05")
-		logLine := fmt.Sprintf("[GIN] %s | %3d | %13v | %15s | %-7s \"%s\"", timestamp, statusCode, latency, clientIP, method, path)
+
+		logLine := fmt.Sprintf("%3d | %13v | %15s | %-7s \"%s\"", statusCode, latency, clientIP, method, path)
 		if errorMessage != "" {
 			logLine = logLine + " | " + errorMessage
 		}
 
+		entry := log.WithField("request_id", requestID)
 		switch {
 		case statusCode >= http.StatusInternalServerError:
-			log.Error(logLine)
+			entry.Error(logLine)
 		case statusCode >= http.StatusBadRequest:
-			log.Warn(logLine)
+			entry.Warn(logLine)
 		default:
-			log.Info(logLine)
+			entry.Info(logLine)
 		}
 	}
 }
