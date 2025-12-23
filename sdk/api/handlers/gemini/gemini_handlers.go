@@ -249,47 +249,55 @@ func (h *GeminiAPIHandler) handleStreamGenerateContent(c *gin.Context, modelName
 	}
 
 	// Peek at the first chunk
-	select {
-	case <-c.Request.Context().Done():
-		cliCancel(c.Request.Context().Err())
-		return
-	case errMsg := <-errChan:
-		// Upstream failed immediately. Return proper error status and JSON.
-		h.WriteErrorResponse(c, errMsg)
-		if errMsg != nil {
-			cliCancel(errMsg.Error)
-		} else {
-			cliCancel(nil)
-		}
-		return
-	case chunk, ok := <-dataChan:
-		if !ok {
-			// Closed without data
+	for {
+		select {
+		case <-c.Request.Context().Done():
+			cliCancel(c.Request.Context().Err())
+			return
+		case errMsg, ok := <-errChan:
+			if !ok {
+				// Err channel closed cleanly; wait for data channel.
+				errChan = nil
+				continue
+			}
+			// Upstream failed immediately. Return proper error status and JSON.
+			h.WriteErrorResponse(c, errMsg)
+			if errMsg != nil {
+				cliCancel(errMsg.Error)
+			} else {
+				cliCancel(nil)
+			}
+			return
+		case chunk, ok := <-dataChan:
+			if !ok {
+				// Closed without data
+				if alt == "" {
+					setSSEHeaders()
+				}
+				flusher.Flush()
+				cliCancel(nil)
+				return
+			}
+
+			// Success! Set headers.
 			if alt == "" {
 				setSSEHeaders()
 			}
+
+			// Write first chunk
+			if alt == "" {
+				_, _ = c.Writer.Write([]byte("data: "))
+				_, _ = c.Writer.Write(chunk)
+				_, _ = c.Writer.Write([]byte("\n\n"))
+			} else {
+				_, _ = c.Writer.Write(chunk)
+			}
 			flusher.Flush()
-			cliCancel(nil)
+
+			// Continue
+			h.forwardGeminiStream(c, flusher, alt, func(err error) { cliCancel(err) }, dataChan, errChan)
 			return
 		}
-
-		// Success! Set headers.
-		if alt == "" {
-			setSSEHeaders()
-		}
-
-		// Write first chunk
-		if alt == "" {
-			_, _ = c.Writer.Write([]byte("data: "))
-			_, _ = c.Writer.Write(chunk)
-			_, _ = c.Writer.Write([]byte("\n\n"))
-		} else {
-			_, _ = c.Writer.Write(chunk)
-		}
-		flusher.Flush()
-
-		// Continue
-		h.forwardGeminiStream(c, flusher, alt, func(err error) { cliCancel(err) }, dataChan, errChan)
 	}
 }
 

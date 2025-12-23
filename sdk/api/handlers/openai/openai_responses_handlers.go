@@ -152,42 +152,50 @@ func (h *OpenAIResponsesAPIHandler) handleStreamingResponse(c *gin.Context, rawJ
 	}
 
 	// Peek at the first chunk
-	select {
-	case <-c.Request.Context().Done():
-		cliCancel(c.Request.Context().Err())
-		return
-	case errMsg := <-errChan:
-		// Upstream failed immediately. Return proper error status and JSON.
-		h.WriteErrorResponse(c, errMsg)
-		if errMsg != nil {
-			cliCancel(errMsg.Error)
-		} else {
-			cliCancel(nil)
-		}
-		return
-	case chunk, ok := <-dataChan:
-		if !ok {
-			// Stream closed without data? Send headers and done.
+	for {
+		select {
+		case <-c.Request.Context().Done():
+			cliCancel(c.Request.Context().Err())
+			return
+		case errMsg, ok := <-errChan:
+			if !ok {
+				// Err channel closed cleanly; wait for data channel.
+				errChan = nil
+				continue
+			}
+			// Upstream failed immediately. Return proper error status and JSON.
+			h.WriteErrorResponse(c, errMsg)
+			if errMsg != nil {
+				cliCancel(errMsg.Error)
+			} else {
+				cliCancel(nil)
+			}
+			return
+		case chunk, ok := <-dataChan:
+			if !ok {
+				// Stream closed without data? Send headers and done.
+				setSSEHeaders()
+				_, _ = c.Writer.Write([]byte("\n"))
+				flusher.Flush()
+				cliCancel(nil)
+				return
+			}
+
+			// Success! Set headers.
 			setSSEHeaders()
+
+			// Write first chunk logic (matching forwardResponsesStream)
+			if bytes.HasPrefix(chunk, []byte("event:")) {
+				_, _ = c.Writer.Write([]byte("\n"))
+			}
+			_, _ = c.Writer.Write(chunk)
 			_, _ = c.Writer.Write([]byte("\n"))
 			flusher.Flush()
-			cliCancel(nil)
+
+			// Continue
+			h.forwardResponsesStream(c, flusher, func(err error) { cliCancel(err) }, dataChan, errChan)
 			return
 		}
-
-		// Success! Set headers.
-		setSSEHeaders()
-
-		// Write first chunk logic (matching forwardResponsesStream)
-		if bytes.HasPrefix(chunk, []byte("event:")) {
-			_, _ = c.Writer.Write([]byte("\n"))
-		}
-		_, _ = c.Writer.Write(chunk)
-		_, _ = c.Writer.Write([]byte("\n"))
-		flusher.Flush()
-
-		// Continue
-		h.forwardResponsesStream(c, flusher, func(err error) { cliCancel(err) }, dataChan, errChan)
 	}
 }
 

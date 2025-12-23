@@ -212,39 +212,47 @@ func (h *ClaudeCodeAPIHandler) handleStreamingResponse(c *gin.Context, rawJSON [
 	}
 
 	// Peek at the first chunk to determine success or failure before setting headers
-	select {
-	case <-c.Request.Context().Done():
-		cliCancel(c.Request.Context().Err())
-		return
-	case errMsg := <-errChan:
-		// Upstream failed immediately. Return proper error status and JSON.
-		h.WriteErrorResponse(c, errMsg)
-		if errMsg != nil {
-			cliCancel(errMsg.Error)
-		} else {
-			cliCancel(nil)
-		}
-		return
-	case chunk, ok := <-dataChan:
-		if !ok {
-			// Stream closed without data? Send DONE or just headers.
+	for {
+		select {
+		case <-c.Request.Context().Done():
+			cliCancel(c.Request.Context().Err())
+			return
+		case errMsg, ok := <-errChan:
+			if !ok {
+				// Err channel closed cleanly; wait for data channel.
+				errChan = nil
+				continue
+			}
+			// Upstream failed immediately. Return proper error status and JSON.
+			h.WriteErrorResponse(c, errMsg)
+			if errMsg != nil {
+				cliCancel(errMsg.Error)
+			} else {
+				cliCancel(nil)
+			}
+			return
+		case chunk, ok := <-dataChan:
+			if !ok {
+				// Stream closed without data? Send DONE or just headers.
+				setSSEHeaders()
+				flusher.Flush()
+				cliCancel(nil)
+				return
+			}
+
+			// Success! Set headers now.
 			setSSEHeaders()
-			flusher.Flush()
-			cliCancel(nil)
+
+			// Write the first chunk
+			if len(chunk) > 0 {
+				_, _ = c.Writer.Write(chunk)
+				flusher.Flush()
+			}
+
+			// Continue streaming the rest
+			h.forwardClaudeStream(c, flusher, func(err error) { cliCancel(err) }, dataChan, errChan)
 			return
 		}
-
-		// Success! Set headers now.
-		setSSEHeaders()
-
-		// Write the first chunk
-		if len(chunk) > 0 {
-			_, _ = c.Writer.Write(chunk)
-			flusher.Flush()
-		}
-
-		// Continue streaming the rest
-		h.forwardClaudeStream(c, flusher, func(err error) { cliCancel(err) }, dataChan, errChan)
 	}
 }
 
