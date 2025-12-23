@@ -279,33 +279,28 @@ func (m *AmpModule) hasModelMappingsChanged(old *config.AmpCode, new *config.Amp
 		return true
 	}
 
-	// Build map for efficient comparison
-    oldMap := make(map[string]string, len(old.ModelMappings))
+    // Build map for efficient and robust comparison
+    type mappingInfo struct {
+        to    string
+        regex bool
+    }
+    oldMap := make(map[string]mappingInfo, len(old.ModelMappings))
     for _, mapping := range old.ModelMappings {
-        from := strings.TrimSpace(mapping.From)
-        to := strings.TrimSpace(mapping.To)
-        key := from
-        val := to + "|regex=" + boolTo01(mapping.Regex)
-        oldMap[key] = val
+        oldMap[strings.TrimSpace(mapping.From)] = mappingInfo{
+            to:    strings.TrimSpace(mapping.To),
+            regex: mapping.Regex,
+        }
     }
 
     for _, mapping := range new.ModelMappings {
         from := strings.TrimSpace(mapping.From)
         to := strings.TrimSpace(mapping.To)
-        val := to + "|regex=" + boolTo01(mapping.Regex)
-        if oldVal, exists := oldMap[from]; !exists || oldVal != val {
+        if oldVal, exists := oldMap[from]; !exists || oldVal.to != to || oldVal.regex != mapping.Regex {
             return true
         }
     }
 
 	return false
-}
-
-func boolTo01(b bool) string {
-    if b {
-        return "1"
-    }
-    return "0"
 }
 
 // hasAPIKeyChanged compares old and new API keys.

@@ -91,8 +91,8 @@ func (m *DefaultModelMapper) UpdateMappings(mappings []config.AmpModelMapping) {
 	defer m.mu.Unlock()
 
 	// Clear and rebuild mappings
-    m.mappings = make(map[string]string)
-    m.regexps = m.regexps[:0]
+    m.mappings = make(map[string]string, len(mappings))
+    m.regexps = make([]regexMapping, 0, len(mappings))
 
 	for _, mapping := range mappings {
 		from := strings.TrimSpace(mapping.From)
