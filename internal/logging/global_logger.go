@@ -45,7 +45,11 @@ func (m *LogFormatter) Format(entry *log.Entry) ([]byte, error) {
 		reqID = id
 	}
 
-	levelStr := fmt.Sprintf("%-5s", entry.Level.String())
+	level := entry.Level.String()
+	if level == "warning" {
+		level = "warn"
+	}
+	levelStr := fmt.Sprintf("%-5s", level)
 
 	var formatted string
 	if reqID != "" && entry.Caller != nil {
