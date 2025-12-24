@@ -76,12 +76,12 @@ func GinLogrusLogger() gin.HandlerFunc {
 		if requestID == "" {
 			requestID = "--------"
 		}
-		logLine := fmt.Sprintf("%3d | %13v | %15s | %s | %-7s \"%s\"", statusCode, latency, clientIP, requestID, method, path)
+		logLine := fmt.Sprintf("%3d | %13v | %15s | %-7s \"%s\"", statusCode, latency, clientIP, method, path)
 		if errorMessage != "" {
 			logLine = logLine + " | " + errorMessage
 		}
 
-		entry := log.NewEntry(log.StandardLogger())
+		entry := log.WithField("request_id", requestID)
 
 		switch {
 		case statusCode >= http.StatusInternalServerError:
