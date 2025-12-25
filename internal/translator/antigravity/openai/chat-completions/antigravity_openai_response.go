@@ -8,7 +8,6 @@ package chat_completions
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 	"sync/atomic"
@@ -187,18 +186,11 @@ func ConvertAntigravityResponseToOpenAI(_ context.Context, _ string, originalReq
 					template, _ = sjson.SetRaw(template, "choices.0.delta.images", `[]`)
 				}
 				imageIndex := len(gjson.Get(template, "choices.0.delta.images").Array())
-				imagePayload, err := json.Marshal(map[string]any{
-					"index": imageIndex,
-					"type":  "image_url",
-					"image_url": map[string]string{
-						"url": imageURL,
-					},
-				})
-				if err != nil {
-					continue
-				}
+				imagePayload := `{"type":"image_url","image_url":{"url":""}}`
+				imagePayload, _ = sjson.Set(imagePayload, "index", imageIndex)
+				imagePayload, _ = sjson.Set(imagePayload, "image_url.url", imageURL)
 				template, _ = sjson.Set(template, "choices.0.delta.role", "assistant")
-				template, _ = sjson.SetRaw(template, "choices.0.delta.images.-1", string(imagePayload))
+				template, _ = sjson.SetRaw(template, "choices.0.delta.images.-1", imagePayload)
 			}
 		}
 	}
