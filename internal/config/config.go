@@ -817,8 +817,8 @@ func getOrCreateMapValue(mapNode *yaml.Node, key string) *yaml.Node {
 }
 
 // mergeMappingPreserve merges keys from src into dst mapping node while preserving
-// key order and comments of existing keys in dst. Unknown keys from src are skipped
-// so the original config structure is preserved without introducing defaults.
+// key order and comments of existing keys in dst. New keys are only added if their
+// value is non-zero to avoid polluting the config with defaults.
 func mergeMappingPreserve(dst, src *yaml.Node) {
 	if dst == nil || src == nil {
 		return
@@ -829,17 +829,21 @@ func mergeMappingPreserve(dst, src *yaml.Node) {
 		copyNodeShallow(dst, src)
 		return
 	}
-	// Only update existing keys in dst, do not add new keys
 	for i := 0; i+1 < len(src.Content); i += 2 {
 		sk := src.Content[i]
 		sv := src.Content[i+1]
 		idx := findMapKeyIndex(dst, sk.Value)
 		if idx >= 0 {
-			// Merge into existing value node
+			// Merge into existing value node (always update, even to zero values)
 			dv := dst.Content[idx+1]
 			mergeNodePreserve(dv, sv)
+		} else {
+			// New key: only add if value is non-zero to avoid polluting config with defaults
+			if isZeroValueNode(sv) {
+				continue
+			}
+			dst.Content = append(dst.Content, deepCopyNode(sk), deepCopyNode(sv))
 		}
-		// Keys not in dst are skipped - preserves original config structure
 	}
 }
 
@@ -918,6 +922,51 @@ func findMapKeyIndex(mapNode *yaml.Node, key string) int {
 		}
 	}
 	return -1
+}
+
+// isZeroValueNode returns true if the YAML node represents a zero/default value
+// that should not be written as a new key to preserve config cleanliness.
+// For mappings and sequences, recursively checks if all children are zero values.
+func isZeroValueNode(node *yaml.Node) bool {
+	if node == nil {
+		return true
+	}
+	switch node.Kind {
+	case yaml.ScalarNode:
+		switch node.Tag {
+		case "!!bool":
+			return node.Value == "false"
+		case "!!int", "!!float":
+			return node.Value == "0" || node.Value == "0.0"
+		case "!!str":
+			return node.Value == ""
+		case "!!null":
+			return true
+		}
+	case yaml.SequenceNode:
+		if len(node.Content) == 0 {
+			return true
+		}
+		// Check if all elements are zero values
+		for _, child := range node.Content {
+			if !isZeroValueNode(child) {
+				return false
+			}
+		}
+		return true
+	case yaml.MappingNode:
+		if len(node.Content) == 0 {
+			return true
+		}
+		// Check if all values are zero values (values are at odd indices)
+		for i := 1; i < len(node.Content); i += 2 {
+			if !isZeroValueNode(node.Content[i]) {
+				return false
+			}
+		}
+		return true
+	}
+	return false
 }
 
 // deepCopyNode creates a deep copy of a yaml.Node graph.
