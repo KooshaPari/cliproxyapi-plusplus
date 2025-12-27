@@ -817,8 +817,8 @@ func getOrCreateMapValue(mapNode *yaml.Node, key string) *yaml.Node {
 }
 
 // mergeMappingPreserve merges keys from src into dst mapping node while preserving
-// key order and comments of existing keys in dst. Unknown keys from src are appended
-// to dst at the end, copying their node structure from src.
+// key order and comments of existing keys in dst. Unknown keys from src are skipped
+// so the original config structure is preserved without introducing defaults.
 func mergeMappingPreserve(dst, src *yaml.Node) {
 	if dst == nil || src == nil {
 		return
