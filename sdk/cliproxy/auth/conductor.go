@@ -386,10 +386,8 @@ func (m *Manager) executeWithProvider(ctx context.Context, provider string, req 
 			return cliproxyexecutor.Response{}, errPick
 		}
 
-		if log.IsLevelEnabled(log.DebugLevel) {
-			entry := logEntryWithRequestID(ctx)
-			debugLogAuthSelection(entry, auth, provider, req.Model)
-		}
+		entry := logEntryWithRequestID(ctx)
+		debugLogAuthSelection(entry, auth, provider, req.Model)
 
 		tried[auth.ID] = struct{}{}
 		execCtx := ctx
@@ -435,10 +433,8 @@ func (m *Manager) executeCountWithProvider(ctx context.Context, provider string,
 			return cliproxyexecutor.Response{}, errPick
 		}
 
-		if log.IsLevelEnabled(log.DebugLevel) {
-			entry := logEntryWithRequestID(ctx)
-			debugLogAuthSelection(entry, auth, provider, req.Model)
-		}
+		entry := logEntryWithRequestID(ctx)
+		debugLogAuthSelection(entry, auth, provider, req.Model)
 
 		tried[auth.ID] = struct{}{}
 		execCtx := ctx
@@ -484,10 +480,8 @@ func (m *Manager) executeStreamWithProvider(ctx context.Context, provider string
 			return nil, errPick
 		}
 
-		if log.IsLevelEnabled(log.DebugLevel) {
-			entry := logEntryWithRequestID(ctx)
-			debugLogAuthSelection(entry, auth, provider, req.Model)
-		}
+		entry := logEntryWithRequestID(ctx)
+		debugLogAuthSelection(entry, auth, provider, req.Model)
 
 		tried[auth.ID] = struct{}{}
 		execCtx := ctx
@@ -1576,25 +1570,24 @@ func logEntryWithRequestID(ctx context.Context) *log.Entry {
 }
 
 func debugLogAuthSelection(entry *log.Entry, auth *Auth, provider string, model string) {
+	if !log.IsLevelEnabled(log.DebugLevel) {
+		return
+	}
 	if entry == nil || auth == nil {
 		return
 	}
 	accountType, accountInfo := auth.AccountInfo()
 	proxyInfo := auth.ProxyInfo()
+	suffix := ""
+	if proxyInfo != "" {
+		suffix = " " + proxyInfo
+	}
 	switch accountType {
 	case "api_key":
-		if proxyInfo != "" {
-			entry.Debugf("Use API key %s for model %s %s", util.HideAPIKey(accountInfo), model, proxyInfo)
-			return
-		}
-		entry.Debugf("Use API key %s for model %s", util.HideAPIKey(accountInfo), model)
+		entry.Debugf("Use API key %s for model %s%s", util.HideAPIKey(accountInfo), model, suffix)
 	case "oauth":
 		ident := formatOauthIdentity(auth, provider, accountInfo)
-		if proxyInfo != "" {
-			entry.Debugf("Use OAuth %s for model %s %s", ident, model, proxyInfo)
-			return
-		}
-		entry.Debugf("Use OAuth %s for model %s", ident, model)
+		entry.Debugf("Use OAuth %s for model %s%s", ident, model, suffix)
 	}
 }
 
