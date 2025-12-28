@@ -1655,7 +1655,7 @@ func formatOauthIdentity(auth *Auth, provider string, accountInfo string) string
 	if accountInfo == "" {
 		return strings.Join(parts, " ")
 	}
-	return strings.Join(parts, " ") + " account=\"" + accountInfo + "\""
+	return strings.Join(parts, " ") + " account=" + strconv.Quote(accountInfo)
 }
 
 // InjectCredentials delegates per-provider HTTP request preparation when supported.
