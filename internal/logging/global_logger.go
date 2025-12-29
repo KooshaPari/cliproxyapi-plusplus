@@ -95,6 +95,15 @@ func ConfigureLogOutput(loggingToFile bool, logsMaxTotalSizeMB int) error {
 	logDir := "logs"
 	if base := util.WritablePath(); base != "" {
 		logDir = filepath.Join(base, "logs")
+	} else if loggingToFile {
+		// When logging to file is enabled but WRITABLE_PATH is not set,
+		// use a default writable location to avoid errors on read-only filesystems
+		// (e.g., Homebrew installations on macOS).
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return fmt.Errorf("logging: failed to determine user home directory for fallback log path: %w", err)
+		}
+		logDir = filepath.Join(home, ".cliproxyapi", "logs")
 	}
 
 	protectedPath := ""
