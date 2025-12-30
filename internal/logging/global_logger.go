@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v6/internal/config"
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/util"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/natefinch/lumberjack.v2"
@@ -86,7 +87,7 @@ func SetupBaseLogger() {
 // ConfigureLogOutput switches the global log destination between rotating files and stdout.
 // When logsMaxTotalSizeMB > 0, a background cleaner removes the oldest log files in the logs directory
 // until the total size is within the limit.
-func ConfigureLogOutput(loggingToFile bool, logsMaxTotalSizeMB int) error {
+func ConfigureLogOutput(cfg *config.Config) error {
 	SetupBaseLogger()
 
 	writerMu.Lock()
@@ -95,19 +96,12 @@ func ConfigureLogOutput(loggingToFile bool, logsMaxTotalSizeMB int) error {
 	logDir := "logs"
 	if base := util.WritablePath(); base != "" {
 		logDir = filepath.Join(base, "logs")
-	} else if loggingToFile {
-		// When logging to file is enabled but WRITABLE_PATH is not set,
-		// use a default writable location to avoid errors on read-only filesystems
-		// (e.g., Homebrew installations on macOS).
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return fmt.Errorf("logging: failed to determine user home directory for fallback log path: %w", err)
-		}
-		logDir = filepath.Join(home, ".cliproxyapi", "logs")
+	} else {
+		logDir = filepath.Join(cfg.AuthDir, "logs")
 	}
 
 	protectedPath := ""
-	if loggingToFile {
+	if cfg.LoggingToFile {
 		if err := os.MkdirAll(logDir, 0o755); err != nil {
 			return fmt.Errorf("logging: failed to create log directory: %w", err)
 		}
@@ -131,7 +125,7 @@ func ConfigureLogOutput(loggingToFile bool, logsMaxTotalSizeMB int) error {
 		log.SetOutput(os.Stdout)
 	}
 
-	configureLogDirCleanerLocked(logDir, logsMaxTotalSizeMB, protectedPath)
+	configureLogDirCleanerLocked(logDir, cfg.LogsMaxTotalSizeMB, protectedPath)
 	return nil
 }
 
