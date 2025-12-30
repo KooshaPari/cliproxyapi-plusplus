@@ -1150,14 +1150,20 @@ func buildConfigModels[T modelEntry](models []T, ownedBy, modelType string) []*M
 		if display == "" {
 			display = alias
 		}
-		out = append(out, &ModelInfo{
+		info := &ModelInfo{
 			ID:          alias,
 			Object:      "model",
 			Created:     now,
 			OwnedBy:     ownedBy,
 			Type:        modelType,
 			DisplayName: display,
-		})
+		}
+		if name != "" {
+			if upstream := registry.LookupStaticModelInfo(name); upstream != nil && upstream.Thinking != nil {
+				info.Thinking = upstream.Thinking
+			}
+		}
+		out = append(out, info)
 	}
 	return out
 }
