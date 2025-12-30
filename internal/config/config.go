@@ -268,6 +268,9 @@ type ClaudeModel struct {
 	Alias string `yaml:"alias" json:"alias"`
 }
 
+func (m ClaudeModel) GetName() string  { return m.Name }
+func (m ClaudeModel) GetAlias() string { return m.Alias }
+
 // CodexKey represents the configuration for a Codex API key,
 // including the API key itself and an optional base URL for the API endpoint.
 type CodexKey struct {
@@ -303,6 +306,9 @@ type CodexModel struct {
 	Alias string `yaml:"alias" json:"alias"`
 }
 
+func (m CodexModel) GetName() string  { return m.Name }
+func (m CodexModel) GetAlias() string { return m.Alias }
+
 // GeminiKey represents the configuration for a Gemini API key,
 // including optional overrides for upstream base URL, proxy routing, and headers.
 type GeminiKey struct {
@@ -336,6 +342,9 @@ type GeminiModel struct {
 	// Alias is the client-facing model name that maps to Name.
 	Alias string `yaml:"alias" json:"alias"`
 }
+
+func (m GeminiModel) GetName() string  { return m.Name }
+func (m GeminiModel) GetAlias() string { return m.Alias }
 
 // OpenAICompatibility represents the configuration for OpenAI API compatibility
 // with external providers, allowing model aliases to be routed through OpenAI API format.
