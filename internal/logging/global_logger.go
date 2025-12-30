@@ -84,6 +84,26 @@ func SetupBaseLogger() {
 	})
 }
 
+// isDirWritable checks if the specified directory exists and is writable by attempting to create and remove a test file.
+func isDirWritable(dir string) bool {
+	info, err := os.Stat(dir)
+	if err != nil || !info.IsDir() {
+		return false
+	}
+
+	testFile := filepath.Join(dir, ".perm_test")
+	f, err := os.Create(testFile)
+	if err != nil {
+		return false
+	}
+
+	defer func() {
+		_ = f.Close()
+		_ = os.Remove(testFile)
+	}()
+	return true
+}
+
 // ConfigureLogOutput switches the global log destination between rotating files and stdout.
 // When logsMaxTotalSizeMB > 0, a background cleaner removes the oldest log files in the logs directory
 // until the total size is within the limit.
@@ -96,7 +116,7 @@ func ConfigureLogOutput(cfg *config.Config) error {
 	logDir := "logs"
 	if base := util.WritablePath(); base != "" {
 		logDir = filepath.Join(base, "logs")
-	} else {
+	} else if !isDirWritable(logDir) {
 		logDir = filepath.Join(cfg.AuthDir, "logs")
 	}
 
