@@ -78,6 +78,13 @@ func (e *GeminiExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, r
 	defer reporter.trackFailure(ctx, &err)
 
 	upstreamModel := util.ResolveOriginalModel(req.Model, req.Metadata)
+	if modelOverride := e.resolveUpstreamModel(upstreamModel, auth); modelOverride != "" {
+		upstreamModel = modelOverride
+	} else if !strings.EqualFold(upstreamModel, req.Model) {
+		if modelOverride := e.resolveUpstreamModel(req.Model, auth); modelOverride != "" {
+			upstreamModel = modelOverride
+		}
+	}
 
 	// Official Gemini API via API key or OAuth bearer
 	from := opts.SourceFormat
@@ -174,6 +181,13 @@ func (e *GeminiExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.A
 	defer reporter.trackFailure(ctx, &err)
 
 	upstreamModel := util.ResolveOriginalModel(req.Model, req.Metadata)
+	if modelOverride := e.resolveUpstreamModel(upstreamModel, auth); modelOverride != "" {
+		upstreamModel = modelOverride
+	} else if !strings.EqualFold(upstreamModel, req.Model) {
+		if modelOverride := e.resolveUpstreamModel(req.Model, auth); modelOverride != "" {
+			upstreamModel = modelOverride
+		}
+	}
 
 	from := opts.SourceFormat
 	to := sdktranslator.FromString("gemini")
@@ -287,6 +301,15 @@ func (e *GeminiExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.A
 func (e *GeminiExecutor) CountTokens(ctx context.Context, auth *cliproxyauth.Auth, req cliproxyexecutor.Request, opts cliproxyexecutor.Options) (cliproxyexecutor.Response, error) {
 	apiKey, bearer := geminiCreds(auth)
 
+	upstreamModel := util.ResolveOriginalModel(req.Model, req.Metadata)
+	if modelOverride := e.resolveUpstreamModel(upstreamModel, auth); modelOverride != "" {
+		upstreamModel = modelOverride
+	} else if !strings.EqualFold(upstreamModel, req.Model) {
+		if modelOverride := e.resolveUpstreamModel(req.Model, auth); modelOverride != "" {
+			upstreamModel = modelOverride
+		}
+	}
+
 	from := opts.SourceFormat
 	to := sdktranslator.FromString("gemini")
 	translatedReq := sdktranslator.TranslateRequest(from, to, req.Model, bytes.Clone(req.Payload), false)
@@ -297,9 +320,10 @@ func (e *GeminiExecutor) CountTokens(ctx context.Context, auth *cliproxyauth.Aut
 	translatedReq, _ = sjson.DeleteBytes(translatedReq, "tools")
 	translatedReq, _ = sjson.DeleteBytes(translatedReq, "generationConfig")
 	translatedReq, _ = sjson.DeleteBytes(translatedReq, "safetySettings")
+	translatedReq, _ = sjson.SetBytes(translatedReq, "model", upstreamModel)
 
 	baseURL := resolveGeminiBaseURL(auth)
-	url := fmt.Sprintf("%s/%s/models/%s:%s", baseURL, glAPIVersion, req.Model, "countTokens")
+	url := fmt.Sprintf("%s/%s/models/%s:%s", baseURL, glAPIVersion, upstreamModel, "countTokens")
 
 	requestBody := bytes.NewReader(translatedReq)
 
@@ -396,6 +420,90 @@ func resolveGeminiBaseURL(auth *cliproxyauth.Auth) string {
 		return glEndpoint
 	}
 	return base
+}
+
+func (e *GeminiExecutor) resolveUpstreamModel(alias string, auth *cliproxyauth.Auth) string {
+	trimmed := strings.TrimSpace(alias)
+	if trimmed == "" {
+		return ""
+	}
+
+	entry := e.resolveGeminiConfig(auth)
+	if entry == nil {
+		return ""
+	}
+
+	normalizedModel, metadata := util.NormalizeThinkingModel(trimmed)
+
+	// Candidate names to match against configured aliases/names.
+	candidates := []string{strings.TrimSpace(normalizedModel)}
+	if !strings.EqualFold(normalizedModel, trimmed) {
+		candidates = append(candidates, trimmed)
+	}
+	if original := util.ResolveOriginalModel(normalizedModel, metadata); original != "" && !strings.EqualFold(original, normalizedModel) {
+		candidates = append(candidates, original)
+	}
+
+	for i := range entry.Models {
+		model := entry.Models[i]
+		name := strings.TrimSpace(model.Name)
+		modelAlias := strings.TrimSpace(model.Alias)
+
+		for _, candidate := range candidates {
+			if candidate == "" {
+				continue
+			}
+			if modelAlias != "" && strings.EqualFold(modelAlias, candidate) {
+				if name != "" {
+					return name
+				}
+				return candidate
+			}
+			if name != "" && strings.EqualFold(name, candidate) {
+				return name
+			}
+		}
+	}
+	return ""
+}
+
+func (e *GeminiExecutor) resolveGeminiConfig(auth *cliproxyauth.Auth) *config.GeminiKey {
+	if auth == nil || e.cfg == nil {
+		return nil
+	}
+	var attrKey, attrBase string
+	if auth.Attributes != nil {
+		attrKey = strings.TrimSpace(auth.Attributes["api_key"])
+		attrBase = strings.TrimSpace(auth.Attributes["base_url"])
+	}
+	for i := range e.cfg.GeminiKey {
+		entry := &e.cfg.GeminiKey[i]
+		cfgKey := strings.TrimSpace(entry.APIKey)
+		cfgBase := strings.TrimSpace(entry.BaseURL)
+		if attrKey != "" && attrBase != "" {
+			if strings.EqualFold(cfgKey, attrKey) && strings.EqualFold(cfgBase, attrBase) {
+				return entry
+			}
+			continue
+		}
+		if attrKey != "" && strings.EqualFold(cfgKey, attrKey) {
+			if cfgBase == "" || strings.EqualFold(cfgBase, attrBase) {
+				return entry
+			}
+		}
+		if attrKey == "" && attrBase != "" && strings.EqualFold(cfgBase, attrBase) {
+			return entry
+		}
+	}
+	if attrKey != "" {
+		for i := range e.cfg.GeminiKey {
+			entry := &e.cfg.GeminiKey[i]
+			if strings.EqualFold(strings.TrimSpace(entry.APIKey), attrKey) {
+				return entry
+			}
+		}
+	}
+	return nil
 }
 
 func applyGeminiHeaders(req *http.Request, auth *cliproxyauth.Auth) {

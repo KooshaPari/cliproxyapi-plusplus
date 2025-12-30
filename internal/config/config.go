@@ -318,11 +318,23 @@ type GeminiKey struct {
 	// ProxyURL optionally overrides the global proxy for this API key.
 	ProxyURL string `yaml:"proxy-url,omitempty" json:"proxy-url,omitempty"`
 
+	// Models defines upstream model names and aliases for request routing.
+	Models []GeminiModel `yaml:"models,omitempty" json:"models,omitempty"`
+
 	// Headers optionally adds extra HTTP headers for requests sent with this key.
 	Headers map[string]string `yaml:"headers,omitempty" json:"headers,omitempty"`
 
 	// ExcludedModels lists model IDs that should be excluded for this provider.
 	ExcludedModels []string `yaml:"excluded-models,omitempty" json:"excluded-models,omitempty"`
+}
+
+// GeminiModel describes a mapping between an alias and the actual upstream model name.
+type GeminiModel struct {
+	// Name is the upstream model identifier used when issuing requests.
+	Name string `yaml:"name" json:"name"`
+
+	// Alias is the client-facing model name that maps to Name.
+	Alias string `yaml:"alias" json:"alias"`
 }
 
 // OpenAICompatibility represents the configuration for OpenAI API compatibility
