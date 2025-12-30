@@ -266,17 +266,19 @@ func ConvertClaudeRequestToCodex(modelName string, inputRawJSON []byte, _ bool) 
 func shortenNameIfNeeded(name string) string {
 	const limit = 64
 	if len(name) <= limit {
-		// Even if within limit, we still apply SanitizeFunctionName to ensure character compliance
-		return util.SanitizeFunctionName(name)
+		return name
 	}
 	if strings.HasPrefix(name, "mcp__") {
 		idx := strings.LastIndex(name, "__")
 		if idx > 0 {
 			cand := "mcp__" + name[idx+2:]
-			return util.SanitizeFunctionName(cand)
+			if len(cand) > limit {
+				return cand[:limit]
+			}
+			return cand
 		}
 	}
-	return util.SanitizeFunctionName(name)
+	return name[:limit]
 }
 
 // buildShortNameMap ensures uniqueness of shortened names within a request.
@@ -286,18 +288,20 @@ func buildShortNameMap(names []string) map[string]string {
 	m := map[string]string{}
 
 	baseCandidate := func(n string) string {
-		const limit = 64
 		if len(n) <= limit {
-			return util.SanitizeFunctionName(n)
+			return n
 		}
 		if strings.HasPrefix(n, "mcp__") {
 			idx := strings.LastIndex(n, "__")
 			if idx > 0 {
 				cand := "mcp__" + n[idx+2:]
-				return util.SanitizeFunctionName(cand)
+				if len(cand) > limit {
+					cand = cand[:limit]
+				}
+				return cand
 			}
 		}
-		return util.SanitizeFunctionName(n)
+		return n[:limit]
 	}
 
 	makeUnique := func(cand string) string {
