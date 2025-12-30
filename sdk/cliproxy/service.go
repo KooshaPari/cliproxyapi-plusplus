@@ -1191,19 +1191,19 @@ func applyOAuthModelMappings(cfg *config.Config, provider, authKind string, mode
 	}
 	forward := make(map[string]string, len(mappings))
 	for i := range mappings {
-		from := strings.TrimSpace(mappings[i].From)
-		to := strings.TrimSpace(mappings[i].To)
-		if from == "" || to == "" {
+		name := strings.TrimSpace(mappings[i].Name)
+		alias := strings.TrimSpace(mappings[i].Alias)
+		if name == "" || alias == "" {
 			continue
 		}
-		if strings.EqualFold(from, to) {
+		if strings.EqualFold(name, alias) {
 			continue
 		}
-		key := strings.ToLower(from)
+		key := strings.ToLower(name)
 		if _, exists := forward[key]; exists {
 			continue
 		}
-		forward[key] = to
+		forward[key] = alias
 	}
 	if len(forward) == 0 {
 		return models

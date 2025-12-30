@@ -146,10 +146,10 @@ type RoutingConfig struct {
 }
 
 // ModelNameMapping defines a model ID rename mapping for a specific channel.
-// It maps the original model name (From) to the client-visible alias (To).
+// It maps the original model name (Name) to the client-visible alias (Alias).
 type ModelNameMapping struct {
-	From string `yaml:"from" json:"from"`
-	To   string `yaml:"to" json:"to"`
+	Name  string `yaml:"name" json:"name"`
+	Alias string `yaml:"alias" json:"alias"`
 }
 
 // AmpModelMapping defines a model name mapping for Amp CLI requests.
@@ -508,29 +508,29 @@ func (cfg *Config) SanitizeOAuthModelMappings() {
 		if channel == "" || len(mappings) == 0 {
 			continue
 		}
-		seenFrom := make(map[string]struct{}, len(mappings))
-		seenTo := make(map[string]struct{}, len(mappings))
+		seenName := make(map[string]struct{}, len(mappings))
+		seenAlias := make(map[string]struct{}, len(mappings))
 		clean := make([]ModelNameMapping, 0, len(mappings))
 		for _, mapping := range mappings {
-			from := strings.TrimSpace(mapping.From)
-			to := strings.TrimSpace(mapping.To)
-			if from == "" || to == "" {
+			name := strings.TrimSpace(mapping.Name)
+			alias := strings.TrimSpace(mapping.Alias)
+			if name == "" || alias == "" {
 				continue
 			}
-			if strings.EqualFold(from, to) {
+			if strings.EqualFold(name, alias) {
 				continue
 			}
-			fromKey := strings.ToLower(from)
-			toKey := strings.ToLower(to)
-			if _, ok := seenFrom[fromKey]; ok {
+			nameKey := strings.ToLower(name)
+			aliasKey := strings.ToLower(alias)
+			if _, ok := seenName[nameKey]; ok {
 				continue
 			}
-			if _, ok := seenTo[toKey]; ok {
+			if _, ok := seenAlias[aliasKey]; ok {
 				continue
 			}
-			seenFrom[fromKey] = struct{}{}
-			seenTo[toKey] = struct{}{}
-			clean = append(clean, ModelNameMapping{From: from, To: to})
+			seenName[nameKey] = struct{}{}
+			seenAlias[aliasKey] = struct{}{}
+			clean = append(clean, ModelNameMapping{Name: name, Alias: alias})
 		}
 		if len(clean) > 0 {
 			out[channel] = clean

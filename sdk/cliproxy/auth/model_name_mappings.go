@@ -26,19 +26,19 @@ func compileModelNameMappingTable(mappings map[string][]internalconfig.ModelName
 		}
 		rev := make(map[string]string, len(entries))
 		for _, entry := range entries {
-			from := strings.TrimSpace(entry.From)
-			to := strings.TrimSpace(entry.To)
-			if from == "" || to == "" {
+			name := strings.TrimSpace(entry.Name)
+			alias := strings.TrimSpace(entry.Alias)
+			if name == "" || alias == "" {
 				continue
 			}
-			if strings.EqualFold(from, to) {
+			if strings.EqualFold(name, alias) {
 				continue
 			}
-			aliasKey := strings.ToLower(to)
+			aliasKey := strings.ToLower(alias)
 			if _, exists := rev[aliasKey]; exists {
 				continue
 			}
-			rev[aliasKey] = from
+			rev[aliasKey] = name
 		}
 		if len(rev) > 0 {
 			out.reverse[channel] = rev

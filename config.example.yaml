@@ -201,29 +201,29 @@ ws-auth: false
 # NOTE: Mappings do not apply to gemini-api-key, codex-api-key, claude-api-key, openai-compatibility, vertex-api-key, or ampcode.
 # oauth-model-mappings:
 #   gemini-cli:
-#     - from: "gemini-2.5-pro"          # original model name under this channel
-#       to: "gpt-5"                     # client-visible alias
+#     - name: "gemini-2.5-pro"          # original model name under this channel
+#       alias: "g2.5p"                  # client-visible alias
 #   vertex:
-#     - from: "gemini-2.5-pro"
-#       to: "gpt-5"
+#     - name: "gemini-2.5-pro"
+#       alias: "g2.5p"
 #   aistudio:
-#     - from: "gemini-2.5-pro"
-#       to: "gpt-5"
+#     - name: "gemini-2.5-pro"
+#       alias: "g2.5p"
 #   antigravity:
-#     - from: "gemini-3-pro-preview"
-#       to: "gpt-5"
+#     - name: "gemini-3-pro-preview"
+#       alias: "g3p"
 #   claude:
-#     - from: "claude-sonnet-4-5-20250929"
-#       to: "gpt-5"
+#     - name: "claude-sonnet-4-5-20250929"
+#       alias: "cs4.5"
 #   codex:
-#     - from: "gpt-5"
-#       to: "gemini-2.5-pro"
+#     - name: "gpt-5"
+#       alias: "g5"
 #   qwen:
-#     - from: "qwen3-coder-plus"
-#       to: "gpt-5"
+#     - name: "qwen3-coder-plus"
+#       alias: "qwen-plus"
 #   iflow:
-#     - from: "glm-4.7"
-#       to: "gpt-5"
+#     - name: "glm-4.7"
+#       alias: "glm-god"
 
 # OAuth provider excluded models
 # oauth-excluded-models:
