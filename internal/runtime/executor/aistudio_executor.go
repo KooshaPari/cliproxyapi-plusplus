@@ -55,7 +55,7 @@ func (e *AIStudioExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth,
 	reporter := newUsageReporter(ctx, e.Identifier(), req.Model, auth)
 	defer reporter.trackFailure(ctx, &err)
 
-	translatedReq, body, err := e.translateRequest(req, opts, false, req.Model)
+	translatedReq, body, err := e.translateRequest(req, opts, false)
 	if err != nil {
 		return resp, err
 	}
@@ -110,7 +110,7 @@ func (e *AIStudioExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth
 	reporter := newUsageReporter(ctx, e.Identifier(), req.Model, auth)
 	defer reporter.trackFailure(ctx, &err)
 
-	translatedReq, body, err := e.translateRequest(req, opts, true, req.Model)
+	translatedReq, body, err := e.translateRequest(req, opts, true)
 	if err != nil {
 		return nil, err
 	}
@@ -256,7 +256,7 @@ func (e *AIStudioExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth
 
 // CountTokens counts tokens for the given request using the AI Studio API.
 func (e *AIStudioExecutor) CountTokens(ctx context.Context, auth *cliproxyauth.Auth, req cliproxyexecutor.Request, opts cliproxyexecutor.Options) (cliproxyexecutor.Response, error) {
-	_, body, err := e.translateRequest(req, opts, false, req.Model)
+	_, body, err := e.translateRequest(req, opts, false)
 	if err != nil {
 		return cliproxyexecutor.Response{}, err
 	}
@@ -320,23 +320,18 @@ type translatedPayload struct {
 	toFormat sdktranslator.Format
 }
 
-func (e *AIStudioExecutor) translateRequest(req cliproxyexecutor.Request, opts cliproxyexecutor.Options, stream bool, upstreamModel string) ([]byte, translatedPayload, error) {
-	model := strings.TrimSpace(upstreamModel)
-	if model == "" {
-		model = strings.TrimSpace(req.Model)
-	}
-
+func (e *AIStudioExecutor) translateRequest(req cliproxyexecutor.Request, opts cliproxyexecutor.Options, stream bool) ([]byte, translatedPayload, error) {
 	from := opts.SourceFormat
 	to := sdktranslator.FromString("gemini")
-	payload := sdktranslator.TranslateRequest(from, to, model, bytes.Clone(req.Payload), stream)
-	payload = ApplyThinkingMetadata(payload, req.Metadata, model)
-	payload = util.ApplyGemini3ThinkingLevelFromMetadata(model, req.Metadata, payload)
-	payload = util.ApplyDefaultThinkingIfNeeded(model, payload)
-	payload = util.ConvertThinkingLevelToBudget(payload, model, true)
-	payload = util.NormalizeGeminiThinkingBudget(model, payload, true)
-	payload = util.StripThinkingConfigIfUnsupported(model, payload)
-	payload = fixGeminiImageAspectRatio(model, payload)
-	payload = applyPayloadConfig(e.cfg, model, payload)
+	payload := sdktranslator.TranslateRequest(from, to, req.Model, bytes.Clone(req.Payload), stream)
+	payload = ApplyThinkingMetadata(payload, req.Metadata, req.Model)
+	payload = util.ApplyGemini3ThinkingLevelFromMetadata(req.Model, req.Metadata, payload)
+	payload = util.ApplyDefaultThinkingIfNeeded(req.Model, payload)
+	payload = util.ConvertThinkingLevelToBudget(payload, req.Model, true)
+	payload = util.NormalizeGeminiThinkingBudget(req.Model, payload, true)
+	payload = util.StripThinkingConfigIfUnsupported(req.Model, payload)
+	payload = fixGeminiImageAspectRatio(req.Model, payload)
+	payload = applyPayloadConfig(e.cfg, req.Model, payload)
 	payload, _ = sjson.DeleteBytes(payload, "generationConfig.maxOutputTokens")
 	payload, _ = sjson.DeleteBytes(payload, "generationConfig.responseMimeType")
 	payload, _ = sjson.DeleteBytes(payload, "generationConfig.responseJsonSchema")
