@@ -553,7 +553,7 @@ func (s *Service) Run(ctx context.Context) error {
 		s.cfg = newCfg
 		s.cfgMu.Unlock()
 		if s.coreManager != nil {
-			s.coreManager.SetGlobalModelNameMappings(newCfg.ModelNameMappings)
+			s.coreManager.SetOAuthModelMappings(newCfg.OAuthModelMappings)
 		}
 		s.rebindExecutors()
 	}
@@ -844,7 +844,7 @@ func (s *Service) registerModelsForAuth(a *coreauth.Auth) {
 			}
 		}
 	}
-	models = applyGlobalModelNameMappings(s.cfg, provider, authKind, models)
+	models = applyOAuthModelMappings(s.cfg, provider, authKind, models)
 	if len(models) > 0 {
 		key := provider
 		if key == "" {
@@ -1154,37 +1154,6 @@ func buildVertexCompatConfigModels(entry *config.VertexCompatKey) []*ModelInfo {
 	return out
 }
 
-func globalModelMappingChannel(provider, authKind string) string {
-	provider = strings.ToLower(strings.TrimSpace(provider))
-	authKind = strings.ToLower(strings.TrimSpace(authKind))
-	switch provider {
-	case "gemini":
-		if authKind == "apikey" {
-			return "apikey-gemini"
-		}
-		return "gemini"
-	case "codex":
-		if authKind == "apikey" {
-			return ""
-		}
-		return "codex"
-	case "claude":
-		if authKind == "apikey" {
-			return ""
-		}
-		return "claude"
-	case "vertex":
-		if authKind == "apikey" {
-			return ""
-		}
-		return "vertex"
-	case "antigravity", "qwen", "iflow":
-		return provider
-	default:
-		return ""
-	}
-}
-
 func rewriteModelInfoName(name, oldID, newID string) string {
 	trimmed := strings.TrimSpace(name)
 	if trimmed == "" {
@@ -1208,15 +1177,15 @@ func rewriteModelInfoName(name, oldID, newID string) string {
 	return name
 }
 
-func applyGlobalModelNameMappings(cfg *config.Config, provider, authKind string, models []*ModelInfo) []*ModelInfo {
+func applyOAuthModelMappings(cfg *config.Config, provider, authKind string, models []*ModelInfo) []*ModelInfo {
 	if cfg == nil || len(models) == 0 {
 		return models
 	}
-	channel := globalModelMappingChannel(provider, authKind)
-	if channel == "" || len(cfg.ModelNameMappings) == 0 {
+	channel := coreauth.OAuthModelMappingChannel(provider, authKind)
+	if channel == "" || len(cfg.OAuthModelMappings) == 0 {
 		return models
 	}
-	mappings := cfg.ModelNameMappings[channel]
+	mappings := cfg.OAuthModelMappings[channel]
 	if len(mappings) == 0 {
 		return models
 	}
