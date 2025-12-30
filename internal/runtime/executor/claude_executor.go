@@ -49,11 +49,6 @@ func (e *ClaudeExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, r
 	}
 	reporter := newUsageReporter(ctx, e.Identifier(), req.Model, auth)
 	defer reporter.trackFailure(ctx, &err)
-	from := opts.SourceFormat
-	to := sdktranslator.FromString("claude")
-	// Use streaming translation to preserve function calling, except for claude.
-	stream := from != to
-	body := sdktranslator.TranslateRequest(from, to, req.Model, bytes.Clone(req.Payload), stream)
 	upstreamModel := util.ResolveOriginalModel(req.Model, req.Metadata)
 	if upstreamModel == "" {
 		upstreamModel = req.Model
@@ -65,20 +60,25 @@ func (e *ClaudeExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, r
 			upstreamModel = modelOverride
 		}
 	}
+	from := opts.SourceFormat
+	to := sdktranslator.FromString("claude")
+	// Use streaming translation to preserve function calling, except for claude.
+	stream := from != to
+	body := sdktranslator.TranslateRequest(from, to, upstreamModel, bytes.Clone(req.Payload), stream)
 	body, _ = sjson.SetBytes(body, "model", upstreamModel)
 	// Inject thinking config based on model metadata for thinking variants
-	body = e.injectThinkingConfig(req.Model, req.Metadata, body)
+	body = e.injectThinkingConfig(upstreamModel, req.Metadata, body)
 
 	if !strings.HasPrefix(upstreamModel, "claude-3-5-haiku") {
 		body = checkSystemInstructions(body)
 	}
-	body = applyPayloadConfig(e.cfg, req.Model, body)
+	body = applyPayloadConfig(e.cfg, upstreamModel, body)
 
 	// Disable thinking if tool_choice forces tool use (Anthropic API constraint)
 	body = disableThinkingIfToolChoiceForced(body)
 
 	// Ensure max_tokens > thinking.budget_tokens when thinking is enabled
-	body = ensureMaxTokensForThinking(req.Model, body)
+	body = ensureMaxTokensForThinking(upstreamModel, body)
 
 	// Extract betas from body and convert to header
 	var extraBetas []string
@@ -170,7 +170,6 @@ func (e *ClaudeExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.A
 	defer reporter.trackFailure(ctx, &err)
 	from := opts.SourceFormat
 	to := sdktranslator.FromString("claude")
-	body := sdktranslator.TranslateRequest(from, to, req.Model, bytes.Clone(req.Payload), true)
 	upstreamModel := util.ResolveOriginalModel(req.Model, req.Metadata)
 	if upstreamModel == "" {
 		upstreamModel = req.Model
@@ -182,17 +181,18 @@ func (e *ClaudeExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.A
 			upstreamModel = modelOverride
 		}
 	}
+	body := sdktranslator.TranslateRequest(from, to, upstreamModel, bytes.Clone(req.Payload), true)
 	body, _ = sjson.SetBytes(body, "model", upstreamModel)
 	// Inject thinking config based on model metadata for thinking variants
-	body = e.injectThinkingConfig(req.Model, req.Metadata, body)
+	body = e.injectThinkingConfig(upstreamModel, req.Metadata, body)
 	body = checkSystemInstructions(body)
-	body = applyPayloadConfig(e.cfg, req.Model, body)
+	body = applyPayloadConfig(e.cfg, upstreamModel, body)
 
 	// Disable thinking if tool_choice forces tool use (Anthropic API constraint)
 	body = disableThinkingIfToolChoiceForced(body)
 
 	// Ensure max_tokens > thinking.budget_tokens when thinking is enabled
-	body = ensureMaxTokensForThinking(req.Model, body)
+	body = ensureMaxTokensForThinking(upstreamModel, body)
 
 	// Extract betas from body and convert to header
 	var extraBetas []string
@@ -316,7 +316,6 @@ func (e *ClaudeExecutor) CountTokens(ctx context.Context, auth *cliproxyauth.Aut
 	to := sdktranslator.FromString("claude")
 	// Use streaming translation to preserve function calling, except for claude.
 	stream := from != to
-	body := sdktranslator.TranslateRequest(from, to, req.Model, bytes.Clone(req.Payload), stream)
 	upstreamModel := util.ResolveOriginalModel(req.Model, req.Metadata)
 	if upstreamModel == "" {
 		upstreamModel = req.Model
@@ -328,6 +327,7 @@ func (e *ClaudeExecutor) CountTokens(ctx context.Context, auth *cliproxyauth.Aut
 			upstreamModel = modelOverride
 		}
 	}
+	body := sdktranslator.TranslateRequest(from, to, upstreamModel, bytes.Clone(req.Payload), stream)
 	body, _ = sjson.SetBytes(body, "model", upstreamModel)
 
 	if !strings.HasPrefix(upstreamModel, "claude-3-5-haiku") {

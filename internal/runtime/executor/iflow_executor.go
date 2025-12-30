@@ -54,11 +54,15 @@ func (e *IFlowExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, re
 	reporter := newUsageReporter(ctx, e.Identifier(), req.Model, auth)
 	defer reporter.trackFailure(ctx, &err)
 
+	upstreamModel := util.ResolveOriginalModel(req.Model, req.Metadata)
+	if strings.TrimSpace(upstreamModel) == "" {
+		upstreamModel = req.Model
+	}
+
 	from := opts.SourceFormat
 	to := sdktranslator.FromString("openai")
-	body := sdktranslator.TranslateRequest(from, to, req.Model, bytes.Clone(req.Payload), false)
-	body = ApplyReasoningEffortMetadata(body, req.Metadata, req.Model, "reasoning_effort", false)
-	upstreamModel := util.ResolveOriginalModel(req.Model, req.Metadata)
+	body := sdktranslator.TranslateRequest(from, to, upstreamModel, bytes.Clone(req.Payload), false)
+	body = ApplyReasoningEffortMetadata(body, req.Metadata, upstreamModel, "reasoning_effort", false)
 	if upstreamModel != "" {
 		body, _ = sjson.SetBytes(body, "model", upstreamModel)
 	}
@@ -68,7 +72,7 @@ func (e *IFlowExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, re
 	}
 	body = applyIFlowThinkingConfig(body)
 	body = preserveReasoningContentInMessages(body)
-	body = applyPayloadConfig(e.cfg, req.Model, body)
+	body = applyPayloadConfig(e.cfg, upstreamModel, body)
 
 	endpoint := strings.TrimSuffix(baseURL, "/") + iflowDefaultEndpoint
 
@@ -146,12 +150,16 @@ func (e *IFlowExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.Au
 	reporter := newUsageReporter(ctx, e.Identifier(), req.Model, auth)
 	defer reporter.trackFailure(ctx, &err)
 
+	upstreamModel := util.ResolveOriginalModel(req.Model, req.Metadata)
+	if strings.TrimSpace(upstreamModel) == "" {
+		upstreamModel = req.Model
+	}
+
 	from := opts.SourceFormat
 	to := sdktranslator.FromString("openai")
-	body := sdktranslator.TranslateRequest(from, to, req.Model, bytes.Clone(req.Payload), true)
+	body := sdktranslator.TranslateRequest(from, to, upstreamModel, bytes.Clone(req.Payload), true)
 
-	body = ApplyReasoningEffortMetadata(body, req.Metadata, req.Model, "reasoning_effort", false)
-	upstreamModel := util.ResolveOriginalModel(req.Model, req.Metadata)
+	body = ApplyReasoningEffortMetadata(body, req.Metadata, upstreamModel, "reasoning_effort", false)
 	if upstreamModel != "" {
 		body, _ = sjson.SetBytes(body, "model", upstreamModel)
 	}
@@ -166,7 +174,7 @@ func (e *IFlowExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.Au
 	if toolsResult.Exists() && toolsResult.IsArray() && len(toolsResult.Array()) == 0 {
 		body = ensureToolsArray(body)
 	}
-	body = applyPayloadConfig(e.cfg, req.Model, body)
+	body = applyPayloadConfig(e.cfg, upstreamModel, body)
 
 	endpoint := strings.TrimSuffix(baseURL, "/") + iflowDefaultEndpoint
 
@@ -249,11 +257,16 @@ func (e *IFlowExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.Au
 }
 
 func (e *IFlowExecutor) CountTokens(ctx context.Context, auth *cliproxyauth.Auth, req cliproxyexecutor.Request, opts cliproxyexecutor.Options) (cliproxyexecutor.Response, error) {
+	upstreamModel := util.ResolveOriginalModel(req.Model, req.Metadata)
+	if strings.TrimSpace(upstreamModel) == "" {
+		upstreamModel = req.Model
+	}
+
 	from := opts.SourceFormat
 	to := sdktranslator.FromString("openai")
-	body := sdktranslator.TranslateRequest(from, to, req.Model, bytes.Clone(req.Payload), false)
+	body := sdktranslator.TranslateRequest(from, to, upstreamModel, bytes.Clone(req.Payload), false)
 
-	enc, err := tokenizerForModel(req.Model)
+	enc, err := tokenizerForModel(upstreamModel)
 	if err != nil {
 		return cliproxyexecutor.Response{}, fmt.Errorf("iflow executor: tokenizer init failed: %w", err)
 	}

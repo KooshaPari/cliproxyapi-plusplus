@@ -63,13 +63,13 @@ func (e *CodexExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, re
 
 	from := opts.SourceFormat
 	to := sdktranslator.FromString("codex")
-	body := sdktranslator.TranslateRequest(from, to, req.Model, bytes.Clone(req.Payload), false)
-	body = ApplyReasoningEffortMetadata(body, req.Metadata, req.Model, "reasoning.effort", false)
+	body := sdktranslator.TranslateRequest(from, to, upstreamModel, bytes.Clone(req.Payload), false)
+	body = ApplyReasoningEffortMetadata(body, req.Metadata, upstreamModel, "reasoning.effort", false)
 	body = NormalizeThinkingConfig(body, upstreamModel, false)
 	if errValidate := ValidateThinkingConfig(body, upstreamModel); errValidate != nil {
 		return resp, errValidate
 	}
-	body = applyPayloadConfig(e.cfg, req.Model, body)
+	body = applyPayloadConfig(e.cfg, upstreamModel, body)
 	body, _ = sjson.SetBytes(body, "model", upstreamModel)
 	body, _ = sjson.SetBytes(body, "stream", true)
 	body, _ = sjson.DeleteBytes(body, "previous_response_id")
@@ -170,14 +170,14 @@ func (e *CodexExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.Au
 
 	from := opts.SourceFormat
 	to := sdktranslator.FromString("codex")
-	body := sdktranslator.TranslateRequest(from, to, req.Model, bytes.Clone(req.Payload), true)
+	body := sdktranslator.TranslateRequest(from, to, upstreamModel, bytes.Clone(req.Payload), true)
 
-	body = ApplyReasoningEffortMetadata(body, req.Metadata, req.Model, "reasoning.effort", false)
+	body = ApplyReasoningEffortMetadata(body, req.Metadata, upstreamModel, "reasoning.effort", false)
 	body = NormalizeThinkingConfig(body, upstreamModel, false)
 	if errValidate := ValidateThinkingConfig(body, upstreamModel); errValidate != nil {
 		return nil, errValidate
 	}
-	body = applyPayloadConfig(e.cfg, req.Model, body)
+	body = applyPayloadConfig(e.cfg, upstreamModel, body)
 	body, _ = sjson.DeleteBytes(body, "previous_response_id")
 	body, _ = sjson.SetBytes(body, "model", upstreamModel)
 
@@ -280,11 +280,11 @@ func (e *CodexExecutor) CountTokens(ctx context.Context, auth *cliproxyauth.Auth
 
 	from := opts.SourceFormat
 	to := sdktranslator.FromString("codex")
-	body := sdktranslator.TranslateRequest(from, to, req.Model, bytes.Clone(req.Payload), false)
+	body := sdktranslator.TranslateRequest(from, to, upstreamModel, bytes.Clone(req.Payload), false)
 
 	modelForCounting := upstreamModel
 
-	body = ApplyReasoningEffortMetadata(body, req.Metadata, req.Model, "reasoning.effort", false)
+	body = ApplyReasoningEffortMetadata(body, req.Metadata, upstreamModel, "reasoning.effort", false)
 	body, _ = sjson.SetBytes(body, "model", upstreamModel)
 	body, _ = sjson.DeleteBytes(body, "previous_response_id")
 	body, _ = sjson.SetBytes(body, "stream", false)

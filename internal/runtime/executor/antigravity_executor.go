@@ -98,13 +98,13 @@ func (e *AntigravityExecutor) Execute(ctx context.Context, auth *cliproxyauth.Au
 
 	from := opts.SourceFormat
 	to := sdktranslator.FromString("antigravity")
-	translated := sdktranslator.TranslateRequest(from, to, req.Model, bytes.Clone(req.Payload), false)
+	translated := sdktranslator.TranslateRequest(from, to, upstreamModel, bytes.Clone(req.Payload), false)
 
-	translated = applyThinkingMetadataCLI(translated, req.Metadata, req.Model)
-	translated = util.ApplyGemini3ThinkingLevelFromMetadataCLI(req.Model, req.Metadata, translated)
-	translated = util.ApplyDefaultThinkingIfNeededCLI(req.Model, translated)
-	translated = normalizeAntigravityThinking(req.Model, translated, isClaude)
-	translated = applyPayloadConfigWithRoot(e.cfg, req.Model, "antigravity", "request", translated)
+	translated = applyThinkingMetadataCLI(translated, req.Metadata, upstreamModel)
+	translated = util.ApplyGemini3ThinkingLevelFromMetadataCLI(upstreamModel, req.Metadata, translated)
+	translated = util.ApplyDefaultThinkingIfNeededCLI(upstreamModel, translated)
+	translated = normalizeAntigravityThinking(upstreamModel, translated, isClaude)
+	translated = applyPayloadConfigWithRoot(e.cfg, upstreamModel, "antigravity", "request", translated)
 
 	baseURLs := antigravityBaseURLFallbackOrder(auth)
 	httpClient := newProxyAwareHTTPClient(ctx, e.cfg, auth, 0)
@@ -191,20 +191,20 @@ func (e *AntigravityExecutor) executeClaudeNonStream(ctx context.Context, auth *
 	reporter := newUsageReporter(ctx, e.Identifier(), req.Model, auth)
 	defer reporter.trackFailure(ctx, &err)
 
-	from := opts.SourceFormat
-	to := sdktranslator.FromString("antigravity")
-	translated := sdktranslator.TranslateRequest(from, to, req.Model, bytes.Clone(req.Payload), true)
-
 	upstreamModel := util.ResolveOriginalModel(req.Model, req.Metadata)
 	if upstreamModel == "" {
 		upstreamModel = req.Model
 	}
 
-	translated = applyThinkingMetadataCLI(translated, req.Metadata, req.Model)
-	translated = util.ApplyGemini3ThinkingLevelFromMetadataCLI(req.Model, req.Metadata, translated)
-	translated = util.ApplyDefaultThinkingIfNeededCLI(req.Model, translated)
-	translated = normalizeAntigravityThinking(req.Model, translated, true)
-	translated = applyPayloadConfigWithRoot(e.cfg, req.Model, "antigravity", "request", translated)
+	from := opts.SourceFormat
+	to := sdktranslator.FromString("antigravity")
+	translated := sdktranslator.TranslateRequest(from, to, upstreamModel, bytes.Clone(req.Payload), true)
+
+	translated = applyThinkingMetadataCLI(translated, req.Metadata, upstreamModel)
+	translated = util.ApplyGemini3ThinkingLevelFromMetadataCLI(upstreamModel, req.Metadata, translated)
+	translated = util.ApplyDefaultThinkingIfNeededCLI(upstreamModel, translated)
+	translated = normalizeAntigravityThinking(upstreamModel, translated, true)
+	translated = applyPayloadConfigWithRoot(e.cfg, upstreamModel, "antigravity", "request", translated)
 
 	baseURLs := antigravityBaseURLFallbackOrder(auth)
 	httpClient := newProxyAwareHTTPClient(ctx, e.cfg, auth, 0)
@@ -530,21 +530,21 @@ func (e *AntigravityExecutor) ExecuteStream(ctx context.Context, auth *cliproxya
 	reporter := newUsageReporter(ctx, e.Identifier(), req.Model, auth)
 	defer reporter.trackFailure(ctx, &err)
 
-	from := opts.SourceFormat
-	to := sdktranslator.FromString("antigravity")
-	translated := sdktranslator.TranslateRequest(from, to, req.Model, bytes.Clone(req.Payload), true)
-
 	upstreamModel := util.ResolveOriginalModel(req.Model, req.Metadata)
 	if upstreamModel == "" {
 		upstreamModel = req.Model
 	}
 	isClaude := strings.Contains(strings.ToLower(upstreamModel), "claude")
 
-	translated = applyThinkingMetadataCLI(translated, req.Metadata, req.Model)
-	translated = util.ApplyGemini3ThinkingLevelFromMetadataCLI(req.Model, req.Metadata, translated)
-	translated = util.ApplyDefaultThinkingIfNeededCLI(req.Model, translated)
-	translated = normalizeAntigravityThinking(req.Model, translated, isClaude)
-	translated = applyPayloadConfigWithRoot(e.cfg, req.Model, "antigravity", "request", translated)
+	from := opts.SourceFormat
+	to := sdktranslator.FromString("antigravity")
+	translated := sdktranslator.TranslateRequest(from, to, upstreamModel, bytes.Clone(req.Payload), true)
+
+	translated = applyThinkingMetadataCLI(translated, req.Metadata, upstreamModel)
+	translated = util.ApplyGemini3ThinkingLevelFromMetadataCLI(upstreamModel, req.Metadata, translated)
+	translated = util.ApplyDefaultThinkingIfNeededCLI(upstreamModel, translated)
+	translated = normalizeAntigravityThinking(upstreamModel, translated, isClaude)
+	translated = applyPayloadConfigWithRoot(e.cfg, upstreamModel, "antigravity", "request", translated)
 
 	baseURLs := antigravityBaseURLFallbackOrder(auth)
 	httpClient := newProxyAwareHTTPClient(ctx, e.cfg, auth, 0)
@@ -713,10 +713,10 @@ func (e *AntigravityExecutor) CountTokens(ctx context.Context, auth *cliproxyaut
 	var lastErr error
 
 	for idx, baseURL := range baseURLs {
-		payload := sdktranslator.TranslateRequest(from, to, req.Model, bytes.Clone(req.Payload), false)
-		payload = applyThinkingMetadataCLI(payload, req.Metadata, req.Model)
-		payload = util.ApplyDefaultThinkingIfNeededCLI(req.Model, payload)
-		payload = normalizeAntigravityThinking(req.Model, payload, isClaude)
+		payload := sdktranslator.TranslateRequest(from, to, upstreamModel, bytes.Clone(req.Payload), false)
+		payload = applyThinkingMetadataCLI(payload, req.Metadata, upstreamModel)
+		payload = util.ApplyDefaultThinkingIfNeededCLI(upstreamModel, payload)
+		payload = normalizeAntigravityThinking(upstreamModel, payload, isClaude)
 		payload = deleteJSONField(payload, "project")
 		payload = deleteJSONField(payload, "model")
 		payload = deleteJSONField(payload, "request.safetySettings")

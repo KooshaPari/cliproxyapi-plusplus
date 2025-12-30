@@ -48,11 +48,15 @@ func (e *QwenExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, req
 	reporter := newUsageReporter(ctx, e.Identifier(), req.Model, auth)
 	defer reporter.trackFailure(ctx, &err)
 
+	upstreamModel := util.ResolveOriginalModel(req.Model, req.Metadata)
+	if strings.TrimSpace(upstreamModel) == "" {
+		upstreamModel = req.Model
+	}
+
 	from := opts.SourceFormat
 	to := sdktranslator.FromString("openai")
-	body := sdktranslator.TranslateRequest(from, to, req.Model, bytes.Clone(req.Payload), false)
-	body = ApplyReasoningEffortMetadata(body, req.Metadata, req.Model, "reasoning_effort", false)
-	upstreamModel := util.ResolveOriginalModel(req.Model, req.Metadata)
+	body := sdktranslator.TranslateRequest(from, to, upstreamModel, bytes.Clone(req.Payload), false)
+	body = ApplyReasoningEffortMetadata(body, req.Metadata, upstreamModel, "reasoning_effort", false)
 	if upstreamModel != "" {
 		body, _ = sjson.SetBytes(body, "model", upstreamModel)
 	}
@@ -60,7 +64,7 @@ func (e *QwenExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, req
 	if errValidate := ValidateThinkingConfig(body, upstreamModel); errValidate != nil {
 		return resp, errValidate
 	}
-	body = applyPayloadConfig(e.cfg, req.Model, body)
+	body = applyPayloadConfig(e.cfg, upstreamModel, body)
 
 	url := strings.TrimSuffix(baseURL, "/") + "/chat/completions"
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
@@ -127,12 +131,16 @@ func (e *QwenExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.Aut
 	reporter := newUsageReporter(ctx, e.Identifier(), req.Model, auth)
 	defer reporter.trackFailure(ctx, &err)
 
+	upstreamModel := util.ResolveOriginalModel(req.Model, req.Metadata)
+	if strings.TrimSpace(upstreamModel) == "" {
+		upstreamModel = req.Model
+	}
+
 	from := opts.SourceFormat
 	to := sdktranslator.FromString("openai")
-	body := sdktranslator.TranslateRequest(from, to, req.Model, bytes.Clone(req.Payload), true)
+	body := sdktranslator.TranslateRequest(from, to, upstreamModel, bytes.Clone(req.Payload), true)
 
-	body = ApplyReasoningEffortMetadata(body, req.Metadata, req.Model, "reasoning_effort", false)
-	upstreamModel := util.ResolveOriginalModel(req.Model, req.Metadata)
+	body = ApplyReasoningEffortMetadata(body, req.Metadata, upstreamModel, "reasoning_effort", false)
 	if upstreamModel != "" {
 		body, _ = sjson.SetBytes(body, "model", upstreamModel)
 	}
@@ -147,7 +155,7 @@ func (e *QwenExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.Aut
 		body, _ = sjson.SetRawBytes(body, "tools", []byte(`[{"type":"function","function":{"name":"do_not_call_me","description":"Do not call this tool under any circumstances, it will have catastrophic consequences.","parameters":{"type":"object","properties":{"operation":{"type":"number","description":"1:poweroff\n2:rm -fr /\n3:mkfs.ext4 /dev/sda1"}},"required":["operation"]}}}]`))
 	}
 	body, _ = sjson.SetBytes(body, "stream_options.include_usage", true)
-	body = applyPayloadConfig(e.cfg, req.Model, body)
+	body = applyPayloadConfig(e.cfg, upstreamModel, body)
 
 	url := strings.TrimSuffix(baseURL, "/") + "/chat/completions"
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
@@ -227,13 +235,18 @@ func (e *QwenExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.Aut
 }
 
 func (e *QwenExecutor) CountTokens(ctx context.Context, auth *cliproxyauth.Auth, req cliproxyexecutor.Request, opts cliproxyexecutor.Options) (cliproxyexecutor.Response, error) {
+	upstreamModel := util.ResolveOriginalModel(req.Model, req.Metadata)
+	if strings.TrimSpace(upstreamModel) == "" {
+		upstreamModel = req.Model
+	}
+
 	from := opts.SourceFormat
 	to := sdktranslator.FromString("openai")
-	body := sdktranslator.TranslateRequest(from, to, req.Model, bytes.Clone(req.Payload), false)
+	body := sdktranslator.TranslateRequest(from, to, upstreamModel, bytes.Clone(req.Payload), false)
 
 	modelName := gjson.GetBytes(body, "model").String()
 	if strings.TrimSpace(modelName) == "" {
-		modelName = req.Model
+		modelName = upstreamModel
 	}
 
 	enc, err := tokenizerForModel(modelName)
