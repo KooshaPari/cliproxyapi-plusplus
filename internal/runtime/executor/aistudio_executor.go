@@ -55,17 +55,12 @@ func (e *AIStudioExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth,
 	reporter := newUsageReporter(ctx, e.Identifier(), req.Model, auth)
 	defer reporter.trackFailure(ctx, &err)
 
-	upstreamModel := strings.TrimSpace(util.ResolveOriginalModel(req.Model, req.Metadata))
-	if upstreamModel == "" {
-		upstreamModel = strings.TrimSpace(req.Model)
-	}
-
-	translatedReq, body, err := e.translateRequest(req, opts, false, upstreamModel)
+	translatedReq, body, err := e.translateRequest(req, opts, false, req.Model)
 	if err != nil {
 		return resp, err
 	}
 
-	endpoint := e.buildEndpoint(upstreamModel, body.action, opts.Alt)
+	endpoint := e.buildEndpoint(req.Model, body.action, opts.Alt)
 	wsReq := &wsrelay.HTTPRequest{
 		Method:  http.MethodPost,
 		URL:     endpoint,
@@ -115,17 +110,12 @@ func (e *AIStudioExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth
 	reporter := newUsageReporter(ctx, e.Identifier(), req.Model, auth)
 	defer reporter.trackFailure(ctx, &err)
 
-	upstreamModel := strings.TrimSpace(util.ResolveOriginalModel(req.Model, req.Metadata))
-	if upstreamModel == "" {
-		upstreamModel = strings.TrimSpace(req.Model)
-	}
-
-	translatedReq, body, err := e.translateRequest(req, opts, true, upstreamModel)
+	translatedReq, body, err := e.translateRequest(req, opts, true, req.Model)
 	if err != nil {
 		return nil, err
 	}
 
-	endpoint := e.buildEndpoint(upstreamModel, body.action, opts.Alt)
+	endpoint := e.buildEndpoint(req.Model, body.action, opts.Alt)
 	wsReq := &wsrelay.HTTPRequest{
 		Method:  http.MethodPost,
 		URL:     endpoint,
@@ -266,12 +256,7 @@ func (e *AIStudioExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth
 
 // CountTokens counts tokens for the given request using the AI Studio API.
 func (e *AIStudioExecutor) CountTokens(ctx context.Context, auth *cliproxyauth.Auth, req cliproxyexecutor.Request, opts cliproxyexecutor.Options) (cliproxyexecutor.Response, error) {
-	upstreamModel := strings.TrimSpace(util.ResolveOriginalModel(req.Model, req.Metadata))
-	if upstreamModel == "" {
-		upstreamModel = strings.TrimSpace(req.Model)
-	}
-
-	_, body, err := e.translateRequest(req, opts, false, upstreamModel)
+	_, body, err := e.translateRequest(req, opts, false, req.Model)
 	if err != nil {
 		return cliproxyexecutor.Response{}, err
 	}
@@ -280,7 +265,7 @@ func (e *AIStudioExecutor) CountTokens(ctx context.Context, auth *cliproxyauth.A
 	body.payload, _ = sjson.DeleteBytes(body.payload, "tools")
 	body.payload, _ = sjson.DeleteBytes(body.payload, "safetySettings")
 
-	endpoint := e.buildEndpoint(upstreamModel, "countTokens", "")
+	endpoint := e.buildEndpoint(req.Model, "countTokens", "")
 	wsReq := &wsrelay.HTTPRequest{
 		Method:  http.MethodPost,
 		URL:     endpoint,
