@@ -225,11 +225,12 @@ func ConvertClaudeRequestToAntigravity(modelName string, inputRawJSON []byte, _ 
 					} else if contentTypeResult.Type == gjson.String && contentTypeResult.String() == "tool_result" {
 						toolCallID := contentResult.Get("tool_use_id").String()
 						if toolCallID != "" {
-							funcName := util.SanitizeFunctionName(toolCallID)
+							rawFuncName := toolCallID
 							toolCallIDs := strings.Split(toolCallID, "-")
 							if len(toolCallIDs) > 1 {
-								funcName = util.SanitizeFunctionName(strings.Join(toolCallIDs[0:len(toolCallIDs)-2], "-"))
+								rawFuncName = strings.Join(toolCallIDs[0:len(toolCallIDs)-1], "-")
 							}
+							funcName := util.SanitizeFunctionName(rawFuncName)
 							functionResponseResult := contentResult.Get("content")
 
 							functionResponseJSON := `{}`

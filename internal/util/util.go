@@ -15,28 +15,29 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+var functionNameSanitizer = regexp.MustCompile(`[^a-zA-Z0-9_.:-]`)
+
 // SanitizeFunctionName ensures a function name matches the requirements for Gemini/Vertex AI.
 // It replaces invalid characters with underscores, ensures it starts with a letter or underscore,
 // and truncates it to 64 characters if necessary.
 // Regex Rule: [^a-zA-Z0-9_.:-] replaced with _.
 func SanitizeFunctionName(name string) string {
 	if name == "" {
-		return name
+		return ""
 	}
 	// Replace invalid characters with underscore
-	re := regexp.MustCompile(`[^a-zA-Z0-9_.:-]`)
-	sanitized := re.ReplaceAllString(name, "_")
+	sanitized := functionNameSanitizer.ReplaceAllString(name, "_")
 
 	// Ensure it starts with a letter or underscore
-	if len(sanitized) > 0 {
-		first := sanitized[0]
-		if !((first >= 'a' && first <= 'z') || (first >= 'A' && first <= 'Z') || first == '_') {
-			// If it starts with an allowed character but not allowed at the beginning,
-			// we must prepend an underscore.
-			sanitized = "_" + sanitized
+	first := sanitized[0]
+	if !((first >= 'a' && first <= 'z') || (first >= 'A' && first <= 'Z') || first == '_') {
+		// If it starts with an allowed character but not allowed at the beginning,
+		// we must prepend an underscore.
+		// To stay within the 64-character limit while prepending, we may need to truncate first.
+		if len(sanitized) >= 64 {
+			sanitized = sanitized[:63]
 		}
-	} else {
-		sanitized = "_"
+		sanitized = "_" + sanitized
 	}
 
 	// Truncate to 64 characters
