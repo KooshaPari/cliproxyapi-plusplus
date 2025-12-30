@@ -8,11 +8,43 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/config"
 	log "github.com/sirupsen/logrus"
 )
+
+// SanitizeFunctionName ensures a function name matches the requirements for Gemini/Vertex AI.
+// It replaces invalid characters with underscores, ensures it starts with a letter or underscore,
+// and truncates it to 64 characters if necessary.
+// Regex Rule: [^a-zA-Z0-9_.:-] replaced with _.
+func SanitizeFunctionName(name string) string {
+	if name == "" {
+		return name
+	}
+	// Replace invalid characters with underscore
+	re := regexp.MustCompile(`[^a-zA-Z0-9_.:-]`)
+	sanitized := re.ReplaceAllString(name, "_")
+
+	// Ensure it starts with a letter or underscore
+	if len(sanitized) > 0 {
+		first := sanitized[0]
+		if !((first >= 'a' && first <= 'z') || (first >= 'A' && first <= 'Z') || first == '_') {
+			// If it starts with an allowed character but not allowed at the beginning,
+			// we must prepend an underscore.
+			sanitized = "_" + sanitized
+		}
+	} else {
+		sanitized = "_"
+	}
+
+	// Truncate to 64 characters
+	if len(sanitized) > 64 {
+		sanitized = sanitized[:64]
+	}
+	return sanitized
+}
 
 // SetLogLevel configures the logrus log level based on the configuration.
 // It sets the log level to DebugLevel if debug mode is enabled, otherwise to InfoLevel.
