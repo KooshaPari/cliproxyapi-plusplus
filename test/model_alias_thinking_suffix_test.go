@@ -3,6 +3,7 @@ package test
 import (
 	"testing"
 
+	"github.com/router-for-me/CLIProxyAPI/v6/internal/runtime/executor"
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/util"
 	"github.com/tidwall/gjson"
 )
@@ -80,8 +81,9 @@ func TestModelAliasThinkingSuffix(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Step 1: Parse model suffix
-			baseModel, metadata := util.NormalizeThinkingModel(tt.requestModel)
+			// Step 1: Parse model suffix (simulates SDK layer normalization)
+			// For "gp(1000)" -> requestedModel="gp", metadata={thinking_budget: 1000}
+			requestedModel, metadata := util.NormalizeThinkingModel(tt.requestModel)
 
 			// Verify suffix was parsed
 			if metadata == nil && (tt.suffixType == "numeric" || tt.suffixType == "level") {
@@ -89,12 +91,13 @@ func TestModelAliasThinkingSuffix(t *testing.T) {
 				return
 			}
 
-			// Step 2: For aliases, simulate the model mapping by adding upstream model info
+			// Step 2: Simulate OAuth model mapping
+			// Real flow: applyOAuthModelMapping stores requestedModel (the alias) in metadata
 			if tt.isAlias {
 				if metadata == nil {
 					metadata = make(map[string]any)
 				}
-				metadata[util.ModelMappingOriginalModelMetadataKey] = baseModel
+				metadata[util.ModelMappingOriginalModelMetadataKey] = requestedModel
 			}
 
 			// Step 3: Verify metadata extraction
@@ -151,12 +154,15 @@ func TestModelAliasThinkingSuffix(t *testing.T) {
 			if tt.expectedField == "thinkingLevel" && util.IsGemini3Model(tt.upstreamModel) {
 				body := []byte(`{"request":{"contents":[]}}`)
 
-				// Build metadata for the function
+				// Build metadata simulating real OAuth flow:
+				// - requestedModel (alias like "gf") is stored in model_mapping_original_model
+				// - upstreamModel is passed as the model parameter
 				testMetadata := make(map[string]any)
 				if tt.isAlias {
-					testMetadata[util.ModelMappingOriginalModelMetadataKey] = tt.upstreamModel
+					// Real flow: applyOAuthModelMapping stores requestedModel (the alias)
+					testMetadata[util.ModelMappingOriginalModelMetadataKey] = requestedModel
 				}
-				// Copy parsed metadata
+				// Copy parsed metadata (thinking_budget, reasoning_effort, etc.)
 				for k, v := range metadata {
 					testMetadata[k] = v
 				}
@@ -172,20 +178,32 @@ func TestModelAliasThinkingSuffix(t *testing.T) {
 				}
 			}
 
-			// Step 5: Test Gemini 2.5 thinkingBudget application
+			// Step 5: Test Gemini 2.5 thinkingBudget application using real ApplyThinkingMetadataCLI flow
 			if tt.expectedField == "thinkingBudget" && util.IsGemini25Model(tt.upstreamModel) {
-				budget, _, _, _ := util.ThinkingFromMetadata(metadata)
-				if budget != nil {
-					body := []byte(`{"request":{"contents":[]}}`)
-					result := util.ApplyGeminiCLIThinkingConfig(body, budget, nil)
-					budgetVal := gjson.GetBytes(result, "request.generationConfig.thinkingConfig.thinkingBudget")
+				body := []byte(`{"request":{"contents":[]}}`)
 
-					expectedBudget := tt.expectedValue.(int)
-					if !budgetVal.Exists() {
-						t.Errorf("Case #%d: expected thinkingBudget in result", tt.id)
-					} else if int(budgetVal.Int()) != expectedBudget {
-						t.Errorf("Case #%d: thinkingBudget = %d, want %d", tt.id, int(budgetVal.Int()), expectedBudget)
-					}
+				// Build metadata simulating real OAuth flow:
+				// - requestedModel (alias like "gp") is stored in model_mapping_original_model
+				// - upstreamModel is passed as the model parameter
+				testMetadata := make(map[string]any)
+				if tt.isAlias {
+					// Real flow: applyOAuthModelMapping stores requestedModel (the alias)
+					testMetadata[util.ModelMappingOriginalModelMetadataKey] = requestedModel
+				}
+				// Copy parsed metadata (thinking_budget, reasoning_effort, etc.)
+				for k, v := range metadata {
+					testMetadata[k] = v
+				}
+
+				// Use the exported ApplyThinkingMetadataCLI which includes the fallback logic
+				result := executor.ApplyThinkingMetadataCLI(body, testMetadata, tt.upstreamModel)
+				budgetVal := gjson.GetBytes(result, "request.generationConfig.thinkingConfig.thinkingBudget")
+
+				expectedBudget := tt.expectedValue.(int)
+				if !budgetVal.Exists() {
+					t.Errorf("Case #%d: expected thinkingBudget in result", tt.id)
+				} else if int(budgetVal.Int()) != expectedBudget {
+					t.Errorf("Case #%d: thinkingBudget = %d, want %d", tt.id, int(budgetVal.Int()), expectedBudget)
 				}
 			}
 		})
