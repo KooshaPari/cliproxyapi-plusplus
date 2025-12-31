@@ -288,49 +288,73 @@ func ApplyDefaultThinkingIfNeeded(model string, body []byte) []byte {
 
 // ApplyGemini3ThinkingLevelFromMetadata applies thinkingLevel from metadata for Gemini 3 models.
 // For standard Gemini API format (generationConfig.thinkingConfig path).
-// This handles the case where reasoning_effort is specified via model name suffix (e.g., model(minimal)).
+// This handles the case where reasoning_effort is specified via model name suffix (e.g., model(minimal))
+// or numeric budget suffix (e.g., model(1000)) which gets converted to a thinkingLevel.
 func ApplyGemini3ThinkingLevelFromMetadata(model string, metadata map[string]any, body []byte) []byte {
 	// Use the alias from metadata if available for model type detection
 	lookupModel := ResolveOriginalModel(model, metadata)
 	if !IsGemini3Model(lookupModel) && !IsGemini3Model(model) {
 		return body
 	}
-	effort, ok := ReasoningEffortFromMetadata(metadata)
-	if !ok || effort == "" {
-		return body
-	}
-	// Validate and apply the thinkingLevel using the model that matches Gemini 3 pattern
+
+	// Determine which model to use for validation
 	checkModel := model
 	if IsGemini3Model(lookupModel) {
 		checkModel = lookupModel
 	}
-	if level, valid := ValidateGemini3ThinkingLevel(checkModel, effort); valid {
-		return ApplyGeminiThinkingLevel(body, level, nil)
+
+	// First try to get effort string from metadata
+	effort, ok := ReasoningEffortFromMetadata(metadata)
+	if ok && effort != "" {
+		if level, valid := ValidateGemini3ThinkingLevel(checkModel, effort); valid {
+			return ApplyGeminiThinkingLevel(body, level, nil)
+		}
 	}
+
+	// Fallback: check for numeric budget and convert to thinkingLevel
+	budget, _, _, matched := ThinkingFromMetadata(metadata)
+	if matched && budget != nil {
+		if level, valid := ThinkingBudgetToGemini3Level(checkModel, *budget); valid {
+			return ApplyGeminiThinkingLevel(body, level, nil)
+		}
+	}
+
 	return body
 }
 
 // ApplyGemini3ThinkingLevelFromMetadataCLI applies thinkingLevel from metadata for Gemini 3 models.
 // For Gemini CLI API format (request.generationConfig.thinkingConfig path).
-// This handles the case where reasoning_effort is specified via model name suffix (e.g., model(minimal)).
+// This handles the case where reasoning_effort is specified via model name suffix (e.g., model(minimal))
+// or numeric budget suffix (e.g., model(1000)) which gets converted to a thinkingLevel.
 func ApplyGemini3ThinkingLevelFromMetadataCLI(model string, metadata map[string]any, body []byte) []byte {
 	// Use the alias from metadata if available for model type detection
 	lookupModel := ResolveOriginalModel(model, metadata)
 	if !IsGemini3Model(lookupModel) && !IsGemini3Model(model) {
 		return body
 	}
-	effort, ok := ReasoningEffortFromMetadata(metadata)
-	if !ok || effort == "" {
-		return body
-	}
-	// Validate and apply the thinkingLevel using the model that matches Gemini 3 pattern
+
+	// Determine which model to use for validation
 	checkModel := model
 	if IsGemini3Model(lookupModel) {
 		checkModel = lookupModel
 	}
-	if level, valid := ValidateGemini3ThinkingLevel(checkModel, effort); valid {
-		return ApplyGeminiCLIThinkingLevel(body, level, nil)
+
+	// First try to get effort string from metadata
+	effort, ok := ReasoningEffortFromMetadata(metadata)
+	if ok && effort != "" {
+		if level, valid := ValidateGemini3ThinkingLevel(checkModel, effort); valid {
+			return ApplyGeminiCLIThinkingLevel(body, level, nil)
+		}
 	}
+
+	// Fallback: check for numeric budget and convert to thinkingLevel
+	budget, _, _, matched := ThinkingFromMetadata(metadata)
+	if matched && budget != nil {
+		if level, valid := ThinkingBudgetToGemini3Level(checkModel, *budget); valid {
+			return ApplyGeminiCLIThinkingLevel(body, level, nil)
+		}
+	}
+
 	return body
 }
 
