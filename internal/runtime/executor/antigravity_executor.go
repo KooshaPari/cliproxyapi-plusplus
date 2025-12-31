@@ -98,7 +98,7 @@ func (e *AntigravityExecutor) Execute(ctx context.Context, auth *cliproxyauth.Au
 
 	translated = applyThinkingMetadataCLI(translated, req.Metadata, req.Model)
 	translated = util.ApplyGemini3ThinkingLevelFromMetadataCLI(req.Model, req.Metadata, translated)
-	translated = util.ApplyDefaultThinkingIfNeededCLI(req.Model, translated)
+	translated = util.ApplyDefaultThinkingIfNeededCLI(req.Model, req.Metadata, translated)
 	translated = normalizeAntigravityThinking(req.Model, translated, isClaude)
 	translated = applyPayloadConfigWithRoot(e.cfg, req.Model, "antigravity", "request", translated)
 
@@ -193,7 +193,7 @@ func (e *AntigravityExecutor) executeClaudeNonStream(ctx context.Context, auth *
 
 	translated = applyThinkingMetadataCLI(translated, req.Metadata, req.Model)
 	translated = util.ApplyGemini3ThinkingLevelFromMetadataCLI(req.Model, req.Metadata, translated)
-	translated = util.ApplyDefaultThinkingIfNeededCLI(req.Model, translated)
+	translated = util.ApplyDefaultThinkingIfNeededCLI(req.Model, req.Metadata, translated)
 	translated = normalizeAntigravityThinking(req.Model, translated, true)
 	translated = applyPayloadConfigWithRoot(e.cfg, req.Model, "antigravity", "request", translated)
 
@@ -529,7 +529,7 @@ func (e *AntigravityExecutor) ExecuteStream(ctx context.Context, auth *cliproxya
 
 	translated = applyThinkingMetadataCLI(translated, req.Metadata, req.Model)
 	translated = util.ApplyGemini3ThinkingLevelFromMetadataCLI(req.Model, req.Metadata, translated)
-	translated = util.ApplyDefaultThinkingIfNeededCLI(req.Model, translated)
+	translated = util.ApplyDefaultThinkingIfNeededCLI(req.Model, req.Metadata, translated)
 	translated = normalizeAntigravityThinking(req.Model, translated, isClaude)
 	translated = applyPayloadConfigWithRoot(e.cfg, req.Model, "antigravity", "request", translated)
 
@@ -698,7 +698,7 @@ func (e *AntigravityExecutor) CountTokens(ctx context.Context, auth *cliproxyaut
 	for idx, baseURL := range baseURLs {
 		payload := sdktranslator.TranslateRequest(from, to, req.Model, bytes.Clone(req.Payload), false)
 		payload = applyThinkingMetadataCLI(payload, req.Metadata, req.Model)
-		payload = util.ApplyDefaultThinkingIfNeededCLI(req.Model, payload)
+		payload = util.ApplyDefaultThinkingIfNeededCLI(req.Model, req.Metadata, payload)
 		payload = normalizeAntigravityThinking(req.Model, payload, isClaude)
 		payload = deleteJSONField(payload, "project")
 		payload = deleteJSONField(payload, "model")

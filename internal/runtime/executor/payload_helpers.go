@@ -14,15 +14,18 @@ import (
 // ApplyThinkingMetadata applies thinking config from model suffix metadata (e.g., (high), (8192))
 // for standard Gemini format payloads. It normalizes the budget when the model supports thinking.
 func ApplyThinkingMetadata(payload []byte, metadata map[string]any, model string) []byte {
-	budgetOverride, includeOverride, ok := util.ResolveThinkingConfigFromMetadata(model, metadata)
+	// Use the alias from metadata if available, as it's registered in the global registry
+	// with thinking metadata; the upstream model name may not be registered.
+	lookupModel := util.ResolveOriginalModel(model, metadata)
+	budgetOverride, includeOverride, ok := util.ResolveThinkingConfigFromMetadata(lookupModel, metadata)
 	if !ok || (budgetOverride == nil && includeOverride == nil) {
 		return payload
 	}
-	if !util.ModelSupportsThinking(model) {
+	if !util.ModelSupportsThinking(lookupModel) {
 		return payload
 	}
 	if budgetOverride != nil {
-		norm := util.NormalizeThinkingBudget(model, *budgetOverride)
+		norm := util.NormalizeThinkingBudget(lookupModel, *budgetOverride)
 		budgetOverride = &norm
 	}
 	return util.ApplyGeminiThinkingConfig(payload, budgetOverride, includeOverride)
@@ -31,15 +34,18 @@ func ApplyThinkingMetadata(payload []byte, metadata map[string]any, model string
 // applyThinkingMetadataCLI applies thinking config from model suffix metadata (e.g., (high), (8192))
 // for Gemini CLI format payloads (nested under "request"). It normalizes the budget when the model supports thinking.
 func applyThinkingMetadataCLI(payload []byte, metadata map[string]any, model string) []byte {
-	budgetOverride, includeOverride, ok := util.ResolveThinkingConfigFromMetadata(model, metadata)
+	// Use the alias from metadata if available, as it's registered in the global registry
+	// with thinking metadata; the upstream model name may not be registered.
+	lookupModel := util.ResolveOriginalModel(model, metadata)
+	budgetOverride, includeOverride, ok := util.ResolveThinkingConfigFromMetadata(lookupModel, metadata)
 	if !ok || (budgetOverride == nil && includeOverride == nil) {
 		return payload
 	}
-	if !util.ModelSupportsThinking(model) {
+	if !util.ModelSupportsThinking(lookupModel) {
 		return payload
 	}
 	if budgetOverride != nil {
-		norm := util.NormalizeThinkingBudget(model, *budgetOverride)
+		norm := util.NormalizeThinkingBudget(lookupModel, *budgetOverride)
 		budgetOverride = &norm
 	}
 	return util.ApplyGeminiCLIThinkingConfig(payload, budgetOverride, includeOverride)
