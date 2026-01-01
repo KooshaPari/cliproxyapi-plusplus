@@ -504,6 +504,7 @@ func applyIFlowThinkingConfig(body []byte) []byte {
 
 	// Remove reasoning_effort as we'll convert to model-specific format
 	body, _ = sjson.DeleteBytes(body, "reasoning_effort")
+	body, _ = sjson.DeleteBytes(body, "thinking")
 
 	// GLM-4.6/4.7: Use chat_template_kwargs
 	if strings.HasPrefix(model, "glm-4") {
