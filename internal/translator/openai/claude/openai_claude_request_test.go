@@ -317,8 +317,8 @@ func TestConvertClaudeRequestToOpenAI_ToolResultOrderAndContent(t *testing.T) {
 	resultJSON := gjson.ParseBytes(result)
 	messages := resultJSON.Get("messages").Array()
 
-	// New behavior: user text is combined, tool_result emitted after user message
-	// Expect: system + assistant(tool_calls) + user(before+after) + tool(result)
+	// OpenAI requires: tool messages MUST immediately follow assistant(tool_calls).
+	// Correct order: system + assistant(tool_calls) + tool(result) + user(before+after)
 	if len(messages) != 4 {
 		t.Fatalf("Expected 4 messages, got %d. Messages: %s", len(messages), resultJSON.Get("messages").Raw)
 	}
@@ -331,25 +331,27 @@ func TestConvertClaudeRequestToOpenAI_ToolResultOrderAndContent(t *testing.T) {
 		t.Fatalf("Expected messages[1] to be assistant tool_calls, got %s: %s", messages[1].Get("role").String(), messages[1].Raw)
 	}
 
-	if messages[2].Get("role").String() != "user" {
-		t.Fatalf("Expected messages[2] to be user, got %s", messages[2].Get("role").String())
+	// tool message MUST immediately follow assistant(tool_calls) per OpenAI spec
+	if messages[2].Get("role").String() != "tool" {
+		t.Fatalf("Expected messages[2] to be tool (must follow tool_calls), got %s", messages[2].Get("role").String())
 	}
-	// User message should contain both "before" and "after" text
-	if got := messages[2].Get("content.0.text").String(); got != "before" {
-		t.Fatalf("Expected user text[0] %q, got %q", "before", got)
-	}
-	if got := messages[2].Get("content.1.text").String(); got != "after" {
-		t.Fatalf("Expected user text[1] %q, got %q", "after", got)
-	}
-
-	if messages[3].Get("role").String() != "tool" {
-		t.Fatalf("Expected messages[3] to be tool, got %s", messages[3].Get("role").String())
-	}
-	if got := messages[3].Get("tool_call_id").String(); got != "call_1" {
+	if got := messages[2].Get("tool_call_id").String(); got != "call_1" {
 		t.Fatalf("Expected tool_call_id %q, got %q", "call_1", got)
 	}
-	if got := messages[3].Get("content").String(); got != "tool ok" {
+	if got := messages[2].Get("content").String(); got != "tool ok" {
 		t.Fatalf("Expected tool content %q, got %q", "tool ok", got)
+	}
+
+	// User message comes after tool message
+	if messages[3].Get("role").String() != "user" {
+		t.Fatalf("Expected messages[3] to be user, got %s", messages[3].Get("role").String())
+	}
+	// User message should contain both "before" and "after" text
+	if got := messages[3].Get("content.0.text").String(); got != "before" {
+		t.Fatalf("Expected user text[0] %q, got %q", "before", got)
+	}
+	if got := messages[3].Get("content.1.text").String(); got != "after" {
+		t.Fatalf("Expected user text[1] %q, got %q", "after", got)
 	}
 }
 

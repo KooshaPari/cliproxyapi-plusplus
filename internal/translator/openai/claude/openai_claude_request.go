@@ -181,6 +181,14 @@ func ConvertClaudeRequestToOpenAI(modelName string, inputRawJSON []byte, stream 
 				hasContent := len(contentItems) > 0
 				hasReasoning := reasoningContent != ""
 				hasToolCalls := len(toolCalls) > 0
+				hasToolResults := len(toolResults) > 0
+
+				// OpenAI requires: tool messages MUST immediately follow the assistant message with tool_calls.
+				// Therefore, we emit tool_result messages FIRST (they respond to the previous assistant's tool_calls),
+				// then emit the current message's content.
+				for _, toolResultJSON := range toolResults {
+					messagesJSON, _ = sjson.Set(messagesJSON, "-1", gjson.Parse(toolResultJSON).Value())
+				}
 
 				// For assistant messages: emit a single unified message with content, tool_calls, and reasoning_content
 				// This avoids splitting into multiple assistant messages which breaks OpenAI tool-call adjacency
@@ -214,6 +222,7 @@ func ConvertClaudeRequestToOpenAI(modelName string, inputRawJSON []byte, stream 
 					}
 				} else {
 					// For non-assistant roles: emit content message if we have content
+					// If the message only contains tool_results (no text/image), we still processed them above
 					if hasContent {
 						msgJSON := `{"role":""}`
 						msgJSON, _ = sjson.Set(msgJSON, "role", role)
@@ -225,12 +234,9 @@ func ConvertClaudeRequestToOpenAI(modelName string, inputRawJSON []byte, stream 
 						msgJSON, _ = sjson.SetRaw(msgJSON, "content", contentArrayJSON)
 
 						messagesJSON, _ = sjson.Set(messagesJSON, "-1", gjson.Parse(msgJSON).Value())
+					} else if hasToolResults && !hasContent {
+						// tool_results already emitted above, no additional user message needed
 					}
-				}
-
-				// Emit tool_result messages after the main message (ensures proper OpenAI ordering)
-				for _, toolResultJSON := range toolResults {
-					messagesJSON, _ = sjson.Set(messagesJSON, "-1", gjson.Parse(toolResultJSON).Value())
 				}
 
 			} else if contentResult.Exists() && contentResult.Type == gjson.String {
