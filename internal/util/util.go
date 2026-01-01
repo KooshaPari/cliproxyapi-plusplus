@@ -25,7 +25,7 @@ func SanitizeFunctionName(name string) string {
 	if name == "" {
 		return ""
 	}
-	
+
 	// Replace invalid characters with underscore
 	sanitized := functionNameSanitizer.ReplaceAllString(name, "_")
 
@@ -36,7 +36,7 @@ func SanitizeFunctionName(name string) string {
 		if !((first >= 'a' && first <= 'z') || (first >= 'A' && first <= 'Z') || first == '_') {
 			// If it starts with an allowed character but not allowed at the beginning (digit, dot, colon, dash),
 			// we must prepend an underscore.
-			
+
 			// To stay within the 64-character limit while prepending, we must truncate first.
 			if len(sanitized) >= 64 {
 				sanitized = sanitized[:63]
