@@ -252,8 +252,8 @@ func ThinkingBudgetToGemini3Level(model string, budget int) (string, bool) {
 // modelsWithDefaultThinking lists models that should have thinking enabled by default
 // when no explicit thinkingConfig is provided.
 var modelsWithDefaultThinking = map[string]bool{
-	"gemini-3-pro-preview":       true,
-	"gemini-3-pro-image-preview": true,
+	// "gemini-3-pro-preview":       true,
+	// "gemini-3-pro-image-preview": true,
 	// "gemini-3-flash-preview":     true,
 }
 
