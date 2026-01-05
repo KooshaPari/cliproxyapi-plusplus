@@ -1377,9 +1377,11 @@ func (h *Handler) RequestCodexToken(c *gin.Context) {
 		claims, _ := codex.ParseJWTToken(tokenResp.IDToken)
 		email := ""
 		accountID := ""
+		planType := ""
 		if claims != nil {
 			email = claims.GetUserEmail()
 			accountID = claims.GetAccountID()
+			planType = strings.TrimSpace(claims.CodexAuthInfo.ChatgptPlanType)
 		}
 		// Build bundle compatible with existing storage
 		bundle := &codex.CodexAuthBundle{
@@ -1396,10 +1398,11 @@ func (h *Handler) RequestCodexToken(c *gin.Context) {
 
 		// Create token storage and persist
 		tokenStorage := openaiAuth.CreateTokenStorage(bundle)
+		fileName := codex.CredentialFileName(tokenStorage.Email, planType, true)
 		record := &coreauth.Auth{
-			ID:       fmt.Sprintf("codex-%s.json", tokenStorage.Email),
+			ID:       fileName,
 			Provider: "codex",
-			FileName: fmt.Sprintf("codex-%s.json", tokenStorage.Email),
+			FileName: fileName,
 			Storage:  tokenStorage,
 			Metadata: map[string]any{
 				"email":      tokenStorage.Email,
