@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"strings"
 	"unicode"
+
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 // CredentialFileName returns the filename used to persist Codex OAuth credentials.
@@ -48,8 +51,5 @@ func titleToken(token string) string {
 	if token == "" {
 		return ""
 	}
-	lower := strings.ToLower(token)
-	runes := []rune(lower)
-	runes[0] = unicode.ToUpper(runes[0])
-	return string(runes)
+	return cases.Title(language.English).String(token)
 }
