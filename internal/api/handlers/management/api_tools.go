@@ -356,9 +356,6 @@ func (h *Handler) refreshAntigravityOAuthAccessToken(ctx context.Context, auth *
 
 	refreshToken := stringValue(metadata, "refresh_token")
 	if refreshToken == "" {
-		if current != "" {
-			return current, nil
-		}
 		return "", fmt.Errorf("antigravity refresh token missing")
 	}
 
