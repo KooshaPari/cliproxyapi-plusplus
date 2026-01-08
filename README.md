@@ -128,7 +128,7 @@ Windows-native CLIProxyAPI fork with TUI, system tray, and multi-provider OAuth 
 
 ### [Claude Proxy VSCode](https://github.com/uzhao/claude-proxy-vscode)
 
-VSCode extension 'Claude Proxy' for quick switching between Claude Code models, featuring integrated CLIProxyAPI as its backend with automatic background lifecycle management.
+VSCode extension for quick switching between Claude Code models, featuring integrated CLIProxyAPI as its backend with automatic background lifecycle management.
 
 > [!NOTE]  
 > If you developed a project based on CLIProxyAPI, please open a PR to add it to this list.
