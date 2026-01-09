@@ -83,12 +83,14 @@ func (e *ClaudeExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, r
 	// Extract betas from body and convert to header
 	var extraBetas []string
 	extraBetas, body = extractAndRemoveBetas(body)
+	bodyForTranslation := body
+	bodyForUpstream := body
 	if isClaudeOAuthToken(apiKey) {
-		body = applyClaudeToolPrefix(body, claudeToolPrefix)
+		bodyForUpstream = applyClaudeToolPrefix(body, claudeToolPrefix)
 	}
 
 	url := fmt.Sprintf("%s/v1/messages?beta=true", baseURL)
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(bodyForUpstream))
 	if err != nil {
 		return resp, err
 	}
@@ -103,7 +105,7 @@ func (e *ClaudeExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, r
 		URL:       url,
 		Method:    http.MethodPost,
 		Headers:   httpReq.Header.Clone(),
-		Body:      body,
+		Body:      bodyForUpstream,
 		Provider:  e.Identifier(),
 		AuthID:    authID,
 		AuthLabel: authLabel,
@@ -161,7 +163,16 @@ func (e *ClaudeExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, r
 		data = stripClaudeToolPrefixFromResponse(data, claudeToolPrefix)
 	}
 	var param any
-	out := sdktranslator.TranslateNonStream(ctx, to, from, req.Model, bytes.Clone(opts.OriginalRequest), body, data, &param)
+	out := sdktranslator.TranslateNonStream(
+		ctx,
+		to,
+		from,
+		req.Model,
+		bytes.Clone(opts.OriginalRequest),
+		bodyForTranslation,
+		data,
+		&param,
+	)
 	resp = cliproxyexecutor.Response{Payload: []byte(out)}
 	return resp, nil
 }
@@ -201,12 +212,14 @@ func (e *ClaudeExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.A
 	// Extract betas from body and convert to header
 	var extraBetas []string
 	extraBetas, body = extractAndRemoveBetas(body)
+	bodyForTranslation := body
+	bodyForUpstream := body
 	if isClaudeOAuthToken(apiKey) {
-		body = applyClaudeToolPrefix(body, claudeToolPrefix)
+		bodyForUpstream = applyClaudeToolPrefix(body, claudeToolPrefix)
 	}
 
 	url := fmt.Sprintf("%s/v1/messages?beta=true", baseURL)
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(bodyForUpstream))
 	if err != nil {
 		return nil, err
 	}
@@ -221,7 +234,7 @@ func (e *ClaudeExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.A
 		URL:       url,
 		Method:    http.MethodPost,
 		Headers:   httpReq.Header.Clone(),
-		Body:      body,
+		Body:      bodyForUpstream,
 		Provider:  e.Identifier(),
 		AuthID:    authID,
 		AuthLabel: authLabel,
@@ -304,7 +317,16 @@ func (e *ClaudeExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.A
 			if isClaudeOAuthToken(apiKey) {
 				line = stripClaudeToolPrefixFromStreamLine(line, claudeToolPrefix)
 			}
-			chunks := sdktranslator.TranslateStream(ctx, to, from, req.Model, bytes.Clone(opts.OriginalRequest), body, bytes.Clone(line), &param)
+			chunks := sdktranslator.TranslateStream(
+				ctx,
+				to,
+				from,
+				req.Model,
+				bytes.Clone(opts.OriginalRequest),
+				bodyForTranslation,
+				bytes.Clone(line),
+				&param,
+			)
 			for i := range chunks {
 				out <- cliproxyexecutor.StreamChunk{Payload: []byte(chunks[i])}
 			}
