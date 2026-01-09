@@ -457,14 +457,14 @@ func (e *CodexExecutor) cacheHelper(ctx context.Context, from sdktranslator.Form
 	if from == "claude" {
 		userIDResult := gjson.GetBytes(req.Payload, "metadata.user_id")
 		if userIDResult.Exists() {
-			var hasKey bool
 			key := fmt.Sprintf("%s-%s", req.Model, userIDResult.String())
-			if cache, hasKey = codexCacheMap[key]; !hasKey || cache.Expire.Before(time.Now()) {
+			var ok bool
+			if cache, ok = getCodexCache(key); !ok {
 				cache = codexCache{
 					ID:     uuid.New().String(),
 					Expire: time.Now().Add(1 * time.Hour),
 				}
-				codexCacheMap[key] = cache
+				setCodexCache(key, cache)
 			}
 		}
 	} else if from == "openai-response" {
