@@ -87,12 +87,16 @@ func (e *CodexExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, re
 
 	from := opts.SourceFormat
 	to := sdktranslator.FromString("codex")
+	userAgent := codexUserAgent(ctx)
 	originalPayload := bytes.Clone(req.Payload)
 	if len(opts.OriginalRequest) > 0 {
 		originalPayload = bytes.Clone(opts.OriginalRequest)
 	}
+	originalPayload = misc.InjectCodexUserAgent(originalPayload, userAgent)
 	originalTranslated := sdktranslator.TranslateRequest(from, to, model, originalPayload, false)
-	body := sdktranslator.TranslateRequest(from, to, model, bytes.Clone(req.Payload), false)
+	body := misc.InjectCodexUserAgent(bytes.Clone(req.Payload), userAgent)
+	body = sdktranslator.TranslateRequest(from, to, model, body, false)
+	body = misc.StripCodexUserAgent(body)
 	body = ApplyReasoningEffortMetadata(body, req.Metadata, model, "reasoning.effort", false)
 	body = NormalizeThinkingConfig(body, model, false)
 	if errValidate := ValidateThinkingConfig(body, model); errValidate != nil {
@@ -192,12 +196,16 @@ func (e *CodexExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.Au
 
 	from := opts.SourceFormat
 	to := sdktranslator.FromString("codex")
+	userAgent := codexUserAgent(ctx)
 	originalPayload := bytes.Clone(req.Payload)
 	if len(opts.OriginalRequest) > 0 {
 		originalPayload = bytes.Clone(opts.OriginalRequest)
 	}
+	originalPayload = misc.InjectCodexUserAgent(originalPayload, userAgent)
 	originalTranslated := sdktranslator.TranslateRequest(from, to, model, originalPayload, true)
-	body := sdktranslator.TranslateRequest(from, to, model, bytes.Clone(req.Payload), true)
+	body := misc.InjectCodexUserAgent(bytes.Clone(req.Payload), userAgent)
+	body = sdktranslator.TranslateRequest(from, to, model, body, true)
+	body = misc.StripCodexUserAgent(body)
 
 	body = ApplyReasoningEffortMetadata(body, req.Metadata, model, "reasoning.effort", false)
 	body = NormalizeThinkingConfig(body, model, false)
@@ -300,7 +308,10 @@ func (e *CodexExecutor) CountTokens(ctx context.Context, auth *cliproxyauth.Auth
 
 	from := opts.SourceFormat
 	to := sdktranslator.FromString("codex")
-	body := sdktranslator.TranslateRequest(from, to, model, bytes.Clone(req.Payload), false)
+	userAgent := codexUserAgent(ctx)
+	body := misc.InjectCodexUserAgent(bytes.Clone(req.Payload), userAgent)
+	body = sdktranslator.TranslateRequest(from, to, model, body, false)
+	body = misc.StripCodexUserAgent(body)
 
 	body = ApplyReasoningEffortMetadata(body, req.Metadata, model, "reasoning.effort", false)
 	body, _ = sjson.SetBytes(body, "model", model)
@@ -551,6 +562,16 @@ func applyCodexHeaders(r *http.Request, auth *cliproxyauth.Auth, token string) {
 		attrs = auth.Attributes
 	}
 	util.ApplyCustomHeadersFromAttrs(r, attrs)
+}
+
+func codexUserAgent(ctx context.Context) string {
+	if ctx == nil {
+		return ""
+	}
+	if ginCtx, ok := ctx.Value("gin").(*gin.Context); ok && ginCtx != nil && ginCtx.Request != nil {
+		return strings.TrimSpace(ginCtx.Request.UserAgent())
+	}
+	return ""
 }
 
 func codexCreds(a *cliproxyauth.Auth) (apiKey, baseURL string) {
