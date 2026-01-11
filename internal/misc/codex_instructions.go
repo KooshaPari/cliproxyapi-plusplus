@@ -73,6 +73,10 @@ func useOpenCodeInstructions(userAgent string) bool {
 	return strings.Contains(strings.ToLower(userAgent), userAgentOpenAISDK)
 }
 
+func IsOpenCodeUserAgent(userAgent string) bool {
+	return useOpenCodeInstructions(userAgent)
+}
+
 func codexInstructionsForCodex(modelName, systemInstructions string) (bool, string) {
 	entries, _ := codexInstructionsDir.ReadDir("codex_instructions")
 
@@ -120,7 +124,7 @@ func codexInstructionsForCodex(modelName, systemInstructions string) (bool, stri
 }
 
 func CodexInstructionsForModel(modelName, systemInstructions, userAgent string) (bool, string) {
-	if useOpenCodeInstructions(userAgent) {
+	if IsOpenCodeUserAgent(userAgent) {
 		return codexInstructionsForOpenCode(systemInstructions)
 	}
 	return codexInstructionsForCodex(modelName, systemInstructions)
