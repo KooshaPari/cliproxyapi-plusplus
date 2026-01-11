@@ -19,8 +19,10 @@ func ConvertCodexResponseToOpenAIResponses(ctx context.Context, modelName string
 		if typeResult := gjson.GetBytes(rawJSON, "type"); typeResult.Exists() {
 			typeStr := typeResult.String()
 			if typeStr == "response.created" || typeStr == "response.in_progress" || typeStr == "response.completed" {
-				instructions := selectInstructions(originalRequestRawJSON, requestRawJSON)
-				rawJSON, _ = sjson.SetBytes(rawJSON, "response.instructions", instructions)
+				if gjson.GetBytes(rawJSON, "response.instructions").Exists() {
+					instructions := selectInstructions(originalRequestRawJSON, requestRawJSON)
+					rawJSON, _ = sjson.SetBytes(rawJSON, "response.instructions", instructions)
+				}
 			}
 		}
 		out := fmt.Sprintf("data: %s", string(rawJSON))
@@ -39,7 +41,9 @@ func ConvertCodexResponseToOpenAIResponsesNonStream(_ context.Context, modelName
 	}
 	responseResult := rootResult.Get("response")
 	template := responseResult.Raw
-	template, _ = sjson.Set(template, "instructions", selectInstructions(originalRequestRawJSON, requestRawJSON))
+	if responseResult.Get("instructions").Exists() {
+		template, _ = sjson.Set(template, "instructions", selectInstructions(originalRequestRawJSON, requestRawJSON))
+	}
 	return template
 }
 
