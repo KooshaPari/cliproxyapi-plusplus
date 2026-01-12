@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -48,6 +49,7 @@ const idempotencyKeyMetadataKey = "idempotency_key"
 const (
 	defaultStreamingKeepAliveSeconds = 0
 	defaultStreamingBootstrapRetries = 0
+	nonStreamingKeepAliveInterval    = 5 * time.Second
 )
 
 // BuildErrorResponseBody builds an OpenAI-compatible JSON error response body.
@@ -290,6 +292,52 @@ func (h *BaseAPIHandler) GetContextWithCancel(handler interfaces.APIHandler, c *
 		}
 
 		cancel()
+	}
+}
+
+// StartNonStreamingKeepAlive emits blank lines every 5 seconds while waiting for a non-streaming response.
+// It returns a stop function that must be called before writing the final response.
+func (h *BaseAPIHandler) StartNonStreamingKeepAlive(c *gin.Context, ctx context.Context) func() {
+	if h == nil || h.Cfg == nil || !h.Cfg.NonStreamKeepAlive {
+		return func() {}
+	}
+	if c == nil {
+		return func() {}
+	}
+	flusher, ok := c.Writer.(http.Flusher)
+	if !ok {
+		return func() {}
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	stopChan := make(chan struct{})
+	var stopOnce sync.Once
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		ticker := time.NewTicker(nonStreamingKeepAliveInterval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-stopChan:
+				return
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				_, _ = c.Writer.Write([]byte("\n"))
+				flusher.Flush()
+			}
+		}
+	}()
+
+	return func() {
+		stopOnce.Do(func() {
+			close(stopChan)
+		})
+		wg.Wait()
 	}
 }
 
