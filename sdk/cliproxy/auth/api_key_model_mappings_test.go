@@ -149,52 +149,31 @@ func TestApplyAPIKeyModelMapping(t *testing.T) {
 	_, _ = mgr.Register(ctx, apiKeyAuth)
 
 	tests := []struct {
-		name          string
-		auth          *Auth
-		inputModel    string
-		wantModel     string
-		wantOriginal  string
-		expectMapping bool
+		name       string
+		auth       *Auth
+		inputModel string
+		wantModel  string
 	}{
 		{
-			name:          "api_key auth with alias",
-			auth:          apiKeyAuth,
-			inputModel:    "g25p(8192)",
-			wantModel:     "gemini-2.5-pro-exp-03-25(8192)",
-			wantOriginal:  "g25p(8192)",
-			expectMapping: true,
+			name:       "api_key auth with alias",
+			auth:       apiKeyAuth,
+			inputModel: "g25p(8192)",
+			wantModel:  "gemini-2.5-pro-exp-03-25(8192)",
 		},
 		{
-			name:          "oauth auth passthrough",
-			auth:          oauthAuth,
-			inputModel:    "some-model",
-			wantModel:     "some-model",
-			expectMapping: false,
+			name:       "oauth auth passthrough",
+			auth:       oauthAuth,
+			inputModel: "some-model",
+			wantModel:  "some-model",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			metadata := map[string]any{"existing": "value"}
-			resolvedModel, resultMeta := mgr.applyAPIKeyModelMapping(tt.auth, tt.inputModel, metadata)
+			resolvedModel := mgr.applyAPIKeyModelMapping(tt.auth, tt.inputModel)
 
 			if resolvedModel != tt.wantModel {
 				t.Errorf("model = %q, want %q", resolvedModel, tt.wantModel)
-			}
-
-			if resultMeta["existing"] != "value" {
-				t.Error("existing metadata not preserved")
-			}
-
-			original, hasOriginal := resultMeta["model_mapping_original_model"].(string)
-			if tt.expectMapping {
-				if !hasOriginal || original != tt.wantOriginal {
-					t.Errorf("original model = %q, want %q", original, tt.wantOriginal)
-				}
-			} else {
-				if hasOriginal {
-					t.Error("should not set model_mapping_original_model for non-api_key auth")
-				}
 			}
 		})
 	}

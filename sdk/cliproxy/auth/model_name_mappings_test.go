@@ -169,19 +169,9 @@ func TestApplyOAuthModelMapping_SuffixPreservation(t *testing.T) {
 	mgr.SetOAuthModelMappings(mappings)
 
 	auth := &Auth{ID: "test-auth-id", Provider: "gemini-cli"}
-	metadata := map[string]any{"existing": "value"}
 
-	resolvedModel, resultMeta := mgr.applyOAuthModelMapping(auth, "gemini-2.5-pro(8192)", metadata)
+	resolvedModel := mgr.applyOAuthModelMapping(auth, "gemini-2.5-pro(8192)")
 	if resolvedModel != "gemini-2.5-pro-exp-03-25(8192)" {
 		t.Errorf("applyOAuthModelMapping() model = %q, want %q", resolvedModel, "gemini-2.5-pro-exp-03-25(8192)")
-	}
-
-	originalModel, ok := resultMeta["model_mapping_original_model"].(string)
-	if !ok || originalModel != "gemini-2.5-pro(8192)" {
-		t.Errorf("applyOAuthModelMapping() metadata[model_mapping_original_model] = %v, want %q", resultMeta["model_mapping_original_model"], "gemini-2.5-pro(8192)")
-	}
-
-	if resultMeta["existing"] != "value" {
-		t.Errorf("applyOAuthModelMapping() metadata[existing] = %v, want %q", resultMeta["existing"], "value")
 	}
 }

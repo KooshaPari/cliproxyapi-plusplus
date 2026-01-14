@@ -752,9 +752,9 @@ func (m *Manager) executeWithProvider(ctx context.Context, provider string, req 
 			execCtx = context.WithValue(execCtx, "cliproxy.roundtripper", rt)
 		}
 		execReq := req
-		execReq.Model, execReq.Metadata = rewriteModelForAuth(routeModel, req.Metadata, auth)
-		execReq.Model, execReq.Metadata = m.applyOAuthModelMapping(auth, execReq.Model, execReq.Metadata)
-		execReq.Model, execReq.Metadata = m.applyAPIKeyModelMapping(auth, execReq.Model, execReq.Metadata)
+		execReq.Model = rewriteModelForAuth(routeModel, auth)
+		execReq.Model = m.applyOAuthModelMapping(auth, execReq.Model)
+		execReq.Model = m.applyAPIKeyModelMapping(auth, execReq.Model)
 		resp, errExec := executor.Execute(execCtx, auth, execReq, opts)
 		result := Result{AuthID: auth.ID, Provider: provider, Model: routeModel, Success: errExec == nil}
 		if errExec != nil {
@@ -801,9 +801,9 @@ func (m *Manager) executeCountWithProvider(ctx context.Context, provider string,
 			execCtx = context.WithValue(execCtx, "cliproxy.roundtripper", rt)
 		}
 		execReq := req
-		execReq.Model, execReq.Metadata = rewriteModelForAuth(routeModel, req.Metadata, auth)
-		execReq.Model, execReq.Metadata = m.applyOAuthModelMapping(auth, execReq.Model, execReq.Metadata)
-		execReq.Model, execReq.Metadata = m.applyAPIKeyModelMapping(auth, execReq.Model, execReq.Metadata)
+		execReq.Model = rewriteModelForAuth(routeModel, auth)
+		execReq.Model = m.applyOAuthModelMapping(auth, execReq.Model)
+		execReq.Model = m.applyAPIKeyModelMapping(auth, execReq.Model)
 		resp, errExec := executor.CountTokens(execCtx, auth, execReq, opts)
 		result := Result{AuthID: auth.ID, Provider: provider, Model: routeModel, Success: errExec == nil}
 		if errExec != nil {
@@ -850,9 +850,9 @@ func (m *Manager) executeStreamWithProvider(ctx context.Context, provider string
 			execCtx = context.WithValue(execCtx, "cliproxy.roundtripper", rt)
 		}
 		execReq := req
-		execReq.Model, execReq.Metadata = rewriteModelForAuth(routeModel, req.Metadata, auth)
-		execReq.Model, execReq.Metadata = m.applyOAuthModelMapping(auth, execReq.Model, execReq.Metadata)
-		execReq.Model, execReq.Metadata = m.applyAPIKeyModelMapping(auth, execReq.Model, execReq.Metadata)
+		execReq.Model = rewriteModelForAuth(routeModel, auth)
+		execReq.Model = m.applyOAuthModelMapping(auth, execReq.Model)
+		execReq.Model = m.applyAPIKeyModelMapping(auth, execReq.Model)
 		chunks, errStream := executor.ExecuteStream(execCtx, auth, execReq, opts)
 		if errStream != nil {
 			rerr := &Error{Message: errStream.Error()}
@@ -890,72 +890,39 @@ func (m *Manager) executeStreamWithProvider(ctx context.Context, provider string
 	}
 }
 
-func rewriteModelForAuth(model string, metadata map[string]any, auth *Auth) (string, map[string]any) {
+func rewriteModelForAuth(model string, auth *Auth) string {
 	if auth == nil || model == "" {
-		return model, metadata
+		return model
 	}
 	prefix := strings.TrimSpace(auth.Prefix)
 	if prefix == "" {
-		return model, metadata
+		return model
 	}
 	needle := prefix + "/"
 	if !strings.HasPrefix(model, needle) {
-		return model, metadata
+		return model
 	}
-	rewritten := strings.TrimPrefix(model, needle)
-	return rewritten, stripPrefixFromMetadata(metadata, needle)
+	return strings.TrimPrefix(model, needle)
 }
 
-func stripPrefixFromMetadata(metadata map[string]any, needle string) map[string]any {
-	if len(metadata) == 0 || needle == "" {
-		return metadata
-	}
-	keys := []string{
-		util.GeminiOriginalModelMetadataKey,
-		util.ModelMappingOriginalModelMetadataKey,
-	}
-	var out map[string]any
-	for _, key := range keys {
-		raw, ok := metadata[key]
-		if !ok {
-			continue
-		}
-		value, okStr := raw.(string)
-		if !okStr || !strings.HasPrefix(value, needle) {
-			continue
-		}
-		if out == nil {
-			out = make(map[string]any, len(metadata))
-			for k, v := range metadata {
-				out[k] = v
-			}
-		}
-		out[key] = strings.TrimPrefix(value, needle)
-	}
-	if out == nil {
-		return metadata
-	}
-	return out
-}
-
-func (m *Manager) applyAPIKeyModelMapping(auth *Auth, requestedModel string, metadata map[string]any) (string, map[string]any) {
+func (m *Manager) applyAPIKeyModelMapping(auth *Auth, requestedModel string) string {
 	if m == nil || auth == nil {
-		return requestedModel, metadata
+		return requestedModel
 	}
 
 	kind, _ := auth.AccountInfo()
 	if !strings.EqualFold(strings.TrimSpace(kind), "api_key") {
-		return requestedModel, metadata
+		return requestedModel
 	}
 
 	requestedModel = strings.TrimSpace(requestedModel)
 	if requestedModel == "" {
-		return requestedModel, metadata
+		return requestedModel
 	}
 
 	// Fast path: lookup per-auth mapping table (keyed by auth.ID).
 	if resolved := m.lookupAPIKeyUpstreamModel(auth.ID, requestedModel); resolved != "" {
-		return applyUpstreamModelOverride(requestedModel, resolved, metadata)
+		return resolved
 	}
 
 	// Slow path: scan config for the matching credential entry and resolve alias.
@@ -980,8 +947,11 @@ func (m *Manager) applyAPIKeyModelMapping(auth *Auth, requestedModel string, met
 		upstreamModel = resolveUpstreamModelForOpenAICompatAPIKey(cfg, auth, requestedModel)
 	}
 
-	// applyUpstreamModelOverride lives in model_name_mappings.go.
-	return applyUpstreamModelOverride(requestedModel, upstreamModel, metadata)
+	// Return upstream model if found, otherwise return requested model.
+	if upstreamModel != "" {
+		return upstreamModel
+	}
+	return requestedModel
 }
 
 // APIKeyConfigEntry is a generic interface for API key configurations.

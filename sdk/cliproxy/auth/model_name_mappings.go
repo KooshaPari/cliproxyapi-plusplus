@@ -5,7 +5,6 @@ import (
 
 	internalconfig "github.com/router-for-me/CLIProxyAPI/v6/internal/config"
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/thinking"
-	"github.com/router-for-me/CLIProxyAPI/v6/internal/util"
 )
 
 type modelMappingEntry interface {
@@ -71,31 +70,14 @@ func (m *Manager) SetOAuthModelMappings(mappings map[string][]internalconfig.Mod
 	m.modelNameMappings.Store(table)
 }
 
-// applyOAuthModelMapping resolves the upstream model from OAuth model mappings
-// and returns the resolved model along with updated metadata. If a mapping exists,
-// the returned model is the upstream model and metadata contains the original
-// requested model for response translation.
-func (m *Manager) applyOAuthModelMapping(auth *Auth, requestedModel string, metadata map[string]any) (string, map[string]any) {
+// applyOAuthModelMapping resolves the upstream model from OAuth model mappings.
+// If a mapping exists, the returned model is the upstream model.
+func (m *Manager) applyOAuthModelMapping(auth *Auth, requestedModel string) string {
 	upstreamModel := m.resolveOAuthUpstreamModel(auth, requestedModel)
-	return applyUpstreamModelOverride(requestedModel, upstreamModel, metadata)
-}
-
-func applyUpstreamModelOverride(requestedModel, upstreamModel string, metadata map[string]any) (string, map[string]any) {
 	if upstreamModel == "" {
-		return requestedModel, metadata
+		return requestedModel
 	}
-
-	out := make(map[string]any, 1)
-	if len(metadata) > 0 {
-		out = make(map[string]any, len(metadata)+1)
-		for k, v := range metadata {
-			out[k] = v
-		}
-	}
-
-	// Preserve the original client model string (including any suffix) for downstream.
-	out[util.ModelMappingOriginalModelMetadataKey] = requestedModel
-	return upstreamModel, out
+	return upstreamModel
 }
 
 func resolveModelAliasFromConfigModels(requestedModel string, models []modelMappingEntry) string {
