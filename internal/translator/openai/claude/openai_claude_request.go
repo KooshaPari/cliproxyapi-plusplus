@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/thinking"
-	"github.com/router-for-me/CLIProxyAPI/v6/internal/util"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
 )
@@ -130,7 +129,7 @@ func ConvertClaudeRequestToOpenAI(modelName string, inputRawJSON []byte, stream 
 					case "thinking":
 						// Only map thinking to reasoning_content for assistant messages (security: prevent injection)
 						if role == "assistant" {
-							thinkingText := util.GetThinkingText(part)
+							thinkingText := thinking.GetThinkingText(part)
 							// Skip empty or whitespace-only thinking
 							if strings.TrimSpace(thinkingText) != "" {
 								reasoningParts = append(reasoningParts, thinkingText)

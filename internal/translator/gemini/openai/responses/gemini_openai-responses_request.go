@@ -6,7 +6,6 @@ import (
 
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/registry"
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/translator/gemini/common"
-	"github.com/router-for-me/CLIProxyAPI/v6/internal/util"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
 )
@@ -389,18 +388,27 @@ func ConvertOpenAIResponsesRequestToGemini(modelName string, inputRawJSON []byte
 		out, _ = sjson.Set(out, "generationConfig.stopSequences", sequences)
 	}
 
-	// OpenAI official reasoning fields take precedence
-	// Only convert for models that use numeric budgets (not discrete levels).
-	hasOfficialThinking := root.Get("reasoning.effort").Exists()
-	modelInfo := registry.GetGlobalRegistry().GetModelInfo(modelName)
-	if hasOfficialThinking && modelInfo != nil && modelInfo.Thinking != nil && len(modelInfo.Thinking.Levels) == 0 {
-		reasoningEffort := root.Get("reasoning.effort")
-		out = string(util.ApplyReasoningEffortToGemini([]byte(out), reasoningEffort.String()))
+	// Apply thinking configuration: convert OpenAI Responses API reasoning.effort to Gemini thinkingConfig.
+	// Inline translation-only mapping; capability checks happen later in ApplyThinking.
+	modelInfo := registry.LookupModelInfo(modelName)
+	re := root.Get("reasoning.effort")
+	if re.Exists() {
+		effort := strings.ToLower(strings.TrimSpace(re.String()))
+		if effort != "" {
+			thinkingPath := "generationConfig.thinkingConfig"
+			if effort == "auto" {
+				out, _ = sjson.Set(out, thinkingPath+".thinkingBudget", -1)
+				out, _ = sjson.Set(out, thinkingPath+".includeThoughts", true)
+			} else {
+				out, _ = sjson.Set(out, thinkingPath+".thinkingLevel", effort)
+				out, _ = sjson.Set(out, thinkingPath+".includeThoughts", effort != "none")
+			}
+		}
 	}
 
 	// Cherry Studio extension (applies only when official fields are missing)
 	// Only apply for models that use numeric budgets, not discrete levels.
-	if !hasOfficialThinking && modelInfo != nil && modelInfo.Thinking != nil && len(modelInfo.Thinking.Levels) == 0 {
+	if !re.Exists() && modelInfo != nil && modelInfo.Thinking != nil && len(modelInfo.Thinking.Levels) == 0 {
 		if tc := root.Get("extra_body.google.thinking_config"); tc.Exists() && tc.IsObject() {
 			var setBudget bool
 			var budget int

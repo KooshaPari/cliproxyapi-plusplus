@@ -5,7 +5,6 @@
 package thinking
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 )
@@ -42,29 +41,6 @@ func ParseSuffix(model string) SuffixResult {
 		HasSuffix: true,
 		RawSuffix: rawSuffix,
 	}
-}
-
-// ParseSuffixWithError extracts thinking suffix and returns an error on invalid format.
-//
-// Invalid format cases:
-//   - Contains "(" but does not end with ")"
-//   - Contains ")" without any "("
-//
-// The error message includes the original input for debugging context.
-func ParseSuffixWithError(model string) (SuffixResult, error) {
-	lastOpen := strings.LastIndex(model, "(")
-	if lastOpen == -1 {
-		if strings.Contains(model, ")") {
-			return SuffixResult{ModelName: model, HasSuffix: false}, NewThinkingError(ErrInvalidSuffix, fmt.Sprintf("invalid suffix format: %s", model))
-		}
-		return SuffixResult{ModelName: model, HasSuffix: false}, nil
-	}
-
-	if !strings.HasSuffix(model, ")") {
-		return SuffixResult{ModelName: model, HasSuffix: false}, NewThinkingError(ErrInvalidSuffix, fmt.Sprintf("invalid suffix format: %s", model))
-	}
-
-	return ParseSuffix(model), nil
 }
 
 // ParseNumericSuffix attempts to parse a raw suffix as a numeric budget value.

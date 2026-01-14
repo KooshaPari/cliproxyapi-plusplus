@@ -1,7 +1,6 @@
 package thinking
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/registry"
@@ -111,7 +110,7 @@ const (
 
 // detectModelCapability determines the thinking format capability of a model.
 //
-// This is an internal function used by NormalizeForModel to decide conversion strategy.
+// This is an internal function used by validation and conversion helpers.
 // It analyzes the model's ThinkingSupport configuration to classify the model:
 //   - CapabilityNone: modelInfo.Thinking is nil (model doesn't support thinking)
 //   - CapabilityBudgetOnly: Has Min/Max but no Levels (Claude, Gemini 2.5)
@@ -139,95 +138,5 @@ func detectModelCapability(modelInfo *registry.ModelInfo) ModelCapability {
 		return CapabilityLevelOnly
 	default:
 		return CapabilityNone
-	}
-}
-
-// normalizeMixedConfig resolves a thinking configuration when both budget and level
-// might be present, applying priority rules.
-//
-// Priority rules (Level takes precedence over Budget):
-//   - If level is non-empty: use level (special handling for "auto" and "none")
-//   - If level is empty and budget is set: use budget
-//   - If neither is set (budget=0, level=""): return ModeNone
-//
-// This function is used internally to handle ambiguous input configurations.
-func normalizeMixedConfig(budget int, level string) ThinkingConfig {
-	normalizedLevel := strings.ToLower(strings.TrimSpace(level))
-	if normalizedLevel != "" {
-		switch normalizedLevel {
-		case string(LevelAuto):
-			return ThinkingConfig{Mode: ModeAuto, Budget: -1, Level: ThinkingLevel(normalizedLevel)}
-		case string(LevelNone):
-			return ThinkingConfig{Mode: ModeNone, Budget: 0, Level: ThinkingLevel(normalizedLevel)}
-		default:
-			return ThinkingConfig{Mode: ModeLevel, Level: ThinkingLevel(normalizedLevel)}
-		}
-	}
-	switch budget {
-	case -1:
-		return ThinkingConfig{Mode: ModeAuto, Budget: -1}
-	case 0:
-		return ThinkingConfig{Mode: ModeNone, Budget: 0}
-	default:
-		return ThinkingConfig{Mode: ModeBudget, Budget: budget}
-	}
-}
-
-// NormalizeForModel normalizes a thinking configuration for a specific model.
-//
-// This function converts the configuration format based on model capabilities:
-//   - Budget-only models (Claude, Gemini 2.5): Level → Budget conversion
-//   - Level-only models (OpenAI, iFlow): Budget → Level conversion
-//   - Hybrid models (Gemini 3): preserve the original format
-//   - No thinking support (Thinking is nil): degrade to ModeNone
-//   - Unknown model (modelInfo is nil): passthrough (preserve original format)
-//
-// Parameters:
-//   - config: The thinking configuration to normalize (must not be nil)
-//   - modelInfo: Model registry information containing ThinkingSupport properties
-//
-// Returns:
-//   - Normalized ThinkingConfig suitable for the model
-//   - Error if conversion fails (e.g., unsupported level or invalid budget)
-func NormalizeForModel(config *ThinkingConfig, modelInfo *registry.ModelInfo) (*ThinkingConfig, error) {
-	if config == nil {
-		return nil, fmt.Errorf("thinking config is nil")
-	}
-
-	normalized := *config
-	capability := detectModelCapability(modelInfo)
-
-	// If model doesn't support thinking, degrade to ModeNone
-	if capability == CapabilityNone && config.Mode != ModeNone && config.Mode != ModeAuto {
-		return &ThinkingConfig{Mode: ModeNone, Budget: 0}, nil
-	}
-
-	switch config.Mode {
-	case ModeAuto, ModeNone:
-		return &normalized, nil
-	case ModeBudget:
-		if capability == CapabilityLevelOnly {
-			level, ok := ConvertBudgetToLevel(config.Budget)
-			if !ok {
-				return nil, fmt.Errorf("invalid budget: %d", config.Budget)
-			}
-			normalized.Mode = ModeLevel
-			normalized.Level = ThinkingLevel(level)
-			normalized.Budget = 0
-		}
-		return &normalized, nil
-	case ModeLevel:
-		if capability == CapabilityBudgetOnly {
-			budget, ok := ConvertLevelToBudget(string(config.Level))
-			if !ok {
-				return nil, fmt.Errorf("unknown level: %s", config.Level)
-			}
-			normalized.Mode = ModeBudget
-			normalized.Budget = budget
-			normalized.Level = ""
-		}
-		return &normalized, nil
-	default:
-		return &normalized, nil
 	}
 }

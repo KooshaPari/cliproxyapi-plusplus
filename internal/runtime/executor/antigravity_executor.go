@@ -1452,15 +1452,15 @@ func generateProjectID() string {
 // This function is called AFTER thinking.ApplyThinking() to apply Claude-specific constraints.
 //
 // It handles:
-//   - Stripping thinking config for unsupported models (via util.StripThinkingConfigIfUnsupported)
+//   - Stripping thinking config for unsupported models
 //   - Normalizing budget to model range (via thinking.ClampBudget)
 //   - For Claude models: ensuring thinking budget < max_tokens
 //   - For Claude models: removing thinkingConfig if budget < minimum allowed
 func normalizeAntigravityThinking(model string, payload []byte, isClaude bool) []byte {
-	payload = util.StripThinkingConfigIfUnsupported(model, payload)
 	modelInfo := registry.LookupModelInfo(model)
 	if modelInfo == nil || modelInfo.Thinking == nil {
-		return payload
+		// Model doesn't support thinking - strip any thinking config
+		return thinking.StripThinkingConfig(payload, "antigravity")
 	}
 	budget := gjson.GetBytes(payload, "request.generationConfig.thinkingConfig.thinkingBudget")
 	if !budget.Exists() {

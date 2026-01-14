@@ -13,6 +13,7 @@ import (
 
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/cache"
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/registry"
+	"github.com/router-for-me/CLIProxyAPI/v6/internal/thinking"
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/translator/gemini/common"
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/util"
 	"github.com/tidwall/gjson"
@@ -123,7 +124,7 @@ func ConvertClaudeRequestToAntigravity(modelName string, inputRawJSON []byte, _ 
 					contentTypeResult := contentResult.Get("type")
 					if contentTypeResult.Type == gjson.String && contentTypeResult.String() == "thinking" {
 						// Use GetThinkingText to handle wrapped thinking objects
-						thinkingText := util.GetThinkingText(contentResult)
+						thinkingText := thinking.GetThinkingText(contentResult)
 						signatureResult := contentResult.Get("signature")
 						clientSignature := ""
 						if signatureResult.Exists() && signatureResult.String() != "" {

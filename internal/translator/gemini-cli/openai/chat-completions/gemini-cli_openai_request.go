@@ -36,18 +36,27 @@ func ConvertOpenAIRequestToGeminiCLI(modelName string, inputRawJSON []byte, _ bo
 	// Model
 	out, _ = sjson.SetBytes(out, "model", modelName)
 
-	// Reasoning effort -> thinkingBudget/include_thoughts
-	// Note: OpenAI official fields take precedence over extra_body.google.thinking_config
+	// Apply thinking configuration: convert OpenAI reasoning_effort to Gemini CLI thinkingConfig.
+	// Inline translation-only mapping; capability checks happen later in ApplyThinking.
 	re := gjson.GetBytes(rawJSON, "reasoning_effort")
-	hasOfficialThinking := re.Exists()
-	modelInfo := registry.GetGlobalRegistry().GetModelInfo(modelName)
-	if hasOfficialThinking && modelInfo != nil && modelInfo.Thinking != nil && len(modelInfo.Thinking.Levels) == 0 {
-		out = util.ApplyReasoningEffortToGeminiCLI(out, re.String())
+	modelInfo := registry.LookupModelInfo(modelName)
+	if re.Exists() {
+		effort := strings.ToLower(strings.TrimSpace(re.String()))
+		if effort != "" {
+			thinkingPath := "request.generationConfig.thinkingConfig"
+			if effort == "auto" {
+				out, _ = sjson.SetBytes(out, thinkingPath+".thinkingBudget", -1)
+				out, _ = sjson.SetBytes(out, thinkingPath+".includeThoughts", true)
+			} else {
+				out, _ = sjson.SetBytes(out, thinkingPath+".thinkingLevel", effort)
+				out, _ = sjson.SetBytes(out, thinkingPath+".includeThoughts", effort != "none")
+			}
+		}
 	}
 
 	// Cherry Studio extension extra_body.google.thinking_config (effective only when official fields are absent)
 	// Only apply for models that use numeric budgets, not discrete levels.
-	if !hasOfficialThinking && modelInfo != nil && modelInfo.Thinking != nil && len(modelInfo.Thinking.Levels) == 0 {
+	if !re.Exists() && modelInfo != nil && modelInfo.Thinking != nil && len(modelInfo.Thinking.Levels) == 0 {
 		if tc := gjson.GetBytes(rawJSON, "extra_body.google.thinking_config"); tc.Exists() && tc.IsObject() {
 			var setBudget bool
 			var budget int
