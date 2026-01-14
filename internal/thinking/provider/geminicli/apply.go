@@ -55,6 +55,9 @@ func (a *Applier) Apply(body []byte, config thinking.ThinkingConfig, modelInfo *
 	if config.Mode == thinking.ModeAuto {
 		return a.applyBudgetFormat(body, config)
 	}
+	if config.Mode == thinking.ModeBudget {
+		return a.applyBudgetFormat(body, config)
+	}
 
 	// For non-auto modes, choose format based on model capabilities
 	support := modelInfo.Thinking

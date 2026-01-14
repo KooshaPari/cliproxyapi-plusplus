@@ -136,7 +136,10 @@ func (e *AntigravityExecutor) Execute(ctx context.Context, auth *cliproxyauth.Au
 	originalTranslated := sdktranslator.TranslateRequest(from, to, baseModel, originalPayload, false)
 	translated := sdktranslator.TranslateRequest(from, to, baseModel, bytes.Clone(req.Payload), false)
 
-	translated, _ = thinking.ApplyThinking(translated, req.Model, "antigravity")
+	translated, err = thinking.ApplyThinking(translated, req.Model, "antigravity")
+	if err != nil {
+		return resp, err
+	}
 
 	// Preserve Claude special handling (use baseModel for registry lookups)
 	translated = normalizeAntigravityThinking(baseModel, translated, isClaude)
@@ -254,7 +257,10 @@ func (e *AntigravityExecutor) executeClaudeNonStream(ctx context.Context, auth *
 	originalTranslated := sdktranslator.TranslateRequest(from, to, baseModel, originalPayload, true)
 	translated := sdktranslator.TranslateRequest(from, to, baseModel, bytes.Clone(req.Payload), true)
 
-	translated, _ = thinking.ApplyThinking(translated, req.Model, "antigravity")
+	translated, err = thinking.ApplyThinking(translated, req.Model, "antigravity")
+	if err != nil {
+		return resp, err
+	}
 
 	// Preserve Claude special handling (use baseModel for registry lookups)
 	translated = normalizeAntigravityThinking(baseModel, translated, true)
@@ -620,7 +626,10 @@ func (e *AntigravityExecutor) ExecuteStream(ctx context.Context, auth *cliproxya
 	originalTranslated := sdktranslator.TranslateRequest(from, to, baseModel, originalPayload, true)
 	translated := sdktranslator.TranslateRequest(from, to, baseModel, bytes.Clone(req.Payload), true)
 
-	translated, _ = thinking.ApplyThinking(translated, req.Model, "antigravity")
+	translated, err = thinking.ApplyThinking(translated, req.Model, "antigravity")
+	if err != nil {
+		return nil, err
+	}
 
 	// Preserve Claude special handling (use baseModel for registry lookups)
 	translated = normalizeAntigravityThinking(baseModel, translated, isClaude)
@@ -801,7 +810,10 @@ func (e *AntigravityExecutor) CountTokens(ctx context.Context, auth *cliproxyaut
 	// Prepare payload once (doesn't depend on baseURL)
 	payload := sdktranslator.TranslateRequest(from, to, baseModel, bytes.Clone(req.Payload), false)
 
-	payload, _ = thinking.ApplyThinking(payload, req.Model, "antigravity")
+	payload, err := thinking.ApplyThinking(payload, req.Model, "antigravity")
+	if err != nil {
+		return cliproxyexecutor.Response{}, err
+	}
 
 	// Preserve Claude special handling (use baseModel for registry lookups)
 	payload = normalizeAntigravityThinking(baseModel, payload, isClaude)

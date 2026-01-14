@@ -1,6 +1,8 @@
 // Package thinking provides unified thinking configuration processing logic.
 package thinking
 
+import "net/http"
+
 // ErrorCode represents the type of thinking configuration error.
 type ErrorCode string
 
@@ -68,4 +70,9 @@ func NewThinkingErrorWithModel(code ErrorCode, message, model string) *ThinkingE
 		Message: message,
 		Model:   model,
 	}
+}
+
+// StatusCode implements a portable status code interface for HTTP handlers.
+func (e *ThinkingError) StatusCode() int {
+	return http.StatusBadRequest
 }

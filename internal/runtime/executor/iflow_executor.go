@@ -92,7 +92,10 @@ func (e *IFlowExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, re
 	body := sdktranslator.TranslateRequest(from, to, baseModel, bytes.Clone(req.Payload), false)
 	body, _ = sjson.SetBytes(body, "model", baseModel)
 
-	body, _ = thinking.ApplyThinking(body, req.Model, "iflow")
+	body, err = thinking.ApplyThinking(body, req.Model, "iflow")
+	if err != nil {
+		return resp, err
+	}
 
 	body = preserveReasoningContentInMessages(body)
 	body = applyPayloadConfigWithRoot(e.cfg, baseModel, to.String(), "", body, originalTranslated)
@@ -187,7 +190,10 @@ func (e *IFlowExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.Au
 	body := sdktranslator.TranslateRequest(from, to, baseModel, bytes.Clone(req.Payload), true)
 	body, _ = sjson.SetBytes(body, "model", baseModel)
 
-	body, _ = thinking.ApplyThinking(body, req.Model, "iflow")
+	body, err = thinking.ApplyThinking(body, req.Model, "iflow")
+	if err != nil {
+		return nil, err
+	}
 
 	body = preserveReasoningContentInMessages(body)
 	// Ensure tools array exists to avoid provider quirks similar to Qwen's behaviour.

@@ -86,7 +86,10 @@ func (e *QwenExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, req
 	body := sdktranslator.TranslateRequest(from, to, baseModel, bytes.Clone(req.Payload), false)
 	body, _ = sjson.SetBytes(body, "model", baseModel)
 
-	body, _ = thinking.ApplyThinking(body, req.Model, "openai")
+	body, err = thinking.ApplyThinking(body, req.Model, "openai")
+	if err != nil {
+		return resp, err
+	}
 
 	body = applyPayloadConfigWithRoot(e.cfg, baseModel, to.String(), "", body, originalTranslated)
 
@@ -169,7 +172,10 @@ func (e *QwenExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.Aut
 	body := sdktranslator.TranslateRequest(from, to, baseModel, bytes.Clone(req.Payload), true)
 	body, _ = sjson.SetBytes(body, "model", baseModel)
 
-	body, _ = thinking.ApplyThinking(body, req.Model, "openai")
+	body, err = thinking.ApplyThinking(body, req.Model, "openai")
+	if err != nil {
+		return nil, err
+	}
 
 	toolsResult := gjson.GetBytes(body, "tools")
 	// I'm addressing the Qwen3 "poisoning" issue, which is caused by the model needing a tool to be defined. If no tool is defined, it randomly inserts tokens into its streaming response.

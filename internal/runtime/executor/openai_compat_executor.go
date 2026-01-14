@@ -92,7 +92,10 @@ func (e *OpenAICompatExecutor) Execute(ctx context.Context, auth *cliproxyauth.A
 	translated := sdktranslator.TranslateRequest(from, to, baseModel, bytes.Clone(req.Payload), opts.Stream)
 	translated = applyPayloadConfigWithRoot(e.cfg, baseModel, to.String(), "", translated, originalTranslated)
 
-	translated, _ = thinking.ApplyThinking(translated, req.Model, "openai")
+	translated, err = thinking.ApplyThinking(translated, req.Model, "openai")
+	if err != nil {
+		return resp, err
+	}
 
 	url := strings.TrimSuffix(baseURL, "/") + "/chat/completions"
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(translated))
@@ -184,7 +187,10 @@ func (e *OpenAICompatExecutor) ExecuteStream(ctx context.Context, auth *cliproxy
 	translated := sdktranslator.TranslateRequest(from, to, baseModel, bytes.Clone(req.Payload), true)
 	translated = applyPayloadConfigWithRoot(e.cfg, baseModel, to.String(), "", translated, originalTranslated)
 
-	translated, _ = thinking.ApplyThinking(translated, req.Model, "openai")
+	translated, err = thinking.ApplyThinking(translated, req.Model, "openai")
+	if err != nil {
+		return nil, err
+	}
 
 	url := strings.TrimSuffix(baseURL, "/") + "/chat/completions"
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(translated))
@@ -291,7 +297,10 @@ func (e *OpenAICompatExecutor) CountTokens(ctx context.Context, auth *cliproxyau
 
 	modelForCounting := baseModel
 
-	translated, _ = thinking.ApplyThinking(translated, req.Model, "openai")
+	translated, err := thinking.ApplyThinking(translated, req.Model, "openai")
+	if err != nil {
+		return cliproxyexecutor.Response{}, err
+	}
 
 	enc, err := tokenizerForModel(modelForCounting)
 	if err != nil {

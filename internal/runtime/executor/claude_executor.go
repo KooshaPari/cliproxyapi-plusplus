@@ -106,7 +106,10 @@ func (e *ClaudeExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, r
 	body := sdktranslator.TranslateRequest(from, to, baseModel, bytes.Clone(req.Payload), stream)
 	body, _ = sjson.SetBytes(body, "model", baseModel)
 
-	body, _ = thinking.ApplyThinking(body, req.Model, "claude")
+	body, err = thinking.ApplyThinking(body, req.Model, "claude")
+	if err != nil {
+		return resp, err
+	}
 
 	if !strings.HasPrefix(baseModel, "claude-3-5-haiku") {
 		body = checkSystemInstructions(body)
@@ -236,7 +239,10 @@ func (e *ClaudeExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.A
 	body := sdktranslator.TranslateRequest(from, to, baseModel, bytes.Clone(req.Payload), true)
 	body, _ = sjson.SetBytes(body, "model", baseModel)
 
-	body, _ = thinking.ApplyThinking(body, req.Model, "claude")
+	body, err = thinking.ApplyThinking(body, req.Model, "claude")
+	if err != nil {
+		return nil, err
+	}
 
 	body = checkSystemInstructions(body)
 	body = applyPayloadConfigWithRoot(e.cfg, baseModel, to.String(), "", body, originalTranslated)

@@ -96,7 +96,10 @@ func (e *CodexExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, re
 	body = sdktranslator.TranslateRequest(from, to, baseModel, body, false)
 	body = misc.StripCodexUserAgent(body)
 
-	body, _ = thinking.ApplyThinking(body, req.Model, "codex")
+	body, err = thinking.ApplyThinking(body, req.Model, "codex")
+	if err != nil {
+		return resp, err
+	}
 
 	body = applyPayloadConfigWithRoot(e.cfg, baseModel, to.String(), "", body, originalTranslated)
 	body, _ = sjson.SetBytes(body, "model", baseModel)
@@ -201,7 +204,10 @@ func (e *CodexExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.Au
 	body = sdktranslator.TranslateRequest(from, to, baseModel, body, true)
 	body = misc.StripCodexUserAgent(body)
 
-	body, _ = thinking.ApplyThinking(body, req.Model, "codex")
+	body, err = thinking.ApplyThinking(body, req.Model, "codex")
+	if err != nil {
+		return nil, err
+	}
 
 	body = applyPayloadConfigWithRoot(e.cfg, baseModel, to.String(), "", body, originalTranslated)
 	body, _ = sjson.DeleteBytes(body, "previous_response_id")
@@ -302,7 +308,10 @@ func (e *CodexExecutor) CountTokens(ctx context.Context, auth *cliproxyauth.Auth
 	body = sdktranslator.TranslateRequest(from, to, baseModel, body, false)
 	body = misc.StripCodexUserAgent(body)
 
-	body, _ = thinking.ApplyThinking(body, req.Model, "codex")
+	body, err := thinking.ApplyThinking(body, req.Model, "codex")
+	if err != nil {
+		return cliproxyexecutor.Response{}, err
+	}
 
 	body, _ = sjson.SetBytes(body, "model", baseModel)
 	body, _ = sjson.DeleteBytes(body, "previous_response_id")

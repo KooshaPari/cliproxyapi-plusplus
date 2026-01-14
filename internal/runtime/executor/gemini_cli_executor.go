@@ -123,7 +123,10 @@ func (e *GeminiCLIExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth
 	originalTranslated := sdktranslator.TranslateRequest(from, to, baseModel, originalPayload, false)
 	basePayload := sdktranslator.TranslateRequest(from, to, baseModel, bytes.Clone(req.Payload), false)
 
-	basePayload, _ = thinking.ApplyThinking(basePayload, req.Model, "gemini-cli")
+	basePayload, err = thinking.ApplyThinking(basePayload, req.Model, "gemini-cli")
+	if err != nil {
+		return resp, err
+	}
 
 	basePayload = fixGeminiCLIImageAspectRatio(baseModel, basePayload)
 	basePayload = applyPayloadConfigWithRoot(e.cfg, baseModel, "gemini", "request", basePayload, originalTranslated)
@@ -269,7 +272,10 @@ func (e *GeminiCLIExecutor) ExecuteStream(ctx context.Context, auth *cliproxyaut
 	originalTranslated := sdktranslator.TranslateRequest(from, to, baseModel, originalPayload, true)
 	basePayload := sdktranslator.TranslateRequest(from, to, baseModel, bytes.Clone(req.Payload), true)
 
-	basePayload, _ = thinking.ApplyThinking(basePayload, req.Model, "gemini-cli")
+	basePayload, err = thinking.ApplyThinking(basePayload, req.Model, "gemini-cli")
+	if err != nil {
+		return nil, err
+	}
 
 	basePayload = fixGeminiCLIImageAspectRatio(baseModel, basePayload)
 	basePayload = applyPayloadConfigWithRoot(e.cfg, baseModel, "gemini", "request", basePayload, originalTranslated)
@@ -473,7 +479,10 @@ func (e *GeminiCLIExecutor) CountTokens(ctx context.Context, auth *cliproxyauth.
 	for range models {
 		payload := sdktranslator.TranslateRequest(from, to, baseModel, bytes.Clone(req.Payload), false)
 
-		payload, _ = thinking.ApplyThinking(payload, req.Model, "gemini-cli")
+		payload, err = thinking.ApplyThinking(payload, req.Model, "gemini-cli")
+		if err != nil {
+			return cliproxyexecutor.Response{}, err
+		}
 
 		payload = deleteJSONField(payload, "project")
 		payload = deleteJSONField(payload, "model")
