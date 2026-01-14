@@ -1005,35 +1005,40 @@ func FetchAntigravityModels(ctx context.Context, auth *cliproxyauth.Auth, cfg *c
 		modelConfig := registry.GetAntigravityModelConfig()
 		models := make([]*registry.ModelInfo, 0, len(result.Map()))
 		for originalName := range result.Map() {
-			aliasName := modelName2Alias(originalName)
-			if aliasName != "" {
-				cfg := modelConfig[aliasName]
-				modelName := aliasName
-				if cfg != nil && cfg.Name != "" {
-					modelName = cfg.Name
-				}
-				modelInfo := &registry.ModelInfo{
-					ID:          aliasName,
-					Name:        modelName,
-					Description: aliasName,
-					DisplayName: aliasName,
-					Version:     aliasName,
-					Object:      "model",
-					Created:     now,
-					OwnedBy:     antigravityAuthType,
-					Type:        antigravityAuthType,
-				}
-				// Look up Thinking support from static config using alias name
-				if cfg != nil {
-					if cfg.Thinking != nil {
-						modelInfo.Thinking = cfg.Thinking
-					}
-					if cfg.MaxCompletionTokens > 0 {
-						modelInfo.MaxCompletionTokens = cfg.MaxCompletionTokens
-					}
-				}
-				models = append(models, modelInfo)
+			modelID := strings.TrimSpace(originalName)
+			if modelID == "" {
+				continue
 			}
+			switch modelID {
+			case "chat_20706", "chat_23310", "gemini-2.5-flash-thinking", "gemini-3-pro-low", "gemini-2.5-pro":
+				continue
+			}
+			cfg := modelConfig[modelID]
+			modelName := modelID
+			if cfg != nil && cfg.Name != "" {
+				modelName = cfg.Name
+			}
+			modelInfo := &registry.ModelInfo{
+				ID:          modelID,
+				Name:        modelName,
+				Description: modelID,
+				DisplayName: modelID,
+				Version:     modelID,
+				Object:      "model",
+				Created:     now,
+				OwnedBy:     antigravityAuthType,
+				Type:        antigravityAuthType,
+			}
+			// Look up Thinking support from static config using upstream model name.
+			if cfg != nil {
+				if cfg.Thinking != nil {
+					modelInfo.Thinking = cfg.Thinking
+				}
+				if cfg.MaxCompletionTokens > 0 {
+					modelInfo.MaxCompletionTokens = cfg.MaxCompletionTokens
+				}
+			}
+			models = append(models, modelInfo)
 		}
 		return models
 	}
@@ -1171,7 +1176,7 @@ func (e *AntigravityExecutor) buildRequest(ctx context.Context, auth *cliproxyau
 		}
 	}
 	payload = geminiToAntigravity(modelName, payload, projectID)
-	payload, _ = sjson.SetBytes(payload, "model", alias2ModelName(modelName))
+	payload, _ = sjson.SetBytes(payload, "model", modelName)
 
 	if strings.Contains(modelName, "claude") {
 		strJSON := string(payload)
@@ -1441,50 +1446,6 @@ func generateProjectID() string {
 	randSourceMutex.Unlock()
 	randomPart := strings.ToLower(uuid.NewString())[:5]
 	return adj + "-" + noun + "-" + randomPart
-}
-
-func modelName2Alias(modelName string) string {
-	switch modelName {
-	case "rev19-uic3-1p":
-		return "gemini-2.5-computer-use-preview-10-2025"
-	case "gemini-3-pro-image":
-		return "gemini-3-pro-image-preview"
-	case "gemini-3-pro-high":
-		return "gemini-3-pro-preview"
-	case "gemini-3-flash":
-		return "gemini-3-flash-preview"
-	case "claude-sonnet-4-5":
-		return "gemini-claude-sonnet-4-5"
-	case "claude-sonnet-4-5-thinking":
-		return "gemini-claude-sonnet-4-5-thinking"
-	case "claude-opus-4-5-thinking":
-		return "gemini-claude-opus-4-5-thinking"
-	case "chat_20706", "chat_23310", "gemini-2.5-flash-thinking", "gemini-3-pro-low", "gemini-2.5-pro":
-		return ""
-	default:
-		return modelName
-	}
-}
-
-func alias2ModelName(modelName string) string {
-	switch modelName {
-	case "gemini-2.5-computer-use-preview-10-2025":
-		return "rev19-uic3-1p"
-	case "gemini-3-pro-image-preview":
-		return "gemini-3-pro-image"
-	case "gemini-3-pro-preview":
-		return "gemini-3-pro-high"
-	case "gemini-3-flash-preview":
-		return "gemini-3-flash"
-	case "gemini-claude-sonnet-4-5":
-		return "claude-sonnet-4-5"
-	case "gemini-claude-sonnet-4-5-thinking":
-		return "claude-sonnet-4-5-thinking"
-	case "gemini-claude-opus-4-5-thinking":
-		return "claude-opus-4-5-thinking"
-	default:
-		return modelName
-	}
 }
 
 // normalizeAntigravityThinking performs Antigravity-specific thinking config normalization.
