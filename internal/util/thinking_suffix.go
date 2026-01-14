@@ -7,15 +7,30 @@ import (
 )
 
 const (
-	ThinkingBudgetMetadataKey            = "thinking_budget"
-	ThinkingIncludeThoughtsMetadataKey   = "thinking_include_thoughts"
-	ReasoningEffortMetadataKey           = "reasoning_effort"
-	ThinkingOriginalModelMetadataKey     = "thinking_original_model"
+	// Deprecated: No longer used. Thinking configuration is now passed via
+	// model name suffix and processed by thinking.ApplyThinking().
+	ThinkingBudgetMetadataKey = "thinking_budget"
+
+	// Deprecated: No longer used. See ThinkingBudgetMetadataKey.
+	ThinkingIncludeThoughtsMetadataKey = "thinking_include_thoughts"
+
+	// Deprecated: No longer used. See ThinkingBudgetMetadataKey.
+	ReasoningEffortMetadataKey = "reasoning_effort"
+
+	// Deprecated: No longer used. The original model name (with suffix) is now
+	// preserved directly in the model field. Use thinking.ParseSuffix() to
+	// extract the base model name if needed.
+	ThinkingOriginalModelMetadataKey = "thinking_original_model"
+
+	// ModelMappingOriginalModelMetadataKey stores the client-requested model alias
+	// for OAuth model name mappings. This is NOT deprecated.
 	ModelMappingOriginalModelMetadataKey = "model_mapping_original_model"
 )
 
 // NormalizeThinkingModel parses dynamic thinking suffixes on model names and returns
 // the normalized base model with extracted metadata. Supported pattern:
+//
+// Deprecated: Use thinking.ParseSuffix instead.
 //   - "(<value>)" where value can be:
 //   - A numeric budget (e.g., "(8192)", "(16384)")
 //   - A reasoning effort level (e.g., "(high)", "(medium)", "(low)")
@@ -89,6 +104,8 @@ func NormalizeThinkingModel(modelName string) (string, map[string]any) {
 
 // ThinkingFromMetadata extracts thinking overrides from metadata produced by NormalizeThinkingModel.
 // It accepts both the new generic keys and legacy Gemini-specific keys.
+//
+// Deprecated: Access ThinkingConfig fields directly.
 func ThinkingFromMetadata(metadata map[string]any) (*int, *bool, *string, bool) {
 	if len(metadata) == 0 {
 		return nil, nil, nil, false
@@ -159,6 +176,8 @@ func ThinkingFromMetadata(metadata map[string]any) (*int, *bool, *string, bool) 
 
 // ResolveThinkingConfigFromMetadata derives thinking budget/include overrides,
 // converting reasoning effort strings into budgets when possible.
+//
+// Deprecated: Use thinking.ApplyThinking instead.
 func ResolveThinkingConfigFromMetadata(model string, metadata map[string]any) (*int, *bool, bool) {
 	budget, include, effort, matched := ThinkingFromMetadata(metadata)
 	if !matched {
@@ -180,6 +199,8 @@ func ResolveThinkingConfigFromMetadata(model string, metadata map[string]any) (*
 
 // ReasoningEffortFromMetadata resolves a reasoning effort string from metadata,
 // inferring "auto" and "none" when budgets request dynamic or disabled thinking.
+//
+// Deprecated: Use thinking.ConvertBudgetToLevel instead.
 func ReasoningEffortFromMetadata(metadata map[string]any) (string, bool) {
 	budget, include, effort, matched := ThinkingFromMetadata(metadata)
 	if !matched {
@@ -204,6 +225,8 @@ func ReasoningEffortFromMetadata(metadata map[string]any) (string, bool) {
 
 // ResolveOriginalModel returns the original model name stored in metadata (if present),
 // otherwise falls back to the provided model.
+//
+// Deprecated: Parse model suffix with thinking.ParseSuffix.
 func ResolveOriginalModel(model string, metadata map[string]any) string {
 	normalize := func(name string) string {
 		if name == "" {

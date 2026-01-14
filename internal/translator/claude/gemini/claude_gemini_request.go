@@ -15,6 +15,8 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+	"github.com/router-for-me/CLIProxyAPI/v6/internal/registry"
+	"github.com/router-for-me/CLIProxyAPI/v6/internal/thinking"
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/util"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
@@ -115,15 +117,18 @@ func ConvertGeminiRequestToClaude(modelName string, inputRawJSON []byte, stream 
 		}
 		// Include thoughts configuration for reasoning process visibility
 		// Only apply for models that support thinking and use numeric budgets, not discrete levels.
-		if thinkingConfig := genConfig.Get("thinkingConfig"); thinkingConfig.Exists() && thinkingConfig.IsObject() && util.ModelSupportsThinking(modelName) && !util.ModelUsesThinkingLevels(modelName) {
-			// Check for thinkingBudget first - if present, enable thinking with budget
-			if thinkingBudget := thinkingConfig.Get("thinkingBudget"); thinkingBudget.Exists() && thinkingBudget.Int() > 0 {
-				out, _ = sjson.Set(out, "thinking.type", "enabled")
-				normalizedBudget := util.NormalizeThinkingBudget(modelName, int(thinkingBudget.Int()))
-				out, _ = sjson.Set(out, "thinking.budget_tokens", normalizedBudget)
-			} else if includeThoughts := thinkingConfig.Get("include_thoughts"); includeThoughts.Exists() && includeThoughts.Type == gjson.True {
-				// Fallback to include_thoughts if no budget specified
-				out, _ = sjson.Set(out, "thinking.type", "enabled")
+		if thinkingConfig := genConfig.Get("thinkingConfig"); thinkingConfig.Exists() && thinkingConfig.IsObject() {
+			modelInfo := registry.GetGlobalRegistry().GetModelInfo(modelName)
+			if modelInfo != nil && modelInfo.Thinking != nil && len(modelInfo.Thinking.Levels) == 0 {
+				// Check for thinkingBudget first - if present, enable thinking with budget
+				if thinkingBudget := thinkingConfig.Get("thinkingBudget"); thinkingBudget.Exists() && thinkingBudget.Int() > 0 {
+					out, _ = sjson.Set(out, "thinking.type", "enabled")
+					normalizedBudget := thinking.ClampBudget(int(thinkingBudget.Int()), modelInfo.Thinking.Min, modelInfo.Thinking.Max)
+					out, _ = sjson.Set(out, "thinking.budget_tokens", normalizedBudget)
+				} else if includeThoughts := thinkingConfig.Get("include_thoughts"); includeThoughts.Exists() && includeThoughts.Type == gjson.True {
+					// Fallback to include_thoughts if no budget specified
+					out, _ = sjson.Set(out, "thinking.type", "enabled")
+				}
 			}
 		}
 	}

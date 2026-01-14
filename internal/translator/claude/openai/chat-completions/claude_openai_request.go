@@ -15,7 +15,8 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
-	"github.com/router-for-me/CLIProxyAPI/v6/internal/util"
+	"github.com/router-for-me/CLIProxyAPI/v6/internal/registry"
+	"github.com/router-for-me/CLIProxyAPI/v6/internal/thinking"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
 )
@@ -65,20 +66,23 @@ func ConvertOpenAIRequestToClaude(modelName string, inputRawJSON []byte, stream 
 
 	root := gjson.ParseBytes(rawJSON)
 
-	if v := root.Get("reasoning_effort"); v.Exists() && util.ModelSupportsThinking(modelName) && !util.ModelUsesThinkingLevels(modelName) {
-		effort := strings.ToLower(strings.TrimSpace(v.String()))
-		if effort != "" {
-			budget, ok := util.ThinkingEffortToBudget(modelName, effort)
-			if ok {
-				switch budget {
-				case 0:
-					out, _ = sjson.Set(out, "thinking.type", "disabled")
-				case -1:
-					out, _ = sjson.Set(out, "thinking.type", "enabled")
-				default:
-					if budget > 0 {
+	if v := root.Get("reasoning_effort"); v.Exists() {
+		modelInfo := registry.GetGlobalRegistry().GetModelInfo(modelName)
+		if modelInfo != nil && modelInfo.Thinking != nil && len(modelInfo.Thinking.Levels) == 0 {
+			effort := strings.ToLower(strings.TrimSpace(v.String()))
+			if effort != "" {
+				budget, ok := thinking.ConvertLevelToBudget(effort)
+				if ok {
+					switch budget {
+					case 0:
+						out, _ = sjson.Set(out, "thinking.type", "disabled")
+					case -1:
 						out, _ = sjson.Set(out, "thinking.type", "enabled")
-						out, _ = sjson.Set(out, "thinking.budget_tokens", budget)
+					default:
+						if budget > 0 {
+							out, _ = sjson.Set(out, "thinking.type", "enabled")
+							out, _ = sjson.Set(out, "thinking.budget_tokens", budget)
+						}
 					}
 				}
 			}

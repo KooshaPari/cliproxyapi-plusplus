@@ -8,6 +8,8 @@ import (
 
 // ModelSupportsThinking reports whether the given model has Thinking capability
 // according to the model registry metadata (provider-agnostic).
+//
+// Deprecated: Use thinking.ApplyThinking with modelInfo.Thinking check.
 func ModelSupportsThinking(model string) bool {
 	if model == "" {
 		return false
@@ -32,6 +34,8 @@ func ModelSupportsThinking(model string) bool {
 // If the model is unknown or has no Thinking metadata, returns the original budget.
 // For dynamic (-1), returns -1 if DynamicAllowed; otherwise approximates mid-range
 // or min (0 if zero is allowed and mid <= 0).
+//
+// Deprecated: Use thinking.ValidateConfig for budget normalization.
 func NormalizeThinkingBudget(model string, budget int) int {
 	if budget == -1 { // dynamic
 		if found, minBudget, maxBudget, zeroAllowed, dynamicAllowed := thinkingRangeFromRegistry(model); found {
@@ -89,6 +93,8 @@ func thinkingRangeFromRegistry(model string) (found bool, min int, max int, zero
 
 // GetModelThinkingLevels returns the discrete reasoning effort levels for the model.
 // Returns nil if the model has no thinking support or no levels defined.
+//
+// Deprecated: Access modelInfo.Thinking.Levels directly.
 func GetModelThinkingLevels(model string) []string {
 	if model == "" {
 		return nil
@@ -102,6 +108,8 @@ func GetModelThinkingLevels(model string) []string {
 
 // ModelUsesThinkingLevels reports whether the model uses discrete reasoning
 // effort levels instead of numeric budgets.
+//
+// Deprecated: Check len(modelInfo.Thinking.Levels) > 0.
 func ModelUsesThinkingLevels(model string) bool {
 	levels := GetModelThinkingLevels(model)
 	return len(levels) > 0
@@ -109,6 +117,8 @@ func ModelUsesThinkingLevels(model string) bool {
 
 // NormalizeReasoningEffortLevel validates and normalizes a reasoning effort
 // level for the given model. Returns false when the level is not supported.
+//
+// Deprecated: Use thinking.ValidateConfig for level validation.
 func NormalizeReasoningEffortLevel(model, effort string) (string, bool) {
 	levels := GetModelThinkingLevels(model)
 	if len(levels) == 0 {
@@ -125,6 +135,8 @@ func NormalizeReasoningEffortLevel(model, effort string) (string, bool) {
 
 // IsOpenAICompatibilityModel reports whether the model is registered as an OpenAI-compatibility model.
 // These models may not advertise Thinking metadata in the registry.
+//
+// Deprecated: Check modelInfo.Type == "openai-compatibility".
 func IsOpenAICompatibilityModel(model string) bool {
 	if model == "" {
 		return false
@@ -149,6 +161,8 @@ func IsOpenAICompatibilityModel(model string) bool {
 //   - "xhigh"   -> 32768
 //
 // Returns false when the effort level is empty or unsupported.
+//
+// Deprecated: Use thinking.ConvertLevelToBudget instead.
 func ThinkingEffortToBudget(model, effort string) (int, bool) {
 	if effort == "" {
 		return 0, false
@@ -186,6 +200,8 @@ func ThinkingEffortToBudget(model, effort string) (int, bool) {
 //   - "high"    -> 32768
 //
 // Returns false when the level is empty or unsupported.
+//
+// Deprecated: Use thinking.ConvertLevelToBudget instead.
 func ThinkingLevelToBudget(level string) (int, bool) {
 	if level == "" {
 		return 0, false
@@ -217,6 +233,8 @@ func ThinkingLevelToBudget(level string) (int, bool) {
 //   - 24577..      -> highest supported level for the model (defaults to "xhigh")
 //
 // Returns false when the budget is unsupported (negative values other than -1).
+//
+// Deprecated: Use thinking.ConvertBudgetToLevel instead.
 func ThinkingBudgetToEffort(model string, budget int) (string, bool) {
 	switch {
 	case budget == -1:

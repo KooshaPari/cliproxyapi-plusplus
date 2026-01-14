@@ -553,6 +553,7 @@ func (s *Service) Run(ctx context.Context) error {
 		s.cfg = newCfg
 		s.cfgMu.Unlock()
 		if s.coreManager != nil {
+			s.coreManager.SetConfig(newCfg)
 			s.coreManager.SetOAuthModelMappings(newCfg.OAuthModelMappings)
 		}
 		s.rebindExecutors()
@@ -825,6 +826,7 @@ func (s *Service) registerModelsForAuth(a *coreauth.Auth) {
 							OwnedBy:     compat.Name,
 							Type:        "openai-compatibility",
 							DisplayName: modelID,
+							UserDefined: true,
 						})
 					}
 					// Register and return
@@ -1157,6 +1159,7 @@ func buildConfigModels[T modelEntry](models []T, ownedBy, modelType string) []*M
 			OwnedBy:     ownedBy,
 			Type:        modelType,
 			DisplayName: display,
+			UserDefined: true,
 		}
 		if name != "" {
 			if upstream := registry.LookupStaticModelInfo(name); upstream != nil && upstream.Thinking != nil {

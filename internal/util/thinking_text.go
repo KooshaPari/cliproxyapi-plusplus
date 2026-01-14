@@ -11,6 +11,8 @@ import (
 // - Wrapped object: { "thinking": { "text": "text", "cache_control": {...} } }
 // - Gemini-style: { "thought": true, "text": "text" }
 // Returns the extracted text string.
+//
+// Deprecated: Use thinking package for thinking text extraction.
 func GetThinkingText(part gjson.Result) string {
 	// Try direct text field first (Gemini-style)
 	if text := part.Get("text"); text.Exists() && text.Type == gjson.String {
@@ -42,6 +44,8 @@ func GetThinkingText(part gjson.Result) string {
 }
 
 // GetThinkingTextFromJSON extracts thinking text from a raw JSON string.
+//
+// Deprecated: Use thinking package for thinking text extraction.
 func GetThinkingTextFromJSON(jsonStr string) string {
 	return GetThinkingText(gjson.Parse(jsonStr))
 }
@@ -49,6 +53,8 @@ func GetThinkingTextFromJSON(jsonStr string) string {
 // SanitizeThinkingPart normalizes a thinking part to a canonical form.
 // Strips cache_control and other non-essential fields.
 // Returns the sanitized part as JSON string.
+//
+// Deprecated: Use thinking package for thinking part sanitization.
 func SanitizeThinkingPart(part gjson.Result) string {
 	// Gemini-style: { thought: true, text, thoughtSignature }
 	if part.Get("thought").Bool() {
@@ -79,6 +85,8 @@ func SanitizeThinkingPart(part gjson.Result) string {
 }
 
 // StripCacheControl removes cache_control and providerOptions from a JSON object.
+//
+// Deprecated: Use thinking package for cache control stripping.
 func StripCacheControl(jsonStr string) string {
 	result := jsonStr
 	result, _ = sjson.Delete(result, "cache_control")

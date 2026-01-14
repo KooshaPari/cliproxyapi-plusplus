@@ -3,9 +3,10 @@ package test
 import (
 	"testing"
 
-	"github.com/router-for-me/CLIProxyAPI/v6/internal/runtime/executor"
+	"github.com/router-for-me/CLIProxyAPI/v6/internal/thinking"
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/util"
 	"github.com/tidwall/gjson"
+	"github.com/tidwall/sjson"
 )
 
 // TestModelAliasThinkingSuffix tests the 32 test cases defined in docs/thinking_suffix_test_cases.md
@@ -178,7 +179,7 @@ func TestModelAliasThinkingSuffix(t *testing.T) {
 				}
 			}
 
-			// Step 5: Test Gemini 2.5 thinkingBudget application using real ApplyThinkingMetadataCLI flow
+			// Step 5: Test Gemini 2.5 thinkingBudget application using thinking.ApplyThinking
 			if tt.expectedField == "thinkingBudget" && util.IsGemini25Model(tt.upstreamModel) {
 				body := []byte(`{"request":{"contents":[]}}`)
 
@@ -195,8 +196,13 @@ func TestModelAliasThinkingSuffix(t *testing.T) {
 					testMetadata[k] = v
 				}
 
-				// Use the exported ApplyThinkingMetadataCLI which includes the fallback logic
-				result := executor.ApplyThinkingMetadataCLI(body, testMetadata, tt.upstreamModel)
+				// Merge thinking config from metadata into body
+				body = applyThinkingFromMetadata(body, testMetadata)
+
+				// Use thinking.ApplyThinking for unified thinking config handling
+				// Note: ApplyThinking now takes model string, not *ModelInfo
+				result, _ := thinking.ApplyThinking(body, tt.upstreamModel, "gemini-cli")
+
 				budgetVal := gjson.GetBytes(result, "request.generationConfig.thinkingConfig.thinkingBudget")
 
 				expectedBudget := tt.expectedValue.(int)
@@ -208,4 +214,49 @@ func TestModelAliasThinkingSuffix(t *testing.T) {
 			}
 		})
 	}
+}
+
+// applyThinkingFromMetadata merges thinking configuration from metadata into the payload.
+func applyThinkingFromMetadata(payload []byte, metadata map[string]any) []byte {
+	if len(metadata) == 0 {
+		return payload
+	}
+
+	// Merge thinking_budget from metadata if present
+	if budget, ok := metadata["thinking_budget"]; ok {
+		if budgetVal, okNum := parseNumberToInt(budget); okNum {
+			payload, _ = sjson.SetBytes(payload, "request.generationConfig.thinkingConfig.thinkingBudget", budgetVal)
+		}
+	}
+
+	// Merge reasoning_effort from metadata if present
+	if effort, ok := metadata["reasoning_effort"]; ok {
+		if effortStr, okStr := effort.(string); okStr && effortStr != "" {
+			payload, _ = sjson.SetBytes(payload, "request.generationConfig.thinkingConfig.thinkingLevel", effortStr)
+		}
+	}
+
+	// Merge thinking_include_thoughts from metadata if present
+	if include, ok := metadata["thinking_include_thoughts"]; ok {
+		if includeBool, okBool := include.(bool); okBool {
+			payload, _ = sjson.SetBytes(payload, "request.generationConfig.thinkingConfig.includeThoughts", includeBool)
+		}
+	}
+
+	return payload
+}
+
+// parseNumberToInt safely converts various numeric types to int
+func parseNumberToInt(raw any) (int, bool) {
+	switch v := raw.(type) {
+	case int:
+		return v, true
+	case int32:
+		return int(v), true
+	case int64:
+		return int(v), true
+	case float64:
+		return int(v), true
+	}
+	return 0, false
 }

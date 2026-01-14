@@ -15,8 +15,10 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	internalconfig "github.com/router-for-me/CLIProxyAPI/v6/internal/config"
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/logging"
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/registry"
+	"github.com/router-for-me/CLIProxyAPI/v6/internal/thinking"
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/util"
 	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/executor"
 	log "github.com/sirupsen/logrus"
@@ -120,6 +122,14 @@ type Manager struct {
 	// modelNameMappings stores global model name alias mappings (alias -> upstream name) keyed by channel.
 	modelNameMappings atomic.Value
 
+	// runtimeConfig stores the latest application config for request-time decisions.
+	// It is initialized in NewManager; never Load() before first Store().
+	runtimeConfig atomic.Value
+
+	// apiKeyModelMappings caches resolved model alias mappings for API-key auths.
+	// Keyed by auth.ID, value is alias(lower) -> upstream model (including suffix).
+	apiKeyModelMappings atomic.Value
+
 	// Optional HTTP RoundTripper provider injected by host.
 	rtProvider RoundTripperProvider
 
@@ -135,7 +145,7 @@ func NewManager(store Store, selector Selector, hook Hook) *Manager {
 	if hook == nil {
 		hook = NoopHook{}
 	}
-	return &Manager{
+	manager := &Manager{
 		store:           store,
 		executors:       make(map[string]ProviderExecutor),
 		selector:        selector,
@@ -143,6 +153,10 @@ func NewManager(store Store, selector Selector, hook Hook) *Manager {
 		auths:           make(map[string]*Auth),
 		providerOffsets: make(map[string]int),
 	}
+	// atomic.Value requires non-nil initial value.
+	manager.runtimeConfig.Store(&internalconfig.Config{})
+	manager.apiKeyModelMappings.Store(apiKeyModelMappingTable(nil))
+	return manager
 }
 
 func (m *Manager) SetSelector(selector Selector) {
@@ -169,6 +183,181 @@ func (m *Manager) SetRoundTripperProvider(p RoundTripperProvider) {
 	m.mu.Lock()
 	m.rtProvider = p
 	m.mu.Unlock()
+}
+
+// SetConfig updates the runtime config snapshot used by request-time helpers.
+// Callers should provide the latest config on reload so per-credential alias mapping stays in sync.
+func (m *Manager) SetConfig(cfg *internalconfig.Config) {
+	if m == nil {
+		return
+	}
+	if cfg == nil {
+		cfg = &internalconfig.Config{}
+	}
+	m.runtimeConfig.Store(cfg)
+	m.rebuildAPIKeyModelMappingsFromRuntimeConfig()
+}
+
+func (m *Manager) lookupAPIKeyUpstreamModel(authID, requestedModel string) string {
+	if m == nil {
+		return ""
+	}
+	authID = strings.TrimSpace(authID)
+	if authID == "" {
+		return ""
+	}
+	requestedModel = strings.TrimSpace(requestedModel)
+	if requestedModel == "" {
+		return ""
+	}
+	table, _ := m.apiKeyModelMappings.Load().(apiKeyModelMappingTable)
+	if table == nil {
+		return ""
+	}
+	byAlias := table[authID]
+	if len(byAlias) == 0 {
+		return ""
+	}
+	key := strings.ToLower(thinking.ParseSuffix(requestedModel).ModelName)
+	if key == "" {
+		key = strings.ToLower(requestedModel)
+	}
+	resolved := strings.TrimSpace(byAlias[key])
+	if resolved == "" {
+		return ""
+	}
+	// Preserve thinking suffix from the client's requested model unless config already has one.
+	requestResult := thinking.ParseSuffix(requestedModel)
+	if thinking.ParseSuffix(resolved).HasSuffix {
+		return resolved
+	}
+	if requestResult.HasSuffix && requestResult.RawSuffix != "" {
+		return resolved + "(" + requestResult.RawSuffix + ")"
+	}
+	return resolved
+
+}
+
+func (m *Manager) rebuildAPIKeyModelMappingsFromRuntimeConfig() {
+	if m == nil {
+		return
+	}
+	cfg, _ := m.runtimeConfig.Load().(*internalconfig.Config)
+	if cfg == nil {
+		cfg = &internalconfig.Config{}
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.rebuildAPIKeyModelMappingsLocked(cfg)
+}
+
+func (m *Manager) rebuildAPIKeyModelMappingsLocked(cfg *internalconfig.Config) {
+	if m == nil {
+		return
+	}
+	if cfg == nil {
+		cfg = &internalconfig.Config{}
+	}
+
+	out := make(apiKeyModelMappingTable)
+	for _, auth := range m.auths {
+		if auth == nil {
+			continue
+		}
+		if strings.TrimSpace(auth.ID) == "" {
+			continue
+		}
+		kind, _ := auth.AccountInfo()
+		if !strings.EqualFold(strings.TrimSpace(kind), "api_key") {
+			continue
+		}
+
+		byAlias := make(map[string]string)
+		provider := strings.ToLower(strings.TrimSpace(auth.Provider))
+		switch provider {
+		case "gemini":
+			if entry := resolveGeminiAPIKeyConfig(cfg, auth); entry != nil {
+				compileAPIKeyModelMappingsForModels(byAlias, entry.Models)
+			}
+		case "claude":
+			if entry := resolveClaudeAPIKeyConfig(cfg, auth); entry != nil {
+				compileAPIKeyModelMappingsForModels(byAlias, entry.Models)
+			}
+		case "codex":
+			if entry := resolveCodexAPIKeyConfig(cfg, auth); entry != nil {
+				compileAPIKeyModelMappingsForModels(byAlias, entry.Models)
+			}
+		case "vertex":
+			if entry := resolveVertexAPIKeyConfig(cfg, auth); entry != nil {
+				compileAPIKeyModelMappingsForModels(byAlias, entry.Models)
+			}
+		default:
+			// OpenAI-compat uses config selection from auth.Attributes.
+			providerKey := ""
+			compatName := ""
+			if auth.Attributes != nil {
+				providerKey = strings.TrimSpace(auth.Attributes["provider_key"])
+				compatName = strings.TrimSpace(auth.Attributes["compat_name"])
+			}
+			if compatName != "" || strings.EqualFold(strings.TrimSpace(auth.Provider), "openai-compatibility") {
+				if entry := resolveOpenAICompatConfig(cfg, providerKey, compatName, auth.Provider); entry != nil {
+					compileAPIKeyModelMappingsForModels(byAlias, entry.Models)
+				}
+			}
+		}
+
+		if len(byAlias) > 0 {
+			out[auth.ID] = byAlias
+		}
+	}
+
+	m.apiKeyModelMappings.Store(out)
+}
+
+func compileAPIKeyModelMappingsForModels[T interface {
+	GetName() string
+	GetAlias() string
+}](out map[string]string, models []T) {
+	if out == nil {
+		return
+	}
+	for i := range models {
+		alias := strings.TrimSpace(models[i].GetAlias())
+		name := strings.TrimSpace(models[i].GetName())
+		if alias == "" || name == "" {
+			continue
+		}
+		aliasKey := strings.ToLower(thinking.ParseSuffix(alias).ModelName)
+		if aliasKey == "" {
+			aliasKey = strings.ToLower(alias)
+		}
+		// Config priority: first alias wins.
+		if _, exists := out[aliasKey]; exists {
+			continue
+		}
+		out[aliasKey] = name
+		// Also allow direct lookup by upstream name (case-insensitive), so lookups on already-upstream
+		// models remain a cheap no-op.
+		nameKey := strings.ToLower(thinking.ParseSuffix(name).ModelName)
+		if nameKey == "" {
+			nameKey = strings.ToLower(name)
+		}
+		if nameKey != "" {
+			if _, exists := out[nameKey]; !exists {
+				out[nameKey] = name
+			}
+		}
+		// Preserve config suffix priority by seeding a base-name lookup when name already has suffix.
+		nameResult := thinking.ParseSuffix(name)
+		if nameResult.HasSuffix {
+			baseKey := strings.ToLower(strings.TrimSpace(nameResult.ModelName))
+			if baseKey != "" {
+				if _, exists := out[baseKey]; !exists {
+					out[baseKey] = name
+				}
+			}
+		}
+	}
 }
 
 // SetRetryConfig updates retry attempts and cooldown wait interval.
@@ -219,6 +408,7 @@ func (m *Manager) Register(ctx context.Context, auth *Auth) (*Auth, error) {
 	m.mu.Lock()
 	m.auths[auth.ID] = auth.Clone()
 	m.mu.Unlock()
+	m.rebuildAPIKeyModelMappingsFromRuntimeConfig()
 	_ = m.persist(ctx, auth)
 	m.hook.OnAuthRegistered(ctx, auth.Clone())
 	return auth.Clone(), nil
@@ -237,6 +427,7 @@ func (m *Manager) Update(ctx context.Context, auth *Auth) (*Auth, error) {
 	auth.EnsureIndex()
 	m.auths[auth.ID] = auth.Clone()
 	m.mu.Unlock()
+	m.rebuildAPIKeyModelMappingsFromRuntimeConfig()
 	_ = m.persist(ctx, auth)
 	m.hook.OnAuthUpdated(ctx, auth.Clone())
 	return auth.Clone(), nil
@@ -261,6 +452,11 @@ func (m *Manager) Load(ctx context.Context) error {
 		auth.EnsureIndex()
 		m.auths[auth.ID] = auth.Clone()
 	}
+	cfg, _ := m.runtimeConfig.Load().(*internalconfig.Config)
+	if cfg == nil {
+		cfg = &internalconfig.Config{}
+	}
+	m.rebuildAPIKeyModelMappingsLocked(cfg)
 	return nil
 }
 
@@ -558,6 +754,7 @@ func (m *Manager) executeWithProvider(ctx context.Context, provider string, req 
 		execReq := req
 		execReq.Model, execReq.Metadata = rewriteModelForAuth(routeModel, req.Metadata, auth)
 		execReq.Model, execReq.Metadata = m.applyOAuthModelMapping(auth, execReq.Model, execReq.Metadata)
+		execReq.Model, execReq.Metadata = m.applyAPIKeyModelMapping(auth, execReq.Model, execReq.Metadata)
 		resp, errExec := executor.Execute(execCtx, auth, execReq, opts)
 		result := Result{AuthID: auth.ID, Provider: provider, Model: routeModel, Success: errExec == nil}
 		if errExec != nil {
@@ -606,6 +803,7 @@ func (m *Manager) executeCountWithProvider(ctx context.Context, provider string,
 		execReq := req
 		execReq.Model, execReq.Metadata = rewriteModelForAuth(routeModel, req.Metadata, auth)
 		execReq.Model, execReq.Metadata = m.applyOAuthModelMapping(auth, execReq.Model, execReq.Metadata)
+		execReq.Model, execReq.Metadata = m.applyAPIKeyModelMapping(auth, execReq.Model, execReq.Metadata)
 		resp, errExec := executor.CountTokens(execCtx, auth, execReq, opts)
 		result := Result{AuthID: auth.ID, Provider: provider, Model: routeModel, Success: errExec == nil}
 		if errExec != nil {
@@ -654,6 +852,7 @@ func (m *Manager) executeStreamWithProvider(ctx context.Context, provider string
 		execReq := req
 		execReq.Model, execReq.Metadata = rewriteModelForAuth(routeModel, req.Metadata, auth)
 		execReq.Model, execReq.Metadata = m.applyOAuthModelMapping(auth, execReq.Model, execReq.Metadata)
+		execReq.Model, execReq.Metadata = m.applyAPIKeyModelMapping(auth, execReq.Model, execReq.Metadata)
 		chunks, errStream := executor.ExecuteStream(execCtx, auth, execReq, opts)
 		if errStream != nil {
 			rerr := &Error{Message: errStream.Error()}
@@ -712,7 +911,6 @@ func stripPrefixFromMetadata(metadata map[string]any, needle string) map[string]
 		return metadata
 	}
 	keys := []string{
-		util.ThinkingOriginalModelMetadataKey,
 		util.GeminiOriginalModelMetadataKey,
 		util.ModelMappingOriginalModelMetadataKey,
 	}
@@ -736,6 +934,215 @@ func stripPrefixFromMetadata(metadata map[string]any, needle string) map[string]
 	}
 	if out == nil {
 		return metadata
+	}
+	return out
+}
+
+func (m *Manager) applyAPIKeyModelMapping(auth *Auth, requestedModel string, metadata map[string]any) (string, map[string]any) {
+	if m == nil || auth == nil {
+		return requestedModel, metadata
+	}
+
+	kind, _ := auth.AccountInfo()
+	if !strings.EqualFold(strings.TrimSpace(kind), "api_key") {
+		return requestedModel, metadata
+	}
+
+	requestedModel = strings.TrimSpace(requestedModel)
+	if requestedModel == "" {
+		return requestedModel, metadata
+	}
+
+	// Fast path: lookup per-auth mapping table (keyed by auth.ID).
+	if resolved := m.lookupAPIKeyUpstreamModel(auth.ID, requestedModel); resolved != "" {
+		return applyUpstreamModelOverride(requestedModel, resolved, metadata)
+	}
+
+	// Slow path: scan config for the matching credential entry and resolve alias.
+	// This acts as a safety net if mappings are stale or auth.ID is missing.
+	cfg, _ := m.runtimeConfig.Load().(*internalconfig.Config)
+	if cfg == nil {
+		cfg = &internalconfig.Config{}
+	}
+
+	provider := strings.ToLower(strings.TrimSpace(auth.Provider))
+	upstreamModel := ""
+	switch provider {
+	case "gemini":
+		upstreamModel = resolveUpstreamModelForGeminiAPIKey(cfg, auth, requestedModel)
+	case "claude":
+		upstreamModel = resolveUpstreamModelForClaudeAPIKey(cfg, auth, requestedModel)
+	case "codex":
+		upstreamModel = resolveUpstreamModelForCodexAPIKey(cfg, auth, requestedModel)
+	case "vertex":
+		upstreamModel = resolveUpstreamModelForVertexAPIKey(cfg, auth, requestedModel)
+	default:
+		upstreamModel = resolveUpstreamModelForOpenAICompatAPIKey(cfg, auth, requestedModel)
+	}
+
+	// applyUpstreamModelOverride lives in model_name_mappings.go.
+	return applyUpstreamModelOverride(requestedModel, upstreamModel, metadata)
+}
+
+// APIKeyConfigEntry is a generic interface for API key configurations.
+type APIKeyConfigEntry interface {
+	GetAPIKey() string
+	GetBaseURL() string
+}
+
+func resolveAPIKeyConfig[T APIKeyConfigEntry](entries []T, auth *Auth) *T {
+	if auth == nil || len(entries) == 0 {
+		return nil
+	}
+	attrKey, attrBase := "", ""
+	if auth.Attributes != nil {
+		attrKey = strings.TrimSpace(auth.Attributes["api_key"])
+		attrBase = strings.TrimSpace(auth.Attributes["base_url"])
+	}
+	for i := range entries {
+		entry := &entries[i]
+		cfgKey := strings.TrimSpace((*entry).GetAPIKey())
+		cfgBase := strings.TrimSpace((*entry).GetBaseURL())
+		if attrKey != "" && attrBase != "" {
+			if strings.EqualFold(cfgKey, attrKey) && strings.EqualFold(cfgBase, attrBase) {
+				return entry
+			}
+			continue
+		}
+		if attrKey != "" && strings.EqualFold(cfgKey, attrKey) {
+			if cfgBase == "" || strings.EqualFold(cfgBase, attrBase) {
+				return entry
+			}
+		}
+		if attrKey == "" && attrBase != "" && strings.EqualFold(cfgBase, attrBase) {
+			return entry
+		}
+	}
+	if attrKey != "" {
+		for i := range entries {
+			entry := &entries[i]
+			if strings.EqualFold(strings.TrimSpace((*entry).GetAPIKey()), attrKey) {
+				return entry
+			}
+		}
+	}
+	return nil
+}
+
+func resolveGeminiAPIKeyConfig(cfg *internalconfig.Config, auth *Auth) *internalconfig.GeminiKey {
+	if cfg == nil {
+		return nil
+	}
+	return resolveAPIKeyConfig(cfg.GeminiKey, auth)
+}
+
+func resolveClaudeAPIKeyConfig(cfg *internalconfig.Config, auth *Auth) *internalconfig.ClaudeKey {
+	if cfg == nil {
+		return nil
+	}
+	return resolveAPIKeyConfig(cfg.ClaudeKey, auth)
+}
+
+func resolveCodexAPIKeyConfig(cfg *internalconfig.Config, auth *Auth) *internalconfig.CodexKey {
+	if cfg == nil {
+		return nil
+	}
+	return resolveAPIKeyConfig(cfg.CodexKey, auth)
+}
+
+func resolveVertexAPIKeyConfig(cfg *internalconfig.Config, auth *Auth) *internalconfig.VertexCompatKey {
+	if cfg == nil {
+		return nil
+	}
+	return resolveAPIKeyConfig(cfg.VertexCompatAPIKey, auth)
+}
+
+func resolveUpstreamModelForGeminiAPIKey(cfg *internalconfig.Config, auth *Auth, requestedModel string) string {
+	entry := resolveGeminiAPIKeyConfig(cfg, auth)
+	if entry == nil {
+		return ""
+	}
+	return resolveModelAliasFromConfigModels(requestedModel, asModelAliasEntries(entry.Models))
+}
+
+func resolveUpstreamModelForClaudeAPIKey(cfg *internalconfig.Config, auth *Auth, requestedModel string) string {
+	entry := resolveClaudeAPIKeyConfig(cfg, auth)
+	if entry == nil {
+		return ""
+	}
+	return resolveModelAliasFromConfigModels(requestedModel, asModelAliasEntries(entry.Models))
+}
+
+func resolveUpstreamModelForCodexAPIKey(cfg *internalconfig.Config, auth *Auth, requestedModel string) string {
+	entry := resolveCodexAPIKeyConfig(cfg, auth)
+	if entry == nil {
+		return ""
+	}
+	return resolveModelAliasFromConfigModels(requestedModel, asModelAliasEntries(entry.Models))
+}
+
+func resolveUpstreamModelForVertexAPIKey(cfg *internalconfig.Config, auth *Auth, requestedModel string) string {
+	entry := resolveVertexAPIKeyConfig(cfg, auth)
+	if entry == nil {
+		return ""
+	}
+	return resolveModelAliasFromConfigModels(requestedModel, asModelAliasEntries(entry.Models))
+}
+
+func resolveUpstreamModelForOpenAICompatAPIKey(cfg *internalconfig.Config, auth *Auth, requestedModel string) string {
+	providerKey := ""
+	compatName := ""
+	if auth != nil && len(auth.Attributes) > 0 {
+		providerKey = strings.TrimSpace(auth.Attributes["provider_key"])
+		compatName = strings.TrimSpace(auth.Attributes["compat_name"])
+	}
+	if compatName == "" && !strings.EqualFold(strings.TrimSpace(auth.Provider), "openai-compatibility") {
+		return ""
+	}
+	entry := resolveOpenAICompatConfig(cfg, providerKey, compatName, auth.Provider)
+	if entry == nil {
+		return ""
+	}
+	return resolveModelAliasFromConfigModels(requestedModel, asModelAliasEntries(entry.Models))
+}
+
+type apiKeyModelMappingTable map[string]map[string]string
+
+func resolveOpenAICompatConfig(cfg *internalconfig.Config, providerKey, compatName, authProvider string) *internalconfig.OpenAICompatibility {
+	if cfg == nil {
+		return nil
+	}
+	candidates := make([]string, 0, 3)
+	if v := strings.TrimSpace(compatName); v != "" {
+		candidates = append(candidates, v)
+	}
+	if v := strings.TrimSpace(providerKey); v != "" {
+		candidates = append(candidates, v)
+	}
+	if v := strings.TrimSpace(authProvider); v != "" {
+		candidates = append(candidates, v)
+	}
+	for i := range cfg.OpenAICompatibility {
+		compat := &cfg.OpenAICompatibility[i]
+		for _, candidate := range candidates {
+			if candidate != "" && strings.EqualFold(strings.TrimSpace(candidate), compat.Name) {
+				return compat
+			}
+		}
+	}
+	return nil
+}
+
+func asModelAliasEntries[T interface {
+	GetName() string
+	GetAlias() string
+}](models []T) []modelMappingEntry {
+	if len(models) == 0 {
+		return nil
+	}
+	out := make([]modelMappingEntry, 0, len(models))
+	for i := range models {
+		out = append(out, models[i])
 	}
 	return out
 }

@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/misc"
+	"github.com/router-for-me/CLIProxyAPI/v6/internal/registry"
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/translator/gemini/common"
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/util"
 	log "github.com/sirupsen/logrus"
@@ -39,7 +40,8 @@ func ConvertOpenAIRequestToAntigravity(modelName string, inputRawJSON []byte, _ 
 	// Note: OpenAI official fields take precedence over extra_body.google.thinking_config
 	re := gjson.GetBytes(rawJSON, "reasoning_effort")
 	hasOfficialThinking := re.Exists()
-	if hasOfficialThinking && util.ModelSupportsThinking(modelName) {
+	modelInfo := registry.GetGlobalRegistry().GetModelInfo(modelName)
+	if hasOfficialThinking && modelInfo != nil && modelInfo.Thinking != nil {
 		effort := strings.ToLower(strings.TrimSpace(re.String()))
 		if util.IsGemini3Model(modelName) {
 			switch effort {
@@ -53,14 +55,14 @@ func ConvertOpenAIRequestToAntigravity(modelName string, inputRawJSON []byte, _ 
 					out = util.ApplyGeminiCLIThinkingLevel(out, level, nil)
 				}
 			}
-		} else if !util.ModelUsesThinkingLevels(modelName) {
+		} else if len(modelInfo.Thinking.Levels) == 0 {
 			out = util.ApplyReasoningEffortToGeminiCLI(out, effort)
 		}
 	}
 
 	// Cherry Studio extension extra_body.google.thinking_config (effective only when official fields are absent)
 	// Only apply for models that use numeric budgets, not discrete levels.
-	if !hasOfficialThinking && util.ModelSupportsThinking(modelName) && !util.ModelUsesThinkingLevels(modelName) {
+	if !hasOfficialThinking && modelInfo != nil && modelInfo.Thinking != nil && len(modelInfo.Thinking.Levels) == 0 {
 		if tc := gjson.GetBytes(rawJSON, "extra_body.google.thinking_config"); tc.Exists() && tc.IsObject() {
 			var setBudget bool
 			var budget int
@@ -71,7 +73,7 @@ func ConvertOpenAIRequestToAntigravity(modelName string, inputRawJSON []byte, _ 
 				setBudget = true
 			} else if v := tc.Get("thinking_budget"); v.Exists() {
 				budget = int(v.Int())
-				out, _ = sjson.SetBytes(out, "request.generationConfig.thinkingConfig.thinkingBudget", budget)
+				out, _ = sjson.SetBytes(out, "request.generationConfig.thinkingBudget.thinkingBudget", budget)
 				setBudget = true
 			}
 
@@ -87,7 +89,7 @@ func ConvertOpenAIRequestToAntigravity(modelName string, inputRawJSON []byte, _ 
 
 	// Claude/Anthropic API format: thinking.type == "enabled" with budget_tokens
 	// This allows Claude Code and other Claude API clients to pass thinking configuration
-	if !gjson.GetBytes(out, "request.generationConfig.thinkingConfig").Exists() && util.ModelSupportsThinking(modelName) {
+	if !gjson.GetBytes(out, "request.generationConfig.thinkingConfig").Exists() && modelInfo != nil && modelInfo.Thinking != nil {
 		if t := gjson.GetBytes(rawJSON, "thinking"); t.Exists() && t.IsObject() {
 			if t.Get("type").String() == "enabled" {
 				if b := t.Get("budget_tokens"); b.Exists() && b.Type == gjson.Number {
