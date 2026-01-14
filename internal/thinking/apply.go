@@ -68,8 +68,10 @@ func IsUserDefinedModel(modelInfo *registry.ModelInfo) bool {
 //
 // Passthrough behavior (returns original body without error):
 //   - Unknown provider (not in providerAppliers map)
-//   - modelInfo is nil (model not found in registry)
 //   - modelInfo.Thinking is nil (model doesn't support thinking)
+//
+// Note: Unknown models (modelInfo is nil) are treated as user-defined models: we skip
+// validation and still apply the thinking config so the upstream can validate it.
 //
 // Example:
 //
@@ -87,15 +89,13 @@ func ApplyThinking(body []byte, model string, provider string) ([]byte, error) {
 	}
 
 	// 2. Parse suffix and get modelInfo
-	// First try dynamic registry, then fall back to static lookup
 	suffixResult := ParseSuffix(model)
 	baseModel := suffixResult.ModelName
-	modelInfo := registry.GetGlobalRegistry().GetModelInfo(baseModel)
-	if modelInfo == nil {
-		modelInfo = registry.LookupStaticModelInfo(baseModel)
-	}
+	modelInfo := registry.LookupModelInfo(baseModel)
 
 	// 3. Model capability check
+	// Unknown models are treated as user-defined so thinking config can still be applied.
+	// The upstream service is responsible for validating the configuration.
 	if IsUserDefinedModel(modelInfo) {
 		return applyUserDefinedModel(body, modelInfo, provider, suffixResult)
 	}

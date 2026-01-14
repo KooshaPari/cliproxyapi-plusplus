@@ -53,18 +53,11 @@ func init() {
 //	  }
 //	}
 func (a *Applier) Apply(body []byte, config thinking.ThinkingConfig, modelInfo *registry.ModelInfo) ([]byte, error) {
-	if modelInfo == nil {
+	if thinking.IsUserDefinedModel(modelInfo) {
 		return applyCompatibleClaude(body, config)
 	}
 	if modelInfo.Thinking == nil {
-		if modelInfo.Type == "" {
-			modelID := modelInfo.ID
-			if modelID == "" {
-				modelID = "unknown"
-			}
-			return nil, thinking.NewThinkingErrorWithModel(thinking.ErrThinkingNotSupported, "thinking not supported for this model", modelID)
-		}
-		return applyCompatibleClaude(body, config)
+		return body, nil
 	}
 
 	// Only process ModeBudget and ModeNone; other modes pass through

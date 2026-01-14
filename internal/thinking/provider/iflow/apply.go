@@ -54,15 +54,11 @@ func init() {
 //	  "reasoning_split": true
 //	}
 func (a *Applier) Apply(body []byte, config thinking.ThinkingConfig, modelInfo *registry.ModelInfo) ([]byte, error) {
-	if modelInfo == nil {
+	if thinking.IsUserDefinedModel(modelInfo) {
 		return body, nil
 	}
 	if modelInfo.Thinking == nil {
-		modelID := modelInfo.ID
-		if modelID == "" {
-			modelID = "unknown"
-		}
-		return nil, thinking.NewThinkingErrorWithModel(thinking.ErrThinkingNotSupported, "thinking not supported for this model", modelID)
+		return body, nil
 	}
 
 	if isGLMModel(modelInfo.ID) {

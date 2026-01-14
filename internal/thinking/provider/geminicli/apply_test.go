@@ -208,26 +208,21 @@ func TestGeminiCLIApplyConflictingFields(t *testing.T) {
 	}
 }
 
-// TestGeminiCLIApplyThinkingNotSupported tests error handling when modelInfo.Thinking is nil.
+// TestGeminiCLIApplyThinkingNotSupported tests passthrough handling when modelInfo.Thinking is nil.
 func TestGeminiCLIApplyThinkingNotSupported(t *testing.T) {
 	applier := NewApplier()
 	config := thinking.ThinkingConfig{Mode: thinking.ModeBudget, Budget: 8192}
+	body := []byte(`{"request":{"generationConfig":{"thinkingConfig":{"thinkingBudget":8192}}}}`)
 
 	// Model with nil Thinking support
 	modelInfo := &registry.ModelInfo{ID: "gemini-cli-unknown", Thinking: nil}
 
-	_, err := applier.Apply([]byte(`{}`), config, modelInfo)
-	if err == nil {
-		t.Fatal("Apply() expected error for nil Thinking, got nil")
+	got, err := applier.Apply(body, config, modelInfo)
+	if err != nil {
+		t.Fatalf("Apply() expected nil error for nil Thinking, got %v", err)
 	}
-
-	// Verify it's the correct error type
-	thinkErr, ok := err.(*thinking.ThinkingError)
-	if !ok {
-		t.Fatalf("Apply() error type = %T, want *thinking.ThinkingError", err)
-	}
-	if thinkErr.Code != thinking.ErrThinkingNotSupported {
-		t.Fatalf("Apply() error code = %v, want %v", thinkErr.Code, thinking.ErrThinkingNotSupported)
+	if string(got) != string(body) {
+		t.Fatalf("expected body unchanged, got %s", string(got))
 	}
 }
 
@@ -252,17 +247,14 @@ func TestGeminiCLIApplyEmptyModelID(t *testing.T) {
 	applier := NewApplier()
 	config := thinking.ThinkingConfig{Mode: thinking.ModeBudget, Budget: 8192}
 	modelInfo := &registry.ModelInfo{ID: "", Thinking: nil}
+	body := []byte(`{"request":{"generationConfig":{"thinkingConfig":{"thinkingBudget":8192}}}}`)
 
-	_, err := applier.Apply([]byte(`{}`), config, modelInfo)
-	if err == nil {
-		t.Fatal("Apply() with empty modelID and nil Thinking should error")
+	got, err := applier.Apply(body, config, modelInfo)
+	if err != nil {
+		t.Fatalf("Apply() expected nil error, got %v", err)
 	}
-	thinkErr, ok := err.(*thinking.ThinkingError)
-	if !ok {
-		t.Fatalf("Apply() error type = %T, want *thinking.ThinkingError", err)
-	}
-	if thinkErr.Model != "unknown" {
-		t.Fatalf("Apply() error model = %q, want %q", thinkErr.Model, "unknown")
+	if string(got) != string(body) {
+		t.Fatalf("expected body unchanged, got %s", string(got))
 	}
 }
 

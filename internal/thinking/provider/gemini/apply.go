@@ -59,18 +59,11 @@ func init() {
 //	  }
 //	}
 func (a *Applier) Apply(body []byte, config thinking.ThinkingConfig, modelInfo *registry.ModelInfo) ([]byte, error) {
-	if modelInfo == nil {
+	if thinking.IsUserDefinedModel(modelInfo) {
 		return a.applyCompatible(body, config)
 	}
 	if modelInfo.Thinking == nil {
-		if modelInfo.Type == "" {
-			modelID := modelInfo.ID
-			if modelID == "" {
-				modelID = "unknown"
-			}
-			return nil, thinking.NewThinkingErrorWithModel(thinking.ErrThinkingNotSupported, "thinking not supported for this model", modelID)
-		}
-		return a.applyCompatible(body, config)
+		return body, nil
 	}
 
 	if config.Mode != thinking.ModeBudget && config.Mode != thinking.ModeLevel && config.Mode != thinking.ModeNone && config.Mode != thinking.ModeAuto {

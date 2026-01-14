@@ -41,18 +41,11 @@ func init() {
 //	  "reasoning_effort": "high"
 //	}
 func (a *Applier) Apply(body []byte, config thinking.ThinkingConfig, modelInfo *registry.ModelInfo) ([]byte, error) {
-	if modelInfo == nil {
+	if thinking.IsUserDefinedModel(modelInfo) {
 		return applyCompatibleOpenAI(body, config)
 	}
 	if modelInfo.Thinking == nil {
-		if modelInfo.Type == "" {
-			modelID := modelInfo.ID
-			if modelID == "" {
-				modelID = "unknown"
-			}
-			return nil, thinking.NewThinkingErrorWithModel(thinking.ErrThinkingNotSupported, "thinking not supported for this model", modelID)
-		}
-		return applyCompatibleOpenAI(body, config)
+		return body, nil
 	}
 
 	// Only handle ModeLevel and ModeNone; other modes pass through unchanged.

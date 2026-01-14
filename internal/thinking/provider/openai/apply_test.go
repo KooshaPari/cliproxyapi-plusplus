@@ -57,22 +57,13 @@ func TestApplyNilModelInfo(t *testing.T) {
 func TestApplyMissingThinkingSupport(t *testing.T) {
 	applier := NewApplier()
 	modelInfo := &registry.ModelInfo{ID: "gpt-5.2"}
-	got, err := applier.Apply([]byte(`{"model":"gpt-5.2"}`), thinking.ThinkingConfig{}, modelInfo)
-	if err == nil {
-		t.Fatalf("expected error, got nil")
+	body := []byte(`{"model":"gpt-5.2"}`)
+	got, err := applier.Apply(body, thinking.ThinkingConfig{}, modelInfo)
+	if err != nil {
+		t.Fatalf("expected nil error, got %v", err)
 	}
-	if got != nil {
-		t.Fatalf("expected nil body on error, got %s", string(got))
-	}
-	thinkingErr, ok := err.(*thinking.ThinkingError)
-	if !ok {
-		t.Fatalf("expected ThinkingError, got %T", err)
-	}
-	if thinkingErr.Code != thinking.ErrThinkingNotSupported {
-		t.Fatalf("expected code %s, got %s", thinking.ErrThinkingNotSupported, thinkingErr.Code)
-	}
-	if thinkingErr.Model != "gpt-5.2" {
-		t.Fatalf("expected model gpt-5.2, got %s", thinkingErr.Model)
+	if string(got) != string(body) {
+		t.Fatalf("expected body unchanged, got %s", string(got))
 	}
 }
 

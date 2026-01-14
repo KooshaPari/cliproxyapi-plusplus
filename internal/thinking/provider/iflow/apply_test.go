@@ -73,33 +73,23 @@ func TestApplyMissingThinkingSupport(t *testing.T) {
 	applier := NewApplier()
 
 	tests := []struct {
-		name      string
-		modelID   string
-		wantModel string
+		name    string
+		modelID string
 	}{
-		{"model id", "glm-4.6", "glm-4.6"},
-		{"empty model id", "", "unknown"},
+		{"model id", "glm-4.6"},
+		{"empty model id", ""},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			modelInfo := &registry.ModelInfo{ID: tt.modelID}
-			got, err := applier.Apply([]byte(`{"model":"`+tt.modelID+`"}`), thinking.ThinkingConfig{}, modelInfo)
-			if err == nil {
-				t.Fatalf("expected error, got nil")
+			body := []byte(`{"model":"` + tt.modelID + `"}`)
+			got, err := applier.Apply(body, thinking.ThinkingConfig{}, modelInfo)
+			if err != nil {
+				t.Fatalf("expected nil error, got %v", err)
 			}
-			if got != nil {
-				t.Fatalf("expected nil body on error, got %s", string(got))
-			}
-			thinkingErr, ok := err.(*thinking.ThinkingError)
-			if !ok {
-				t.Fatalf("expected ThinkingError, got %T", err)
-			}
-			if thinkingErr.Code != thinking.ErrThinkingNotSupported {
-				t.Fatalf("expected code %s, got %s", thinking.ErrThinkingNotSupported, thinkingErr.Code)
-			}
-			if thinkingErr.Model != tt.wantModel {
-				t.Fatalf("expected model %s, got %s", tt.wantModel, thinkingErr.Model)
+			if string(got) != string(body) {
+				t.Fatalf("expected body unchanged, got %s", string(got))
 			}
 		})
 	}
