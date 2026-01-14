@@ -118,7 +118,7 @@ func ConvertGeminiRequestToClaude(modelName string, inputRawJSON []byte, stream 
 		// Include thoughts configuration for reasoning process visibility
 		// Only apply for models that support thinking and use numeric budgets, not discrete levels.
 		if thinkingConfig := genConfig.Get("thinkingConfig"); thinkingConfig.Exists() && thinkingConfig.IsObject() {
-			modelInfo := registry.GetGlobalRegistry().GetModelInfo(modelName)
+			modelInfo := registry.LookupModelInfo(modelName)
 			if modelInfo != nil && modelInfo.Thinking != nil && len(modelInfo.Thinking.Levels) == 0 {
 				// Check for thinkingBudget first - if present, enable thinking with budget
 				if thinkingBudget := thinkingConfig.Get("thinkingBudget"); thinkingBudget.Exists() && thinkingBudget.Int() > 0 {

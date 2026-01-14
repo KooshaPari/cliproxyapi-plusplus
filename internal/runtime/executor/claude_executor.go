@@ -560,7 +560,7 @@ func ensureMaxTokensForThinking(modelName string, body []byte) []byte {
 
 	// Look up the model's max completion tokens from the registry
 	maxCompletionTokens := 0
-	if modelInfo := registry.GetGlobalRegistry().GetModelInfo(modelName); modelInfo != nil {
+	if modelInfo := registry.LookupModelInfo(modelName); modelInfo != nil {
 		maxCompletionTokens = modelInfo.MaxCompletionTokens
 	}
 

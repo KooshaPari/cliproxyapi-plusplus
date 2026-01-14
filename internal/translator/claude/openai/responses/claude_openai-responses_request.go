@@ -55,7 +55,7 @@ func ConvertOpenAIResponsesRequestToClaude(modelName string, inputRawJSON []byte
 	root := gjson.ParseBytes(rawJSON)
 
 	if v := root.Get("reasoning.effort"); v.Exists() {
-		modelInfo := registry.GetGlobalRegistry().GetModelInfo(modelName)
+		modelInfo := registry.LookupModelInfo(modelName)
 		if modelInfo != nil && modelInfo.Thinking != nil && len(modelInfo.Thinking.Levels) == 0 {
 			effort := strings.ToLower(strings.TrimSpace(v.String()))
 			if effort != "" {

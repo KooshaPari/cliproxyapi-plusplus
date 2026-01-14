@@ -161,7 +161,7 @@ func ConvertClaudeRequestToCLI(modelName string, inputRawJSON []byte, _ bool) []
 
 	// Map Anthropic thinking -> Gemini thinkingBudget/include_thoughts when type==enabled
 	if t := gjson.GetBytes(rawJSON, "thinking"); t.Exists() && t.IsObject() {
-		modelInfo := registry.GetGlobalRegistry().GetModelInfo(modelName)
+		modelInfo := registry.LookupModelInfo(modelName)
 		if modelInfo != nil && modelInfo.Thinking != nil {
 			if t.Get("type").String() == "enabled" {
 				if b := t.Get("budget_tokens"); b.Exists() && b.Type == gjson.Number {

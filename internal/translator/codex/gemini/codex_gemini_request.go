@@ -253,7 +253,7 @@ func ConvertGeminiRequestToCodex(modelName string, inputRawJSON []byte, _ bool) 
 	reasoningEffort := "medium" // default
 	if genConfig := root.Get("generationConfig"); genConfig.Exists() {
 		if thinkingConfig := genConfig.Get("thinkingConfig"); thinkingConfig.Exists() && thinkingConfig.IsObject() {
-			modelInfo := registry.GetGlobalRegistry().GetModelInfo(modelName)
+			modelInfo := registry.LookupModelInfo(modelName)
 			if modelInfo != nil && modelInfo.Thinking != nil && len(modelInfo.Thinking.Levels) > 0 {
 				if thinkingBudget := thinkingConfig.Get("thinkingBudget"); thinkingBudget.Exists() {
 					budget := int(thinkingBudget.Int())

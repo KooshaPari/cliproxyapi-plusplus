@@ -155,7 +155,7 @@ func ConvertClaudeRequestToGemini(modelName string, inputRawJSON []byte, _ bool)
 	// Map Anthropic thinking -> Gemini thinkingBudget/include_thoughts when enabled
 	// Only apply for models that use numeric budgets, not discrete levels.
 	if t := gjson.GetBytes(rawJSON, "thinking"); t.Exists() && t.IsObject() {
-		modelInfo := registry.GetGlobalRegistry().GetModelInfo(modelName)
+		modelInfo := registry.LookupModelInfo(modelName)
 		if modelInfo != nil && modelInfo.Thinking != nil && len(modelInfo.Thinking.Levels) == 0 {
 			if t.Get("type").String() == "enabled" {
 				if b := t.Get("budget_tokens"); b.Exists() && b.Type == gjson.Number {

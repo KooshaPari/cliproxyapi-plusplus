@@ -221,7 +221,7 @@ func ConvertClaudeRequestToCodex(modelName string, inputRawJSON []byte, _ bool) 
 	// Convert thinking.budget_tokens to reasoning.effort for level-based models
 	reasoningEffort := "medium" // default
 	if thinkingConfig := rootResult.Get("thinking"); thinkingConfig.Exists() && thinkingConfig.IsObject() {
-		modelInfo := registry.GetGlobalRegistry().GetModelInfo(modelName)
+		modelInfo := registry.LookupModelInfo(modelName)
 		switch thinkingConfig.Get("type").String() {
 		case "enabled":
 			if modelInfo != nil && modelInfo.Thinking != nil && len(modelInfo.Thinking.Levels) > 0 {

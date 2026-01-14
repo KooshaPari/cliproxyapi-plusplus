@@ -67,7 +67,7 @@ func ConvertOpenAIRequestToClaude(modelName string, inputRawJSON []byte, stream 
 	root := gjson.ParseBytes(rawJSON)
 
 	if v := root.Get("reasoning_effort"); v.Exists() {
-		modelInfo := registry.GetGlobalRegistry().GetModelInfo(modelName)
+		modelInfo := registry.LookupModelInfo(modelName)
 		if modelInfo != nil && modelInfo.Thinking != nil && len(modelInfo.Thinking.Levels) == 0 {
 			effort := strings.ToLower(strings.TrimSpace(v.String()))
 			if effort != "" {
