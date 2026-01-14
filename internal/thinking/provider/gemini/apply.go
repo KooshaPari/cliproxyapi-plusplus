@@ -127,6 +127,8 @@ func (a *Applier) applyLevelFormat(body []byte, config thinking.ThinkingConfig) 
 
 	// Remove conflicting field to avoid both thinkingLevel and thinkingBudget in output
 	result, _ := sjson.DeleteBytes(body, "generationConfig.thinkingConfig.thinkingBudget")
+	// Normalize includeThoughts field name to avoid oneof conflicts in upstream JSON parsing.
+	result, _ = sjson.DeleteBytes(result, "generationConfig.thinkingConfig.include_thoughts")
 
 	if config.Mode == thinking.ModeNone {
 		result, _ = sjson.SetBytes(result, "generationConfig.thinkingConfig.includeThoughts", false)
@@ -150,6 +152,8 @@ func (a *Applier) applyLevelFormat(body []byte, config thinking.ThinkingConfig) 
 func (a *Applier) applyBudgetFormat(body []byte, config thinking.ThinkingConfig) ([]byte, error) {
 	// Remove conflicting field to avoid both thinkingLevel and thinkingBudget in output
 	result, _ := sjson.DeleteBytes(body, "generationConfig.thinkingConfig.thinkingLevel")
+	// Normalize includeThoughts field name to avoid oneof conflicts in upstream JSON parsing.
+	result, _ = sjson.DeleteBytes(result, "generationConfig.thinkingConfig.include_thoughts")
 
 	budget := config.Budget
 	// ModeNone semantics:
