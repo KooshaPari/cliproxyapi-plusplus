@@ -450,8 +450,9 @@ func TestGeminiApplyNilModelInfo(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Apply() with nil modelInfo should not error, got: %v", err)
 	}
-	if string(result) != string(body) {
-		t.Fatalf("Apply() with nil modelInfo should return original body, got: %s", result)
+	// nil modelInfo now applies compatible config
+	if !gjson.GetBytes(result, "generationConfig.thinkingConfig.thinkingBudget").Exists() {
+		t.Fatalf("Apply() with nil modelInfo should apply thinking config, got: %s", result)
 	}
 }
 

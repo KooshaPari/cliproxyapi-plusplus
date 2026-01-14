@@ -43,12 +43,14 @@ func TestApplierImplementsInterface(t *testing.T) {
 func TestApplyNilModelInfo(t *testing.T) {
 	applier := NewApplier()
 	body := []byte(`{"model":"gpt-5.2"}`)
-	got, err := applier.Apply(body, thinking.ThinkingConfig{}, nil)
+	config := thinking.ThinkingConfig{Mode: thinking.ModeLevel, Level: thinking.LevelHigh}
+	got, err := applier.Apply(body, config, nil)
 	if err != nil {
 		t.Fatalf("expected nil error, got %v", err)
 	}
-	if string(got) != string(body) {
-		t.Fatalf("expected body unchanged, got %s", string(got))
+	// nil modelInfo now applies compatible config
+	if !gjson.GetBytes(got, "reasoning_effort").Exists() {
+		t.Fatalf("expected reasoning_effort applied, got %s", string(got))
 	}
 }
 

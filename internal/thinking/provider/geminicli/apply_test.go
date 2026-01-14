@@ -241,8 +241,9 @@ func TestGeminiCLIApplyNilModelInfo(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Apply() with nil modelInfo should not error, got: %v", err)
 	}
-	if string(result) != string(body) {
-		t.Fatalf("Apply() with nil modelInfo should return original body, got: %s", result)
+	// nil modelInfo now applies compatible config
+	if !gjson.GetBytes(result, "request.generationConfig.thinkingConfig.thinkingBudget").Exists() {
+		t.Fatalf("Apply() with nil modelInfo should apply thinking config, got: %s", result)
 	}
 }
 
@@ -277,9 +278,9 @@ func TestGeminiCLIApplyModeBudgetWithLevels(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Apply() error = %v", err)
 	}
-	// ModeBudget with Levels model: Apply returns body unchanged (conversion is upper layer's job)
-	if string(result) != string(body) {
-		t.Fatalf("Apply() ModeBudget with Levels should return original body, got: %s", result)
+	// ModeBudget applies budget format directly without conversion to levels
+	if !gjson.GetBytes(result, "request.generationConfig.thinkingConfig.thinkingBudget").Exists() {
+		t.Fatalf("Apply() ModeBudget should apply budget format, got: %s", result)
 	}
 }
 

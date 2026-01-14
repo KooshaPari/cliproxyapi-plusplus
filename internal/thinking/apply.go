@@ -40,7 +40,7 @@ func RegisterProvider(name string, applier ProviderApplier) {
 // letting the upstream service validate the configuration.
 func IsUserDefinedModel(modelInfo *registry.ModelInfo) bool {
 	if modelInfo == nil {
-		return false
+		return true
 	}
 	return modelInfo.UserDefined
 }
@@ -87,28 +87,28 @@ func ApplyThinking(body []byte, model string, provider string) ([]byte, error) {
 	}
 
 	// 2. Parse suffix and get modelInfo
+	// First try dynamic registry, then fall back to static lookup
 	suffixResult := ParseSuffix(model)
 	baseModel := suffixResult.ModelName
 	modelInfo := registry.GetGlobalRegistry().GetModelInfo(baseModel)
+	if modelInfo == nil {
+		modelInfo = registry.LookupStaticModelInfo(baseModel)
+	}
 
 	// 3. Model capability check
-	if modelInfo == nil {
-		log.WithField("model", model).Debug("thinking: nil modelInfo, passthrough")
-		return body, nil
+	if IsUserDefinedModel(modelInfo) {
+		return applyUserDefinedModel(body, modelInfo, provider, suffixResult)
 	}
 	if modelInfo.Thinking == nil {
-		if IsUserDefinedModel(modelInfo) {
-			return applyUserDefinedModel(body, modelInfo, provider, suffixResult)
-		}
 		config := extractThinkingConfig(body, provider)
 		if hasThinkingConfig(config) {
 			log.WithFields(log.Fields{
-				"model":    modelInfo.ID,
+				"model":    baseModel,
 				"provider": provider,
 			}).Debug("thinking: model does not support thinking, stripping config")
 			return StripThinkingConfig(body, provider), nil
 		}
-		log.WithField("model", modelInfo.ID).Debug("thinking: model does not support thinking, passthrough")
+		log.WithField("model", baseModel).Debug("thinking: model does not support thinking, passthrough")
 		return body, nil
 	}
 
@@ -212,6 +212,14 @@ func parseSuffixToConfig(rawSuffix string) ThinkingConfig {
 // applyUserDefinedModel applies thinking configuration for user-defined models
 // without ThinkingSupport validation.
 func applyUserDefinedModel(body []byte, modelInfo *registry.ModelInfo, provider string, suffixResult SuffixResult) ([]byte, error) {
+	// Get model ID for logging
+	modelID := ""
+	if modelInfo != nil {
+		modelID = modelInfo.ID
+	} else {
+		modelID = suffixResult.ModelName
+	}
+
 	// Get config: suffix priority over body
 	var config ThinkingConfig
 	if suffixResult.HasSuffix {
@@ -222,7 +230,7 @@ func applyUserDefinedModel(body []byte, modelInfo *registry.ModelInfo, provider 
 
 	if !hasThinkingConfig(config) {
 		log.WithFields(log.Fields{
-			"model":        modelInfo.ID,
+			"model":        modelID,
 			"provider":     provider,
 			"user_defined": true,
 			"passthrough":  true,
@@ -233,7 +241,7 @@ func applyUserDefinedModel(body []byte, modelInfo *registry.ModelInfo, provider 
 	applier := GetProviderApplier(provider)
 	if applier == nil {
 		log.WithFields(log.Fields{
-			"model":        modelInfo.ID,
+			"model":        modelID,
 			"provider":     provider,
 			"user_defined": true,
 			"passthrough":  true,
@@ -242,7 +250,7 @@ func applyUserDefinedModel(body []byte, modelInfo *registry.ModelInfo, provider 
 	}
 
 	log.WithFields(log.Fields{
-		"model":        modelInfo.ID,
+		"model":        modelID,
 		"provider":     provider,
 		"user_defined": true,
 		"passthrough":  false,

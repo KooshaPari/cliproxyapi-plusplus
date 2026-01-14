@@ -150,7 +150,7 @@ func TestIsUserDefinedModel(t *testing.T) {
 		modelInfo *registry.ModelInfo
 		want      bool
 	}{
-		{"nil modelInfo", nil, false},
+		{"nil modelInfo", nil, true},
 		{"not user-defined no flag", &registry.ModelInfo{ID: "test"}, false},
 		{"not user-defined with type", &registry.ModelInfo{ID: "test", Type: "openai"}, false},
 		{"user-defined with flag", &registry.ModelInfo{ID: "test", Type: "openai", UserDefined: true}, true},

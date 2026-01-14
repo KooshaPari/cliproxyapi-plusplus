@@ -30,7 +30,7 @@ func init() {
 // Apply applies thinking configuration to Gemini CLI request body.
 func (a *Applier) Apply(body []byte, config thinking.ThinkingConfig, modelInfo *registry.ModelInfo) ([]byte, error) {
 	if modelInfo == nil {
-		return body, nil
+		return a.applyCompatible(body, config)
 	}
 	if modelInfo.Thinking == nil {
 		if modelInfo.Type == "" {

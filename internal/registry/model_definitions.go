@@ -788,6 +788,7 @@ func LookupStaticModelInfo(modelID string) *ModelInfo {
 	if modelID == "" {
 		return nil
 	}
+
 	allModels := [][]*ModelInfo{
 		GetClaudeModels(),
 		GetGeminiModels(),
@@ -805,5 +806,16 @@ func LookupStaticModelInfo(modelID string) *ModelInfo {
 			}
 		}
 	}
+
+	// Check Antigravity static config
+	if cfg := GetAntigravityModelConfig()[modelID]; cfg != nil && cfg.Thinking != nil {
+		return &ModelInfo{
+			ID:                  modelID,
+			Name:                cfg.Name,
+			Thinking:            cfg.Thinking,
+			MaxCompletionTokens: cfg.MaxCompletionTokens,
+		}
+	}
+
 	return nil
 }

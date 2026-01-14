@@ -45,7 +45,7 @@ func init() {
 //	}
 func (a *Applier) Apply(body []byte, config thinking.ThinkingConfig, modelInfo *registry.ModelInfo) ([]byte, error) {
 	if modelInfo == nil {
-		return body, nil
+		return applyCompatibleCodex(body, config)
 	}
 	if modelInfo.Thinking == nil {
 		if modelInfo.Type == "" {
