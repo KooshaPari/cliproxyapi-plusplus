@@ -149,7 +149,7 @@ func ApplyThinking(body []byte, model string, provider string) ([]byte, error) {
 			"provider": provider,
 			"model":    modelInfo.ID,
 			"error":    err.Error(),
-		}).Warn("thinking: validation failed, returning original body")
+		}).Warn("thinking: validation failed")
 		// Return original body on validation failure (defensive programming).
 		// This ensures callers who ignore the error won't receive nil body.
 		// The upstream service will decide how to handle the unmodified request.

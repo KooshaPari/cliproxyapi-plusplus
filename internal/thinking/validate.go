@@ -76,12 +76,10 @@ func ClampBudgetWithZeroCheck(value, min, max int, zeroAllowed bool) int {
 			return 0
 		}
 		log.WithFields(log.Fields{
-			"original_value": value,
-			"clamped_to":     min,
-			"min":            min,
-			"max":            max,
-			"reason":         "zero_not_allowed",
-		}).Warn("budget clamped: zero not allowed")
+			"clamped_to": min,
+			"min":        min,
+			"max":        max,
+		}).Warn("thinking: budget zero not allowed")
 		return min
 	}
 
@@ -253,8 +251,8 @@ func convertAutoToMidRange(config ThinkingConfig, support *registry.ThinkingSupp
 func logClamp(original, clampedTo, min, max int) {
 	log.WithFields(log.Fields{
 		"original_value": original,
-		"clamped_to":     clampedTo,
 		"min":            min,
 		"max":            max,
-	}).Debug("budget clamped: value outside model range")
+		"clamped_to":     clampedTo,
+	}).Debug("thinking: budget clamped")
 }

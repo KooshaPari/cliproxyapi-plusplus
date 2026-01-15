@@ -6,7 +6,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 	"sync"
 
@@ -29,6 +28,9 @@ var (
 // This formatter adds timestamp, level, request ID, and source location to each log entry.
 // Format: [2025-12-23 20:14:04] [debug] [manager.go:524] | a1b2c3d4 | Use API key sk-9...0RHO for model gpt-5.2
 type LogFormatter struct{}
+
+// logFieldOrder defines the display order for common log fields.
+var logFieldOrder = []string{"provider", "model", "mode", "budget", "level", "original_value", "min", "max", "clamped_to", "error"}
 
 // Format renders a single log entry with custom formatting.
 func (m *LogFormatter) Format(entry *log.Entry) ([]byte, error) {
@@ -56,17 +58,19 @@ func (m *LogFormatter) Format(entry *log.Entry) ([]byte, error) {
 	// Build fields string (excluding request_id which is already shown)
 	var fieldsStr string
 	if len(entry.Data) > 0 {
-		var keys []string
-		for k := range entry.Data {
-			if k == "request_id" {
+		seen := make(map[string]bool)
+		var fields []string
+		for _, k := range logFieldOrder {
+			if v, ok := entry.Data[k]; ok {
+				fields = append(fields, fmt.Sprintf("%s=%v", k, v))
+				seen[k] = true
+			}
+		}
+		for k, v := range entry.Data {
+			if k == "request_id" || seen[k] {
 				continue
 			}
-			keys = append(keys, k)
-		}
-		sort.Strings(keys)
-		var fields []string
-		for _, k := range keys {
-			fields = append(fields, fmt.Sprintf("%s=%v", k, entry.Data[k]))
+			fields = append(fields, fmt.Sprintf("%s=%v", k, v))
 		}
 		if len(fields) > 0 {
 			fieldsStr = " " + strings.Join(fields, " ")
