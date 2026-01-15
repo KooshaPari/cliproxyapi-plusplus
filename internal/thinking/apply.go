@@ -247,31 +247,27 @@ func applyUserDefinedModel(body []byte, modelInfo *registry.ModelInfo, provider 
 
 	if !hasThinkingConfig(config) {
 		log.WithFields(log.Fields{
-			"model":        modelID,
-			"provider":     provider,
-			"user_defined": true,
-			"passthrough":  true,
-		}).Debug("thinking: user-defined model, no config, passthrough")
+			"model":    modelID,
+			"provider": provider,
+		}).Debug("thinking: user-defined model, passthrough (no config)")
 		return body, nil
 	}
 
 	applier := GetProviderApplier(provider)
 	if applier == nil {
 		log.WithFields(log.Fields{
-			"model":        modelID,
-			"provider":     provider,
-			"user_defined": true,
-			"passthrough":  true,
-		}).Debug("thinking: user-defined model, unknown provider, passthrough")
+			"model":    modelID,
+			"provider": provider,
+		}).Debug("thinking: user-defined model, passthrough (unknown provider)")
 		return body, nil
 	}
 
 	log.WithFields(log.Fields{
-		"model":        modelID,
-		"provider":     provider,
-		"user_defined": true,
-		"passthrough":  false,
-		"config":       config,
+		"provider": provider,
+		"model":    modelID,
+		"mode":     config.Mode,
+		"budget":   config.Budget,
+		"level":    config.Level,
 	}).Debug("thinking: applying config for user-defined model (skip validation)")
 
 	return applier.Apply(body, config, modelInfo)
