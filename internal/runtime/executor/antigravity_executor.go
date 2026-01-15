@@ -141,8 +141,6 @@ func (e *AntigravityExecutor) Execute(ctx context.Context, auth *cliproxyauth.Au
 		return resp, err
 	}
 
-	// Preserve Claude special handling (use baseModel for registry lookups)
-	translated = normalizeAntigravityThinking(baseModel, translated, isClaude)
 	translated = applyPayloadConfigWithRoot(e.cfg, baseModel, "antigravity", "request", translated, originalTranslated)
 
 	baseURLs := antigravityBaseURLFallbackOrder(auth)
@@ -262,8 +260,6 @@ func (e *AntigravityExecutor) executeClaudeNonStream(ctx context.Context, auth *
 		return resp, err
 	}
 
-	// Preserve Claude special handling (use baseModel for registry lookups)
-	translated = normalizeAntigravityThinking(baseModel, translated, true)
 	translated = applyPayloadConfigWithRoot(e.cfg, baseModel, "antigravity", "request", translated, originalTranslated)
 
 	baseURLs := antigravityBaseURLFallbackOrder(auth)
@@ -603,7 +599,6 @@ func (e *AntigravityExecutor) ExecuteStream(ctx context.Context, auth *cliproxya
 	baseModel := thinking.ParseSuffix(req.Model).ModelName
 
 	ctx = context.WithValue(ctx, "alt", "")
-	isClaude := strings.Contains(strings.ToLower(baseModel), "claude")
 
 	token, updatedAuth, errToken := e.ensureAccessToken(ctx, auth)
 	if errToken != nil {
@@ -631,8 +626,6 @@ func (e *AntigravityExecutor) ExecuteStream(ctx context.Context, auth *cliproxya
 		return nil, err
 	}
 
-	// Preserve Claude special handling (use baseModel for registry lookups)
-	translated = normalizeAntigravityThinking(baseModel, translated, isClaude)
 	translated = applyPayloadConfigWithRoot(e.cfg, baseModel, "antigravity", "request", translated, originalTranslated)
 
 	baseURLs := antigravityBaseURLFallbackOrder(auth)
@@ -790,7 +783,6 @@ func (e *AntigravityExecutor) Refresh(ctx context.Context, auth *cliproxyauth.Au
 // CountTokens counts tokens for the given request using the Antigravity API.
 func (e *AntigravityExecutor) CountTokens(ctx context.Context, auth *cliproxyauth.Auth, req cliproxyexecutor.Request, opts cliproxyexecutor.Options) (cliproxyexecutor.Response, error) {
 	baseModel := thinking.ParseSuffix(req.Model).ModelName
-	isClaude := strings.Contains(strings.ToLower(baseModel), "claude")
 
 	token, updatedAuth, errToken := e.ensureAccessToken(ctx, auth)
 	if errToken != nil {
@@ -815,8 +807,6 @@ func (e *AntigravityExecutor) CountTokens(ctx context.Context, auth *cliproxyaut
 		return cliproxyexecutor.Response{}, err
 	}
 
-	// Preserve Claude special handling (use baseModel for registry lookups)
-	payload = normalizeAntigravityThinking(baseModel, payload, isClaude)
 	payload = deleteJSONField(payload, "project")
 	payload = deleteJSONField(payload, "model")
 	payload = deleteJSONField(payload, "request.safetySettings")
@@ -1446,72 +1436,4 @@ func generateProjectID() string {
 	randSourceMutex.Unlock()
 	randomPart := strings.ToLower(uuid.NewString())[:5]
 	return adj + "-" + noun + "-" + randomPart
-}
-
-// normalizeAntigravityThinking performs Antigravity-specific thinking config normalization.
-// This function is called AFTER thinking.ApplyThinking() to apply Claude-specific constraints.
-//
-// It handles:
-//   - Stripping thinking config for unsupported models
-//   - Normalizing budget to model range (via thinking.ClampBudget)
-//   - For Claude models: ensuring thinking budget < max_tokens
-//   - For Claude models: removing thinkingConfig if budget < minimum allowed
-func normalizeAntigravityThinking(model string, payload []byte, isClaude bool) []byte {
-	modelInfo := registry.LookupModelInfo(model)
-	if modelInfo == nil || modelInfo.Thinking == nil {
-		// Model doesn't support thinking - strip any thinking config
-		return thinking.StripThinkingConfig(payload, "antigravity")
-	}
-	budget := gjson.GetBytes(payload, "request.generationConfig.thinkingConfig.thinkingBudget")
-	if !budget.Exists() {
-		return payload
-	}
-	raw := int(budget.Int())
-	normalized := thinking.ClampBudget(raw, modelInfo, "antigravity")
-
-	if isClaude {
-		effectiveMax, setDefaultMax := antigravityEffectiveMaxTokens(model, payload)
-		if effectiveMax > 0 && normalized >= effectiveMax {
-			normalized = effectiveMax - 1
-		}
-		minBudget := antigravityMinThinkingBudget(model)
-		if minBudget > 0 && normalized >= 0 && normalized < minBudget {
-			// Budget is below minimum, remove thinking config entirely
-			payload, _ = sjson.DeleteBytes(payload, "request.generationConfig.thinkingConfig")
-			return payload
-		}
-		if setDefaultMax {
-			if res, errSet := sjson.SetBytes(payload, "request.generationConfig.maxOutputTokens", effectiveMax); errSet == nil {
-				payload = res
-			}
-		}
-	}
-
-	updated, err := sjson.SetBytes(payload, "request.generationConfig.thinkingConfig.thinkingBudget", normalized)
-	if err != nil {
-		return payload
-	}
-	return updated
-}
-
-// antigravityEffectiveMaxTokens returns the max tokens to cap thinking:
-// prefer request-provided maxOutputTokens; otherwise fall back to model default.
-// The boolean indicates whether the value came from the model default (and thus should be written back).
-func antigravityEffectiveMaxTokens(model string, payload []byte) (max int, fromModel bool) {
-	if maxTok := gjson.GetBytes(payload, "request.generationConfig.maxOutputTokens"); maxTok.Exists() && maxTok.Int() > 0 {
-		return int(maxTok.Int()), false
-	}
-	if modelInfo := registry.LookupModelInfo(model); modelInfo != nil && modelInfo.MaxCompletionTokens > 0 {
-		return modelInfo.MaxCompletionTokens, true
-	}
-	return 0, false
-}
-
-// antigravityMinThinkingBudget returns the minimum thinking budget for a model.
-// Falls back to -1 if no model info is found.
-func antigravityMinThinkingBudget(model string) int {
-	if modelInfo := registry.LookupModelInfo(model); modelInfo != nil && modelInfo.Thinking != nil {
-		return modelInfo.Thinking.Min
-	}
-	return -1
 }

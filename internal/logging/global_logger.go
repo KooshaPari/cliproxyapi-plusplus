@@ -55,22 +55,14 @@ func (m *LogFormatter) Format(entry *log.Entry) ([]byte, error) {
 	}
 	levelStr := fmt.Sprintf("%-5s", level)
 
-	// Build fields string (excluding request_id which is already shown)
+	// Build fields string (only print fields in logFieldOrder)
 	var fieldsStr string
 	if len(entry.Data) > 0 {
-		seen := make(map[string]bool)
 		var fields []string
 		for _, k := range logFieldOrder {
 			if v, ok := entry.Data[k]; ok {
 				fields = append(fields, fmt.Sprintf("%s=%v", k, v))
-				seen[k] = true
 			}
-		}
-		for k, v := range entry.Data {
-			if k == "request_id" || seen[k] {
-				continue
-			}
-			fields = append(fields, fmt.Sprintf("%s=%v", k, v))
 		}
 		if len(fields) > 0 {
 			fieldsStr = " " + strings.Join(fields, " ")

@@ -22,9 +22,7 @@ func NewApplier() *Applier {
 }
 
 func init() {
-	applier := NewApplier()
-	thinking.RegisterProvider("gemini-cli", applier)
-	thinking.RegisterProvider("antigravity", applier)
+	thinking.RegisterProvider("gemini-cli", NewApplier())
 }
 
 // Apply applies thinking configuration to Gemini CLI request body.
