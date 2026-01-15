@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"sync"
 	"time"
@@ -72,9 +73,12 @@ func (s *FileTokenStore) Save(ctx context.Context, auth *cliproxyauth.Auth) (str
 		if errMarshal != nil {
 			return "", fmt.Errorf("auth filestore: marshal metadata failed: %w", errMarshal)
 		}
-		if _, errRead := os.ReadFile(path); errRead == nil {
+		if existing, errRead := os.ReadFile(path); errRead == nil {
 			// Use metadataEqualIgnoringTimestamps to skip writes when only timestamp fields change.
 			// This prevents the token refresh loop caused by timestamp/expired/expires_in changes.
+			if metadataEqualIgnoringTimestamps(existing, raw) {
+				return path, nil
+			}
 			file, errOpen := os.OpenFile(path, os.O_WRONLY|os.O_TRUNC, 0o600)
 			if errOpen != nil {
 				return "", fmt.Errorf("auth filestore: open existing failed: %w", errOpen)
@@ -294,4 +298,30 @@ func (s *FileTokenStore) baseDirSnapshot() string {
 	s.dirLock.RLock()
 	defer s.dirLock.RUnlock()
 	return s.baseDir
+}
+
+// metadataEqualIgnoringTimestamps compares two metadata JSON blobs, ignoring volatile fields that
+// change on every refresh but don't affect authentication logic.
+func metadataEqualIgnoringTimestamps(a, b []byte) bool {
+	var objA map[string]any
+	var objB map[string]any
+	if errUnmarshalA := json.Unmarshal(a, &objA); errUnmarshalA != nil {
+		return false
+	}
+	if errUnmarshalB := json.Unmarshal(b, &objB); errUnmarshalB != nil {
+		return false
+	}
+	stripVolatileMetadataFields(objA)
+	stripVolatileMetadataFields(objB)
+	return reflect.DeepEqual(objA, objB)
+}
+
+func stripVolatileMetadataFields(metadata map[string]any) {
+	if metadata == nil {
+		return
+	}
+	// These fields change on refresh and would otherwise trigger watcher reload loops.
+	for _, field := range []string{"timestamp", "expired", "expires_in", "last_refresh", "access_token"} {
+		delete(metadata, field)
+	}
 }
