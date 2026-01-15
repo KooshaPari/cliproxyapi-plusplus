@@ -159,15 +159,27 @@ func ValidateConfig(config ThinkingConfig, modelInfo *registry.ModelInfo, provid
 		normalized = convertAutoToMidRange(normalized, support, provider, model)
 	}
 
-	switch normalized.Mode {
-	case ModeBudget, ModeAuto, ModeNone:
-		normalized.Budget = ClampBudget(normalized.Budget, modelInfo, provider)
+	// ModeNone handling varies by provider/model capability:
+	// - Claude can always disable thinking via thinking.type="disabled".
+	// - Some models/providers cannot be fully disabled; for those we force minimal thinking
+	//   while hiding thoughts (ModeNone + Budget>0 and/or Level set).
+	if normalized.Mode == ModeNone {
+		if provider == "claude" {
+			normalized.Budget = 0
+			normalized.Level = ""
+		} else if !support.ZeroAllowed {
+			if support.Min > 0 {
+				normalized.Budget = support.Min
+			}
+			if normalized.Level == "" && normalized.Budget > 0 && len(support.Levels) > 0 {
+				normalized.Level = ThinkingLevel(support.Levels[0])
+			}
+		}
 	}
 
-	// ModeNone with clamped Budget > 0: set Level to lowest for Level-only/Hybrid models
-	// This ensures Apply layer doesn't need to access support.Levels
-	if normalized.Mode == ModeNone && normalized.Budget > 0 && len(support.Levels) > 0 {
-		normalized.Level = ThinkingLevel(support.Levels[0])
+	switch normalized.Mode {
+	case ModeBudget, ModeAuto:
+		normalized.Budget = ClampBudget(normalized.Budget, modelInfo, provider)
 	}
 
 	return &normalized, nil
