@@ -91,13 +91,13 @@ type Config struct {
 	// OAuthExcludedModels defines per-provider global model exclusions applied to OAuth/file-backed auth entries.
 	OAuthExcludedModels map[string][]string `yaml:"oauth-excluded-models,omitempty" json:"oauth-excluded-models,omitempty"`
 
-	// OAuthModelMappings defines global model name mappings for OAuth/file-backed auth channels.
-	// These mappings affect both model listing and model routing for supported channels:
+	// OAuthModelAlias defines global model name aliases for OAuth/file-backed auth channels.
+	// These aliases affect both model listing and model routing for supported channels:
 	// gemini-cli, vertex, aistudio, antigravity, claude, codex, qwen, iflow.
 	//
 	// NOTE: This does not apply to existing per-credential model alias features under:
 	// gemini-api-key, codex-api-key, claude-api-key, openai-compatibility, vertex-api-key, and ampcode.
-	OAuthModelMappings map[string][]ModelNameMapping `yaml:"oauth-model-mappings,omitempty" json:"oauth-model-mappings,omitempty"`
+	OAuthModelAlias map[string][]OAuthModelAlias `yaml:"oauth-model-alias,omitempty" json:"oauth-model-alias,omitempty"`
 
 	// Payload defines default and override rules for provider payload parameters.
 	Payload PayloadConfig `yaml:"payload" json:"payload"`
@@ -145,11 +145,11 @@ type RoutingConfig struct {
 	Strategy string `yaml:"strategy,omitempty" json:"strategy,omitempty"`
 }
 
-// ModelNameMapping defines a model ID mapping for a specific channel.
+// OAuthModelAlias defines a model ID alias for a specific channel.
 // It maps the upstream model name (Name) to the client-visible alias (Alias).
 // When Fork is true, the alias is added as an additional model in listings while
 // keeping the original model ID available.
-type ModelNameMapping struct {
+type OAuthModelAlias struct {
 	Name  string `yaml:"name" json:"name"`
 	Alias string `yaml:"alias" json:"alias"`
 	Fork  bool   `yaml:"fork,omitempty" json:"fork,omitempty"`
@@ -266,6 +266,9 @@ type ClaudeKey struct {
 	ExcludedModels []string `yaml:"excluded-models,omitempty" json:"excluded-models,omitempty"`
 }
 
+func (k ClaudeKey) GetAPIKey() string  { return k.APIKey }
+func (k ClaudeKey) GetBaseURL() string { return k.BaseURL }
+
 // ClaudeModel describes a mapping between an alias and the actual upstream model name.
 type ClaudeModel struct {
 	// Name is the upstream model identifier used when issuing requests.
@@ -308,6 +311,9 @@ type CodexKey struct {
 	ExcludedModels []string `yaml:"excluded-models,omitempty" json:"excluded-models,omitempty"`
 }
 
+func (k CodexKey) GetAPIKey() string  { return k.APIKey }
+func (k CodexKey) GetBaseURL() string { return k.BaseURL }
+
 // CodexModel describes a mapping between an alias and the actual upstream model name.
 type CodexModel struct {
 	// Name is the upstream model identifier used when issuing requests.
@@ -348,6 +354,9 @@ type GeminiKey struct {
 	// ExcludedModels lists model IDs that should be excluded for this provider.
 	ExcludedModels []string `yaml:"excluded-models,omitempty" json:"excluded-models,omitempty"`
 }
+
+func (k GeminiKey) GetAPIKey() string  { return k.APIKey }
+func (k GeminiKey) GetBaseURL() string { return k.BaseURL }
 
 // GeminiModel describes a mapping between an alias and the actual upstream model name.
 type GeminiModel struct {
@@ -406,6 +415,9 @@ type OpenAICompatibilityModel struct {
 	Alias string `yaml:"alias" json:"alias"`
 }
 
+func (m OpenAICompatibilityModel) GetName() string  { return m.Name }
+func (m OpenAICompatibilityModel) GetAlias() string { return m.Alias }
+
 // LoadConfig reads a YAML configuration file from the given path,
 // unmarshals it into a Config struct, applies environment variable overrides,
 // and returns it.
@@ -424,6 +436,15 @@ func LoadConfig(configFile string) (*Config, error) {
 // If optional is true and the file is missing, it returns an empty Config.
 // If optional is true and the file is empty or invalid, it returns an empty Config.
 func LoadConfigOptional(configFile string, optional bool) (*Config, error) {
+	// Perform oauth-model-alias migration before loading config.
+	// This migrates oauth-model-mappings to oauth-model-alias if needed.
+	if migrated, err := MigrateOAuthModelAlias(configFile); err != nil {
+		// Log warning but don't fail - config loading should still work
+		fmt.Printf("Warning: oauth-model-alias migration failed: %v\n", err)
+	} else if migrated {
+		fmt.Println("Migrated oauth-model-mappings to oauth-model-alias")
+	}
+
 	// Read the entire configuration file into memory.
 	data, err := os.ReadFile(configFile)
 	if err != nil {
@@ -516,8 +537,8 @@ func LoadConfigOptional(configFile string, optional bool) (*Config, error) {
 	// Normalize OAuth provider model exclusion map.
 	cfg.OAuthExcludedModels = NormalizeOAuthExcludedModels(cfg.OAuthExcludedModels)
 
-	// Normalize global OAuth model name mappings.
-	cfg.SanitizeOAuthModelMappings()
+	// Normalize global OAuth model name aliases.
+	cfg.SanitizeOAuthModelAlias()
 
 	if cfg.legacyMigrationPending {
 		fmt.Println("Detected legacy configuration keys, attempting to persist the normalized config...")
@@ -535,24 +556,24 @@ func LoadConfigOptional(configFile string, optional bool) (*Config, error) {
 	return &cfg, nil
 }
 
-// SanitizeOAuthModelMappings normalizes and deduplicates global OAuth model name mappings.
+// SanitizeOAuthModelAlias normalizes and deduplicates global OAuth model name aliases.
 // It trims whitespace, normalizes channel keys to lower-case, drops empty entries,
 // allows multiple aliases per upstream name, and ensures aliases are unique within each channel.
-func (cfg *Config) SanitizeOAuthModelMappings() {
-	if cfg == nil || len(cfg.OAuthModelMappings) == 0 {
+func (cfg *Config) SanitizeOAuthModelAlias() {
+	if cfg == nil || len(cfg.OAuthModelAlias) == 0 {
 		return
 	}
-	out := make(map[string][]ModelNameMapping, len(cfg.OAuthModelMappings))
-	for rawChannel, mappings := range cfg.OAuthModelMappings {
+	out := make(map[string][]OAuthModelAlias, len(cfg.OAuthModelAlias))
+	for rawChannel, aliases := range cfg.OAuthModelAlias {
 		channel := strings.ToLower(strings.TrimSpace(rawChannel))
-		if channel == "" || len(mappings) == 0 {
+		if channel == "" || len(aliases) == 0 {
 			continue
 		}
-		seenAlias := make(map[string]struct{}, len(mappings))
-		clean := make([]ModelNameMapping, 0, len(mappings))
-		for _, mapping := range mappings {
-			name := strings.TrimSpace(mapping.Name)
-			alias := strings.TrimSpace(mapping.Alias)
+		seenAlias := make(map[string]struct{}, len(aliases))
+		clean := make([]OAuthModelAlias, 0, len(aliases))
+		for _, entry := range aliases {
+			name := strings.TrimSpace(entry.Name)
+			alias := strings.TrimSpace(entry.Alias)
 			if name == "" || alias == "" {
 				continue
 			}
@@ -564,13 +585,13 @@ func (cfg *Config) SanitizeOAuthModelMappings() {
 				continue
 			}
 			seenAlias[aliasKey] = struct{}{}
-			clean = append(clean, ModelNameMapping{Name: name, Alias: alias, Fork: mapping.Fork})
+			clean = append(clean, OAuthModelAlias{Name: name, Alias: alias, Fork: entry.Fork})
 		}
 		if len(clean) > 0 {
 			out[channel] = clean
 		}
 	}
-	cfg.OAuthModelMappings = out
+	cfg.OAuthModelAlias = out
 }
 
 // SanitizeOpenAICompatibility removes OpenAI-compatibility provider entries that are
