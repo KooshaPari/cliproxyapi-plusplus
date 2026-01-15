@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"strings"
 
-	"github.com/router-for-me/CLIProxyAPI/v6/internal/registry"
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/translator/gemini/common"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
@@ -390,7 +389,6 @@ func ConvertOpenAIResponsesRequestToGemini(modelName string, inputRawJSON []byte
 
 	// Apply thinking configuration: convert OpenAI Responses API reasoning.effort to Gemini thinkingConfig.
 	// Inline translation-only mapping; capability checks happen later in ApplyThinking.
-	modelInfo := registry.LookupModelInfo(modelName)
 	re := root.Get("reasoning.effort")
 	if re.Exists() {
 		effort := strings.ToLower(strings.TrimSpace(re.String()))
@@ -402,27 +400,6 @@ func ConvertOpenAIResponsesRequestToGemini(modelName string, inputRawJSON []byte
 			} else {
 				out, _ = sjson.Set(out, thinkingPath+".thinkingLevel", effort)
 				out, _ = sjson.Set(out, thinkingPath+".includeThoughts", effort != "none")
-			}
-		}
-	}
-
-	// Cherry Studio extension (applies only when official fields are missing)
-	// Only apply for models that use numeric budgets, not discrete levels.
-	if !re.Exists() && modelInfo != nil && modelInfo.Thinking != nil && len(modelInfo.Thinking.Levels) == 0 {
-		if tc := root.Get("extra_body.google.thinking_config"); tc.Exists() && tc.IsObject() {
-			var setBudget bool
-			var budget int
-			if v := tc.Get("thinking_budget"); v.Exists() {
-				budget = int(v.Int())
-				out, _ = sjson.Set(out, "generationConfig.thinkingConfig.thinkingBudget", budget)
-				setBudget = true
-			}
-			if v := tc.Get("include_thoughts"); v.Exists() {
-				out, _ = sjson.Set(out, "generationConfig.thinkingConfig.include_thoughts", v.Bool())
-			} else if setBudget {
-				if budget != 0 {
-					out, _ = sjson.Set(out, "generationConfig.thinkingConfig.include_thoughts", true)
-				}
 			}
 		}
 	}
