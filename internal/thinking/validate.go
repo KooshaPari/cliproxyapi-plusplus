@@ -9,81 +9,59 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// ClampBudget clamps a budget value to the specified range [min, max].
-//
-// This function ensures budget values stay within model-supported bounds.
-// When clamping occurs, a Debug-level log is recorded.
-//
-// Special handling:
-//   - Auto value (-1) passes through without clamping
-//   - Values below min are clamped to min
-//   - Values above max are clamped to max
-//
-// Parameters:
-//   - value: The budget value to clamp
-//   - min: Minimum allowed budget (inclusive)
-//   - max: Maximum allowed budget (inclusive)
-//
-// Returns:
-//   - The clamped budget value (min ≤ result ≤ max, or -1 for auto)
+// ClampBudget clamps a budget value to the model's supported range.
 //
 // Logging:
-//   - Debug level when value is clamped (either to min or max)
-//   - Fields: original_value, clamped_to, min, max
-func ClampBudget(value, min, max int) int {
-	// Auto value (-1) passes through without clamping
+//   - Warn when value=0 but ZeroAllowed=false
+//   - Debug when value is clamped to min/max
+//
+// Fields: provider, model, original_value, clamped_to, min, max
+func ClampBudget(value int, modelInfo *registry.ModelInfo, provider string) int {
+	model := "unknown"
+	support := (*registry.ThinkingSupport)(nil)
+	if modelInfo != nil {
+		if modelInfo.ID != "" {
+			model = modelInfo.ID
+		}
+		support = modelInfo.Thinking
+	}
+	if support == nil {
+		return value
+	}
+
+	// Auto value (-1) passes through without clamping.
 	if value == -1 {
 		return value
 	}
 
-	// Clamp to min if below
-	if value < min {
-		logClamp(value, min, min, max)
-		return min
-	}
-
-	// Clamp to max if above
-	if value > max {
-		logClamp(value, max, min, max)
-		return max
-	}
-
-	// Within range, return original
-	return value
-}
-
-// ClampBudgetWithZeroCheck clamps a budget value to the specified range [min, max]
-// while honoring the ZeroAllowed constraint.
-//
-// This function extends ClampBudget with ZeroAllowed boundary handling.
-// When zeroAllowed is false and value is 0, the value is clamped to min and logged.
-//
-// Parameters:
-//   - value: The budget value to clamp
-//   - min: Minimum allowed budget (inclusive)
-//   - max: Maximum allowed budget (inclusive)
-//   - zeroAllowed: Whether 0 (thinking disabled) is allowed
-//
-// Returns:
-//   - The clamped budget value (min ≤ result ≤ max, or -1 for auto)
-//
-// Logging:
-//   - Warn level when zeroAllowed=false and value=0 (zero not allowed for model)
-//   - Fields: original_value, clamped_to, reason
-func ClampBudgetWithZeroCheck(value, min, max int, zeroAllowed bool) int {
-	if value == 0 {
-		if zeroAllowed {
-			return 0
-		}
+	min := support.Min
+	max := support.Max
+	if value == 0 && !support.ZeroAllowed {
 		log.WithFields(log.Fields{
-			"clamped_to": min,
-			"min":        min,
-			"max":        max,
+			"provider":       provider,
+			"model":          model,
+			"original_value": value,
+			"clamped_to":     min,
+			"min":            min,
+			"max":            max,
 		}).Warn("thinking: budget zero not allowed")
 		return min
 	}
 
-	return ClampBudget(value, min, max)
+	// Some models are level-only and do not define numeric budget ranges.
+	if min == 0 && max == 0 {
+		return value
+	}
+
+	if value < min {
+		logClamp(provider, model, value, min, min, max)
+		return min
+	}
+	if value > max {
+		logClamp(provider, model, value, max, min, max)
+		return max
+	}
+	return value
 }
 
 // ValidateConfig validates a thinking configuration against model capabilities.
@@ -106,16 +84,26 @@ func ClampBudgetWithZeroCheck(value, min, max int, zeroAllowed bool) int {
 //   - Budget-only model + Level config → Level converted to Budget
 //   - Level-only model + Budget config → Budget converted to Level
 //   - Hybrid model → preserve original format
-func ValidateConfig(config ThinkingConfig, support *registry.ThinkingSupport) (*ThinkingConfig, error) {
+func ValidateConfig(config ThinkingConfig, modelInfo *registry.ModelInfo, provider string) (*ThinkingConfig, error) {
 	normalized := config
+
+	model := "unknown"
+	support := (*registry.ThinkingSupport)(nil)
+	if modelInfo != nil {
+		if modelInfo.ID != "" {
+			model = modelInfo.ID
+		}
+		support = modelInfo.Thinking
+	}
+
 	if support == nil {
 		if config.Mode != ModeNone {
-			return nil, NewThinkingErrorWithModel(ErrThinkingNotSupported, "thinking not supported for this model", "unknown")
+			return nil, NewThinkingErrorWithModel(ErrThinkingNotSupported, "thinking not supported for this model", model)
 		}
 		return &normalized, nil
 	}
 
-	capability := detectModelCapability(&registry.ModelInfo{Thinking: support})
+	capability := detectModelCapability(modelInfo)
 	switch capability {
 	case CapabilityBudgetOnly:
 		if normalized.Mode == ModeLevel {
@@ -168,13 +156,12 @@ func ValidateConfig(config ThinkingConfig, support *registry.ThinkingSupport) (*
 
 	// Convert ModeAuto to mid-range if dynamic not allowed
 	if normalized.Mode == ModeAuto && !support.DynamicAllowed {
-		normalized = convertAutoToMidRange(normalized, support)
+		normalized = convertAutoToMidRange(normalized, support, provider, model)
 	}
 
 	switch normalized.Mode {
 	case ModeBudget, ModeAuto, ModeNone:
-		clamped := ClampBudgetWithZeroCheck(normalized.Budget, support.Min, support.Max, support.ZeroAllowed)
-		normalized.Budget = clamped
+		normalized.Budget = ClampBudget(normalized.Budget, modelInfo, provider)
 	}
 
 	// ModeNone with clamped Budget > 0: set Level to lowest for Level-only/Hybrid models
@@ -213,17 +200,18 @@ func normalizeLevels(levels []string) []string {
 // Logging:
 //   - Debug level when conversion occurs
 //   - Fields: original_mode, clamped_to, reason
-func convertAutoToMidRange(config ThinkingConfig, support *registry.ThinkingSupport) ThinkingConfig {
+func convertAutoToMidRange(config ThinkingConfig, support *registry.ThinkingSupport, provider, model string) ThinkingConfig {
 	// For level-only models (has Levels but no Min/Max range), use ModeLevel with medium
 	if len(support.Levels) > 0 && support.Min == 0 && support.Max == 0 {
 		config.Mode = ModeLevel
 		config.Level = LevelMedium
 		config.Budget = 0
 		log.WithFields(log.Fields{
+			"provider":      provider,
+			"model":         model,
 			"original_mode": "auto",
 			"clamped_to":    string(LevelMedium),
-			"reason":        "dynamic_not_allowed_level_only",
-		}).Debug("thinking mode converted: dynamic not allowed, using medium level")
+		}).Debug("thinking: mode converted: dynamic not allowed, using medium level")
 		return config
 	}
 
@@ -240,16 +228,19 @@ func convertAutoToMidRange(config ThinkingConfig, support *registry.ThinkingSupp
 		config.Budget = mid
 	}
 	log.WithFields(log.Fields{
+		"provider":      provider,
+		"model":         model,
 		"original_mode": "auto",
 		"clamped_to":    config.Budget,
-		"reason":        "dynamic_not_allowed",
-	}).Debug("thinking mode converted: dynamic not allowed")
+	}).Debug("thinking: mode converted: dynamic not allowed")
 	return config
 }
 
 // logClamp logs a debug message when budget clamping occurs.
-func logClamp(original, clampedTo, min, max int) {
+func logClamp(provider, model string, original, clampedTo, min, max int) {
 	log.WithFields(log.Fields{
+		"provider":       provider,
+		"model":          model,
 		"original_value": original,
 		"min":            min,
 		"max":            max,

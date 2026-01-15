@@ -1467,7 +1467,7 @@ func normalizeAntigravityThinking(model string, payload []byte, isClaude bool) [
 		return payload
 	}
 	raw := int(budget.Int())
-	normalized := thinking.ClampBudget(raw, modelInfo.Thinking.Min, modelInfo.Thinking.Max)
+	normalized := thinking.ClampBudget(raw, modelInfo, "antigravity")
 
 	if isClaude {
 		effectiveMax, setDefaultMax := antigravityEffectiveMaxTokens(model, payload)
