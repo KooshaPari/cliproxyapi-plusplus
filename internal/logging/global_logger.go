@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 
@@ -52,11 +53,31 @@ func (m *LogFormatter) Format(entry *log.Entry) ([]byte, error) {
 	}
 	levelStr := fmt.Sprintf("%-5s", level)
 
+	// Build fields string (excluding request_id which is already shown)
+	var fieldsStr string
+	if len(entry.Data) > 0 {
+		var keys []string
+		for k := range entry.Data {
+			if k == "request_id" {
+				continue
+			}
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		var fields []string
+		for _, k := range keys {
+			fields = append(fields, fmt.Sprintf("%s=%v", k, entry.Data[k]))
+		}
+		if len(fields) > 0 {
+			fieldsStr = " " + strings.Join(fields, " ")
+		}
+	}
+
 	var formatted string
 	if entry.Caller != nil {
-		formatted = fmt.Sprintf("[%s] [%s] [%s] [%s:%d] %s\n", timestamp, reqID, levelStr, filepath.Base(entry.Caller.File), entry.Caller.Line, message)
+		formatted = fmt.Sprintf("[%s] [%s] [%s] [%s:%d] %s%s\n", timestamp, reqID, levelStr, filepath.Base(entry.Caller.File), entry.Caller.Line, message, fieldsStr)
 	} else {
-		formatted = fmt.Sprintf("[%s] [%s] [%s] %s\n", timestamp, reqID, levelStr, message)
+		formatted = fmt.Sprintf("[%s] [%s] [%s] %s%s\n", timestamp, reqID, levelStr, message, fieldsStr)
 	}
 	buffer.WriteString(formatted)
 

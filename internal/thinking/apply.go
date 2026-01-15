@@ -117,18 +117,21 @@ func ApplyThinking(body []byte, model string, provider string) ([]byte, error) {
 	if suffixResult.HasSuffix {
 		config = parseSuffixToConfig(suffixResult.RawSuffix)
 		log.WithFields(log.Fields{
-			"provider":   provider,
-			"model":      model,
-			"raw_suffix": suffixResult.RawSuffix,
-			"config":     config,
-		}).Debug("thinking: using suffix config (priority)")
+			"provider": provider,
+			"model":    model,
+			"mode":     config.Mode,
+			"budget":   config.Budget,
+			"level":    config.Level,
+		}).Debug("thinking: config from model suffix")
 	} else {
 		config = extractThinkingConfig(body, provider)
 		log.WithFields(log.Fields{
 			"provider": provider,
 			"model":    modelInfo.ID,
-			"config":   config,
-		}).Debug("thinking: extracted config from request body")
+			"mode":     config.Mode,
+			"budget":   config.Budget,
+			"level":    config.Level,
+		}).Debug("thinking: original config from request")
 	}
 
 	if !hasThinkingConfig(config) {
@@ -163,10 +166,12 @@ func ApplyThinking(body []byte, model string, provider string) ([]byte, error) {
 	}
 
 	log.WithFields(log.Fields{
-		"provider":  provider,
-		"model":     modelInfo.ID,
-		"validated": *validated,
-	}).Debug("thinking: applying validated config")
+		"provider": provider,
+		"model":    modelInfo.ID,
+		"mode":     validated.Mode,
+		"budget":   validated.Budget,
+		"level":    validated.Level,
+	}).Debug("thinking: processed config to apply")
 
 	// 6. Apply configuration using provider-specific applier
 	return applier.Apply(body, *validated, modelInfo)

@@ -20,6 +20,22 @@ const (
 	ModeAuto
 )
 
+// String returns the string representation of ThinkingMode.
+func (m ThinkingMode) String() string {
+	switch m {
+	case ModeBudget:
+		return "budget"
+	case ModeLevel:
+		return "level"
+	case ModeNone:
+		return "none"
+	case ModeAuto:
+		return "auto"
+	default:
+		return "unknown"
+	}
+}
+
 // ThinkingLevel represents a discrete thinking level.
 type ThinkingLevel string
 
