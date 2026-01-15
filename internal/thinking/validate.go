@@ -44,7 +44,7 @@ func ClampBudget(value int, modelInfo *registry.ModelInfo, provider string) int 
 			"clamped_to":     min,
 			"min":            min,
 			"max":            max,
-		}).Warn("thinking: budget zero not allowed")
+		}).Warn("thinking: budget zero not allowed |")
 		return min
 	}
 
@@ -221,7 +221,7 @@ func convertAutoToMidRange(config ThinkingConfig, support *registry.ThinkingSupp
 			"model":         model,
 			"original_mode": "auto",
 			"clamped_to":    string(LevelMedium),
-		}).Debug("thinking: mode converted: dynamic not allowed, using medium level")
+		}).Debug("thinking: mode converted, dynamic not allowed, using medium level |")
 		return config
 	}
 
@@ -242,7 +242,7 @@ func convertAutoToMidRange(config ThinkingConfig, support *registry.ThinkingSupp
 		"model":         model,
 		"original_mode": "auto",
 		"clamped_to":    config.Budget,
-	}).Debug("thinking: mode converted: dynamic not allowed")
+	}).Debug("thinking: mode converted, dynamic not allowed |")
 	return config
 }
 
@@ -255,5 +255,5 @@ func logClamp(provider, model string, original, clampedTo, min, max int) {
 		"min":            min,
 		"max":            max,
 		"clamped_to":     clampedTo,
-	}).Debug("thinking: budget clamped")
+	}).Debug("thinking: budget clamped |")
 }

@@ -87,7 +87,7 @@ func ApplyThinking(body []byte, model string, provider string) ([]byte, error) {
 		log.WithFields(log.Fields{
 			"provider": provider,
 			"model":    model,
-		}).Debug("thinking: unknown provider, passthrough")
+		}).Debug("thinking: unknown provider, passthrough |")
 		return body, nil
 	}
 
@@ -108,13 +108,13 @@ func ApplyThinking(body []byte, model string, provider string) ([]byte, error) {
 			log.WithFields(log.Fields{
 				"model":    baseModel,
 				"provider": provider,
-			}).Debug("thinking: model does not support thinking, stripping config")
+			}).Debug("thinking: model does not support thinking, stripping config |")
 			return StripThinkingConfig(body, provider), nil
 		}
 		log.WithFields(log.Fields{
 			"provider": provider,
 			"model":    baseModel,
-		}).Debug("thinking: model does not support thinking, passthrough")
+		}).Debug("thinking: model does not support thinking, passthrough |")
 		return body, nil
 	}
 
@@ -128,7 +128,7 @@ func ApplyThinking(body []byte, model string, provider string) ([]byte, error) {
 			"mode":     config.Mode,
 			"budget":   config.Budget,
 			"level":    config.Level,
-		}).Debug("thinking: config from model suffix")
+		}).Debug("thinking: config from model suffix |")
 	} else {
 		config = extractThinkingConfig(body, provider)
 		if hasThinkingConfig(config) {
@@ -138,7 +138,7 @@ func ApplyThinking(body []byte, model string, provider string) ([]byte, error) {
 				"mode":     config.Mode,
 				"budget":   config.Budget,
 				"level":    config.Level,
-			}).Debug("thinking: original config from request")
+			}).Debug("thinking: original config from request |")
 		}
 	}
 
@@ -146,7 +146,7 @@ func ApplyThinking(body []byte, model string, provider string) ([]byte, error) {
 		log.WithFields(log.Fields{
 			"provider": provider,
 			"model":    modelInfo.ID,
-		}).Debug("thinking: no config found, passthrough")
+		}).Debug("thinking: no config found, passthrough |")
 		return body, nil
 	}
 
@@ -157,7 +157,7 @@ func ApplyThinking(body []byte, model string, provider string) ([]byte, error) {
 			"provider": provider,
 			"model":    modelInfo.ID,
 			"error":    err.Error(),
-		}).Warn("thinking: validation failed")
+		}).Warn("thinking: validation failed |")
 		// Return original body on validation failure (defensive programming).
 		// This ensures callers who ignore the error won't receive nil body.
 		// The upstream service will decide how to handle the unmodified request.
@@ -169,7 +169,7 @@ func ApplyThinking(body []byte, model string, provider string) ([]byte, error) {
 		log.WithFields(log.Fields{
 			"provider": provider,
 			"model":    modelInfo.ID,
-		}).Warn("thinking: ValidateConfig returned nil config without error, passthrough")
+		}).Warn("thinking: ValidateConfig returned nil config without error, passthrough |")
 		return body, nil
 	}
 
@@ -179,7 +179,7 @@ func ApplyThinking(body []byte, model string, provider string) ([]byte, error) {
 		"mode":     validated.Mode,
 		"budget":   validated.Budget,
 		"level":    validated.Level,
-	}).Debug("thinking: processed config to apply")
+	}).Debug("thinking: processed config to apply |")
 
 	// 6. Apply configuration using provider-specific applier
 	return applier.Apply(body, *validated, modelInfo)
@@ -222,7 +222,7 @@ func parseSuffixToConfig(rawSuffix, provider, model string) ThinkingConfig {
 		"provider":   provider,
 		"model":      model,
 		"raw_suffix": rawSuffix,
-	}).Debug("thinking: unknown suffix format, treating as no config")
+	}).Debug("thinking: unknown suffix format, treating as no config |")
 	return ThinkingConfig{}
 }
 
@@ -249,7 +249,7 @@ func applyUserDefinedModel(body []byte, modelInfo *registry.ModelInfo, provider 
 		log.WithFields(log.Fields{
 			"model":    modelID,
 			"provider": provider,
-		}).Debug("thinking: user-defined model, passthrough (no config)")
+		}).Debug("thinking: user-defined model, passthrough (no config) |")
 		return body, nil
 	}
 
@@ -258,7 +258,7 @@ func applyUserDefinedModel(body []byte, modelInfo *registry.ModelInfo, provider 
 		log.WithFields(log.Fields{
 			"model":    modelID,
 			"provider": provider,
-		}).Debug("thinking: user-defined model, passthrough (unknown provider)")
+		}).Debug("thinking: user-defined model, passthrough (unknown provider) |")
 		return body, nil
 	}
 
