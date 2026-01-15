@@ -54,6 +54,9 @@ func ClampBudget(value int, modelInfo *registry.ModelInfo, provider string) int 
 	}
 
 	if value < min {
+		if value == 0 && support.ZeroAllowed {
+			return 0
+		}
 		logClamp(provider, model, value, min, min, max)
 		return min
 	}

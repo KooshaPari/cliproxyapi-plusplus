@@ -87,6 +87,20 @@ func TestThinkingE2EMatrix(t *testing.T) {
 			},
 		},
 		{
+			ID:          "antigravity-budget-model",
+			Object:      "model",
+			Created:     1700000000,
+			OwnedBy:     "test",
+			Type:        "gemini-cli",
+			DisplayName: "Antigravity Budget Model",
+			Thinking: &registry.ThinkingSupport{
+				Min:            128,
+				Max:            20000,
+				ZeroAllowed:    true,
+				DynamicAllowed: true,
+			},
+		},
+		{
 			ID:          "no-thinking-model",
 			Object:      "model",
 			Created:     1700000000,
@@ -618,6 +632,114 @@ func TestThinkingE2EMatrix(t *testing.T) {
 			expectErr:   false,
 		},
 
+		// antigravity-budget-model (Min=128, Max=20000, ZeroAllowed=true, DynamicAllowed=true)
+		{
+			name:        "46",
+			from:        "gemini",
+			to:          "antigravity",
+			modelSuffix: "antigravity-budget-model",
+			inputJSON:   `{"model":"antigravity-budget-model","contents":[{"role":"user","parts":[{"text":"hi"}]}]}`,
+			expectField: "",
+			expectErr:   false,
+		},
+		{
+			name:            "47",
+			from:            "gemini",
+			to:              "antigravity",
+			modelSuffix:     "antigravity-budget-model(medium)",
+			inputJSON:       `{"model":"antigravity-budget-model(medium)","contents":[{"role":"user","parts":[{"text":"hi"}]}]}`,
+			expectField:     "request.generationConfig.thinkingConfig.thinkingBudget",
+			expectValue:     "8192",
+			includeThoughts: "true",
+			expectErr:       false,
+		},
+		{
+			name:            "48",
+			from:            "gemini",
+			to:              "antigravity",
+			modelSuffix:     "antigravity-budget-model(xhigh)",
+			inputJSON:       `{"model":"antigravity-budget-model(xhigh)","contents":[{"role":"user","parts":[{"text":"hi"}]}]}`,
+			expectField:     "request.generationConfig.thinkingConfig.thinkingBudget",
+			expectValue:     "20000",
+			includeThoughts: "true",
+			expectErr:       false,
+		},
+		{
+			name:            "49",
+			from:            "gemini",
+			to:              "antigravity",
+			modelSuffix:     "antigravity-budget-model(none)",
+			inputJSON:       `{"model":"antigravity-budget-model(none)","contents":[{"role":"user","parts":[{"text":"hi"}]}]}`,
+			expectField:     "request.generationConfig.thinkingConfig.thinkingBudget",
+			expectValue:     "0",
+			includeThoughts: "false",
+			expectErr:       false,
+		},
+		{
+			name:            "50",
+			from:            "gemini",
+			to:              "antigravity",
+			modelSuffix:     "antigravity-budget-model(auto)",
+			inputJSON:       `{"model":"antigravity-budget-model(auto)","contents":[{"role":"user","parts":[{"text":"hi"}]}]}`,
+			expectField:     "request.generationConfig.thinkingConfig.thinkingBudget",
+			expectValue:     "-1",
+			includeThoughts: "true",
+			expectErr:       false,
+		},
+		{
+			name:        "51",
+			from:        "claude",
+			to:          "antigravity",
+			modelSuffix: "antigravity-budget-model",
+			inputJSON:   `{"model":"antigravity-budget-model","messages":[{"role":"user","content":"hi"}]}`,
+			expectField: "",
+			expectErr:   false,
+		},
+		{
+			name:            "52",
+			from:            "claude",
+			to:              "antigravity",
+			modelSuffix:     "antigravity-budget-model(8192)",
+			inputJSON:       `{"model":"antigravity-budget-model(8192)","messages":[{"role":"user","content":"hi"}]}`,
+			expectField:     "request.generationConfig.thinkingConfig.thinkingBudget",
+			expectValue:     "8192",
+			includeThoughts: "true",
+			expectErr:       false,
+		},
+		{
+			name:            "53",
+			from:            "claude",
+			to:              "antigravity",
+			modelSuffix:     "antigravity-budget-model(64000)",
+			inputJSON:       `{"model":"antigravity-budget-model(64000)","messages":[{"role":"user","content":"hi"}]}`,
+			expectField:     "request.generationConfig.thinkingConfig.thinkingBudget",
+			expectValue:     "20000",
+			includeThoughts: "true",
+			expectErr:       false,
+		},
+		{
+			name:            "54",
+			from:            "claude",
+			to:              "antigravity",
+			modelSuffix:     "antigravity-budget-model(0)",
+			inputJSON:       `{"model":"antigravity-budget-model(0)","messages":[{"role":"user","content":"hi"}]}`,
+			expectField:     "request.generationConfig.thinkingConfig.thinkingBudget",
+			expectValue:     "0",
+			includeThoughts: "false",
+			expectErr:       false,
+		},
+		{
+			name:            "55",
+			from:            "claude",
+			to:              "antigravity",
+			modelSuffix:     "antigravity-budget-model(-1)",
+			inputJSON:       `{"model":"antigravity-budget-model(-1)","messages":[{"role":"user","content":"hi"}]}`,
+			expectField:     "request.generationConfig.thinkingConfig.thinkingBudget",
+			expectValue:     "-1",
+			includeThoughts: "true",
+			expectErr:       false,
+		},
+
 		// no-thinking-model (Thinking=nil)
 		{
 			name:        "46",
@@ -801,6 +923,49 @@ func TestThinkingE2EMatrix(t *testing.T) {
 			expectValue: "auto",
 			expectErr:   false,
 		},
+		// openai/codex → gemini/claude for user-defined-model
+		{
+			name:            "64",
+			from:            "openai",
+			to:              "gemini",
+			modelSuffix:     "user-defined-model(8192)",
+			inputJSON:       `{"model":"user-defined-model(8192)","messages":[{"role":"user","content":"hi"}]}`,
+			expectField:     "generationConfig.thinkingConfig.thinkingBudget",
+			expectValue:     "8192",
+			includeThoughts: "true",
+			expectErr:       false,
+		},
+		{
+			name:        "65",
+			from:        "openai",
+			to:          "claude",
+			modelSuffix: "user-defined-model(8192)",
+			inputJSON:   `{"model":"user-defined-model(8192)","messages":[{"role":"user","content":"hi"}]}`,
+			expectField: "thinking.budget_tokens",
+			expectValue: "8192",
+			expectErr:   false,
+		},
+		{
+			name:            "66",
+			from:            "codex",
+			to:              "gemini",
+			modelSuffix:     "user-defined-model(8192)",
+			inputJSON:       `{"model":"user-defined-model(8192)","input":[{"role":"user","content":"hi"}]}`,
+			expectField:     "generationConfig.thinkingConfig.thinkingBudget",
+			expectValue:     "8192",
+			includeThoughts: "true",
+			expectErr:       false,
+		},
+		{
+			name:        "67",
+			from:        "codex",
+			to:          "claude",
+			modelSuffix: "user-defined-model(8192)",
+			inputJSON:   `{"model":"user-defined-model(8192)","input":[{"role":"user","content":"hi"}]}`,
+			expectField: "thinking.budget_tokens",
+			expectValue: "8192",
+			expectErr:   false,
+		},
 	}
 
 	for _, tc := range cases {
@@ -868,9 +1033,13 @@ func TestThinkingE2EMatrix(t *testing.T) {
 				t.Fatalf("field %s: expected %q, got %q, body=%s", tc.expectField, tc.expectValue, actualValue, string(body))
 			}
 
-			// Check includeThoughts for Gemini
-			if tc.includeThoughts != "" && tc.to == "gemini" {
-				itVal := gjson.GetBytes(body, "generationConfig.thinkingConfig.includeThoughts")
+			// Check includeThoughts for Gemini/Antigravity
+			if tc.includeThoughts != "" && (tc.to == "gemini" || tc.to == "antigravity") {
+				path := "generationConfig.thinkingConfig.includeThoughts"
+				if tc.to == "antigravity" {
+					path = "request.generationConfig.thinkingConfig.includeThoughts"
+				}
+				itVal := gjson.GetBytes(body, path)
 				if !itVal.Exists() {
 					t.Fatalf("expected includeThoughts field not found, body=%s", string(body))
 				}
