@@ -6,12 +6,14 @@ package config
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"strings"
 	"syscall"
 
+	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/yaml.v3"
 )
@@ -216,8 +218,12 @@ type AmpUpstreamAPIKeyEntry struct {
 type PayloadConfig struct {
 	// Default defines rules that only set parameters when they are missing in the payload.
 	Default []PayloadRule `yaml:"default" json:"default"`
+	// DefaultRaw defines rules that set raw JSON values only when they are missing.
+	DefaultRaw []PayloadRule `yaml:"default-raw" json:"default-raw"`
 	// Override defines rules that always set parameters, overwriting any existing values.
 	Override []PayloadRule `yaml:"override" json:"override"`
+	// OverrideRaw defines rules that always set raw JSON values, overwriting any existing values.
+	OverrideRaw []PayloadRule `yaml:"override-raw" json:"override-raw"`
 }
 
 // PayloadRule describes a single rule targeting a list of models with parameter updates.
@@ -225,6 +231,7 @@ type PayloadRule struct {
 	// Models lists model entries with name pattern and protocol constraint.
 	Models []PayloadModelRule `yaml:"models" json:"models"`
 	// Params maps JSON paths (gjson/sjson syntax) to values written into the payload.
+	// For *-raw rules, values are treated as raw JSON fragments (strings are used as-is).
 	Params map[string]any `yaml:"params" json:"params"`
 }
 
@@ -540,6 +547,9 @@ func LoadConfigOptional(configFile string, optional bool) (*Config, error) {
 	// Normalize global OAuth model name aliases.
 	cfg.SanitizeOAuthModelAlias()
 
+	// Validate raw payload rules and drop invalid entries.
+	cfg.SanitizePayloadRules()
+
 	if cfg.legacyMigrationPending {
 		fmt.Println("Detected legacy configuration keys, attempting to persist the normalized config...")
 		if !optional && configFile != "" {
@@ -554,6 +564,61 @@ func LoadConfigOptional(configFile string, optional bool) (*Config, error) {
 
 	// Return the populated configuration struct.
 	return &cfg, nil
+}
+
+// SanitizePayloadRules validates raw JSON payload rule params and drops invalid rules.
+func (cfg *Config) SanitizePayloadRules() {
+	if cfg == nil {
+		return
+	}
+	cfg.Payload.DefaultRaw = sanitizePayloadRawRules(cfg.Payload.DefaultRaw, "default-raw")
+	cfg.Payload.OverrideRaw = sanitizePayloadRawRules(cfg.Payload.OverrideRaw, "override-raw")
+}
+
+func sanitizePayloadRawRules(rules []PayloadRule, section string) []PayloadRule {
+	if len(rules) == 0 {
+		return rules
+	}
+	out := make([]PayloadRule, 0, len(rules))
+	for i := range rules {
+		rule := rules[i]
+		if len(rule.Params) == 0 {
+			continue
+		}
+		invalid := false
+		for path, value := range rule.Params {
+			raw, ok := payloadRawString(value)
+			if !ok {
+				continue
+			}
+			trimmed := bytes.TrimSpace(raw)
+			if len(trimmed) == 0 || !json.Valid(trimmed) {
+				log.WithFields(log.Fields{
+					"section":    section,
+					"rule_index": i + 1,
+					"param":      path,
+				}).Warn("payload rule dropped: invalid raw JSON")
+				invalid = true
+				break
+			}
+		}
+		if invalid {
+			continue
+		}
+		out = append(out, rule)
+	}
+	return out
+}
+
+func payloadRawString(value any) ([]byte, bool) {
+	switch typed := value.(type) {
+	case string:
+		return []byte(typed), true
+	case []byte:
+		return typed, true
+	default:
+		return nil, false
+	}
 }
 
 // SanitizeOAuthModelAlias normalizes and deduplicates global OAuth model name aliases.
