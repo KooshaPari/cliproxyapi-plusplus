@@ -13,7 +13,7 @@ import (
 	"github.com/tidwall/sjson"
 )
 
-// codexInstructionsEnabled controls whether CodexInstructionsForModel returns custom instructions.
+// codexInstructionsEnabled controls whether CodexInstructionsForModel returns official instructions.
 // When false (default), CodexInstructionsForModel returns (true, "") immediately.
 // Set via SetCodexInstructionsEnabled from config.
 var codexInstructionsEnabled atomic.Bool
