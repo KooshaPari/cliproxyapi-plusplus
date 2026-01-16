@@ -36,6 +36,9 @@ type VertexCompatKey struct {
 	Models []VertexCompatModel `yaml:"models,omitempty" json:"models,omitempty"`
 }
 
+func (k VertexCompatKey) GetAPIKey() string  { return k.APIKey }
+func (k VertexCompatKey) GetBaseURL() string { return k.BaseURL }
+
 // VertexCompatModel represents a model configuration for Vertex compatibility,
 // including the actual model name and its alias for API routing.
 type VertexCompatModel struct {
