@@ -18,12 +18,14 @@ import (
 //   - Clamps budget values to model's allowed range
 //   - When converting Budget -> Level for level-only models, clamps the derived standard level to the nearest supported level
 //     (special values none/auto are preserved)
+//   - When config comes from a model suffix, strict budget validation is disabled (we clamp instead of error)
 //
 // Parameters:
 //   - config: The thinking configuration to validate
 //   - support: Model's ThinkingSupport properties (nil means no thinking support)
 //   - fromFormat: Source provider format (used to determine strict validation rules)
 //   - toFormat: Target provider format
+//   - fromSuffix: Whether config was sourced from model suffix
 //
 // Returns:
 //   - Normalized ThinkingConfig with clamped values
@@ -33,7 +35,7 @@ import (
 //   - Budget-only model + Level config → Level converted to Budget
 //   - Level-only model + Budget config → Budget converted to Level
 //   - Hybrid model → preserve original format
-func ValidateConfig(config ThinkingConfig, modelInfo *registry.ModelInfo, fromFormat, toFormat string) (*ThinkingConfig, error) {
+func ValidateConfig(config ThinkingConfig, modelInfo *registry.ModelInfo, fromFormat, toFormat string, fromSuffix bool) (*ThinkingConfig, error) {
 	fromFormat, toFormat = strings.ToLower(strings.TrimSpace(fromFormat)), strings.ToLower(strings.TrimSpace(toFormat))
 	model := "unknown"
 	support := (*registry.ThinkingSupport)(nil)
@@ -52,7 +54,7 @@ func ValidateConfig(config ThinkingConfig, modelInfo *registry.ModelInfo, fromFo
 	}
 
 	allowClampUnsupported := isBudgetBasedProvider(fromFormat) && isLevelBasedProvider(toFormat)
-	strictBudget := fromFormat != "" && isSameProviderFamily(fromFormat, toFormat)
+	strictBudget := !fromSuffix && fromFormat != "" && isSameProviderFamily(fromFormat, toFormat)
 	budgetDerivedFromLevel := false
 
 	capability := detectModelCapability(modelInfo)
@@ -238,7 +240,7 @@ func clampLevel(level ThinkingLevel, modelInfo *registry.ModelInfo, provider str
 		log.WithFields(log.Fields{
 			"provider":       provider,
 			"model":          model,
-			"original_level": string(level),
+			"original_value": string(level),
 			"clamped_to":     string(clamped),
 		}).Debug("thinking: level clamped |")
 		return clamped

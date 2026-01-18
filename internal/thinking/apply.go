@@ -159,7 +159,7 @@ func ApplyThinking(body []byte, model string, fromFormat string, toFormat string
 	}
 
 	// 5. Validate and normalize configuration
-	validated, err := ValidateConfig(config, modelInfo, fromFormat, providerFormat)
+	validated, err := ValidateConfig(config, modelInfo, fromFormat, providerFormat, suffixResult.HasSuffix)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"provider": providerFormat,
