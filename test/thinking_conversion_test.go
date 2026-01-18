@@ -921,10 +921,10 @@ func TestThinkingE2EMatrix_Suffix(t *testing.T) {
 			expectValue: "8192",
 			expectErr:   false,
 		},
-		// Case 78: Codex to Gemini budget 8192 → passthrough → 8192
+		// Case 78: OpenAI-Response to Gemini budget 8192 → passthrough → 8192
 		{
 			name:            "78",
-			from:            "codex",
+			from:            "openai-response",
 			to:              "gemini",
 			model:           "user-defined-model(8192)",
 			inputJSON:       `{"model":"user-defined-model(8192)","input":[{"role":"user","content":"hi"}]}`,
@@ -933,10 +933,10 @@ func TestThinkingE2EMatrix_Suffix(t *testing.T) {
 			includeThoughts: "true",
 			expectErr:       false,
 		},
-		// Case 79: Codex to Claude budget 8192 → passthrough → 8192
+		// Case 79: OpenAI-Response to Claude budget 8192 → passthrough → 8192
 		{
 			name:        "79",
-			from:        "codex",
+			from:        "openai-response",
 			to:          "claude",
 			model:       "user-defined-model(8192)",
 			inputJSON:   `{"model":"user-defined-model(8192)","input":[{"role":"user","content":"hi"}]}`,
@@ -968,10 +968,10 @@ func TestThinkingE2EMatrix_Suffix(t *testing.T) {
 			expectField: "",
 			expectErr:   true,
 		},
-		// Case 82: Codex to Codex, level high → passthrough reasoning.effort
+		// Case 82: OpenAI-Response to Codex, level high → passthrough reasoning.effort
 		{
 			name:        "82",
-			from:        "codex",
+			from:        "openai-response",
 			to:          "codex",
 			model:       "level-model(high)",
 			inputJSON:   `{"model":"level-model(high)","input":[{"role":"user","content":"hi"}]}`,
@@ -979,10 +979,10 @@ func TestThinkingE2EMatrix_Suffix(t *testing.T) {
 			expectValue: "high",
 			expectErr:   false,
 		},
-		// Case 83: Codex to Codex, level xhigh → out of range error
+		// Case 83: OpenAI-Response to Codex, level xhigh → out of range error
 		{
 			name:        "83",
-			from:        "codex",
+			from:        "openai-response",
 			to:          "codex",
 			model:       "level-model(xhigh)",
 			inputJSON:   `{"model":"level-model(xhigh)","input":[{"role":"user","content":"hi"}]}`,
@@ -1231,6 +1231,74 @@ func TestThinkingE2EMatrix_Suffix(t *testing.T) {
 			expectField: "reasoning_split",
 			expectValue: "false",
 			expectErr:   false,
+		},
+
+		// Gemini Family Cross-Channel Consistency (Cases 106-114)
+		// Tests that gemini/gemini-cli/antigravity as same API family should have consistent validation behavior
+
+		// Case 106: Gemini to Antigravity, budget 64000 → exceeds Max error (same family strict validation)
+		{
+			name:        "106",
+			from:        "gemini",
+			to:          "antigravity",
+			model:       "gemini-budget-model(64000)",
+			inputJSON:   `{"model":"gemini-budget-model(64000)","contents":[{"role":"user","parts":[{"text":"hi"}]}]}`,
+			expectField: "",
+			expectErr:   true,
+		},
+		// Case 107: Gemini to Gemini-CLI, budget 64000 → exceeds Max error (same family strict validation)
+		{
+			name:        "107",
+			from:        "gemini",
+			to:          "gemini-cli",
+			model:       "gemini-budget-model(64000)",
+			inputJSON:   `{"model":"gemini-budget-model(64000)","contents":[{"role":"user","parts":[{"text":"hi"}]}]}`,
+			expectField: "",
+			expectErr:   true,
+		},
+		// Case 108: Gemini-CLI to Antigravity, budget 64000 → exceeds Max error (same family strict validation)
+		{
+			name:        "108",
+			from:        "gemini-cli",
+			to:          "antigravity",
+			model:       "gemini-budget-model(64000)",
+			inputJSON:   `{"model":"gemini-budget-model(64000)","request":{"contents":[{"role":"user","parts":[{"text":"hi"}]}]}}`,
+			expectField: "",
+			expectErr:   true,
+		},
+		// Case 109: Gemini-CLI to Gemini, budget 64000 → exceeds Max error (same family strict validation)
+		{
+			name:        "109",
+			from:        "gemini-cli",
+			to:          "gemini",
+			model:       "gemini-budget-model(64000)",
+			inputJSON:   `{"model":"gemini-budget-model(64000)","request":{"contents":[{"role":"user","parts":[{"text":"hi"}]}]}}`,
+			expectField: "",
+			expectErr:   true,
+		},
+		// Case 110: Gemini to Antigravity, budget 8192 → passthrough (normal value)
+		{
+			name:            "110",
+			from:            "gemini",
+			to:              "antigravity",
+			model:           "gemini-budget-model(8192)",
+			inputJSON:       `{"model":"gemini-budget-model(8192)","contents":[{"role":"user","parts":[{"text":"hi"}]}]}`,
+			expectField:     "request.generationConfig.thinkingConfig.thinkingBudget",
+			expectValue:     "8192",
+			includeThoughts: "true",
+			expectErr:       false,
+		},
+		// Case 111: Gemini-CLI to Antigravity, budget 8192 → passthrough (normal value)
+		{
+			name:            "111",
+			from:            "gemini-cli",
+			to:              "antigravity",
+			model:           "gemini-budget-model(8192)",
+			inputJSON:       `{"model":"gemini-budget-model(8192)","request":{"contents":[{"role":"user","parts":[{"text":"hi"}]}]}}`,
+			expectField:     "request.generationConfig.thinkingConfig.thinkingBudget",
+			expectValue:     "8192",
+			includeThoughts: "true",
+			expectErr:       false,
 		},
 	}
 
@@ -2122,10 +2190,10 @@ func TestThinkingE2EMatrix_Body(t *testing.T) {
 			expectValue: "8192",
 			expectErr:   false,
 		},
-		// Case 78: Codex reasoning.effort=medium to Gemini → 8192
+		// Case 78: OpenAI-Response reasoning.effort=medium to Gemini → 8192
 		{
 			name:            "78",
-			from:            "codex",
+			from:            "openai-response",
 			to:              "gemini",
 			model:           "user-defined-model",
 			inputJSON:       `{"model":"user-defined-model","input":[{"role":"user","content":"hi"}],"reasoning":{"effort":"medium"}}`,
@@ -2134,10 +2202,10 @@ func TestThinkingE2EMatrix_Body(t *testing.T) {
 			includeThoughts: "true",
 			expectErr:       false,
 		},
-		// Case 79: Codex reasoning.effort=medium to Claude → 8192
+		// Case 79: OpenAI-Response reasoning.effort=medium to Claude → 8192
 		{
 			name:        "79",
-			from:        "codex",
+			from:        "openai-response",
 			to:          "claude",
 			model:       "user-defined-model",
 			inputJSON:   `{"model":"user-defined-model","input":[{"role":"user","content":"hi"}],"reasoning":{"effort":"medium"}}`,
@@ -2169,10 +2237,10 @@ func TestThinkingE2EMatrix_Body(t *testing.T) {
 			expectField: "",
 			expectErr:   true,
 		},
-		// Case 82: Codex to Codex, reasoning.effort=high → passthrough
+		// Case 82: OpenAI-Response to Codex, reasoning.effort=high → passthrough
 		{
 			name:        "82",
-			from:        "codex",
+			from:        "openai-response",
 			to:          "codex",
 			model:       "level-model",
 			inputJSON:   `{"model":"level-model","input":[{"role":"user","content":"hi"}],"reasoning":{"effort":"high"}}`,
@@ -2180,10 +2248,10 @@ func TestThinkingE2EMatrix_Body(t *testing.T) {
 			expectValue: "high",
 			expectErr:   false,
 		},
-		// Case 83: Codex to Codex, reasoning.effort=xhigh → out of range error
+		// Case 83: OpenAI-Response to Codex, reasoning.effort=xhigh → out of range error
 		{
 			name:        "83",
-			from:        "codex",
+			from:        "openai-response",
 			to:          "codex",
 			model:       "level-model",
 			inputJSON:   `{"model":"level-model","input":[{"role":"user","content":"hi"}],"reasoning":{"effort":"xhigh"}}`,
@@ -2432,6 +2500,74 @@ func TestThinkingE2EMatrix_Body(t *testing.T) {
 			expectField: "reasoning_split",
 			expectValue: "false",
 			expectErr:   false,
+		},
+
+		// Gemini Family Cross-Channel Consistency (Cases 106-114)
+		// Tests that gemini/gemini-cli/antigravity as same API family should have consistent validation behavior
+
+		// Case 106: Gemini to Antigravity, thinkingBudget=64000 → exceeds Max error (same family strict validation)
+		{
+			name:        "106",
+			from:        "gemini",
+			to:          "antigravity",
+			model:       "gemini-budget-model",
+			inputJSON:   `{"model":"gemini-budget-model","contents":[{"role":"user","parts":[{"text":"hi"}]}],"generationConfig":{"thinkingConfig":{"thinkingBudget":64000}}}`,
+			expectField: "",
+			expectErr:   true,
+		},
+		// Case 107: Gemini to Gemini-CLI, thinkingBudget=64000 → exceeds Max error (same family strict validation)
+		{
+			name:        "107",
+			from:        "gemini",
+			to:          "gemini-cli",
+			model:       "gemini-budget-model",
+			inputJSON:   `{"model":"gemini-budget-model","contents":[{"role":"user","parts":[{"text":"hi"}]}],"generationConfig":{"thinkingConfig":{"thinkingBudget":64000}}}`,
+			expectField: "",
+			expectErr:   true,
+		},
+		// Case 108: Gemini-CLI to Antigravity, thinkingBudget=64000 → exceeds Max error (same family strict validation)
+		{
+			name:        "108",
+			from:        "gemini-cli",
+			to:          "antigravity",
+			model:       "gemini-budget-model",
+			inputJSON:   `{"model":"gemini-budget-model","request":{"contents":[{"role":"user","parts":[{"text":"hi"}]}],"generationConfig":{"thinkingConfig":{"thinkingBudget":64000}}}}`,
+			expectField: "",
+			expectErr:   true,
+		},
+		// Case 109: Gemini-CLI to Gemini, thinkingBudget=64000 → exceeds Max error (same family strict validation)
+		{
+			name:        "109",
+			from:        "gemini-cli",
+			to:          "gemini",
+			model:       "gemini-budget-model",
+			inputJSON:   `{"model":"gemini-budget-model","request":{"contents":[{"role":"user","parts":[{"text":"hi"}]}],"generationConfig":{"thinkingConfig":{"thinkingBudget":64000}}}}`,
+			expectField: "",
+			expectErr:   true,
+		},
+		// Case 110: Gemini to Antigravity, thinkingBudget=8192 → passthrough (normal value)
+		{
+			name:            "110",
+			from:            "gemini",
+			to:              "antigravity",
+			model:           "gemini-budget-model",
+			inputJSON:       `{"model":"gemini-budget-model","contents":[{"role":"user","parts":[{"text":"hi"}]}],"generationConfig":{"thinkingConfig":{"thinkingBudget":8192}}}`,
+			expectField:     "request.generationConfig.thinkingConfig.thinkingBudget",
+			expectValue:     "8192",
+			includeThoughts: "true",
+			expectErr:       false,
+		},
+		// Case 111: Gemini-CLI to Antigravity, thinkingBudget=8192 → passthrough (normal value)
+		{
+			name:            "111",
+			from:            "gemini-cli",
+			to:              "antigravity",
+			model:           "gemini-budget-model",
+			inputJSON:       `{"model":"gemini-budget-model","request":{"contents":[{"role":"user","parts":[{"text":"hi"}]}],"generationConfig":{"thinkingConfig":{"thinkingBudget":8192}}}}`,
+			expectField:     "request.generationConfig.thinkingConfig.thinkingBudget",
+			expectValue:     "8192",
+			includeThoughts: "true",
+			expectErr:       false,
 		},
 	}
 

@@ -35,7 +35,6 @@ import (
 //   - Hybrid model → preserve original format
 func ValidateConfig(config ThinkingConfig, modelInfo *registry.ModelInfo, fromFormat, toFormat string) (*ThinkingConfig, error) {
 	fromFormat, toFormat = strings.ToLower(strings.TrimSpace(fromFormat)), strings.ToLower(strings.TrimSpace(toFormat))
-	normalized := config
 	model := "unknown"
 	support := (*registry.ThinkingSupport)(nil)
 	if modelInfo != nil {
@@ -49,106 +48,108 @@ func ValidateConfig(config ThinkingConfig, modelInfo *registry.ModelInfo, fromFo
 		if config.Mode != ModeNone {
 			return nil, NewThinkingErrorWithModel(ErrThinkingNotSupported, "thinking not supported for this model", model)
 		}
-		return &normalized, nil
+		return &config, nil
 	}
 
 	allowClampUnsupported := isBudgetBasedProvider(fromFormat) && isLevelBasedProvider(toFormat)
-	strictBudget := fromFormat != "" && fromFormat == toFormat
+	strictBudget := fromFormat != "" && isSameProviderFamily(fromFormat, toFormat)
+	budgetDerivedFromLevel := false
 
 	capability := detectModelCapability(modelInfo)
 	switch capability {
 	case CapabilityBudgetOnly:
-		if normalized.Mode == ModeLevel {
-			if normalized.Level == LevelAuto {
+		if config.Mode == ModeLevel {
+			if config.Level == LevelAuto {
 				break
 			}
-			budget, ok := ConvertLevelToBudget(string(normalized.Level))
+			budget, ok := ConvertLevelToBudget(string(config.Level))
 			if !ok {
-				return nil, NewThinkingError(ErrUnknownLevel, fmt.Sprintf("unknown level: %s", normalized.Level))
+				return nil, NewThinkingError(ErrUnknownLevel, fmt.Sprintf("unknown level: %s", config.Level))
 			}
-			normalized.Mode = ModeBudget
-			normalized.Budget = budget
-			normalized.Level = ""
+			config.Mode = ModeBudget
+			config.Budget = budget
+			config.Level = ""
+			budgetDerivedFromLevel = true
 		}
 	case CapabilityLevelOnly:
-		if normalized.Mode == ModeBudget {
-			level, ok := ConvertBudgetToLevel(normalized.Budget)
+		if config.Mode == ModeBudget {
+			level, ok := ConvertBudgetToLevel(config.Budget)
 			if !ok {
-				return nil, NewThinkingError(ErrUnknownLevel, fmt.Sprintf("budget %d cannot be converted to a valid level", normalized.Budget))
+				return nil, NewThinkingError(ErrUnknownLevel, fmt.Sprintf("budget %d cannot be converted to a valid level", config.Budget))
 			}
 			// When converting Budget -> Level for level-only models, clamp the derived standard level
 			// to the nearest supported level. Special values (none/auto) are preserved.
-			normalized.Mode = ModeLevel
-			normalized.Level = clampLevel(ThinkingLevel(level), modelInfo, toFormat)
-			normalized.Budget = 0
+			config.Mode = ModeLevel
+			config.Level = clampLevel(ThinkingLevel(level), modelInfo, toFormat)
+			config.Budget = 0
 		}
 	case CapabilityHybrid:
 	}
 
-	if normalized.Mode == ModeLevel && normalized.Level == LevelNone {
-		normalized.Mode = ModeNone
-		normalized.Budget = 0
-		normalized.Level = ""
+	if config.Mode == ModeLevel && config.Level == LevelNone {
+		config.Mode = ModeNone
+		config.Budget = 0
+		config.Level = ""
 	}
-	if normalized.Mode == ModeLevel && normalized.Level == LevelAuto {
-		normalized.Mode = ModeAuto
-		normalized.Budget = -1
-		normalized.Level = ""
+	if config.Mode == ModeLevel && config.Level == LevelAuto {
+		config.Mode = ModeAuto
+		config.Budget = -1
+		config.Level = ""
 	}
-	if normalized.Mode == ModeBudget && normalized.Budget == 0 {
-		normalized.Mode = ModeNone
-		normalized.Level = ""
+	if config.Mode == ModeBudget && config.Budget == 0 {
+		config.Mode = ModeNone
+		config.Level = ""
 	}
 
-	if len(support.Levels) > 0 && normalized.Mode == ModeLevel {
-		if !isLevelSupported(string(normalized.Level), support.Levels) {
+	if len(support.Levels) > 0 && config.Mode == ModeLevel {
+		if !isLevelSupported(string(config.Level), support.Levels) {
 			if allowClampUnsupported {
-				normalized.Level = clampLevel(normalized.Level, modelInfo, toFormat)
+				config.Level = clampLevel(config.Level, modelInfo, toFormat)
 			}
-			if !isLevelSupported(string(normalized.Level), support.Levels) {
+			if !isLevelSupported(string(config.Level), support.Levels) {
 				// User explicitly specified an unsupported level - return error
 				// (budget-derived levels may be clamped based on source format)
 				validLevels := normalizeLevels(support.Levels)
-				message := fmt.Sprintf("level %q not supported, valid levels: %s", strings.ToLower(string(normalized.Level)), strings.Join(validLevels, ", "))
+				message := fmt.Sprintf("level %q not supported, valid levels: %s", strings.ToLower(string(config.Level)), strings.Join(validLevels, ", "))
 				return nil, NewThinkingError(ErrLevelNotSupported, message)
 			}
 		}
 	}
 
-	if strictBudget && normalized.Mode == ModeBudget {
+	if strictBudget && config.Mode == ModeBudget && !budgetDerivedFromLevel {
 		min, max := support.Min, support.Max
 		if min != 0 || max != 0 {
-			if normalized.Budget < min || normalized.Budget > max || (normalized.Budget == 0 && !support.ZeroAllowed) {
-				message := fmt.Sprintf("budget %d out of range [%d,%d]", normalized.Budget, min, max)
+			if config.Budget < min || config.Budget > max || (config.Budget == 0 && !support.ZeroAllowed) {
+				message := fmt.Sprintf("budget %d out of range [%d,%d]", config.Budget, min, max)
 				return nil, NewThinkingError(ErrBudgetOutOfRange, message)
 			}
 		}
 	}
 
 	// Convert ModeAuto to mid-range if dynamic not allowed
-	if normalized.Mode == ModeAuto && !support.DynamicAllowed {
-		normalized = convertAutoToMidRange(normalized, support, toFormat, model)
+	if config.Mode == ModeAuto && !support.DynamicAllowed {
+		config = convertAutoToMidRange(config, support, toFormat, model)
 	}
 
-	if normalized.Mode == ModeNone && toFormat == "claude" {
+	if config.Mode == ModeNone && toFormat == "claude" {
 		// Claude supports explicit disable via thinking.type="disabled".
 		// Keep Budget=0 so applier can omit budget_tokens.
-		normalized.Budget = 0
-		normalized.Level = ""
+		config.Budget = 0
+		config.Level = ""
 	} else {
-		switch normalized.Mode {
+		switch config.Mode {
 		case ModeBudget, ModeAuto, ModeNone:
-			normalized.Budget = clampBudget(normalized.Budget, modelInfo, toFormat)
+			config.Budget = clampBudget(config.Budget, modelInfo, toFormat)
 		}
 
 		// ModeNone with clamped Budget > 0: set Level to lowest for Level-only/Hybrid models
 		// This ensures Apply layer doesn't need to access support.Levels
-		if normalized.Mode == ModeNone && normalized.Budget > 0 && len(support.Levels) > 0 {
-			normalized.Level = ThinkingLevel(support.Levels[0])
+		if config.Mode == ModeNone && config.Budget > 0 && len(support.Levels) > 0 {
+			config.Level = ThinkingLevel(support.Levels[0])
 		}
 	}
 
-	return &normalized, nil
+	return &config, nil
 }
 
 // convertAutoToMidRange converts ModeAuto to a mid-range value when dynamic is not allowed.
@@ -338,6 +339,22 @@ func isLevelBasedProvider(provider string) bool {
 	default:
 		return false
 	}
+}
+
+func isGeminiFamily(provider string) bool {
+	switch provider {
+	case "gemini", "gemini-cli", "antigravity":
+		return true
+	default:
+		return false
+	}
+}
+
+func isSameProviderFamily(from, to string) bool {
+	if from == to {
+		return true
+	}
+	return isGeminiFamily(from) && isGeminiFamily(to)
 }
 
 func abs(x int) int {
