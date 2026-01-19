@@ -1005,9 +1005,6 @@ func FetchAntigravityModels(ctx context.Context, auth *cliproxyauth.Auth, cfg *c
 			}
 			modelCfg := modelConfig[modelID]
 			modelName := modelID
-			if modelCfg != nil && modelCfg.Name != "" {
-				modelName = modelCfg.Name
-			}
 			modelInfo := &registry.ModelInfo{
 				ID:          modelID,
 				Name:        modelName,
