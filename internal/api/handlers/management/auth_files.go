@@ -777,11 +777,15 @@ func (h *Handler) PatchAuthFileStatus(c *gin.Context) {
 
 	// Find auth by name or ID
 	var targetAuth *coreauth.Auth
-	auths := h.authManager.List()
-	for _, auth := range auths {
-		if auth.FileName == name || auth.ID == name {
-			targetAuth = auth
-			break
+	if auth, ok := h.authManager.GetByID(name); ok {
+		targetAuth = auth
+	} else {
+		auths := h.authManager.List()
+		for _, auth := range auths {
+			if auth.FileName == name {
+				targetAuth = auth
+				break
+			}
 		}
 	}
 
