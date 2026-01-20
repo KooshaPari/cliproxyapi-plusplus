@@ -140,11 +140,11 @@ func ConvertClaudeRequestToAntigravity(modelName string, inputRawJSON []byte, _ 
 							}
 						}
 
-						// Fallback to client signature only if cache miss and client signature is valid
-						if signature == "" && cache.HasValidSignature(clientSignature) {
-							signature = clientSignature
-							// log.Debugf("Using client-provided signature for thinking block")
-						}
+						// NOTE: We do NOT fallback to client signature anymore.
+						// Client signatures from Claude models are incompatible with Antigravity/Gemini API.
+						// When switching between models (e.g., Claude Opus -> Gemini Flash), the Claude
+						// signatures will cause "Corrupted thought signature" errors.
+						// If we have no cached signature, the thinking block will be skipped below.
 
 						// Store for subsequent tool_use in the same message
 						if cache.HasValidSignature(signature) {
