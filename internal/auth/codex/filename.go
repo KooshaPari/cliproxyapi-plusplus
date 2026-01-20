@@ -12,19 +12,21 @@ import (
 // CredentialFileName returns the filename used to persist Codex OAuth credentials.
 // When planType is available (e.g. "plus", "team"), it is appended after the email
 // as a suffix to disambiguate subscriptions.
-func CredentialFileName(email, planType string, includeProviderPrefix bool) string {
+func CredentialFileName(email, planType, hashAccountID string, includeProviderPrefix bool) string {
 	email = strings.TrimSpace(email)
 	plan := normalizePlanTypeForFilename(planType)
 
 	prefix := ""
 	if includeProviderPrefix {
-		prefix = "codex-"
+		prefix = "codex"
 	}
 
 	if plan == "" {
-		return fmt.Sprintf("%s%s.json", prefix, email)
+		return fmt.Sprintf("%s-%s.json", prefix, email)
+	} else if plan == "team" {
+		return fmt.Sprintf("%s-%s-%s-%s.json", prefix, hashAccountID, email, plan)
 	}
-	return fmt.Sprintf("%s%s-%s.json", prefix, email, plan)
+	return fmt.Sprintf("%s-%s-%s.json", prefix, email, plan)
 }
 
 func normalizePlanTypeForFilename(planType string) string {
