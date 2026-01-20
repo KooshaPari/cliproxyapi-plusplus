@@ -12,10 +12,11 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	vertexauth "github.com/router-for-me/CLIProxyAPI/v6/internal/auth/vertex"
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/config"
-	"github.com/router-for-me/CLIProxyAPI/v6/internal/util"
+	"github.com/router-for-me/CLIProxyAPI/v6/internal/thinking"
 	cliproxyauth "github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/auth"
 	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/executor"
 	sdktranslator "github.com/router-for-me/CLIProxyAPI/v6/sdk/translator"
@@ -30,6 +31,143 @@ const (
 	// vertexAPIVersion aligns with current public Vertex Generative AI API.
 	vertexAPIVersion = "v1"
 )
+
+// isImagenModel checks if the model name is an Imagen image generation model.
+// Imagen models use the :predict action instead of :generateContent.
+func isImagenModel(model string) bool {
+	lowerModel := strings.ToLower(model)
+	return strings.Contains(lowerModel, "imagen")
+}
+
+// getVertexAction returns the appropriate action for the given model.
+// Imagen models use "predict", while Gemini models use "generateContent".
+func getVertexAction(model string, isStream bool) string {
+	if isImagenModel(model) {
+		return "predict"
+	}
+	if isStream {
+		return "streamGenerateContent"
+	}
+	return "generateContent"
+}
+
+// convertImagenToGeminiResponse converts Imagen API response to Gemini format
+// so it can be processed by the standard translation pipeline.
+// This ensures Imagen models return responses in the same format as gemini-3-pro-image-preview.
+func convertImagenToGeminiResponse(data []byte, model string) []byte {
+	predictions := gjson.GetBytes(data, "predictions")
+	if !predictions.Exists() || !predictions.IsArray() {
+		return data
+	}
+
+	// Build Gemini-compatible response with inlineData
+	parts := make([]map[string]any, 0)
+	for _, pred := range predictions.Array() {
+		imageData := pred.Get("bytesBase64Encoded").String()
+		mimeType := pred.Get("mimeType").String()
+		if mimeType == "" {
+			mimeType = "image/png"
+		}
+		if imageData != "" {
+			parts = append(parts, map[string]any{
+				"inlineData": map[string]any{
+					"mimeType": mimeType,
+					"data":     imageData,
+				},
+			})
+		}
+	}
+
+	// Generate unique response ID using timestamp
+	responseId := fmt.Sprintf("imagen-%d", time.Now().UnixNano())
+
+	response := map[string]any{
+		"candidates": []map[string]any{{
+			"content": map[string]any{
+				"parts": parts,
+				"role":  "model",
+			},
+			"finishReason": "STOP",
+		}},
+		"responseId":   responseId,
+		"modelVersion": model,
+		// Imagen API doesn't return token counts, set to 0 for tracking purposes
+		"usageMetadata": map[string]any{
+			"promptTokenCount":     0,
+			"candidatesTokenCount": 0,
+			"totalTokenCount":      0,
+		},
+	}
+
+	result, err := json.Marshal(response)
+	if err != nil {
+		return data
+	}
+	return result
+}
+
+// convertToImagenRequest converts a Gemini-style request to Imagen API format.
+// Imagen API uses a different structure: instances[].prompt instead of contents[].
+func convertToImagenRequest(payload []byte) ([]byte, error) {
+	// Extract prompt from Gemini-style contents
+	prompt := ""
+
+	// Try to get prompt from contents[0].parts[0].text
+	contentsText := gjson.GetBytes(payload, "contents.0.parts.0.text")
+	if contentsText.Exists() {
+		prompt = contentsText.String()
+	}
+
+	// If no contents, try messages format (OpenAI-compatible)
+	if prompt == "" {
+		messagesText := gjson.GetBytes(payload, "messages.#.content")
+		if messagesText.Exists() && messagesText.IsArray() {
+			for _, msg := range messagesText.Array() {
+				if msg.String() != "" {
+					prompt = msg.String()
+					break
+				}
+			}
+		}
+	}
+
+	// If still no prompt, try direct prompt field
+	if prompt == "" {
+		directPrompt := gjson.GetBytes(payload, "prompt")
+		if directPrompt.Exists() {
+			prompt = directPrompt.String()
+		}
+	}
+
+	if prompt == "" {
+		return nil, fmt.Errorf("imagen: no prompt found in request")
+	}
+
+	// Build Imagen API request
+	imagenReq := map[string]any{
+		"instances": []map[string]any{
+			{
+				"prompt": prompt,
+			},
+		},
+		"parameters": map[string]any{
+			"sampleCount": 1,
+		},
+	}
+
+	// Extract optional parameters
+	if aspectRatio := gjson.GetBytes(payload, "aspectRatio"); aspectRatio.Exists() {
+		imagenReq["parameters"].(map[string]any)["aspectRatio"] = aspectRatio.String()
+	}
+	if sampleCount := gjson.GetBytes(payload, "sampleCount"); sampleCount.Exists() {
+		imagenReq["parameters"].(map[string]any)["sampleCount"] = int(sampleCount.Int())
+	}
+	if negativePrompt := gjson.GetBytes(payload, "negativePrompt"); negativePrompt.Exists() {
+		imagenReq["instances"].([]map[string]any)[0]["negativePrompt"] = negativePrompt.String()
+	}
+
+	return json.Marshal(imagenReq)
+}
 
 // GeminiVertexExecutor sends requests to Vertex AI Gemini endpoints using service account credentials.
 type GeminiVertexExecutor struct {
@@ -155,39 +293,50 @@ func (e *GeminiVertexExecutor) Refresh(_ context.Context, auth *cliproxyauth.Aut
 // executeWithServiceAccount handles authentication using service account credentials.
 // This method contains the original service account authentication logic.
 func (e *GeminiVertexExecutor) executeWithServiceAccount(ctx context.Context, auth *cliproxyauth.Auth, req cliproxyexecutor.Request, opts cliproxyexecutor.Options, projectID, location string, saJSON []byte) (resp cliproxyexecutor.Response, err error) {
-	reporter := newUsageReporter(ctx, e.Identifier(), req.Model, auth)
+	baseModel := thinking.ParseSuffix(req.Model).ModelName
+
+	reporter := newUsageReporter(ctx, e.Identifier(), baseModel, auth)
 	defer reporter.trackFailure(ctx, &err)
 
-	from := opts.SourceFormat
-	to := sdktranslator.FromString("gemini")
-	originalPayload := bytes.Clone(req.Payload)
-	if len(opts.OriginalRequest) > 0 {
-		originalPayload = bytes.Clone(opts.OriginalRequest)
-	}
-	originalTranslated := sdktranslator.TranslateRequest(from, to, req.Model, originalPayload, false)
-	body := sdktranslator.TranslateRequest(from, to, req.Model, bytes.Clone(req.Payload), false)
-	if budgetOverride, includeOverride, ok := util.ResolveThinkingConfigFromMetadata(req.Model, req.Metadata); ok && util.ModelSupportsThinking(req.Model) {
-		if budgetOverride != nil {
-			norm := util.NormalizeThinkingBudget(req.Model, *budgetOverride)
-			budgetOverride = &norm
-		}
-		body = util.ApplyGeminiThinkingConfig(body, budgetOverride, includeOverride)
-	}
-	body = util.ApplyDefaultThinkingIfNeeded(req.Model, body)
-	body = util.NormalizeGeminiThinkingBudget(req.Model, body)
-	body = util.StripThinkingConfigIfUnsupported(req.Model, body)
-	body = fixGeminiImageAspectRatio(req.Model, body)
-	body = applyPayloadConfigWithRoot(e.cfg, req.Model, to.String(), "", body, originalTranslated)
-	body, _ = sjson.SetBytes(body, "model", req.Model)
+	var body []byte
 
-	action := "generateContent"
+	// Handle Imagen models with special request format
+	if isImagenModel(baseModel) {
+		imagenBody, errImagen := convertToImagenRequest(req.Payload)
+		if errImagen != nil {
+			return resp, errImagen
+		}
+		body = imagenBody
+	} else {
+		// Standard Gemini translation flow
+		from := opts.SourceFormat
+		to := sdktranslator.FromString("gemini")
+
+		originalPayload := bytes.Clone(req.Payload)
+		if len(opts.OriginalRequest) > 0 {
+			originalPayload = bytes.Clone(opts.OriginalRequest)
+		}
+		originalTranslated := sdktranslator.TranslateRequest(from, to, baseModel, originalPayload, false)
+		body = sdktranslator.TranslateRequest(from, to, baseModel, bytes.Clone(req.Payload), false)
+
+		body, err = thinking.ApplyThinking(body, req.Model, from.String(), to.String())
+		if err != nil {
+			return resp, err
+		}
+
+		body = fixGeminiImageAspectRatio(baseModel, body)
+		body = applyPayloadConfigWithRoot(e.cfg, baseModel, to.String(), "", body, originalTranslated)
+		body, _ = sjson.SetBytes(body, "model", baseModel)
+	}
+
+	action := getVertexAction(baseModel, false)
 	if req.Metadata != nil {
 		if a, _ := req.Metadata["action"].(string); a == "countTokens" {
 			action = "countTokens"
 		}
 	}
 	baseURL := vertexBaseURL(location)
-	url := fmt.Sprintf("%s/%s/projects/%s/locations/%s/publishers/google/models/%s:%s", baseURL, vertexAPIVersion, projectID, location, req.Model, action)
+	url := fmt.Sprintf("%s/%s/projects/%s/locations/%s/publishers/google/models/%s:%s", baseURL, vertexAPIVersion, projectID, location, baseModel, action)
 	if opts.Alt != "" && action != "countTokens" {
 		url = url + fmt.Sprintf("?$alt=%s", opts.Alt)
 	}
@@ -250,6 +399,16 @@ func (e *GeminiVertexExecutor) executeWithServiceAccount(ctx context.Context, au
 	}
 	appendAPIResponseChunk(ctx, e.cfg, data)
 	reporter.publish(ctx, parseGeminiUsage(data))
+
+	// For Imagen models, convert response to Gemini format before translation
+	// This ensures Imagen responses use the same format as gemini-3-pro-image-preview
+	if isImagenModel(baseModel) {
+		data = convertImagenToGeminiResponse(data, baseModel)
+	}
+
+	// Standard Gemini translation (works for both Gemini and converted Imagen responses)
+	from := opts.SourceFormat
+	to := sdktranslator.FromString("gemini")
 	var param any
 	out := sdktranslator.TranslateNonStream(ctx, to, from, req.Model, bytes.Clone(opts.OriginalRequest), body, data, &param)
 	resp = cliproxyexecutor.Response{Payload: []byte(out)}
@@ -258,37 +417,31 @@ func (e *GeminiVertexExecutor) executeWithServiceAccount(ctx context.Context, au
 
 // executeWithAPIKey handles authentication using API key credentials.
 func (e *GeminiVertexExecutor) executeWithAPIKey(ctx context.Context, auth *cliproxyauth.Auth, req cliproxyexecutor.Request, opts cliproxyexecutor.Options, apiKey, baseURL string) (resp cliproxyexecutor.Response, err error) {
-	reporter := newUsageReporter(ctx, e.Identifier(), req.Model, auth)
-	defer reporter.trackFailure(ctx, &err)
+	baseModel := thinking.ParseSuffix(req.Model).ModelName
 
-	model := req.Model
-	if override := e.resolveUpstreamModel(req.Model, auth); override != "" {
-		model = override
-	}
+	reporter := newUsageReporter(ctx, e.Identifier(), baseModel, auth)
+	defer reporter.trackFailure(ctx, &err)
 
 	from := opts.SourceFormat
 	to := sdktranslator.FromString("gemini")
+
 	originalPayload := bytes.Clone(req.Payload)
 	if len(opts.OriginalRequest) > 0 {
 		originalPayload = bytes.Clone(opts.OriginalRequest)
 	}
-	originalTranslated := sdktranslator.TranslateRequest(from, to, model, originalPayload, false)
-	body := sdktranslator.TranslateRequest(from, to, model, bytes.Clone(req.Payload), false)
-	if budgetOverride, includeOverride, ok := util.ResolveThinkingConfigFromMetadata(model, req.Metadata); ok && util.ModelSupportsThinking(model) {
-		if budgetOverride != nil {
-			norm := util.NormalizeThinkingBudget(model, *budgetOverride)
-			budgetOverride = &norm
-		}
-		body = util.ApplyGeminiThinkingConfig(body, budgetOverride, includeOverride)
-	}
-	body = util.ApplyDefaultThinkingIfNeeded(model, body)
-	body = util.NormalizeGeminiThinkingBudget(model, body)
-	body = util.StripThinkingConfigIfUnsupported(model, body)
-	body = fixGeminiImageAspectRatio(model, body)
-	body = applyPayloadConfigWithRoot(e.cfg, model, to.String(), "", body, originalTranslated)
-	body, _ = sjson.SetBytes(body, "model", model)
+	originalTranslated := sdktranslator.TranslateRequest(from, to, baseModel, originalPayload, false)
+	body := sdktranslator.TranslateRequest(from, to, baseModel, bytes.Clone(req.Payload), false)
 
-	action := "generateContent"
+	body, err = thinking.ApplyThinking(body, req.Model, from.String(), to.String())
+	if err != nil {
+		return resp, err
+	}
+
+	body = fixGeminiImageAspectRatio(baseModel, body)
+	body = applyPayloadConfigWithRoot(e.cfg, baseModel, to.String(), "", body, originalTranslated)
+	body, _ = sjson.SetBytes(body, "model", baseModel)
+
+	action := getVertexAction(baseModel, false)
 	if req.Metadata != nil {
 		if a, _ := req.Metadata["action"].(string); a == "countTokens" {
 			action = "countTokens"
@@ -299,7 +452,7 @@ func (e *GeminiVertexExecutor) executeWithAPIKey(ctx context.Context, auth *clip
 	if baseURL == "" {
 		baseURL = "https://generativelanguage.googleapis.com"
 	}
-	url := fmt.Sprintf("%s/%s/publishers/google/models/%s:%s", baseURL, vertexAPIVersion, model, action)
+	url := fmt.Sprintf("%s/%s/publishers/google/models/%s:%s", baseURL, vertexAPIVersion, baseModel, action)
 	if opts.Alt != "" && action != "countTokens" {
 		url = url + fmt.Sprintf("?$alt=%s", opts.Alt)
 	}
@@ -367,37 +520,40 @@ func (e *GeminiVertexExecutor) executeWithAPIKey(ctx context.Context, auth *clip
 
 // executeStreamWithServiceAccount handles streaming authentication using service account credentials.
 func (e *GeminiVertexExecutor) executeStreamWithServiceAccount(ctx context.Context, auth *cliproxyauth.Auth, req cliproxyexecutor.Request, opts cliproxyexecutor.Options, projectID, location string, saJSON []byte) (stream <-chan cliproxyexecutor.StreamChunk, err error) {
-	reporter := newUsageReporter(ctx, e.Identifier(), req.Model, auth)
+	baseModel := thinking.ParseSuffix(req.Model).ModelName
+
+	reporter := newUsageReporter(ctx, e.Identifier(), baseModel, auth)
 	defer reporter.trackFailure(ctx, &err)
 
 	from := opts.SourceFormat
 	to := sdktranslator.FromString("gemini")
+
 	originalPayload := bytes.Clone(req.Payload)
 	if len(opts.OriginalRequest) > 0 {
 		originalPayload = bytes.Clone(opts.OriginalRequest)
 	}
-	originalTranslated := sdktranslator.TranslateRequest(from, to, req.Model, originalPayload, true)
-	body := sdktranslator.TranslateRequest(from, to, req.Model, bytes.Clone(req.Payload), true)
-	if budgetOverride, includeOverride, ok := util.ResolveThinkingConfigFromMetadata(req.Model, req.Metadata); ok && util.ModelSupportsThinking(req.Model) {
-		if budgetOverride != nil {
-			norm := util.NormalizeThinkingBudget(req.Model, *budgetOverride)
-			budgetOverride = &norm
-		}
-		body = util.ApplyGeminiThinkingConfig(body, budgetOverride, includeOverride)
-	}
-	body = util.ApplyDefaultThinkingIfNeeded(req.Model, body)
-	body = util.NormalizeGeminiThinkingBudget(req.Model, body)
-	body = util.StripThinkingConfigIfUnsupported(req.Model, body)
-	body = fixGeminiImageAspectRatio(req.Model, body)
-	body = applyPayloadConfigWithRoot(e.cfg, req.Model, to.String(), "", body, originalTranslated)
-	body, _ = sjson.SetBytes(body, "model", req.Model)
+	originalTranslated := sdktranslator.TranslateRequest(from, to, baseModel, originalPayload, true)
+	body := sdktranslator.TranslateRequest(from, to, baseModel, bytes.Clone(req.Payload), true)
 
+	body, err = thinking.ApplyThinking(body, req.Model, from.String(), to.String())
+	if err != nil {
+		return nil, err
+	}
+
+	body = fixGeminiImageAspectRatio(baseModel, body)
+	body = applyPayloadConfigWithRoot(e.cfg, baseModel, to.String(), "", body, originalTranslated)
+	body, _ = sjson.SetBytes(body, "model", baseModel)
+
+	action := getVertexAction(baseModel, true)
 	baseURL := vertexBaseURL(location)
-	url := fmt.Sprintf("%s/%s/projects/%s/locations/%s/publishers/google/models/%s:%s", baseURL, vertexAPIVersion, projectID, location, req.Model, "streamGenerateContent")
-	if opts.Alt == "" {
-		url = url + "?alt=sse"
-	} else {
-		url = url + fmt.Sprintf("?$alt=%s", opts.Alt)
+	url := fmt.Sprintf("%s/%s/projects/%s/locations/%s/publishers/google/models/%s:%s", baseURL, vertexAPIVersion, projectID, location, baseModel, action)
+	// Imagen models don't support streaming, skip SSE params
+	if !isImagenModel(baseModel) {
+		if opts.Alt == "" {
+			url = url + "?alt=sse"
+		} else {
+			url = url + fmt.Sprintf("?$alt=%s", opts.Alt)
+		}
 	}
 	body, _ = sjson.DeleteBytes(body, "session_id")
 
@@ -487,45 +643,43 @@ func (e *GeminiVertexExecutor) executeStreamWithServiceAccount(ctx context.Conte
 
 // executeStreamWithAPIKey handles streaming authentication using API key credentials.
 func (e *GeminiVertexExecutor) executeStreamWithAPIKey(ctx context.Context, auth *cliproxyauth.Auth, req cliproxyexecutor.Request, opts cliproxyexecutor.Options, apiKey, baseURL string) (stream <-chan cliproxyexecutor.StreamChunk, err error) {
-	reporter := newUsageReporter(ctx, e.Identifier(), req.Model, auth)
-	defer reporter.trackFailure(ctx, &err)
+	baseModel := thinking.ParseSuffix(req.Model).ModelName
 
-	model := req.Model
-	if override := e.resolveUpstreamModel(req.Model, auth); override != "" {
-		model = override
-	}
+	reporter := newUsageReporter(ctx, e.Identifier(), baseModel, auth)
+	defer reporter.trackFailure(ctx, &err)
 
 	from := opts.SourceFormat
 	to := sdktranslator.FromString("gemini")
+
 	originalPayload := bytes.Clone(req.Payload)
 	if len(opts.OriginalRequest) > 0 {
 		originalPayload = bytes.Clone(opts.OriginalRequest)
 	}
-	originalTranslated := sdktranslator.TranslateRequest(from, to, model, originalPayload, true)
-	body := sdktranslator.TranslateRequest(from, to, model, bytes.Clone(req.Payload), true)
-	if budgetOverride, includeOverride, ok := util.ResolveThinkingConfigFromMetadata(model, req.Metadata); ok && util.ModelSupportsThinking(model) {
-		if budgetOverride != nil {
-			norm := util.NormalizeThinkingBudget(model, *budgetOverride)
-			budgetOverride = &norm
-		}
-		body = util.ApplyGeminiThinkingConfig(body, budgetOverride, includeOverride)
-	}
-	body = util.ApplyDefaultThinkingIfNeeded(model, body)
-	body = util.NormalizeGeminiThinkingBudget(model, body)
-	body = util.StripThinkingConfigIfUnsupported(model, body)
-	body = fixGeminiImageAspectRatio(model, body)
-	body = applyPayloadConfigWithRoot(e.cfg, model, to.String(), "", body, originalTranslated)
-	body, _ = sjson.SetBytes(body, "model", model)
+	originalTranslated := sdktranslator.TranslateRequest(from, to, baseModel, originalPayload, true)
+	body := sdktranslator.TranslateRequest(from, to, baseModel, bytes.Clone(req.Payload), true)
 
+	body, err = thinking.ApplyThinking(body, req.Model, from.String(), to.String())
+	if err != nil {
+		return nil, err
+	}
+
+	body = fixGeminiImageAspectRatio(baseModel, body)
+	body = applyPayloadConfigWithRoot(e.cfg, baseModel, to.String(), "", body, originalTranslated)
+	body, _ = sjson.SetBytes(body, "model", baseModel)
+
+	action := getVertexAction(baseModel, true)
 	// For API key auth, use simpler URL format without project/location
 	if baseURL == "" {
 		baseURL = "https://generativelanguage.googleapis.com"
 	}
-	url := fmt.Sprintf("%s/%s/publishers/google/models/%s:%s", baseURL, vertexAPIVersion, model, "streamGenerateContent")
-	if opts.Alt == "" {
-		url = url + "?alt=sse"
-	} else {
-		url = url + fmt.Sprintf("?$alt=%s", opts.Alt)
+	url := fmt.Sprintf("%s/%s/publishers/google/models/%s:%s", baseURL, vertexAPIVersion, baseModel, action)
+	// Imagen models don't support streaming, skip SSE params
+	if !isImagenModel(baseModel) {
+		if opts.Alt == "" {
+			url = url + "?alt=sse"
+		} else {
+			url = url + fmt.Sprintf("?$alt=%s", opts.Alt)
+		}
 	}
 	body, _ = sjson.DeleteBytes(body, "session_id")
 
@@ -612,26 +766,27 @@ func (e *GeminiVertexExecutor) executeStreamWithAPIKey(ctx context.Context, auth
 
 // countTokensWithServiceAccount counts tokens using service account credentials.
 func (e *GeminiVertexExecutor) countTokensWithServiceAccount(ctx context.Context, auth *cliproxyauth.Auth, req cliproxyexecutor.Request, opts cliproxyexecutor.Options, projectID, location string, saJSON []byte) (cliproxyexecutor.Response, error) {
+	baseModel := thinking.ParseSuffix(req.Model).ModelName
+
 	from := opts.SourceFormat
 	to := sdktranslator.FromString("gemini")
-	translatedReq := sdktranslator.TranslateRequest(from, to, req.Model, bytes.Clone(req.Payload), false)
-	if budgetOverride, includeOverride, ok := util.ResolveThinkingConfigFromMetadata(req.Model, req.Metadata); ok && util.ModelSupportsThinking(req.Model) {
-		if budgetOverride != nil {
-			norm := util.NormalizeThinkingBudget(req.Model, *budgetOverride)
-			budgetOverride = &norm
-		}
-		translatedReq = util.ApplyGeminiThinkingConfig(translatedReq, budgetOverride, includeOverride)
+
+	translatedReq := sdktranslator.TranslateRequest(from, to, baseModel, bytes.Clone(req.Payload), false)
+
+	translatedReq, err := thinking.ApplyThinking(translatedReq, req.Model, from.String(), to.String())
+	if err != nil {
+		return cliproxyexecutor.Response{}, err
 	}
-	translatedReq = util.StripThinkingConfigIfUnsupported(req.Model, translatedReq)
-	translatedReq = fixGeminiImageAspectRatio(req.Model, translatedReq)
-	translatedReq, _ = sjson.SetBytes(translatedReq, "model", req.Model)
+
+	translatedReq = fixGeminiImageAspectRatio(baseModel, translatedReq)
+	translatedReq, _ = sjson.SetBytes(translatedReq, "model", baseModel)
 	respCtx := context.WithValue(ctx, "alt", opts.Alt)
 	translatedReq, _ = sjson.DeleteBytes(translatedReq, "tools")
 	translatedReq, _ = sjson.DeleteBytes(translatedReq, "generationConfig")
 	translatedReq, _ = sjson.DeleteBytes(translatedReq, "safetySettings")
 
 	baseURL := vertexBaseURL(location)
-	url := fmt.Sprintf("%s/%s/projects/%s/locations/%s/publishers/google/models/%s:%s", baseURL, vertexAPIVersion, projectID, location, req.Model, "countTokens")
+	url := fmt.Sprintf("%s/%s/projects/%s/locations/%s/publishers/google/models/%s:%s", baseURL, vertexAPIVersion, projectID, location, baseModel, "countTokens")
 
 	httpReq, errNewReq := http.NewRequestWithContext(respCtx, http.MethodPost, url, bytes.NewReader(translatedReq))
 	if errNewReq != nil {
@@ -688,10 +843,6 @@ func (e *GeminiVertexExecutor) countTokensWithServiceAccount(ctx context.Context
 		return cliproxyexecutor.Response{}, errRead
 	}
 	appendAPIResponseChunk(ctx, e.cfg, data)
-	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
-		log.Debugf("request error, error status: %d, error body: %s", httpResp.StatusCode, summarizeErrorBody(httpResp.Header.Get("Content-Type"), data))
-		return cliproxyexecutor.Response{}, statusErr{code: httpResp.StatusCode, msg: string(data)}
-	}
 	count := gjson.GetBytes(data, "totalTokens").Int()
 	out := sdktranslator.TranslateTokenCount(ctx, to, from, count, data)
 	return cliproxyexecutor.Response{Payload: []byte(out)}, nil
@@ -699,24 +850,20 @@ func (e *GeminiVertexExecutor) countTokensWithServiceAccount(ctx context.Context
 
 // countTokensWithAPIKey handles token counting using API key credentials.
 func (e *GeminiVertexExecutor) countTokensWithAPIKey(ctx context.Context, auth *cliproxyauth.Auth, req cliproxyexecutor.Request, opts cliproxyexecutor.Options, apiKey, baseURL string) (cliproxyexecutor.Response, error) {
-	model := req.Model
-	if override := e.resolveUpstreamModel(req.Model, auth); override != "" {
-		model = override
-	}
+	baseModel := thinking.ParseSuffix(req.Model).ModelName
 
 	from := opts.SourceFormat
 	to := sdktranslator.FromString("gemini")
-	translatedReq := sdktranslator.TranslateRequest(from, to, model, bytes.Clone(req.Payload), false)
-	if budgetOverride, includeOverride, ok := util.ResolveThinkingConfigFromMetadata(model, req.Metadata); ok && util.ModelSupportsThinking(model) {
-		if budgetOverride != nil {
-			norm := util.NormalizeThinkingBudget(model, *budgetOverride)
-			budgetOverride = &norm
-		}
-		translatedReq = util.ApplyGeminiThinkingConfig(translatedReq, budgetOverride, includeOverride)
+
+	translatedReq := sdktranslator.TranslateRequest(from, to, baseModel, bytes.Clone(req.Payload), false)
+
+	translatedReq, err := thinking.ApplyThinking(translatedReq, req.Model, from.String(), to.String())
+	if err != nil {
+		return cliproxyexecutor.Response{}, err
 	}
-	translatedReq = util.StripThinkingConfigIfUnsupported(model, translatedReq)
-	translatedReq = fixGeminiImageAspectRatio(model, translatedReq)
-	translatedReq, _ = sjson.SetBytes(translatedReq, "model", model)
+
+	translatedReq = fixGeminiImageAspectRatio(baseModel, translatedReq)
+	translatedReq, _ = sjson.SetBytes(translatedReq, "model", baseModel)
 	respCtx := context.WithValue(ctx, "alt", opts.Alt)
 	translatedReq, _ = sjson.DeleteBytes(translatedReq, "tools")
 	translatedReq, _ = sjson.DeleteBytes(translatedReq, "generationConfig")
@@ -726,7 +873,7 @@ func (e *GeminiVertexExecutor) countTokensWithAPIKey(ctx context.Context, auth *
 	if baseURL == "" {
 		baseURL = "https://generativelanguage.googleapis.com"
 	}
-	url := fmt.Sprintf("%s/%s/publishers/google/models/%s:%s", baseURL, vertexAPIVersion, model, "countTokens")
+	url := fmt.Sprintf("%s/%s/publishers/google/models/%s:%s", baseURL, vertexAPIVersion, baseModel, "countTokens")
 
 	httpReq, errNewReq := http.NewRequestWithContext(respCtx, http.MethodPost, url, bytes.NewReader(translatedReq))
 	if errNewReq != nil {
@@ -780,10 +927,6 @@ func (e *GeminiVertexExecutor) countTokensWithAPIKey(ctx context.Context, auth *
 		return cliproxyexecutor.Response{}, errRead
 	}
 	appendAPIResponseChunk(ctx, e.cfg, data)
-	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
-		log.Debugf("request error, error status: %d, error body: %s", httpResp.StatusCode, summarizeErrorBody(httpResp.Header.Get("Content-Type"), data))
-		return cliproxyexecutor.Response{}, statusErr{code: httpResp.StatusCode, msg: string(data)}
-	}
 	count := gjson.GetBytes(data, "totalTokens").Int()
 	out := sdktranslator.TranslateTokenCount(ctx, to, from, count, data)
 	return cliproxyexecutor.Response{Payload: []byte(out)}, nil
@@ -868,53 +1011,6 @@ func vertexAccessToken(ctx context.Context, cfg *config.Config, auth *cliproxyau
 		return "", fmt.Errorf("vertex executor: get access token failed: %w", errTok)
 	}
 	return tok.AccessToken, nil
-}
-
-// resolveUpstreamModel resolves the upstream model name from vertex-api-key configuration.
-// It matches the requested model alias against configured models and returns the actual upstream name.
-func (e *GeminiVertexExecutor) resolveUpstreamModel(alias string, auth *cliproxyauth.Auth) string {
-	trimmed := strings.TrimSpace(alias)
-	if trimmed == "" {
-		return ""
-	}
-
-	entry := e.resolveVertexConfig(auth)
-	if entry == nil {
-		return ""
-	}
-
-	normalizedModel, metadata := util.NormalizeThinkingModel(trimmed)
-
-	// Candidate names to match against configured aliases/names.
-	candidates := []string{strings.TrimSpace(normalizedModel)}
-	if !strings.EqualFold(normalizedModel, trimmed) {
-		candidates = append(candidates, trimmed)
-	}
-	if original := util.ResolveOriginalModel(normalizedModel, metadata); original != "" && !strings.EqualFold(original, normalizedModel) {
-		candidates = append(candidates, original)
-	}
-
-	for i := range entry.Models {
-		model := entry.Models[i]
-		name := strings.TrimSpace(model.Name)
-		modelAlias := strings.TrimSpace(model.Alias)
-
-		for _, candidate := range candidates {
-			if candidate == "" {
-				continue
-			}
-			if modelAlias != "" && strings.EqualFold(modelAlias, candidate) {
-				if name != "" {
-					return name
-				}
-				return candidate
-			}
-			if name != "" && strings.EqualFold(name, candidate) {
-				return name
-			}
-		}
-	}
-	return ""
 }
 
 // resolveVertexConfig finds the matching vertex-api-key configuration entry for the given auth.

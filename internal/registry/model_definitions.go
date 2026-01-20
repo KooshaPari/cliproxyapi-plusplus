@@ -27,7 +27,7 @@ func GetClaudeModels() []*ModelInfo {
 			DisplayName:         "Claude 4.5 Sonnet",
 			ContextLength:       200000,
 			MaxCompletionTokens: 64000,
-			Thinking:            &ThinkingSupport{Min: 1024, Max: 100000, ZeroAllowed: false, DynamicAllowed: true},
+			Thinking:            &ThinkingSupport{Min: 1024, Max: 128000, ZeroAllowed: true, DynamicAllowed: false},
 		},
 		{
 			ID:                  "claude-opus-4-5-20251101",
@@ -39,7 +39,7 @@ func GetClaudeModels() []*ModelInfo {
 			Description:         "Premium model combining maximum intelligence with practical performance",
 			ContextLength:       200000,
 			MaxCompletionTokens: 64000,
-			Thinking:            &ThinkingSupport{Min: 1024, Max: 100000, ZeroAllowed: false, DynamicAllowed: true},
+			Thinking:            &ThinkingSupport{Min: 1024, Max: 128000, ZeroAllowed: true, DynamicAllowed: false},
 		},
 		{
 			ID:                  "claude-opus-4-1-20250805",
@@ -50,7 +50,7 @@ func GetClaudeModels() []*ModelInfo {
 			DisplayName:         "Claude 4.1 Opus",
 			ContextLength:       200000,
 			MaxCompletionTokens: 32000,
-			Thinking:            &ThinkingSupport{Min: 1024, Max: 100000, ZeroAllowed: false, DynamicAllowed: true},
+			Thinking:            &ThinkingSupport{Min: 1024, Max: 128000, ZeroAllowed: false, DynamicAllowed: false},
 		},
 		{
 			ID:                  "claude-opus-4-20250514",
@@ -61,7 +61,7 @@ func GetClaudeModels() []*ModelInfo {
 			DisplayName:         "Claude 4 Opus",
 			ContextLength:       200000,
 			MaxCompletionTokens: 32000,
-			Thinking:            &ThinkingSupport{Min: 1024, Max: 100000, ZeroAllowed: false, DynamicAllowed: true},
+			Thinking:            &ThinkingSupport{Min: 1024, Max: 128000, ZeroAllowed: false, DynamicAllowed: false},
 		},
 		{
 			ID:                  "claude-sonnet-4-20250514",
@@ -72,7 +72,7 @@ func GetClaudeModels() []*ModelInfo {
 			DisplayName:         "Claude 4 Sonnet",
 			ContextLength:       200000,
 			MaxCompletionTokens: 64000,
-			Thinking:            &ThinkingSupport{Min: 1024, Max: 100000, ZeroAllowed: false, DynamicAllowed: true},
+			Thinking:            &ThinkingSupport{Min: 1024, Max: 128000, ZeroAllowed: false, DynamicAllowed: false},
 		},
 		{
 			ID:                  "claude-3-7-sonnet-20250219",
@@ -83,7 +83,7 @@ func GetClaudeModels() []*ModelInfo {
 			DisplayName:         "Claude 3.7 Sonnet",
 			ContextLength:       128000,
 			MaxCompletionTokens: 8192,
-			Thinking:            &ThinkingSupport{Min: 1024, Max: 100000, ZeroAllowed: false, DynamicAllowed: true},
+			Thinking:            &ThinkingSupport{Min: 1024, Max: 128000, ZeroAllowed: false, DynamicAllowed: false},
 		},
 		{
 			ID:                  "claude-3-5-haiku-20241022",
@@ -287,6 +287,67 @@ func GetGeminiVertexModels() []*ModelInfo {
 			SupportedGenerationMethods: []string{"generateContent", "countTokens", "createCachedContent", "batchGenerateContent"},
 			Thinking:                   &ThinkingSupport{Min: 128, Max: 32768, ZeroAllowed: false, DynamicAllowed: true, Levels: []string{"low", "high"}},
 		},
+		// Imagen image generation models - use :predict action
+		{
+			ID:                         "imagen-4.0-generate-001",
+			Object:                     "model",
+			Created:                    1750000000,
+			OwnedBy:                    "google",
+			Type:                       "gemini",
+			Name:                       "models/imagen-4.0-generate-001",
+			Version:                    "4.0",
+			DisplayName:                "Imagen 4.0 Generate",
+			Description:                "Imagen 4.0 image generation model",
+			SupportedGenerationMethods: []string{"predict"},
+		},
+		{
+			ID:                         "imagen-4.0-ultra-generate-001",
+			Object:                     "model",
+			Created:                    1750000000,
+			OwnedBy:                    "google",
+			Type:                       "gemini",
+			Name:                       "models/imagen-4.0-ultra-generate-001",
+			Version:                    "4.0",
+			DisplayName:                "Imagen 4.0 Ultra Generate",
+			Description:                "Imagen 4.0 Ultra high-quality image generation model",
+			SupportedGenerationMethods: []string{"predict"},
+		},
+		{
+			ID:                         "imagen-3.0-generate-002",
+			Object:                     "model",
+			Created:                    1740000000,
+			OwnedBy:                    "google",
+			Type:                       "gemini",
+			Name:                       "models/imagen-3.0-generate-002",
+			Version:                    "3.0",
+			DisplayName:                "Imagen 3.0 Generate",
+			Description:                "Imagen 3.0 image generation model",
+			SupportedGenerationMethods: []string{"predict"},
+		},
+		{
+			ID:                         "imagen-3.0-fast-generate-001",
+			Object:                     "model",
+			Created:                    1740000000,
+			OwnedBy:                    "google",
+			Type:                       "gemini",
+			Name:                       "models/imagen-3.0-fast-generate-001",
+			Version:                    "3.0",
+			DisplayName:                "Imagen 3.0 Fast Generate",
+			Description:                "Imagen 3.0 fast image generation model",
+			SupportedGenerationMethods: []string{"predict"},
+		},
+		{
+			ID:                         "imagen-4.0-fast-generate-001",
+			Object:                     "model",
+			Created:                    1750000000,
+			OwnedBy:                    "google",
+			Type:                       "gemini",
+			Name:                       "models/imagen-4.0-fast-generate-001",
+			Version:                    "4.0",
+			DisplayName:                "Imagen 4.0 Fast Generate",
+			Description:                "Imagen 4.0 fast image generation model",
+			SupportedGenerationMethods: []string{"predict"},
+		},
 	}
 }
 
@@ -432,7 +493,7 @@ func GetAIStudioModels() []*ModelInfo {
 			InputTokenLimit:            1048576,
 			OutputTokenLimit:           65536,
 			SupportedGenerationMethods: []string{"generateContent", "countTokens", "createCachedContent", "batchGenerateContent"},
-			Thinking:                   &ThinkingSupport{Min: 128, Max: 32768, ZeroAllowed: false, DynamicAllowed: true, Levels: []string{"low", "high"}},
+			Thinking:                   &ThinkingSupport{Min: 128, Max: 32768, ZeroAllowed: false, DynamicAllowed: true},
 		},
 		{
 			ID:                         "gemini-3-flash-preview",
@@ -447,7 +508,7 @@ func GetAIStudioModels() []*ModelInfo {
 			InputTokenLimit:            1048576,
 			OutputTokenLimit:           65536,
 			SupportedGenerationMethods: []string{"generateContent", "countTokens", "createCachedContent", "batchGenerateContent"},
-			Thinking:                   &ThinkingSupport{Min: 128, Max: 32768, ZeroAllowed: false, DynamicAllowed: true, Levels: []string{"minimal", "low", "medium", "high"}},
+			Thinking:                   &ThinkingSupport{Min: 128, Max: 32768, ZeroAllowed: false, DynamicAllowed: true},
 		},
 		{
 			ID:                         "gemini-pro-latest",
@@ -742,6 +803,7 @@ func GetIFlowModels() []*ModelInfo {
 		{ID: "qwen3-235b", DisplayName: "Qwen3-235B-A22B", Description: "Qwen3 235B A22B", Created: 1753401600},
 		{ID: "minimax-m2", DisplayName: "MiniMax-M2", Description: "MiniMax M2", Created: 1758672000, Thinking: iFlowThinkingSupport},
 		{ID: "minimax-m2.1", DisplayName: "MiniMax-M2.1", Description: "MiniMax M2.1", Created: 1766448000, Thinking: iFlowThinkingSupport},
+		{ID: "iflow-rome-30ba3b", DisplayName: "iFlow-ROME", Description: "iFlow Rome 30BA3B model", Created: 1736899200},
 	}
 	models := make([]*ModelInfo, 0, len(entries))
 	for _, entry := range entries {
@@ -764,21 +826,23 @@ func GetIFlowModels() []*ModelInfo {
 type AntigravityModelConfig struct {
 	Thinking            *ThinkingSupport
 	MaxCompletionTokens int
-	Name                string
 }
 
 // GetAntigravityModelConfig returns static configuration for antigravity models.
-// Keys use the ALIASED model names (after modelName2Alias conversion) for direct lookup.
+// Keys use upstream model names returned by the Antigravity models endpoint.
 func GetAntigravityModelConfig() map[string]*AntigravityModelConfig {
 	return map[string]*AntigravityModelConfig{
-		"gemini-2.5-flash":                        {Thinking: &ThinkingSupport{Min: 0, Max: 24576, ZeroAllowed: true, DynamicAllowed: true}, Name: "models/gemini-2.5-flash"},
-		"gemini-2.5-flash-lite":                   {Thinking: &ThinkingSupport{Min: 0, Max: 24576, ZeroAllowed: true, DynamicAllowed: true}, Name: "models/gemini-2.5-flash-lite"},
-		"gemini-2.5-computer-use-preview-10-2025": {Thinking: &ThinkingSupport{Min: 128, Max: 32768, ZeroAllowed: false, DynamicAllowed: true}, Name: "models/gemini-2.5-computer-use-preview-10-2025"},
-		"gemini-3-pro-preview":                    {Thinking: &ThinkingSupport{Min: 128, Max: 32768, ZeroAllowed: false, DynamicAllowed: true, Levels: []string{"low", "high"}}, Name: "models/gemini-3-pro-preview"},
-		"gemini-3-pro-image-preview":              {Thinking: &ThinkingSupport{Min: 128, Max: 32768, ZeroAllowed: false, DynamicAllowed: true, Levels: []string{"low", "high"}}, Name: "models/gemini-3-pro-image-preview"},
-		"gemini-3-flash-preview":                  {Thinking: &ThinkingSupport{Min: 128, Max: 32768, ZeroAllowed: false, DynamicAllowed: true, Levels: []string{"minimal", "low", "medium", "high"}}, Name: "models/gemini-3-flash-preview"},
-		"gemini-claude-sonnet-4-5-thinking":       {Thinking: &ThinkingSupport{Min: 1024, Max: 200000, ZeroAllowed: false, DynamicAllowed: true}, MaxCompletionTokens: 64000},
-		"gemini-claude-opus-4-5-thinking":         {Thinking: &ThinkingSupport{Min: 1024, Max: 200000, ZeroAllowed: false, DynamicAllowed: true}, MaxCompletionTokens: 64000},
+		"gemini-2.5-flash":           {Thinking: &ThinkingSupport{Min: 0, Max: 24576, ZeroAllowed: true, DynamicAllowed: true}},
+		"gemini-2.5-flash-lite":      {Thinking: &ThinkingSupport{Min: 0, Max: 24576, ZeroAllowed: true, DynamicAllowed: true}},
+		"rev19-uic3-1p":              {Thinking: &ThinkingSupport{Min: 128, Max: 32768, ZeroAllowed: false, DynamicAllowed: true}},
+		"gemini-3-pro-high":          {Thinking: &ThinkingSupport{Min: 128, Max: 32768, ZeroAllowed: false, DynamicAllowed: true, Levels: []string{"low", "high"}}},
+		"gemini-3-pro-image":         {Thinking: &ThinkingSupport{Min: 128, Max: 32768, ZeroAllowed: false, DynamicAllowed: true, Levels: []string{"low", "high"}}},
+		"gemini-3-flash":             {Thinking: &ThinkingSupport{Min: 128, Max: 32768, ZeroAllowed: false, DynamicAllowed: true, Levels: []string{"minimal", "low", "medium", "high"}}},
+		"claude-sonnet-4-5-thinking": {Thinking: &ThinkingSupport{Min: 1024, Max: 128000, ZeroAllowed: true, DynamicAllowed: true}, MaxCompletionTokens: 64000},
+		"claude-opus-4-5-thinking":   {Thinking: &ThinkingSupport{Min: 1024, Max: 128000, ZeroAllowed: true, DynamicAllowed: true}, MaxCompletionTokens: 64000},
+		"claude-sonnet-4-5":          {MaxCompletionTokens: 64000},
+		"gpt-oss-120b-medium":        {},
+		"tab_flash_lite_preview":     {},
 	}
 }
 
@@ -788,6 +852,7 @@ func LookupStaticModelInfo(modelID string) *ModelInfo {
 	if modelID == "" {
 		return nil
 	}
+
 	allModels := [][]*ModelInfo{
 		GetClaudeModels(),
 		GetGeminiModels(),
@@ -805,5 +870,15 @@ func LookupStaticModelInfo(modelID string) *ModelInfo {
 			}
 		}
 	}
+
+	// Check Antigravity static config
+	if cfg := GetAntigravityModelConfig()[modelID]; cfg != nil {
+		return &ModelInfo{
+			ID:                  modelID,
+			Thinking:            cfg.Thinking,
+			MaxCompletionTokens: cfg.MaxCompletionTokens,
+		}
+	}
+
 	return nil
 }
