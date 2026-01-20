@@ -3,6 +3,7 @@ package cache
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"sync"
 	"time"
 )
@@ -94,7 +95,7 @@ func purgeExpiredSessions() {
 
 // CacheSignature stores a thinking signature for a given session and text.
 // Used for Claude models that require signed thinking blocks in multi-turn conversations.
-func CacheSignature(sessionID, text, signature string) {
+func CacheSignature(modelName, sessionID, text, signature string) {
 	if sessionID == "" || text == "" || signature == "" {
 		return
 	}
@@ -102,7 +103,7 @@ func CacheSignature(sessionID, text, signature string) {
 		return
 	}
 
-	sc := getOrCreateSession(sessionID)
+	sc := getOrCreateSession(fmt.Sprintf("%s#%s", modelName, sessionID))
 	textHash := hashText(text)
 
 	sc.mu.Lock()
@@ -116,12 +117,12 @@ func CacheSignature(sessionID, text, signature string) {
 
 // GetCachedSignature retrieves a cached signature for a given session and text.
 // Returns empty string if not found or expired.
-func GetCachedSignature(sessionID, text string) string {
+func GetCachedSignature(modelName, sessionID, text string) string {
 	if sessionID == "" || text == "" {
 		return ""
 	}
 
-	val, ok := signatureCache.Load(sessionID)
+	val, ok := signatureCache.Load(fmt.Sprintf("%s#%s", modelName, sessionID))
 	if !ok {
 		return ""
 	}
