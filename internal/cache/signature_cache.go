@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 )
@@ -103,7 +104,7 @@ func CacheSignature(modelName, sessionID, text, signature string) {
 		return
 	}
 
-	sc := getOrCreateSession(fmt.Sprintf("%s#%s", modelName, sessionID))
+	sc := getOrCreateSession(fmt.Sprintf("%s#%s", GetModelGroup(modelName), sessionID))
 	textHash := hashText(text)
 
 	sc.mu.Lock()
@@ -122,7 +123,7 @@ func GetCachedSignature(modelName, sessionID, text string) string {
 		return ""
 	}
 
-	val, ok := signatureCache.Load(fmt.Sprintf("%s#%s", modelName, sessionID))
+	val, ok := signatureCache.Load(fmt.Sprintf("%s#%s", GetModelGroup(modelName), sessionID))
 	if !ok {
 		return ""
 	}
@@ -167,4 +168,15 @@ func ClearSignatureCache(sessionID string) {
 // HasValidSignature checks if a signature is valid (non-empty and long enough)
 func HasValidSignature(signature string) bool {
 	return signature != "" && len(signature) >= MinValidSignatureLen
+}
+
+func GetModelGroup(modelName string) string {
+	if strings.Contains(modelName, "gpt") {
+		return "gpt"
+	} else if strings.Contains(modelName, "claude") {
+		return "claude"
+	} else if strings.Contains(modelName, "gemini") {
+		return "gemini"
+	}
+	return modelName
 }
