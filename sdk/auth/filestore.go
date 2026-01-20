@@ -336,7 +336,7 @@ func metadataEqualIgnoringTimestamps(a, b []byte, provider string) bool {
 	// For providers that can re-fetch tokens when needed (e.g., Google OAuth),
 	// we ignore access_token to avoid unnecessary file writes.
 	switch provider {
-	case "gemini", "gemini-cli":
+	case "gemini", "gemini-cli", "antigravity":
 		ignoredFields = append(ignoredFields, "access_token")
 	}
 
