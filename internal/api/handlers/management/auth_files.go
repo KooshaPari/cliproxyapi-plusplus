@@ -3,6 +3,8 @@ package management
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -1389,6 +1391,11 @@ func (h *Handler) RequestCodexToken(c *gin.Context) {
 			accountID = claims.GetAccountID()
 			planType = strings.TrimSpace(claims.CodexAuthInfo.ChatgptPlanType)
 		}
+		hashAccountID := ""
+		if accountID != "" {
+			digest := sha256.Sum256([]byte(accountID))
+			hashAccountID = hex.EncodeToString(digest[:])[:8]
+		}
 		// Build bundle compatible with existing storage
 		bundle := &codex.CodexAuthBundle{
 			TokenData: codex.CodexTokenData{
@@ -1404,7 +1411,7 @@ func (h *Handler) RequestCodexToken(c *gin.Context) {
 
 		// Create token storage and persist
 		tokenStorage := openaiAuth.CreateTokenStorage(bundle)
-		fileName := codex.CredentialFileName(tokenStorage.Email, planType, true)
+		fileName := codex.CredentialFileName(tokenStorage.Email, planType, hashAccountID, true)
 		record := &coreauth.Auth{
 			ID:       fileName,
 			Provider: "codex",
