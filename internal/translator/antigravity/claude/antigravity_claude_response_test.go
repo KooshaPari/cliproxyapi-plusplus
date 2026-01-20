@@ -97,6 +97,7 @@ func TestConvertAntigravityResponseToClaude_SignatureCached(t *testing.T) {
 	cache.ClearSignatureCache("")
 
 	requestJSON := []byte(`{
+		"model": "claude-sonnet-4-5-thinking",
 		"messages": [{"role": "user", "content": [{"type": "text", "text": "Cache test"}]}]
 	}`)
 
@@ -158,6 +159,7 @@ func TestConvertAntigravityResponseToClaude_MultipleThinkingBlocks(t *testing.T)
 	cache.ClearSignatureCache("")
 
 	requestJSON := []byte(`{
+		"model": "claude-sonnet-4-5-thinking",
 		"messages": [{"role": "user", "content": [{"type": "text", "text": "Multi block test"}]}]
 	}`)
 

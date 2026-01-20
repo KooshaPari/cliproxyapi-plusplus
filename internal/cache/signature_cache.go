@@ -156,7 +156,13 @@ func GetCachedSignature(modelName, sessionID, text string) string {
 // ClearSignatureCache clears signature cache for a specific session or all sessions.
 func ClearSignatureCache(sessionID string) {
 	if sessionID != "" {
-		signatureCache.Delete(sessionID)
+		signatureCache.Range(func(key, _ any) bool {
+			kStr, ok := key.(string)
+			if ok && strings.HasSuffix(kStr, "#"+sessionID) {
+				signatureCache.Delete(key)
+			}
+			return true
+		})
 	} else {
 		signatureCache.Range(func(key, _ any) bool {
 			signatureCache.Delete(key)
