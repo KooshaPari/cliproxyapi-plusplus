@@ -290,11 +290,11 @@ func ConvertOpenAIResponsesRequestToGemini(modelName string, inputRawJSON []byte
 				// Set the raw JSON output directly (preserves string encoding)
 				if outputRaw != "" && outputRaw != "null" {
 					output := gjson.Parse(outputRaw)
-					if output.Type == gjson.JSON {
-						functionResponse, _ = sjson.SetRaw(functionResponse, "functionResponse.response.result", output.Raw)
-					} else {
-						functionResponse, _ = sjson.Set(functionResponse, "functionResponse.response.result", outputRaw)
-					}
+				if output.Type == gjson.JSON {
+					functionResponse, _ = sjson.SetRaw(functionResponse, "functionResponse.response.output", output.Raw)
+				} else {
+					functionResponse, _ = sjson.Set(functionResponse, "functionResponse.response.output", outputRaw)
+				}
 				}
 				functionContent, _ = sjson.SetRaw(functionContent, "parts.-1", functionResponse)
 				out, _ = sjson.SetRaw(out, "contents.-1", functionContent)

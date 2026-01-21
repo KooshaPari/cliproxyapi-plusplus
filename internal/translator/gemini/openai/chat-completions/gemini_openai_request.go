@@ -255,7 +255,8 @@ func ConvertOpenAIRequestToGemini(modelName string, inputRawJSON []byte, _ bool)
 						fid := tc.Get("id").String()
 						fname := tc.Get("function.name").String()
 						fargs := tc.Get("function.arguments").String()
-						node, _ = sjson.SetBytes(node, "parts."+itoa(p)+".functionCall.name", fname)
+					node, _ = sjson.SetBytes(node, "parts."+itoa(p)+".functionCall.id", fid)
+					node, _ = sjson.SetBytes(node, "parts."+itoa(p)+".functionCall.name", fname)
 						node, _ = sjson.SetRawBytes(node, "parts."+itoa(p)+".functionCall.args", []byte(fargs))
 						node, _ = sjson.SetBytes(node, "parts."+itoa(p)+".thoughtSignature", geminiFunctionThoughtSignature)
 						p++
@@ -270,12 +271,13 @@ func ConvertOpenAIRequestToGemini(modelName string, inputRawJSON []byte, _ bool)
 					pp := 0
 					for _, fid := range fIDs {
 						if name, ok := tcID2Name[fid]; ok {
-							toolNode, _ = sjson.SetBytes(toolNode, "parts."+itoa(pp)+".functionResponse.name", name)
+						toolNode, _ = sjson.SetBytes(toolNode, "parts."+itoa(pp)+".functionResponse.id", fid)
+						toolNode, _ = sjson.SetBytes(toolNode, "parts."+itoa(pp)+".functionResponse.name", name)
 							resp := toolResponses[fid]
 							if resp == "" {
 								resp = "{}"
 							}
-							toolNode, _ = sjson.SetBytes(toolNode, "parts."+itoa(pp)+".functionResponse.response.result", []byte(resp))
+						toolNode, _ = sjson.SetBytes(toolNode, "parts."+itoa(pp)+".functionResponse.response.output", []byte(resp))
 							pp++
 						}
 					}
