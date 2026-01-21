@@ -186,8 +186,8 @@ func ClearSignatureCache(sessionID string) {
 }
 
 // HasValidSignature checks if a signature is valid (non-empty and long enough)
-func HasValidSignature(signature string) bool {
-	return signature != "" && len(signature) >= MinValidSignatureLen
+func HasValidSignature(modelName, signature string) bool {
+	return (signature != "" && len(signature) >= MinValidSignatureLen) || (signature == "skip_thought_signature_validator" && GetModelGroup(modelName) == "gemini")
 }
 
 func GetModelGroup(modelName string) string {

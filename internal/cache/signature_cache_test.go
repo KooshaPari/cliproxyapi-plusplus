@@ -132,7 +132,7 @@ func TestHasValidSignature(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := HasValidSignature(tt.signature)
+			result := HasValidSignature("claude-sonnet-4-5-thinking", tt.signature)
 			if result != tt.expected {
 				t.Errorf("HasValidSignature(%q) = %v, expected %v", tt.signature, result, tt.expected)
 			}

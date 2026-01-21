@@ -156,19 +156,19 @@ func ConvertClaudeRequestToAntigravity(modelName string, inputRawJSON []byte, _ 
 									}
 								}
 							}
-							if cache.HasValidSignature(clientSignature) {
+							if cache.HasValidSignature(modelName, clientSignature) {
 								signature = clientSignature
 							}
 							// log.Debugf("Using client-provided signature for thinking block")
 						}
 
 						// Store for subsequent tool_use in the same message
-						if cache.HasValidSignature(signature) {
+						if cache.HasValidSignature(modelName, signature) {
 							currentMessageThinkingSignature = signature
 						}
 
 						// Skip trailing unsigned thinking blocks on last assistant message
-						isUnsigned := !cache.HasValidSignature(signature)
+						isUnsigned := !cache.HasValidSignature(modelName, signature)
 
 						// If unsigned, skip entirely (don't convert to text)
 						// Claude requires assistant messages to start with thinking blocks when thinking is enabled
@@ -223,7 +223,7 @@ func ConvertClaudeRequestToAntigravity(modelName string, inputRawJSON []byte, _ 
 							// This is the approach used in opencode-google-antigravity-auth for Gemini
 							// and also works for Claude through Antigravity API
 							const skipSentinel = "skip_thought_signature_validator"
-							if cache.HasValidSignature(currentMessageThinkingSignature) {
+							if cache.HasValidSignature(modelName, currentMessageThinkingSignature) {
 								partJSON, _ = sjson.Set(partJSON, "thoughtSignature", currentMessageThinkingSignature)
 							} else {
 								// No valid signature - use skip sentinel to bypass validation
