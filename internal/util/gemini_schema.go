@@ -12,6 +12,8 @@ import (
 
 var gjsonPathKeyReplacer = strings.NewReplacer(".", "\\.", "*", "\\*", "?", "\\?")
 
+const placeholderReasonDescription = "Brief explanation of why you are calling this tool"
+
 // CleanJSONSchemaForAntigravity transforms a JSON schema to be compatible with Antigravity API.
 // It handles unsupported keywords, type flattening, and schema simplification while preserving
 // semantic information as description hints.
@@ -72,7 +74,7 @@ func removePlaceholderFields(jsonStr string) string {
 			continue
 		}
 		desc := gjson.Get(jsonStr, p+".description").String()
-		if desc != "Brief explanation of why you are calling this tool" {
+		if desc != placeholderReasonDescription {
 			continue
 		}
 		jsonStr, _ = sjson.Delete(jsonStr, p)
@@ -502,7 +504,7 @@ func addEmptySchemaPlaceholder(jsonStr string) string {
 			// Add placeholder "reason" property
 			reasonPath := joinPath(propsPath, "reason")
 			jsonStr, _ = sjson.Set(jsonStr, reasonPath+".type", "string")
-			jsonStr, _ = sjson.Set(jsonStr, reasonPath+".description", "Brief explanation of why you are calling this tool")
+			jsonStr, _ = sjson.Set(jsonStr, reasonPath+".description", placeholderReasonDescription)
 
 			// Add to required array
 			jsonStr, _ = sjson.Set(jsonStr, reqPath, []string{"reason"})
