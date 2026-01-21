@@ -98,19 +98,20 @@ func ConvertGeminiRequestToAntigravity(modelName string, inputRawJSON []byte, _ 
 		}
 	}
 
-	// Gemini-specific handling: add skip_thought_signature_validator to functionCall parts
-	// and remove thinking blocks entirely (Gemini doesn't need to preserve them)
+	// Gemini-specific handling for non-Claude models:
+	// - Add skip_thought_signature_validator to functionCall parts so upstream can bypass signature validation.
+	// - Also mark thinking parts with the same sentinel when present (we keep the parts; we only annotate them).
 	if !strings.Contains(modelName, "claude") {
 		const skipSentinel = "skip_thought_signature_validator"
 
 		gjson.GetBytes(rawJSON, "request.contents").ForEach(func(contentIdx, content gjson.Result) bool {
 			if content.Get("role").String() == "model" {
-				// First pass: collect indices of thinking parts to remove
-				var thinkingIndicesToRemove []int64
+				// First pass: collect indices of thinking parts to mark with skip sentinel
+				var thinkingIndicesToSkipSignature []int64
 				content.Get("parts").ForEach(func(partIdx, part gjson.Result) bool {
-					// Mark thinking blocks for removal
+					// Collect indices of thinking blocks to mark with skip sentinel
 					if part.Get("thought").Bool() {
-						thinkingIndicesToRemove = append(thinkingIndicesToRemove, partIdx.Int())
+						thinkingIndicesToSkipSignature = append(thinkingIndicesToSkipSignature, partIdx.Int())
 					}
 					// Add skip sentinel to functionCall parts
 					if part.Get("functionCall").Exists() {
@@ -122,10 +123,10 @@ func ConvertGeminiRequestToAntigravity(modelName string, inputRawJSON []byte, _ 
 					return true
 				})
 
-				// Remove thinking blocks in reverse order to preserve indices
-				for i := len(thinkingIndicesToRemove) - 1; i >= 0; i-- {
-					idx := thinkingIndicesToRemove[i]
-					rawJSON, _ = sjson.DeleteBytes(rawJSON, fmt.Sprintf("request.contents.%d.parts.%d", contentIdx.Int(), idx))
+				// Add skip_thought_signature_validator sentinel to thinking blocks in reverse order to preserve indices
+				for i := len(thinkingIndicesToSkipSignature) - 1; i >= 0; i-- {
+					idx := thinkingIndicesToSkipSignature[i]
+					rawJSON, _ = sjson.SetBytes(rawJSON, fmt.Sprintf("request.contents.%d.parts.%d.thoughtSignature", contentIdx.Int(), idx), skipSentinel)
 				}
 			}
 			return true
