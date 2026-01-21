@@ -36,11 +36,7 @@ func deriveSessionID(rawJSON []byte) string {
 	}
 	for _, msg := range messages.Array() {
 		if msg.Get("role").String() == "user" {
-			content := msg.Get("content").String()
-			if content == "" {
-				// Try to get text from content array
-				content = msg.Get("content.0.text").String()
-			}
+			content := msg.Get("content").Raw
 			if content != "" {
 				h := sha256.Sum256([]byte(content))
 				return hex.EncodeToString(h[:16])
@@ -138,7 +134,7 @@ func ConvertClaudeRequestToAntigravity(modelName string, inputRawJSON []byte, _ 
 						// Client may send stale or invalid signatures from different sessions
 						signature := ""
 						if sessionID != "" && thinkingText != "" {
-							if cachedSig := cache.GetCachedSignature(modelName, sessionID, thinkingText); cachedSig != "" {
+							if cachedSig := cache.GetCachedSignature(modelName, thinkingText); cachedSig != "" {
 								signature = cachedSig
 								// log.Debugf("Using cached signature for thinking block")
 							}
