@@ -104,9 +104,9 @@ func CacheSignature(modelName, text, signature string) {
 		return
 	}
 
-	sc := getOrCreateSession(fmt.Sprintf("%s#%s", GetModelGroup(modelName), text))
+	text = fmt.Sprintf("%s#%s", GetModelGroup(modelName), text)
 	textHash := hashText(text)
-
+	sc := getOrCreateSession(textHash)
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
 
@@ -127,8 +127,8 @@ func GetCachedSignature(modelName, text string) string {
 		}
 		return ""
 	}
-
-	val, ok := signatureCache.Load(fmt.Sprintf("%s#%s", family, text))
+	text = fmt.Sprintf("%s#%s", GetModelGroup(modelName), text)
+	val, ok := signatureCache.Load(hashText(text))
 	if !ok {
 		if family == "gemini" {
 			return "skip_thought_signature_validator"

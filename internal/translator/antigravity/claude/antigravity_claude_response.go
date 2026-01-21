@@ -41,7 +41,6 @@ type Params struct {
 	HasContent           bool   // Tracks whether any content (text, thinking, or tool use) has been output
 
 	// Signature caching support
-	SessionID           string          // Session ID derived from request for signature caching
 	CurrentThinkingText strings.Builder // Accumulates thinking text for signature caching
 }
 
@@ -138,7 +137,7 @@ func ConvertAntigravityResponseToClaude(_ context.Context, _ string, originalReq
 					if thoughtSignature := partResult.Get("thoughtSignature"); thoughtSignature.Exists() && thoughtSignature.String() != "" {
 						// log.Debug("Branch: signature_delta")
 
-						if params.SessionID != "" && params.CurrentThinkingText.Len() > 0 {
+						if params.CurrentThinkingText.Len() > 0 {
 							cache.CacheSignature(modelName, params.CurrentThinkingText.String(), thoughtSignature.String())
 							// log.Debugf("Cached signature for thinking block (sessionID=%s, textLen=%d)", params.SessionID, params.CurrentThinkingText.Len())
 							params.CurrentThinkingText.Reset()
