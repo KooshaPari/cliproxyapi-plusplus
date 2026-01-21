@@ -8,6 +8,7 @@ package gemini
 import (
 	"bytes"
 	"fmt"
+	"strings"
 
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/translator/gemini/common"
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/util"
@@ -32,12 +33,12 @@ import (
 //
 // Returns:
 //   - []byte: The transformed request data in Gemini API format
-func ConvertGeminiRequestToAntigravity(_ string, inputRawJSON []byte, _ bool) []byte {
+func ConvertGeminiRequestToAntigravity(modelName string, inputRawJSON []byte, _ bool) []byte {
 	rawJSON := bytes.Clone(inputRawJSON)
 	template := ""
 	template = `{"project":"","request":{},"model":""}`
 	template, _ = sjson.SetRaw(template, "request", string(rawJSON))
-	template, _ = sjson.Set(template, "model", gjson.Get(template, "request.model").String())
+	template, _ = sjson.Set(template, "model", modelName)
 	template, _ = sjson.Delete(template, "request.model")
 
 	template, errFixCLIToolResponse := fixCLIToolResponse(template)
@@ -99,35 +100,37 @@ func ConvertGeminiRequestToAntigravity(_ string, inputRawJSON []byte, _ bool) []
 
 	// Gemini-specific handling: add skip_thought_signature_validator to functionCall parts
 	// and remove thinking blocks entirely (Gemini doesn't need to preserve them)
-	const skipSentinel = "skip_thought_signature_validator"
+	if !strings.Contains(modelName, "claude") {
+		const skipSentinel = "skip_thought_signature_validator"
 
-	gjson.GetBytes(rawJSON, "request.contents").ForEach(func(contentIdx, content gjson.Result) bool {
-		if content.Get("role").String() == "model" {
-			// First pass: collect indices of thinking parts to remove
-			var thinkingIndicesToRemove []int64
-			content.Get("parts").ForEach(func(partIdx, part gjson.Result) bool {
-				// Mark thinking blocks for removal
-				if part.Get("thought").Bool() {
-					thinkingIndicesToRemove = append(thinkingIndicesToRemove, partIdx.Int())
-				}
-				// Add skip sentinel to functionCall parts
-				if part.Get("functionCall").Exists() {
-					existingSig := part.Get("thoughtSignature").String()
-					if existingSig == "" || len(existingSig) < 50 {
-						rawJSON, _ = sjson.SetBytes(rawJSON, fmt.Sprintf("request.contents.%d.parts.%d.thoughtSignature", contentIdx.Int(), partIdx.Int()), skipSentinel)
+		gjson.GetBytes(rawJSON, "request.contents").ForEach(func(contentIdx, content gjson.Result) bool {
+			if content.Get("role").String() == "model" {
+				// First pass: collect indices of thinking parts to remove
+				var thinkingIndicesToRemove []int64
+				content.Get("parts").ForEach(func(partIdx, part gjson.Result) bool {
+					// Mark thinking blocks for removal
+					if part.Get("thought").Bool() {
+						thinkingIndicesToRemove = append(thinkingIndicesToRemove, partIdx.Int())
 					}
-				}
-				return true
-			})
+					// Add skip sentinel to functionCall parts
+					if part.Get("functionCall").Exists() {
+						existingSig := part.Get("thoughtSignature").String()
+						if existingSig == "" || len(existingSig) < 50 {
+							rawJSON, _ = sjson.SetBytes(rawJSON, fmt.Sprintf("request.contents.%d.parts.%d.thoughtSignature", contentIdx.Int(), partIdx.Int()), skipSentinel)
+						}
+					}
+					return true
+				})
 
-			// Remove thinking blocks in reverse order to preserve indices
-			for i := len(thinkingIndicesToRemove) - 1; i >= 0; i-- {
-				idx := thinkingIndicesToRemove[i]
-				rawJSON, _ = sjson.DeleteBytes(rawJSON, fmt.Sprintf("request.contents.%d.parts.%d", contentIdx.Int(), idx))
+				// Remove thinking blocks in reverse order to preserve indices
+				for i := len(thinkingIndicesToRemove) - 1; i >= 0; i-- {
+					idx := thinkingIndicesToRemove[i]
+					rawJSON, _ = sjson.DeleteBytes(rawJSON, fmt.Sprintf("request.contents.%d.parts.%d", contentIdx.Int(), idx))
+				}
 			}
-		}
-		return true
-	})
+			return true
+		})
+	}
 
 	return common.AttachDefaultSafetySettings(rawJSON, "request.safetySettings")
 }
