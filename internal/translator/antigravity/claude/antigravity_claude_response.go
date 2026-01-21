@@ -70,7 +70,6 @@ func ConvertAntigravityResponseToClaude(_ context.Context, _ string, originalReq
 			HasFirstResponse: false,
 			ResponseType:     0,
 			ResponseIndex:    0,
-			SessionID:        deriveSessionID(originalRequestRawJSON),
 		}
 	}
 	modelName := gjson.GetBytes(requestRawJSON, "model").String()
