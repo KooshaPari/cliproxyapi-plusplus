@@ -21,33 +21,33 @@ func TestCacheSignature_BasicStorageAndRetrieval(t *testing.T) {
 	}
 }
 
-func TestCacheSignature_DifferentSessions(t *testing.T) {
+func TestCacheSignature_DifferentModelGroups(t *testing.T) {
 	ClearSignatureCache("")
 
-	text := "Same text in different sessions"
+	text := "Same text across models"
 	sig1 := "signature1_1234567890123456789012345678901234567890123456"
 	sig2 := "signature2_1234567890123456789012345678901234567890123456"
 
-	CacheSignature("test-model", text, sig1)
-	CacheSignature("test-model", text, sig2)
+	CacheSignature("claude-sonnet-4-5-thinking", text, sig1)
+	CacheSignature("gpt-4o", text, sig2)
 
-	if GetCachedSignature("test-model", text) != sig1 {
-		t.Error("Session-a signature mismatch")
+	if GetCachedSignature("claude-sonnet-4-5-thinking", text) != sig1 {
+		t.Error("Claude signature mismatch")
 	}
-	if GetCachedSignature("test-model", text) != sig2 {
-		t.Error("Session-b signature mismatch")
+	if GetCachedSignature("gpt-4o", text) != sig2 {
+		t.Error("GPT signature mismatch")
 	}
 }
 
 func TestCacheSignature_NotFound(t *testing.T) {
 	ClearSignatureCache("")
 
-	// Non-existent session
+	// Non-existent cache entry
 	if got := GetCachedSignature("test-model", "some text"); got != "" {
-		t.Errorf("Expected empty string for nonexistent session, got '%s'", got)
+		t.Errorf("Expected empty string for missing entry, got '%s'", got)
 	}
 
-	// Existing session but different text
+	// Existing cache but different text
 	CacheSignature("test-model", "text-a", "sigA12345678901234567890123456789012345678901234567890")
 	if got := GetCachedSignature("test-model", "text-b"); got != "" {
 		t.Errorf("Expected empty string for different text, got '%s'", got)
@@ -58,7 +58,6 @@ func TestCacheSignature_EmptyInputs(t *testing.T) {
 	ClearSignatureCache("")
 
 	// All empty/invalid inputs should be no-ops
-	CacheSignature("test-model", "text", "sig12345678901234567890123456789012345678901234567890")
 	CacheSignature("test-model", "", "sig12345678901234567890123456789012345678901234567890")
 	CacheSignature("test-model", "text", "")
 	CacheSignature("test-model", "text", "short") // Too short
@@ -81,20 +80,21 @@ func TestCacheSignature_ShortSignatureRejected(t *testing.T) {
 	}
 }
 
-func TestClearSignatureCache_SpecificSession(t *testing.T) {
+func TestClearSignatureCache_ModelGroup(t *testing.T) {
 	ClearSignatureCache("")
 
-	sig := "validSig1234567890123456789012345678901234567890123456"
-	CacheSignature("test-model", "text", sig)
-	CacheSignature("test-model", "text", sig)
+	sigClaude := "validSig1234567890123456789012345678901234567890123456"
+	sigGpt := "validSig9876543210987654321098765432109876543210987654"
+	CacheSignature("claude-sonnet-4-5-thinking", "text", sigClaude)
+	CacheSignature("gpt-4o", "text", sigGpt)
 
-	ClearSignatureCache("session-1")
+	ClearSignatureCache("claude-sonnet-4-5-thinking")
 
-	if got := GetCachedSignature("test-model", "text"); got != "" {
-		t.Error("session-1 should be cleared")
+	if got := GetCachedSignature("claude-sonnet-4-5-thinking", "text"); got != "" {
+		t.Error("Claude cache should be cleared")
 	}
-	if got := GetCachedSignature("test-model", "text"); got != sig {
-		t.Error("session-2 should still exist")
+	if got := GetCachedSignature("gpt-4o", "text"); got != sigGpt {
+		t.Error("GPT cache should still exist")
 	}
 }
 
@@ -108,10 +108,10 @@ func TestClearSignatureCache_AllSessions(t *testing.T) {
 	ClearSignatureCache("")
 
 	if got := GetCachedSignature("test-model", "text"); got != "" {
-		t.Error("session-1 should be cleared")
+		t.Error("cache should be cleared")
 	}
 	if got := GetCachedSignature("test-model", "text"); got != "" {
-		t.Error("session-2 should be cleared")
+		t.Error("cache should be cleared")
 	}
 }
 

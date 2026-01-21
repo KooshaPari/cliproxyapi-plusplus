@@ -98,32 +98,38 @@ func ConvertClaudeRequestToAntigravity(modelName string, inputRawJSON []byte, _ 
 						// Use GetThinkingText to handle wrapped thinking objects
 						thinkingText := thinking.GetThinkingText(contentResult)
 
-						// Always try cached signature first (more reliable than client-provided)
-						// Client may send stale or invalid signatures from different sessions
 						signature := ""
-						if thinkingText != "" {
-							if cachedSig := cache.GetCachedSignature(modelName, thinkingText); cachedSig != "" {
-								signature = cachedSig
-								// log.Debugf("Using cached signature for thinking block")
-							}
-						}
+						signatureResult := contentResult.Get("signature")
+						hasClientSignature := signatureResult.Exists() && signatureResult.String() != ""
 
-						// Fallback to client signature only if cache miss and client signature is valid
-						if signature == "" {
-							signatureResult := contentResult.Get("signature")
-							clientSignature := ""
-							if signatureResult.Exists() && signatureResult.String() != "" {
-								arrayClientSignatures := strings.SplitN(signatureResult.String(), "#", 2)
-								if len(arrayClientSignatures) == 2 {
-									if modelName == arrayClientSignatures[0] {
-										clientSignature = arrayClientSignatures[1]
-									}
+						// Only consider cached signatures when the client provided a signature.
+						// Unsigned thinking blocks must be dropped.
+						if hasClientSignature {
+							// Always try cached signature first (more reliable than client-provided)
+							// Client may send stale or invalid signatures from other requests
+							if thinkingText != "" {
+								if cachedSig := cache.GetCachedSignature(modelName, thinkingText); cachedSig != "" {
+									signature = cachedSig
+									// log.Debugf("Using cached signature for thinking block")
 								}
 							}
-							if cache.HasValidSignature(modelName, clientSignature) {
-								signature = clientSignature
+
+							// Fallback to client signature only if cache miss and client signature is valid
+							if signature == "" {
+								clientSignature := ""
+								if signatureResult.Exists() && signatureResult.String() != "" {
+									arrayClientSignatures := strings.SplitN(signatureResult.String(), "#", 2)
+									if len(arrayClientSignatures) == 2 {
+										if modelName == arrayClientSignatures[0] {
+											clientSignature = arrayClientSignatures[1]
+										}
+									}
+								}
+								if cache.HasValidSignature(modelName, clientSignature) {
+									signature = clientSignature
+								}
+								// log.Debugf("Using client-provided signature for thinking block")
 							}
-							// log.Debugf("Using client-provided signature for thinking block")
 						}
 
 						// Store for subsequent tool_use in the same message

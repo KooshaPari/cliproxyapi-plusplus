@@ -78,9 +78,7 @@ func TestConvertClaudeRequestToAntigravity_ThinkingBlocks(t *testing.T) {
 	validSignature := "abc123validSignature1234567890123456789012345678901234567890"
 	thinkingText := "Let me think..."
 
-	// Pre-cache the signature (simulating a response from the same session)
-	// The session ID is derived from the first user message hash
-	// Since there's no user message in this test, we need to add one
+	// Pre-cache the signature (simulating a previous response for the same thinking text)
 	inputJSON := []byte(`{
 		"model": "claude-sonnet-4-5-thinking",
 		"messages": [
