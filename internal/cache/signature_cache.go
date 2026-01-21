@@ -119,12 +119,20 @@ func CacheSignature(modelName, sessionID, text, signature string) {
 // GetCachedSignature retrieves a cached signature for a given session and text.
 // Returns empty string if not found or expired.
 func GetCachedSignature(modelName, sessionID, text string) string {
+	family := GetModelGroup(modelName)
+
 	if sessionID == "" || text == "" {
+		if family == "gemini" {
+			return "skip_thought_signature_validator"
+		}
 		return ""
 	}
 
-	val, ok := signatureCache.Load(fmt.Sprintf("%s#%s", GetModelGroup(modelName), sessionID))
+	val, ok := signatureCache.Load(fmt.Sprintf("%s#%s", family, sessionID))
 	if !ok {
+		if family == "gemini" {
+			return "skip_thought_signature_validator"
+		}
 		return ""
 	}
 	sc := val.(*sessionCache)
@@ -137,11 +145,17 @@ func GetCachedSignature(modelName, sessionID, text string) string {
 	entry, exists := sc.entries[textHash]
 	if !exists {
 		sc.mu.Unlock()
+		if family == "gemini" {
+			return "skip_thought_signature_validator"
+		}
 		return ""
 	}
 	if now.Sub(entry.Timestamp) > SignatureCacheTTL {
 		delete(sc.entries, textHash)
 		sc.mu.Unlock()
+		if family == "gemini" {
+			return "skip_thought_signature_validator"
+		}
 		return ""
 	}
 
