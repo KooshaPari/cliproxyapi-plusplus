@@ -1371,8 +1371,12 @@ func (m *Manager) MarkResult(ctx context.Context, result Result) {
 					shouldSuspendModel = true
 					setModelQuota = true
 				case 408, 500, 502, 503, 504:
-					next := now.Add(1 * time.Minute)
-					state.NextRetryAfter = next
+					if quotaCooldownDisabled.Load() {
+						state.NextRetryAfter = time.Time{}
+					} else {
+						next := now.Add(1 * time.Minute)
+						state.NextRetryAfter = next
+					}
 				default:
 					state.NextRetryAfter = time.Time{}
 				}
@@ -1623,7 +1627,11 @@ func applyAuthFailureState(auth *Auth, resultErr *Error, retryAfter *time.Durati
 		auth.NextRetryAfter = next
 	case 408, 500, 502, 503, 504:
 		auth.StatusMessage = "transient upstream error"
-		auth.NextRetryAfter = now.Add(1 * time.Minute)
+		if quotaCooldownDisabled.Load() {
+			auth.NextRetryAfter = time.Time{}
+		} else {
+			auth.NextRetryAfter = now.Add(1 * time.Minute)
+		}
 	default:
 		if auth.StatusMessage == "" {
 			auth.StatusMessage = "request failed"
