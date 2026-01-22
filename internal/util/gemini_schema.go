@@ -21,6 +21,44 @@ func CleanJSONSchemaForAntigravity(jsonStr string) string {
 	return cleanJSONSchema(jsonStr, true)
 }
 
+// CleanJSONSchemaForGemini transforms a JSON schema to be compatible with Gemini tool calling.
+// It removes unsupported keywords and simplifies schemas, without adding empty-schema placeholders.
+func CleanJSONSchemaForGemini(jsonStr string) string {
+	return cleanJSONSchema(jsonStr, false)
+}
+
+// cleanJSONSchema performs the core cleaning operations on the JSON schema.
+func cleanJSONSchema(jsonStr string, addPlaceholder bool) string {
+	// Phase 1: Convert and add hints
+	jsonStr = convertRefsToHints(jsonStr)
+	jsonStr = convertConstToEnum(jsonStr)
+	jsonStr = convertEnumValuesToStrings(jsonStr)
+	jsonStr = addEnumHints(jsonStr)
+	jsonStr = addAdditionalPropertiesHints(jsonStr)
+	jsonStr = moveConstraintsToDescription(jsonStr)
+
+	// Phase 2: Flatten complex structures
+	jsonStr = mergeAllOf(jsonStr)
+	jsonStr = flattenAnyOfOneOf(jsonStr)
+	jsonStr = flattenTypeArrays(jsonStr)
+
+	// Phase 3: Cleanup
+	jsonStr = removeUnsupportedKeywords(jsonStr)
+	if !addPlaceholder {
+		// Gemini schema cleanup: remove nullable/title and placeholder-only fields.
+		jsonStr = removeKeywords(jsonStr, []string{"nullable", "title"})
+		jsonStr = removePlaceholderFields(jsonStr)
+	}
+	jsonStr = cleanupRequiredFields(jsonStr)
+	// Phase 4: Add placeholder for empty object schemas (Claude VALIDATED mode requirement)
+	if addPlaceholder {
+		jsonStr = addEmptySchemaPlaceholder(jsonStr)
+	}
+
+	return jsonStr
+}
+
+// removeKeywords removes all occurrences of specified keywords from the JSON schema.
 func removeKeywords(jsonStr string, keywords []string) string {
 	for _, key := range keywords {
 		for _, p := range findPaths(jsonStr, key) {
@@ -93,42 +131,6 @@ func removePlaceholderFields(jsonStr string) string {
 				jsonStr, _ = sjson.Set(jsonStr, reqPath, filtered)
 			}
 		}
-	}
-
-	return jsonStr
-}
-
-// CleanJSONSchemaForGemini transforms a JSON schema to be compatible with Gemini tool calling.
-// It removes unsupported keywords and simplifies schemas, without adding empty-schema placeholders.
-func CleanJSONSchemaForGemini(jsonStr string) string {
-	return cleanJSONSchema(jsonStr, false)
-}
-
-func cleanJSONSchema(jsonStr string, addPlaceholder bool) string {
-	// Phase 1: Convert and add hints
-	jsonStr = convertRefsToHints(jsonStr)
-	jsonStr = convertConstToEnum(jsonStr)
-	jsonStr = convertEnumValuesToStrings(jsonStr)
-	jsonStr = addEnumHints(jsonStr)
-	jsonStr = addAdditionalPropertiesHints(jsonStr)
-	jsonStr = moveConstraintsToDescription(jsonStr)
-
-	// Phase 2: Flatten complex structures
-	jsonStr = mergeAllOf(jsonStr)
-	jsonStr = flattenAnyOfOneOf(jsonStr)
-	jsonStr = flattenTypeArrays(jsonStr)
-
-	// Phase 3: Cleanup
-	jsonStr = removeUnsupportedKeywords(jsonStr)
-	if !addPlaceholder {
-		// Gemini schema cleanup: remove nullable/title and placeholder-only fields.
-		jsonStr = removeKeywords(jsonStr, []string{"nullable", "title"})
-		jsonStr = removePlaceholderFields(jsonStr)
-	}
-	jsonStr = cleanupRequiredFields(jsonStr)
-	// Phase 4: Add placeholder for empty object schemas (Claude VALIDATED mode requirement)
-	if addPlaceholder {
-		jsonStr = addEmptySchemaPlaceholder(jsonStr)
 	}
 
 	return jsonStr
