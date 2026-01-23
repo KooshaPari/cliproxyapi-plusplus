@@ -1500,22 +1500,11 @@ func (h *Handler) RequestCodexToken(c *gin.Context) {
 }
 
 func (h *Handler) RequestAntigravityToken(c *gin.Context) {
-	const (
-		antigravityCallbackPort = 51121
-		antigravityClientID     = "1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.googleusercontent.com"
-		antigravityClientSecret = "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"
-	)
-	var antigravityScopes = []string{
-		"https://www.googleapis.com/auth/cloud-platform",
-		"https://www.googleapis.com/auth/userinfo.email",
-		"https://www.googleapis.com/auth/userinfo.profile",
-		"https://www.googleapis.com/auth/cclog",
-		"https://www.googleapis.com/auth/experimentsandconfigs",
-	}
-
 	ctx := context.Background()
 
 	fmt.Println("Initializing Antigravity authentication...")
+
+	authSvc := antigravity.NewAntigravityAuth(h.cfg)
 
 	state, errState := misc.GenerateRandomState()
 	if errState != nil {
@@ -1524,17 +1513,10 @@ func (h *Handler) RequestAntigravityToken(c *gin.Context) {
 		return
 	}
 
-	redirectURI := fmt.Sprintf("http://localhost:%d/oauth-callback", antigravityCallbackPort)
-
-	params := url.Values{}
-	params.Set("access_type", "offline")
-	params.Set("client_id", antigravityClientID)
-	params.Set("prompt", "consent")
-	params.Set("redirect_uri", redirectURI)
-	params.Set("response_type", "code")
-	params.Set("scope", strings.Join(antigravityScopes, " "))
-	params.Set("state", state)
-	authURL := "https://accounts.google.com/o/oauth2/v2/auth?" + params.Encode()
+	redirectURI := fmt.Sprintf("http://localhost:%d/oauth-callback", antigravity.CallbackPort)
+	authURL := authSvc.BuildAuthURL(state)
+	// Override redirect URI if needed (BuildAuthURL hardcodes it)
+	authURL = strings.ReplaceAll(authURL, fmt.Sprintf("http://localhost:%d/oauth-callback", antigravity.CallbackPort), redirectURI)
 
 	RegisterOAuthSession(state, "antigravity")
 
@@ -1548,7 +1530,7 @@ func (h *Handler) RequestAntigravityToken(c *gin.Context) {
 			return
 		}
 		var errStart error
-		if forwarder, errStart = startCallbackForwarder(antigravityCallbackPort, "antigravity", targetURL); errStart != nil {
+		if forwarder, errStart = startCallbackForwarder(antigravity.CallbackPort, "antigravity", targetURL); errStart != nil {
 			log.WithError(errStart).Error("failed to start antigravity callback forwarder")
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to start callback server"})
 			return
@@ -1557,7 +1539,7 @@ func (h *Handler) RequestAntigravityToken(c *gin.Context) {
 
 	go func() {
 		if isWebUI {
-			defer stopCallbackForwarderInstance(antigravityCallbackPort, forwarder)
+			defer stopCallbackForwarderInstance(antigravity.CallbackPort, forwarder)
 		}
 
 		waitFile := filepath.Join(h.cfg.AuthDir, fmt.Sprintf(".oauth-antigravity-%s.oauth", state))
@@ -1597,93 +1579,27 @@ func (h *Handler) RequestAntigravityToken(c *gin.Context) {
 			time.Sleep(500 * time.Millisecond)
 		}
 
-		httpClient := util.SetProxy(&h.cfg.SDKConfig, &http.Client{})
-		form := url.Values{}
-		form.Set("code", authCode)
-		form.Set("client_id", antigravityClientID)
-		form.Set("client_secret", antigravityClientSecret)
-		form.Set("redirect_uri", redirectURI)
-		form.Set("grant_type", "authorization_code")
-
-		req, errNewRequest := http.NewRequestWithContext(ctx, http.MethodPost, "https://oauth2.googleapis.com/token", strings.NewReader(form.Encode()))
-		if errNewRequest != nil {
-			log.Errorf("Failed to build token request: %v", errNewRequest)
-			SetOAuthSessionError(state, "Failed to build token request")
-			return
-		}
-		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-		resp, errDo := httpClient.Do(req)
-		if errDo != nil {
-			log.Errorf("Failed to execute token request: %v", errDo)
+		tokenResp, errToken := authSvc.ExchangeCodeForTokens(ctx, authCode, redirectURI)
+		if errToken != nil {
+			log.Errorf("Failed to exchange token: %v", errToken)
 			SetOAuthSessionError(state, "Failed to exchange token")
-			return
-		}
-		defer func() {
-			if errClose := resp.Body.Close(); errClose != nil {
-				log.Errorf("antigravity token exchange close error: %v", errClose)
-			}
-		}()
-
-		if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
-			bodyBytes, _ := io.ReadAll(resp.Body)
-			log.Errorf("Antigravity token exchange failed with status %d: %s", resp.StatusCode, string(bodyBytes))
-			SetOAuthSessionError(state, fmt.Sprintf("Token exchange failed: %d", resp.StatusCode))
-			return
-		}
-
-		var tokenResp struct {
-			AccessToken  string `json:"access_token"`
-			RefreshToken string `json:"refresh_token"`
-			ExpiresIn    int64  `json:"expires_in"`
-			TokenType    string `json:"token_type"`
-		}
-		if errDecode := json.NewDecoder(resp.Body).Decode(&tokenResp); errDecode != nil {
-			log.Errorf("Failed to parse token response: %v", errDecode)
-			SetOAuthSessionError(state, "Failed to parse token response")
 			return
 		}
 
 		email := ""
 		if strings.TrimSpace(tokenResp.AccessToken) != "" {
-			infoReq, errInfoReq := http.NewRequestWithContext(ctx, http.MethodGet, "https://www.googleapis.com/oauth2/v1/userinfo?alt=json", nil)
-			if errInfoReq != nil {
-				log.Errorf("Failed to build user info request: %v", errInfoReq)
-				SetOAuthSessionError(state, "Failed to build user info request")
-				return
-			}
-			infoReq.Header.Set("Authorization", "Bearer "+tokenResp.AccessToken)
-
-			infoResp, errInfo := httpClient.Do(infoReq)
+			fetchedEmail, errInfo := authSvc.FetchUserInfo(ctx, tokenResp.AccessToken)
 			if errInfo != nil {
-				log.Errorf("Failed to execute user info request: %v", errInfo)
-				SetOAuthSessionError(state, "Failed to execute user info request")
+				log.Errorf("Failed to fetch user info: %v", errInfo)
+				SetOAuthSessionError(state, "Failed to fetch user info")
 				return
 			}
-			defer func() {
-				if errClose := infoResp.Body.Close(); errClose != nil {
-					log.Errorf("antigravity user info close error: %v", errClose)
-				}
-			}()
-
-			if infoResp.StatusCode >= http.StatusOK && infoResp.StatusCode < http.StatusMultipleChoices {
-				var infoPayload struct {
-					Email string `json:"email"`
-				}
-				if errDecodeInfo := json.NewDecoder(infoResp.Body).Decode(&infoPayload); errDecodeInfo == nil {
-					email = strings.TrimSpace(infoPayload.Email)
-				}
-			} else {
-				bodyBytes, _ := io.ReadAll(infoResp.Body)
-				log.Errorf("User info request failed with status %d: %s", infoResp.StatusCode, string(bodyBytes))
-				SetOAuthSessionError(state, fmt.Sprintf("User info request failed: %d", infoResp.StatusCode))
-				return
-			}
+			email = strings.TrimSpace(fetchedEmail)
 		}
 
 		projectID := ""
 		if strings.TrimSpace(tokenResp.AccessToken) != "" {
-			fetchedProjectID, errProject := sdkAuth.FetchAntigravityProjectID(ctx, tokenResp.AccessToken, httpClient)
+			fetchedProjectID, errProject := authSvc.FetchProjectID(ctx, tokenResp.AccessToken)
 			if errProject != nil {
 				log.Warnf("antigravity: failed to fetch project ID: %v", errProject)
 			} else {
