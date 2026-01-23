@@ -11,7 +11,6 @@ import (
 	"io"
 	"net"
 	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
@@ -1346,73 +1345,25 @@ func (h *Handler) RequestCodexToken(c *gin.Context) {
 		}
 
 		log.Debug("Authorization code received, exchanging for tokens...")
-		// Extract client_id from authURL
-		clientID := ""
-		if u2, errP := url.Parse(authURL); errP == nil {
-			clientID = u2.Query().Get("client_id")
-		}
-		// Exchange code for tokens with redirect equal to mgmtRedirect
-		form := url.Values{
-			"grant_type":    {"authorization_code"},
-			"client_id":     {clientID},
-			"code":          {code},
-			"redirect_uri":  {"http://localhost:1455/auth/callback"},
-			"code_verifier": {pkceCodes.CodeVerifier},
-		}
-		httpClient := util.SetProxy(&h.cfg.SDKConfig, &http.Client{})
-		req, _ := http.NewRequestWithContext(ctx, "POST", "https://auth.openai.com/oauth/token", strings.NewReader(form.Encode()))
-		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-		req.Header.Set("Accept", "application/json")
-		resp, errDo := httpClient.Do(req)
-		if errDo != nil {
-			authErr := codex.NewAuthenticationError(codex.ErrCodeExchangeFailed, errDo)
+		// Exchange code for tokens using internal auth service
+		bundle, errExchange := openaiAuth.ExchangeCodeForTokens(ctx, code, pkceCodes)
+		if errExchange != nil {
+			authErr := codex.NewAuthenticationError(codex.ErrCodeExchangeFailed, errExchange)
 			SetOAuthSessionError(state, "Failed to exchange authorization code for tokens")
 			log.Errorf("Failed to exchange authorization code for tokens: %v", authErr)
 			return
 		}
-		defer func() { _ = resp.Body.Close() }()
-		respBody, _ := io.ReadAll(resp.Body)
-		if resp.StatusCode != http.StatusOK {
-			SetOAuthSessionError(state, fmt.Sprintf("Token exchange failed with status %d", resp.StatusCode))
-			log.Errorf("token exchange failed with status %d: %s", resp.StatusCode, string(respBody))
-			return
-		}
-		var tokenResp struct {
-			AccessToken  string `json:"access_token"`
-			RefreshToken string `json:"refresh_token"`
-			IDToken      string `json:"id_token"`
-			ExpiresIn    int    `json:"expires_in"`
-		}
-		if errU := json.Unmarshal(respBody, &tokenResp); errU != nil {
-			SetOAuthSessionError(state, "Failed to parse token response")
-			log.Errorf("failed to parse token response: %v", errU)
-			return
-		}
-		claims, _ := codex.ParseJWTToken(tokenResp.IDToken)
-		email := ""
-		accountID := ""
+
+		// Extract additional info for filename generation
+		claims, _ := codex.ParseJWTToken(bundle.TokenData.IDToken)
 		planType := ""
-		if claims != nil {
-			email = claims.GetUserEmail()
-			accountID = claims.GetAccountID()
-			planType = strings.TrimSpace(claims.CodexAuthInfo.ChatgptPlanType)
-		}
 		hashAccountID := ""
-		if accountID != "" {
-			digest := sha256.Sum256([]byte(accountID))
-			hashAccountID = hex.EncodeToString(digest[:])[:8]
-		}
-		// Build bundle compatible with existing storage
-		bundle := &codex.CodexAuthBundle{
-			TokenData: codex.CodexTokenData{
-				IDToken:      tokenResp.IDToken,
-				AccessToken:  tokenResp.AccessToken,
-				RefreshToken: tokenResp.RefreshToken,
-				AccountID:    accountID,
-				Email:        email,
-				Expire:       time.Now().Add(time.Duration(tokenResp.ExpiresIn) * time.Second).Format(time.RFC3339),
-			},
-			LastRefresh: time.Now().Format(time.RFC3339),
+		if claims != nil {
+			planType = strings.TrimSpace(claims.CodexAuthInfo.ChatgptPlanType)
+			if accountID := claims.GetAccountID(); accountID != "" {
+				digest := sha256.Sum256([]byte(accountID))
+				hashAccountID = hex.EncodeToString(digest[:])[:8]
+			}
 		}
 
 		// Create token storage and persist
