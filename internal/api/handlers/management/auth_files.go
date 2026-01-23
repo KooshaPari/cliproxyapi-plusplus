@@ -974,66 +974,13 @@ func (h *Handler) RequestAnthropicToken(c *gin.Context) {
 		rawCode := resultMap["code"]
 		code := strings.Split(rawCode, "#")[0]
 
-		// Exchange code for tokens (replicate logic using updated redirect_uri)
-		// Extract client_id from the modified auth URL
-		clientID := ""
-		if u2, errP := url.Parse(authURL); errP == nil {
-			clientID = u2.Query().Get("client_id")
-		}
-		// Build request
-		bodyMap := map[string]any{
-			"code":          code,
-			"state":         state,
-			"grant_type":    "authorization_code",
-			"client_id":     clientID,
-			"redirect_uri":  "http://localhost:54545/callback",
-			"code_verifier": pkceCodes.CodeVerifier,
-		}
-		bodyJSON, _ := json.Marshal(bodyMap)
-
-		httpClient := util.SetProxy(&h.cfg.SDKConfig, &http.Client{})
-		req, _ := http.NewRequestWithContext(ctx, "POST", "https://console.anthropic.com/v1/oauth/token", strings.NewReader(string(bodyJSON)))
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Accept", "application/json")
-		resp, errDo := httpClient.Do(req)
-		if errDo != nil {
-			authErr := claude.NewAuthenticationError(claude.ErrCodeExchangeFailed, errDo)
+		// Exchange code for tokens using internal auth service
+		bundle, errExchange := anthropicAuth.ExchangeCodeForTokens(ctx, code, state, pkceCodes)
+		if errExchange != nil {
+			authErr := claude.NewAuthenticationError(claude.ErrCodeExchangeFailed, errExchange)
 			log.Errorf("Failed to exchange authorization code for tokens: %v", authErr)
 			SetOAuthSessionError(state, "Failed to exchange authorization code for tokens")
 			return
-		}
-		defer func() {
-			if errClose := resp.Body.Close(); errClose != nil {
-				log.Errorf("failed to close response body: %v", errClose)
-			}
-		}()
-		respBody, _ := io.ReadAll(resp.Body)
-		if resp.StatusCode != http.StatusOK {
-			log.Errorf("token exchange failed with status %d: %s", resp.StatusCode, string(respBody))
-			SetOAuthSessionError(state, fmt.Sprintf("token exchange failed with status %d", resp.StatusCode))
-			return
-		}
-		var tResp struct {
-			AccessToken  string `json:"access_token"`
-			RefreshToken string `json:"refresh_token"`
-			ExpiresIn    int    `json:"expires_in"`
-			Account      struct {
-				EmailAddress string `json:"email_address"`
-			} `json:"account"`
-		}
-		if errU := json.Unmarshal(respBody, &tResp); errU != nil {
-			log.Errorf("failed to parse token response: %v", errU)
-			SetOAuthSessionError(state, "Failed to parse token response")
-			return
-		}
-		bundle := &claude.ClaudeAuthBundle{
-			TokenData: claude.ClaudeTokenData{
-				AccessToken:  tResp.AccessToken,
-				RefreshToken: tResp.RefreshToken,
-				Email:        tResp.Account.EmailAddress,
-				Expire:       time.Now().Add(time.Duration(tResp.ExpiresIn) * time.Second).Format(time.RFC3339),
-			},
-			LastRefresh: time.Now().Format(time.RFC3339),
 		}
 
 		// Create token storage
