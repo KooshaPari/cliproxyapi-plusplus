@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v6/internal/auth/antigravity"
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/auth/claude"
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/auth/codex"
 	geminiAuth "github.com/router-for-me/CLIProxyAPI/v6/internal/auth/gemini"
@@ -230,14 +231,6 @@ func stopForwarderInstance(port int, forwarder *callbackForwarder) {
 	}
 
 	log.Infof("callback forwarder on port %d stopped", port)
-}
-
-func sanitizeAntigravityFileName(email string) string {
-	if strings.TrimSpace(email) == "" {
-		return "antigravity.json"
-	}
-	replacer := strings.NewReplacer("@", "_", ".", "_")
-	return fmt.Sprintf("antigravity-%s.json", replacer.Replace(email))
 }
 
 func (h *Handler) managementCallbackURL(path string) (string, error) {
@@ -1715,7 +1708,7 @@ func (h *Handler) RequestAntigravityToken(c *gin.Context) {
 			metadata["project_id"] = projectID
 		}
 
-		fileName := sanitizeAntigravityFileName(email)
+		fileName := antigravity.CredentialFileName(email)
 		label := strings.TrimSpace(email)
 		if label == "" {
 			label = "antigravity"
