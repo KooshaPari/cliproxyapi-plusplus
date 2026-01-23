@@ -20,7 +20,7 @@ import (
 type TokenResponse struct {
 	AccessToken  string `json:"access_token"`
 	RefreshToken string `json:"refresh_token"`
-	ExpiresIn    int64  `json:"expires_token"`
+	ExpiresIn    int64  `json:"expires_in"`
 	TokenType    string `json:"token_type"`
 }
 
@@ -34,20 +34,29 @@ type AntigravityAuth struct {
 	httpClient *http.Client
 }
 
-// NewAntigravityAuth creates a new Antigravity auth service
-func NewAntigravityAuth(cfg *config.Config) *AntigravityAuth {
+// NewAntigravityAuth creates a new Antigravity auth service.
+func NewAntigravityAuth(cfg *config.Config, httpClient *http.Client) *AntigravityAuth {
+	if httpClient != nil {
+		return &AntigravityAuth{httpClient: httpClient}
+	}
+	if cfg == nil {
+		cfg = &config.Config{}
+	}
 	return &AntigravityAuth{
 		httpClient: util.SetProxy(&cfg.SDKConfig, &http.Client{}),
 	}
 }
 
-// BuildAuthURL generates the OAuth authorization URL
-func (o *AntigravityAuth) BuildAuthURL(state string) string {
+// BuildAuthURL generates the OAuth authorization URL.
+func (o *AntigravityAuth) BuildAuthURL(state, redirectURI string) string {
+	if strings.TrimSpace(redirectURI) == "" {
+		redirectURI = fmt.Sprintf("http://localhost:%d/oauth-callback", CallbackPort)
+	}
 	params := url.Values{}
 	params.Set("access_type", "offline")
 	params.Set("client_id", ClientID)
 	params.Set("prompt", "consent")
-	params.Set("redirect_uri", fmt.Sprintf("http://localhost:%d/oauth-callback", CallbackPort))
+	params.Set("redirect_uri", redirectURI)
 	params.Set("response_type", "code")
 	params.Set("scope", strings.Join(Scopes, " "))
 	params.Set("state", state)

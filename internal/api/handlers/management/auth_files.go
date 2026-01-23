@@ -1398,7 +1398,7 @@ func (h *Handler) RequestAntigravityToken(c *gin.Context) {
 
 	fmt.Println("Initializing Antigravity authentication...")
 
-	authSvc := antigravity.NewAntigravityAuth(h.cfg)
+	authSvc := antigravity.NewAntigravityAuth(h.cfg, nil)
 
 	state, errState := misc.GenerateRandomState()
 	if errState != nil {
@@ -1408,9 +1408,7 @@ func (h *Handler) RequestAntigravityToken(c *gin.Context) {
 	}
 
 	redirectURI := fmt.Sprintf("http://localhost:%d/oauth-callback", antigravity.CallbackPort)
-	authURL := authSvc.BuildAuthURL(state)
-	// Override redirect URI if needed (BuildAuthURL hardcodes it)
-	authURL = strings.ReplaceAll(authURL, fmt.Sprintf("http://localhost:%d/oauth-callback", antigravity.CallbackPort), redirectURI)
+	authURL := authSvc.BuildAuthURL(state, redirectURI)
 
 	RegisterOAuthSession(state, "antigravity")
 
