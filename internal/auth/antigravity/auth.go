@@ -74,13 +74,13 @@ func (o *AntigravityAuth) ExchangeCodeForTokens(ctx context.Context, code, redir
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, TokenEndpoint, strings.NewReader(data.Encode()))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("antigravity token exchange: create request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	resp, errDo := o.httpClient.Do(req)
 	if errDo != nil {
-		return nil, errDo
+		return nil, fmt.Errorf("antigravity token exchange: execute request: %w", errDo)
 	}
 	defer func() {
 		if errClose := resp.Body.Close(); errClose != nil {
@@ -88,12 +88,21 @@ func (o *AntigravityAuth) ExchangeCodeForTokens(ctx context.Context, code, redir
 		}
 	}()
 
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		bodyBytes, errRead := io.ReadAll(io.LimitReader(resp.Body, 8<<10))
+		if errRead != nil {
+			return nil, fmt.Errorf("antigravity token exchange: read response: %w", errRead)
+		}
+		body := strings.TrimSpace(string(bodyBytes))
+		if body == "" {
+			return nil, fmt.Errorf("antigravity token exchange: request failed: status %d", resp.StatusCode)
+		}
+		return nil, fmt.Errorf("antigravity token exchange: request failed: status %d: %s", resp.StatusCode, body)
+	}
+
 	var token TokenResponse
 	if errDecode := json.NewDecoder(resp.Body).Decode(&token); errDecode != nil {
-		return nil, errDecode
-	}
-	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
-		return nil, fmt.Errorf("oauth token exchange failed: status %d", resp.StatusCode)
+		return nil, fmt.Errorf("antigravity token exchange: decode response: %w", errDecode)
 	}
 	return &token, nil
 }
