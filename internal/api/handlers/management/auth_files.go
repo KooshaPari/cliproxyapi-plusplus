@@ -1148,13 +1148,9 @@ func (h *Handler) RequestGeminiCLIToken(c *gin.Context) {
 		}
 
 		ifToken["token_uri"] = "https://oauth2.googleapis.com/token"
-		ifToken["client_id"] = "681255809395-oo8ft2oprdrnp9e3aqf6av3hmdib135j.apps.googleusercontent.com"
-		ifToken["client_secret"] = "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"
-		ifToken["scopes"] = []string{
-			"https://www.googleapis.com/auth/cloud-platform",
-			"https://www.googleapis.com/auth/userinfo.email",
-			"https://www.googleapis.com/auth/userinfo.profile",
-		}
+		ifToken["client_id"] = geminiAuth.ClientID
+		ifToken["client_secret"] = geminiAuth.ClientSecret
+		ifToken["scopes"] = geminiAuth.Scopes
 		ifToken["universe_domain"] = "googleapis.com"
 
 		ts := geminiAuth.GeminiTokenStorage{
@@ -1478,20 +1474,29 @@ func (h *Handler) RequestAntigravityToken(c *gin.Context) {
 			return
 		}
 
-		email := ""
-		if strings.TrimSpace(tokenResp.AccessToken) != "" {
-			fetchedEmail, errInfo := authSvc.FetchUserInfo(ctx, tokenResp.AccessToken)
-			if errInfo != nil {
-				log.Errorf("Failed to fetch user info: %v", errInfo)
-				SetOAuthSessionError(state, "Failed to fetch user info")
-				return
-			}
-			email = strings.TrimSpace(fetchedEmail)
+		accessToken := strings.TrimSpace(tokenResp.AccessToken)
+		if accessToken == "" {
+			log.Error("antigravity: token exchange returned empty access token")
+			SetOAuthSessionError(state, "Failed to exchange token")
+			return
+		}
+
+		email, errInfo := authSvc.FetchUserInfo(ctx, accessToken)
+		if errInfo != nil {
+			log.Errorf("Failed to fetch user info: %v", errInfo)
+			SetOAuthSessionError(state, "Failed to fetch user info")
+			return
+		}
+		email = strings.TrimSpace(email)
+		if email == "" {
+			log.Error("antigravity: user info returned empty email")
+			SetOAuthSessionError(state, "Failed to fetch user info")
+			return
 		}
 
 		projectID := ""
-		if strings.TrimSpace(tokenResp.AccessToken) != "" {
-			fetchedProjectID, errProject := authSvc.FetchProjectID(ctx, tokenResp.AccessToken)
+		if accessToken != "" {
+			fetchedProjectID, errProject := authSvc.FetchProjectID(ctx, accessToken)
 			if errProject != nil {
 				log.Warnf("antigravity: failed to fetch project ID: %v", errProject)
 			} else {

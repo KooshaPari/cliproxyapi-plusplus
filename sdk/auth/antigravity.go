@@ -153,17 +153,24 @@ waitForCallback:
 		return nil, fmt.Errorf("antigravity: token exchange failed: %w", errToken)
 	}
 
-	email := ""
-	if tokenResp.AccessToken != "" {
-		if fetchedEmail, errInfo := authSvc.FetchUserInfo(ctx, tokenResp.AccessToken); errInfo == nil && strings.TrimSpace(fetchedEmail) != "" {
-			email = strings.TrimSpace(fetchedEmail)
-		}
+	accessToken := strings.TrimSpace(tokenResp.AccessToken)
+	if accessToken == "" {
+		return nil, fmt.Errorf("antigravity: token exchange returned empty access token")
+	}
+
+	email, errInfo := authSvc.FetchUserInfo(ctx, accessToken)
+	if errInfo != nil {
+		return nil, fmt.Errorf("antigravity: fetch user info failed: %w", errInfo)
+	}
+	email = strings.TrimSpace(email)
+	if email == "" {
+		return nil, fmt.Errorf("antigravity: empty email returned from user info")
 	}
 
 	// Fetch project ID via loadCodeAssist (same approach as Gemini CLI)
 	projectID := ""
-	if tokenResp.AccessToken != "" {
-		fetchedProjectID, errProject := authSvc.FetchProjectID(ctx, tokenResp.AccessToken)
+	if accessToken != "" {
+		fetchedProjectID, errProject := authSvc.FetchProjectID(ctx, accessToken)
 		if errProject != nil {
 			log.Warnf("antigravity: failed to fetch project ID: %v", errProject)
 		} else {

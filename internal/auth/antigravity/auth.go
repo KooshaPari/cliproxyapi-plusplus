@@ -100,18 +100,19 @@ func (o *AntigravityAuth) ExchangeCodeForTokens(ctx context.Context, code, redir
 
 // FetchUserInfo retrieves user email from Google
 func (o *AntigravityAuth) FetchUserInfo(ctx context.Context, accessToken string) (string, error) {
-	if strings.TrimSpace(accessToken) == "" {
-		return "", nil
+	accessToken = strings.TrimSpace(accessToken)
+	if accessToken == "" {
+		return "", fmt.Errorf("antigravity userinfo: missing access token")
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, UserInfoEndpoint, nil)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("antigravity userinfo: create request: %w", err)
 	}
 	req.Header.Set("Authorization", "Bearer "+accessToken)
 
 	resp, errDo := o.httpClient.Do(req)
 	if errDo != nil {
-		return "", errDo
+		return "", fmt.Errorf("antigravity userinfo: execute request: %w", errDo)
 	}
 	defer func() {
 		if errClose := resp.Body.Close(); errClose != nil {
@@ -120,13 +121,25 @@ func (o *AntigravityAuth) FetchUserInfo(ctx context.Context, accessToken string)
 	}()
 
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
-		return "", nil
+		bodyBytes, errRead := io.ReadAll(io.LimitReader(resp.Body, 8<<10))
+		if errRead != nil {
+			return "", fmt.Errorf("antigravity userinfo: read response: %w", errRead)
+		}
+		body := strings.TrimSpace(string(bodyBytes))
+		if body == "" {
+			return "", fmt.Errorf("antigravity userinfo: request failed: status %d", resp.StatusCode)
+		}
+		return "", fmt.Errorf("antigravity userinfo: request failed: status %d: %s", resp.StatusCode, body)
 	}
 	var info userInfo
 	if errDecode := json.NewDecoder(resp.Body).Decode(&info); errDecode != nil {
-		return "", errDecode
+		return "", fmt.Errorf("antigravity userinfo: decode response: %w", errDecode)
 	}
-	return info.Email, nil
+	email := strings.TrimSpace(info.Email)
+	if email == "" {
+		return "", fmt.Errorf("antigravity userinfo: response missing email")
+	}
+	return email, nil
 }
 
 // FetchProjectID retrieves the project ID for the authenticated user via loadCodeAssist
