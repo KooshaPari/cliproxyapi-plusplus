@@ -102,3 +102,38 @@ jobs:
             --tag "${DOCKERHUB_REPO}:${VERSION}" \
             "${DOCKERHUB_REPO}:${VERSION}-amd64" \
             "${DOCKERHUB_REPO}:${VERSION}-arm64"
+      - name: Cleanup temporary tags
+        continue-on-error: true
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          namespace="${DOCKERHUB_REPO%%/*}"
+          repo_name="${DOCKERHUB_REPO#*/}"
+
+          token="$(
+            curl -fsSL \
+              -H 'Content-Type: application/json' \
+              -d "{\"username\":\"${DOCKERHUB_USERNAME}\",\"password\":\"${DOCKERHUB_TOKEN}\"}" \
+              'https://hub.docker.com/v2/users/login/' \
+              | python3 -c 'import json,sys; print(json.load(sys.stdin)["token"])'
+          )"
+
+          delete_tag() {
+            local tag="$1"
+            local url="https://hub.docker.com/v2/repositories/${namespace}/${repo_name}/tags/${tag}/"
+            local http_code
+            http_code="$(curl -sS -o /dev/null -w "%{http_code}" -X DELETE -H "Authorization: JWT ${token}" "${url}" || true)"
+            if [ "${http_code}" = "204" ] || [ "${http_code}" = "404" ]; then
+              echo "Docker Hub tag removed (or missing): ${DOCKERHUB_REPO}:${tag} (HTTP ${http_code})"
+              return 0
+            fi
+            echo "Docker Hub tag delete failed: ${DOCKERHUB_REPO}:${tag} (HTTP ${http_code})"
+            return 0
+          }
+
+          delete_tag "latest-amd64"
+          delete_tag "latest-arm64"
+          delete_tag "${VERSION}-amd64"
+          delete_tag "${VERSION}-arm64"
