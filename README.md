@@ -146,6 +146,10 @@ A lightweight web admin panel for CLIProxyAPI with health checks, resource monit
 
 A Windows tray application implemented using PowerShell scripts, without relying on any third-party libraries. The main features include: automatic creation of shortcuts, silent running, password management, channel switching (Main / Plus), and automatic downloading and updating.
 
+### [霖君](https://github.com/wangdabaoqq/LinJun)
+
+霖君 is a cross-platform desktop application for managing AI programming assistants, supporting macOS, Windows, and Linux systems.Unified management of Claude Code, Gemini CLI, OpenAI Codex, Qwen Code, and other AI coding tools, with local proxy for multi-account quota tracking and one-click configuration.
+
 > [!NOTE]  
 > If you developed a project based on CLIProxyAPI, please open a PR to add it to this list.
 
