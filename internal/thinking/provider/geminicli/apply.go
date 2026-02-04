@@ -79,8 +79,10 @@ func (a *Applier) applyCompatible(body []byte, config thinking.ThinkingConfig) (
 }
 
 func (a *Applier) applyLevelFormat(body []byte, config thinking.ThinkingConfig) ([]byte, error) {
-	// Remove conflicting field to avoid both thinkingLevel and thinkingBudget in output
+	// Remove conflicting fields to avoid both thinkingLevel and thinkingBudget in output
 	result, _ := sjson.DeleteBytes(body, "request.generationConfig.thinkingConfig.thinkingBudget")
+	result, _ = sjson.DeleteBytes(result, "request.generationConfig.thinkingConfig.thinking_budget")
+	result, _ = sjson.DeleteBytes(result, "request.generationConfig.thinkingConfig.thinking_level")
 	// Normalize includeThoughts field name to avoid oneof conflicts in upstream JSON parsing.
 	result, _ = sjson.DeleteBytes(result, "request.generationConfig.thinkingConfig.include_thoughts")
 
@@ -104,8 +106,10 @@ func (a *Applier) applyLevelFormat(body []byte, config thinking.ThinkingConfig) 
 }
 
 func (a *Applier) applyBudgetFormat(body []byte, config thinking.ThinkingConfig) ([]byte, error) {
-	// Remove conflicting field to avoid both thinkingLevel and thinkingBudget in output
+	// Remove conflicting fields to avoid both thinkingLevel and thinkingBudget in output
 	result, _ := sjson.DeleteBytes(body, "request.generationConfig.thinkingConfig.thinkingLevel")
+	result, _ = sjson.DeleteBytes(result, "request.generationConfig.thinkingConfig.thinking_level")
+	result, _ = sjson.DeleteBytes(result, "request.generationConfig.thinkingConfig.thinking_budget")
 	// Normalize includeThoughts field name to avoid oneof conflicts in upstream JSON parsing.
 	result, _ = sjson.DeleteBytes(result, "request.generationConfig.thinkingConfig.include_thoughts")
 
