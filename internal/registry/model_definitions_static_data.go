@@ -15,7 +15,7 @@ func GetClaudeModels() []*ModelInfo {
 			DisplayName:         "Claude 4.5 Haiku",
 			ContextLength:       200000,
 			MaxCompletionTokens: 64000,
-			// Thinking: not supported for Haiku models
+			Thinking:            &ThinkingSupport{Min: 1024, Max: 128000, ZeroAllowed: true, DynamicAllowed: false},
 		},
 		{
 			ID:                  "claude-sonnet-4-5-20250929",
