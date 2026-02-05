@@ -140,7 +140,16 @@ func (a *Applier) applyLevelFormat(body []byte, config thinking.ThinkingConfig) 
 
 	level := string(config.Level)
 	result, _ = sjson.SetBytes(result, "generationConfig.thinkingConfig.thinkingLevel", level)
-	result, _ = sjson.SetBytes(result, "generationConfig.thinkingConfig.includeThoughts", true)
+
+	// Respect user's explicit includeThoughts setting from original body; default to true if not set
+	// Support both camelCase and snake_case variants
+	includeThoughts := true
+	if inc := gjson.GetBytes(body, "generationConfig.thinkingConfig.includeThoughts"); inc.Exists() {
+		includeThoughts = inc.Bool()
+	} else if inc := gjson.GetBytes(body, "generationConfig.thinkingConfig.include_thoughts"); inc.Exists() {
+		includeThoughts = inc.Bool()
+	}
+	result, _ = sjson.SetBytes(result, "generationConfig.thinkingConfig.includeThoughts", includeThoughts)
 	return result, nil
 }
 
@@ -153,18 +162,33 @@ func (a *Applier) applyBudgetFormat(body []byte, config thinking.ThinkingConfig)
 	result, _ = sjson.DeleteBytes(result, "generationConfig.thinkingConfig.include_thoughts")
 
 	budget := config.Budget
-	// ModeNone semantics:
-	//   - ModeNone + Budget=0: completely disable thinking
-	//   - ModeNone + Budget>0: forced to think but hide output (includeThoughts=false)
-	// When ZeroAllowed=false, ValidateConfig clamps Budget to Min while preserving ModeNone.
-	includeThoughts := false
-	switch config.Mode {
-	case thinking.ModeNone:
-		includeThoughts = false
-	case thinking.ModeAuto:
-		includeThoughts = true
-	default:
-		includeThoughts = budget > 0
+
+	// Determine includeThoughts: respect user's explicit setting from original body if provided
+	// Support both camelCase and snake_case variants
+	var includeThoughts bool
+	var userSetIncludeThoughts bool
+	if inc := gjson.GetBytes(body, "generationConfig.thinkingConfig.includeThoughts"); inc.Exists() {
+		includeThoughts = inc.Bool()
+		userSetIncludeThoughts = true
+	} else if inc := gjson.GetBytes(body, "generationConfig.thinkingConfig.include_thoughts"); inc.Exists() {
+		includeThoughts = inc.Bool()
+		userSetIncludeThoughts = true
+	}
+
+	if !userSetIncludeThoughts {
+		// No explicit setting, use default logic based on mode
+		// ModeNone semantics:
+		//   - ModeNone + Budget=0: completely disable thinking
+		//   - ModeNone + Budget>0: forced to think but hide output (includeThoughts=false)
+		// When ZeroAllowed=false, ValidateConfig clamps Budget to Min while preserving ModeNone.
+		switch config.Mode {
+		case thinking.ModeNone:
+			includeThoughts = false
+		case thinking.ModeAuto:
+			includeThoughts = true
+		default:
+			includeThoughts = budget > 0
+		}
 	}
 
 	result, _ = sjson.SetBytes(result, "generationConfig.thinkingConfig.thinkingBudget", budget)
