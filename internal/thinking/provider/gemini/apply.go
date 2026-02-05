@@ -163,6 +163,15 @@ func (a *Applier) applyBudgetFormat(body []byte, config thinking.ThinkingConfig)
 
 	budget := config.Budget
 
+	// For ModeNone, always set includeThoughts to false regardless of user setting.
+	// This ensures that when user requests budget=0 (disable thinking output),
+	// the includeThoughts is correctly set to false even if budget is clamped to min.
+	if config.Mode == thinking.ModeNone {
+		result, _ = sjson.SetBytes(result, "generationConfig.thinkingConfig.thinkingBudget", budget)
+		result, _ = sjson.SetBytes(result, "generationConfig.thinkingConfig.includeThoughts", false)
+		return result, nil
+	}
+
 	// Determine includeThoughts: respect user's explicit setting from original body if provided
 	// Support both camelCase and snake_case variants
 	var includeThoughts bool
@@ -177,13 +186,7 @@ func (a *Applier) applyBudgetFormat(body []byte, config thinking.ThinkingConfig)
 
 	if !userSetIncludeThoughts {
 		// No explicit setting, use default logic based on mode
-		// ModeNone semantics:
-		//   - ModeNone + Budget=0: completely disable thinking
-		//   - ModeNone + Budget>0: forced to think but hide output (includeThoughts=false)
-		// When ZeroAllowed=false, ValidateConfig clamps Budget to Min while preserving ModeNone.
 		switch config.Mode {
-		case thinking.ModeNone:
-			includeThoughts = false
 		case thinking.ModeAuto:
 			includeThoughts = true
 		default:
