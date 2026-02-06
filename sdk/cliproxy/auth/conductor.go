@@ -1299,7 +1299,7 @@ func updateAggregatedAvailability(auth *Auth, now time.Time) {
 			stateUnavailable = true
 		} else if state.Unavailable {
 			if state.NextRetryAfter.IsZero() {
-				stateUnavailable = true
+				stateUnavailable = false
 			} else if state.NextRetryAfter.After(now) {
 				stateUnavailable = true
 				if earliestRetry.IsZero() || state.NextRetryAfter.Before(earliestRetry) {
