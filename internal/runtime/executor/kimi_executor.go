@@ -23,7 +23,6 @@ import (
 	"github.com/tidwall/sjson"
 )
 
-
 // KimiExecutor is a stateless executor for Kimi API using OpenAI-compatible chat completions.
 type KimiExecutor struct {
 	cfg *config.Config
@@ -88,7 +87,7 @@ func (e *KimiExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, req
 		return resp, fmt.Errorf("kimi executor: failed to set model in payload: %w", err)
 	}
 
-	body, err = thinking.ApplyThinking(body, req.Model, from.String(), to.String(), e.Identifier())
+	body, err = thinking.ApplyThinking(body, req.Model, from.String(), "kimi", e.Identifier())
 	if err != nil {
 		return resp, err
 	}
@@ -101,7 +100,7 @@ func (e *KimiExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, req
 	if err != nil {
 		return resp, err
 	}
-	applyKimiHeaders(httpReq, token, false)
+	applyKimiHeadersWithAuth(httpReq, token, false, auth)
 	var authID, authLabel, authType, authValue string
 	if auth != nil {
 		authID = auth.ID
@@ -179,7 +178,7 @@ func (e *KimiExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.Aut
 		return nil, fmt.Errorf("kimi executor: failed to set model in payload: %w", err)
 	}
 
-	body, err = thinking.ApplyThinking(body, req.Model, from.String(), to.String(), e.Identifier())
+	body, err = thinking.ApplyThinking(body, req.Model, from.String(), "kimi", e.Identifier())
 	if err != nil {
 		return nil, err
 	}
@@ -196,7 +195,7 @@ func (e *KimiExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.Aut
 	if err != nil {
 		return nil, err
 	}
-	applyKimiHeaders(httpReq, token, true)
+	applyKimiHeadersWithAuth(httpReq, token, true, auth)
 	var authID, authLabel, authType, authValue string
 	if auth != nil {
 		authID = auth.ID
@@ -310,7 +309,7 @@ func (e *KimiExecutor) Refresh(ctx context.Context, auth *cliproxyauth.Auth) (*c
 		return auth, nil
 	}
 
-	client := kimiauth.NewDeviceFlowClient(e.cfg)
+	client := kimiauth.NewDeviceFlowClientWithDeviceID(e.cfg, resolveKimiDeviceID(auth))
 	td, err := client.RefreshToken(ctx, refreshToken)
 	if err != nil {
 		return nil, err
@@ -351,6 +350,53 @@ func applyKimiHeaders(r *http.Request, token string, stream bool) {
 	r.Header.Set("Accept", "application/json")
 }
 
+func resolveKimiDeviceIDFromAuth(auth *cliproxyauth.Auth) string {
+	if auth == nil || auth.Metadata == nil {
+		return ""
+	}
+
+	deviceIDRaw, ok := auth.Metadata["device_id"]
+	if !ok {
+		return ""
+	}
+
+	deviceID, ok := deviceIDRaw.(string)
+	if !ok {
+		return ""
+	}
+
+	return strings.TrimSpace(deviceID)
+}
+
+func resolveKimiDeviceIDFromStorage(auth *cliproxyauth.Auth) string {
+	if auth == nil {
+		return ""
+	}
+
+	storage, ok := auth.Storage.(*kimiauth.KimiTokenStorage)
+	if !ok || storage == nil {
+		return ""
+	}
+
+	return strings.TrimSpace(storage.DeviceID)
+}
+
+func resolveKimiDeviceID(auth *cliproxyauth.Auth) string {
+	deviceID := resolveKimiDeviceIDFromAuth(auth)
+	if deviceID != "" {
+		return deviceID
+	}
+	return resolveKimiDeviceIDFromStorage(auth)
+}
+
+func applyKimiHeadersWithAuth(r *http.Request, token string, stream bool, auth *cliproxyauth.Auth) {
+	applyKimiHeaders(r, token, stream)
+
+	if deviceID := resolveKimiDeviceID(auth); deviceID != "" {
+		r.Header.Set("X-Msh-Device-Id", deviceID)
+	}
+}
+
 // getKimiHostname returns the machine hostname.
 func getKimiHostname() string {
 	hostname, err := os.Hostname()
@@ -387,11 +433,6 @@ func getKimiDeviceID() string {
 	}
 	deviceIDPath := filepath.Join(kimiShareDir, "device_id")
 	if data, err := os.ReadFile(deviceIDPath); err == nil {
-		return strings.TrimSpace(string(data))
-	}
-	// Fallback to our own device ID
-	ourPath := filepath.Join(homeDir, ".cli-proxy-api", "kimi-device-id")
-	if data, err := os.ReadFile(ourPath); err == nil {
 		return strings.TrimSpace(string(data))
 	}
 	return "cli-proxy-api-device"

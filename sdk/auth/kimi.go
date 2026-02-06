@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/auth/kimi"
@@ -101,6 +102,9 @@ func (a KimiAuthenticator) Login(ctx context.Context, cfg *config.Config, opts *
 	if authBundle.TokenData.ExpiresAt > 0 {
 		exp := time.Unix(authBundle.TokenData.ExpiresAt, 0).UTC().Format(time.RFC3339)
 		metadata["expired"] = exp
+	}
+	if strings.TrimSpace(authBundle.DeviceID) != "" {
+		metadata["device_id"] = strings.TrimSpace(authBundle.DeviceID)
 	}
 
 	// Generate a unique filename

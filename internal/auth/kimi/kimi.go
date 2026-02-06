@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
@@ -68,6 +67,7 @@ func (k *KimiAuth) WaitForAuthorization(ctx context.Context, deviceCode *DeviceC
 
 	return &KimiAuthBundle{
 		TokenData: tokenData,
+		DeviceID:  k.deviceClient.deviceID,
 	}, nil
 }
 
@@ -82,6 +82,7 @@ func (k *KimiAuth) CreateTokenStorage(bundle *KimiAuthBundle) *KimiTokenStorage 
 		RefreshToken: bundle.TokenData.RefreshToken,
 		TokenType:    bundle.TokenData.TokenType,
 		Scope:        bundle.TokenData.Scope,
+		DeviceID:     strings.TrimSpace(bundle.DeviceID),
 		Expired:      expired,
 		Type:         "kimi",
 	}
@@ -96,42 +97,29 @@ type DeviceFlowClient struct {
 
 // NewDeviceFlowClient creates a new device flow client.
 func NewDeviceFlowClient(cfg *config.Config) *DeviceFlowClient {
+	return NewDeviceFlowClientWithDeviceID(cfg, "")
+}
+
+// NewDeviceFlowClientWithDeviceID creates a new device flow client with the specified device ID.
+func NewDeviceFlowClientWithDeviceID(cfg *config.Config, deviceID string) *DeviceFlowClient {
 	client := &http.Client{Timeout: 30 * time.Second}
 	if cfg != nil {
 		client = util.SetProxy(&cfg.SDKConfig, client)
 	}
+	resolvedDeviceID := strings.TrimSpace(deviceID)
+	if resolvedDeviceID == "" {
+		resolvedDeviceID = getOrCreateDeviceID()
+	}
 	return &DeviceFlowClient{
 		httpClient: client,
 		cfg:        cfg,
-		deviceID:   getOrCreateDeviceID(),
+		deviceID:   resolvedDeviceID,
 	}
 }
 
-// getOrCreateDeviceID returns a stable device ID.
+// getOrCreateDeviceID returns an in-memory device ID for the current authentication flow.
 func getOrCreateDeviceID() string {
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		log.Warnf("kimi: could not get user home directory: %v. Using random device ID.", err)
-		return uuid.New().String()
-	}
-	configDir := filepath.Join(homeDir, ".cli-proxy-api")
-	deviceIDPath := filepath.Join(configDir, "kimi-device-id")
-
-	// Try to read existing device ID
-	if data, err := os.ReadFile(deviceIDPath); err == nil {
-		return strings.TrimSpace(string(data))
-	}
-
-	// Create new device ID
-	deviceID := uuid.New().String()
-	if err := os.MkdirAll(configDir, 0700); err != nil {
-		log.Warnf("kimi: failed to create config directory %s, cannot persist device ID: %v", configDir, err)
-		return deviceID
-	}
-	if err := os.WriteFile(deviceIDPath, []byte(deviceID), 0600); err != nil {
-		log.Warnf("kimi: failed to write device ID to %s: %v", deviceIDPath, err)
-	}
-	return deviceID
+	return uuid.New().String()
 }
 
 // getDeviceModel returns a device model string.
@@ -406,4 +394,3 @@ func (c *DeviceFlowClient) RefreshToken(ctx context.Context, refreshToken string
 		Scope:        tokenResp.Scope,
 	}, nil
 }
-

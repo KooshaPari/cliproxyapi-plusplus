@@ -23,6 +23,8 @@ type KimiTokenStorage struct {
 	TokenType string `json:"token_type"`
 	// Scope is the OAuth2 scope granted to the token.
 	Scope string `json:"scope,omitempty"`
+	// DeviceID is the OAuth device flow identifier used for Kimi requests.
+	DeviceID string `json:"device_id,omitempty"`
 	// Expired is the RFC3339 timestamp when the access token expires.
 	Expired string `json:"expired,omitempty"`
 	// Type indicates the authentication provider type, always "kimi" for this storage.
@@ -47,6 +49,8 @@ type KimiTokenData struct {
 type KimiAuthBundle struct {
 	// TokenData contains the OAuth token information.
 	TokenData *KimiTokenData
+	// DeviceID is the device identifier used during OAuth device flow.
+	DeviceID string
 }
 
 // DeviceCodeResponse represents Kimi's device code response.
