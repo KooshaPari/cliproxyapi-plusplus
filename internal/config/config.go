@@ -1125,10 +1125,12 @@ func mergeMappingPreserve(dst, src *yaml.Node, path ...[]string) {
 			mergeNodePreserve(dv, sv, childPath)
 		} else {
 			// New key: only add if value is non-zero and not a known default
-			if isKnownDefaultValue(childPath, sv) {
+			candidate := deepCopyNode(sv)
+			pruneKnownDefaultsInNewNode(childPath, candidate)
+			if isKnownDefaultValue(childPath, candidate) {
 				continue
 			}
-			dst.Content = append(dst.Content, deepCopyNode(sk), deepCopyNode(sv))
+			dst.Content = append(dst.Content, deepCopyNode(sk), candidate)
 		}
 	}
 }
@@ -1263,6 +1265,44 @@ func isKnownDefaultValue(path []string, node *yaml.Node) bool {
 	}
 
 	return false
+}
+
+// pruneKnownDefaultsInNewNode removes default-valued descendants from a new node
+// before it is appended into the destination YAML tree.
+func pruneKnownDefaultsInNewNode(path []string, node *yaml.Node) {
+	if node == nil {
+		return
+	}
+
+	switch node.Kind {
+	case yaml.MappingNode:
+		filtered := make([]*yaml.Node, 0, len(node.Content))
+		for i := 0; i+1 < len(node.Content); i += 2 {
+			keyNode := node.Content[i]
+			valueNode := node.Content[i+1]
+			if keyNode == nil || valueNode == nil {
+				continue
+			}
+
+			childPath := appendPath(path, keyNode.Value)
+			if isKnownDefaultValue(childPath, valueNode) {
+				continue
+			}
+
+			pruneKnownDefaultsInNewNode(childPath, valueNode)
+			if (valueNode.Kind == yaml.MappingNode || valueNode.Kind == yaml.SequenceNode) &&
+				len(valueNode.Content) == 0 {
+				continue
+			}
+
+			filtered = append(filtered, keyNode, valueNode)
+		}
+		node.Content = filtered
+	case yaml.SequenceNode:
+		for _, child := range node.Content {
+			pruneKnownDefaultsInNewNode(path, child)
+		}
+	}
 }
 
 // isZeroValueNode returns true if the YAML node represents a zero/default value
