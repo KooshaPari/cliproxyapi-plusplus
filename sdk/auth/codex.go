@@ -2,17 +2,19 @@ package auth
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"net/http"
 	"strings"
 	"time"
 
-	"github.com/router-for-me/CLIProxyAPI/v6/internal/auth/codex"
-	"github.com/router-for-me/CLIProxyAPI/v6/internal/browser"
+	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/auth/codex"
+	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/browser"
 	// legacy client removed
-	"github.com/router-for-me/CLIProxyAPI/v6/internal/config"
-	"github.com/router-for-me/CLIProxyAPI/v6/internal/misc"
-	"github.com/router-for-me/CLIProxyAPI/v6/internal/util"
+	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/config"
+	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/misc"
+	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/util"
 	coreauth "github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/auth"
 	log "github.com/sirupsen/logrus"
 )
@@ -44,10 +46,6 @@ func (a *CodexAuthenticator) Login(ctx context.Context, cfg *config.Config, opts
 	}
 	if opts == nil {
 		opts = &LoginOptions{}
-	}
-
-	if shouldUseCodexDeviceFlow(opts) {
-		return a.loginWithDeviceFlow(ctx, cfg, opts)
 	}
 
 	callbackPort := a.CallbackPort
@@ -188,5 +186,39 @@ waitForCallback:
 		return nil, codex.NewAuthenticationError(codex.ErrCodeExchangeFailed, err)
 	}
 
-	return a.buildAuthRecord(authSvc, authBundle)
+	tokenStorage := authSvc.CreateTokenStorage(authBundle)
+
+	if tokenStorage == nil || tokenStorage.Email == "" {
+		return nil, fmt.Errorf("codex token storage missing account information")
+	}
+
+	planType := ""
+	hashAccountID := ""
+	if tokenStorage.IDToken != "" {
+		if claims, errParse := codex.ParseJWTToken(tokenStorage.IDToken); errParse == nil && claims != nil {
+			planType = strings.TrimSpace(claims.CodexAuthInfo.ChatgptPlanType)
+			accountID := strings.TrimSpace(claims.CodexAuthInfo.ChatgptAccountID)
+			if accountID != "" {
+				digest := sha256.Sum256([]byte(accountID))
+				hashAccountID = hex.EncodeToString(digest[:])[:8]
+			}
+		}
+	}
+	fileName := codex.CredentialFileName(tokenStorage.Email, planType, hashAccountID, true)
+	metadata := map[string]any{
+		"email": tokenStorage.Email,
+	}
+
+	fmt.Println("Codex authentication successful")
+	if authBundle.APIKey != "" {
+		fmt.Println("Codex API key obtained and stored")
+	}
+
+	return &coreauth.Auth{
+		ID:       fileName,
+		Provider: a.Provider(),
+		FileName: fileName,
+		Storage:  tokenStorage,
+		Metadata: metadata,
+	}, nil
 }
