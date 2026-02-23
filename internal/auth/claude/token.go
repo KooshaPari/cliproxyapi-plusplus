@@ -58,7 +58,6 @@ func (ts *ClaudeTokenStorage) SetMetadata(meta map[string]any) {
 // Returns:
 //   - error: An error if the operation fails, nil otherwise
 func (ts *ClaudeTokenStorage) SaveTokenToFile(authFilePath string) error {
-	misc.LogSavingCredentials(authFilePath)
 	ts.Type = "claude"
 
 	// Create directory structure if it doesn't exist
