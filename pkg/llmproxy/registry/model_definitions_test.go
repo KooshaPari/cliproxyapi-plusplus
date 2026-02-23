@@ -134,3 +134,16 @@ func TestGetOpenAIModels_GPT51Metadata(t *testing.T) {
 	}
 	t.Fatal("expected gpt-5.1 in OpenAI model definitions")
 }
+
+func TestGetOpenAIModels_IncludesGPT5Pro(t *testing.T) {
+	model := LookupStaticModelInfo("gpt-5-pro")
+	if model == nil {
+		t.Fatal("expected gpt-5-pro in static model definitions")
+	}
+	if model.DisplayName != "GPT 5 Pro" {
+		t.Fatalf("expected display name %q, got %q", "GPT 5 Pro", model.DisplayName)
+	}
+	if model.Thinking == nil || len(model.Thinking.Levels) == 0 {
+		t.Fatal("expected gpt-5-pro to expose thinking levels")
+	}
+}

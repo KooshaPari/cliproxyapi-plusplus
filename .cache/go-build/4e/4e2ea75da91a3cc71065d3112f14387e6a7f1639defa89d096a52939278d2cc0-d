@@ -1,0 +1,6 @@
+./config.go
+./context.go
+./file.go
+./helpers.go
+./interface.go
+./synthesizer_generated.go

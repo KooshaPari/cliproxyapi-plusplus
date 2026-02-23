@@ -218,12 +218,29 @@ If non-stream succeeds but stream chunks are delayed/batched:
 | Channel toggle works on non-stream only (`CPB-0787`) | stream bootstrap path misses toggle | compare stream vs non-stream same prompt | align bootstrap settings and re-run parity probe |
 | Antigravity stream returns stale chunks (`CPB-0788`) | request-scoped translator state leak | run two back-to-back stream requests | reset per-request stream state and verify isolation |
 | Sonnet 4.5 rollout confusion (`CPB-0789`, `CPB-0790`) | feature flag/metadata mismatch | `cliproxyctl doctor --json` + `/v1/models` metadata | align flag gating + static registry metadata |
-| Reasoning/cache metrics inconsistent (`CPB-0791`, `CPB-0792`, `CPB-0797`) | reasoning normalization or usage mapping drift | check `usage` for stream/non-stream | normalize reasoning, keep usage metadata parity |
+| Gemini thinking stream parity gap (`CPB-0791`) | reasoning metadata normalization splits between CLI/translator and upstream, so the stream response drops `thinking` results or mismatches non-stream output | `curl -sS -X POST http://localhost:8317/v1/chat/completions -H "Authorization: Bearer demo-client-key" -H "Content-Type: application/json" -d '{"model":"gemini-2.5-pro","messages":[{"role":"user","content":"reasoning normalization probe"}],"reasoning":{"effort":"x-high"},"stream":false}' | jq '{model,usage,error}'` then `curl -N -X POST http://localhost:8317/v1/chat/completions -H "Authorization: Bearer demo-client-key" -H "Content-Type: application/json" -d '{"model":"gemini-2.5-pro","messages":[{"role":"user","content":"reasoning normalization probe"}],"reasoning":{"effort":"x-high"},"stream":true}'` | align translator normalization and telemetry so thinking metadata survives stream translation, re-run the reasoning probe, and confirm matching `usage` counts in stream/non-stream outputs |
+| Gemini CLI/Antigravity prompt cache drift (`CPB-0792`, `CPB-0797`) | prompt cache keying or executor fallback lacks validation, letting round-robin slip to stale providers and emit unexpected usage totals | re-run the `gemini-2.5-pro` chat completion three times and repeat with `antigravity/claude-sonnet-4-5-thinking`, e.g. `curl -sS -X POST http://localhost:8317/v1/chat/completions -H "Authorization: Bearer demo-client-key" -H "Content-Type: application/json" -d '{"model":"<model>","messages":[{"role":"user","content":"cache guard probe"}],"stream":false}' | jq '{model,usage,error}'` | reset prompt caches, enforce provider-specific cache keys/fallbacks, and alert when round-robin reroutes to unexpected providers |
 | Docker compose startup error (`CPB-0793`) | service boot failure before bind | `docker compose ps` + `/health` | inspect startup logs, fix bind/config, restart |
 | AI Studio auth status unclear (`CPB-0795`) | auth-file toggle not visible/used | `GET/PATCH /v0/management/auth-files` | enable target auth file and re-run provider login |
 | Setup/login callback breaks (`CPB-0798`, `CPB-0800`) | callback mode mismatch/manual callback unset | inspect `cliproxyctl setup/login --help` | use `--manual-callback` and verify one stable auth-dir |
 | Huggingface provider errors not actionable (`CPB-0803`) | logs/usage missing provider tags | `GET /v0/management/logs` + `/usage` | add/provider-filter tags and alert routing |
 | Codex/Gemini parity drifts (`CPB-0804`, `CPB-0805`, `CPB-0807`, `CPB-0808`) | provider-specific response path divergence | compare `/v1/responses` stream/non-stream | keep translation hooks shared and cache path deterministic |
+
+### Setup/login callback guardrails (`CPB-0798`, `CPB-0800`)
+
+When headless environments or proxy tunnels prevent automatic callbacks, fall back to the CLI-managed Antigravity cursor flow and the manual callback mode that keep one `auth` directory deterministic.
+
+```bash
+cliproxyctl setup --config ./config.yaml
+  # choose “Antigravity login” when prompted to seed ~/.cliproxy/auth.
+cliproxyctl login --provider antigravity --no-browser --oauth-callback-port 51121
+cliproxyctl login --provider openai --no-browser --oauth-callback-port 0
+cliproxyctl doctor --json | jq '{auth,warnings}'
+curl -sS http://localhost:8317/v0/management/auth-files -H "X-Management-Secret: ${MANAGEMENT_SECRET}" | jq '.[] | select(.manual) | {provider,name,status}'
+curl -sS http://localhost:8317/v0/management/logs -H "X-Management-Secret: ${MANAGEMENT_SECRET}" | jq '.entries[]? | select(.message|test("manual callback";"i"))'
+```
+
+Copy the callback URL `cliproxyctl` prints, complete it from a reachable browser, and keep a single stable `auth` directory per CLI invocation so the manual callback metadata stays up to date.
 
 ## Wave Batch 3 triage matrix (`CPB-0809..CPB-0830` remaining 17)
 
