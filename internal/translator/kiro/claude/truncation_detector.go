@@ -55,17 +55,17 @@ var KnownCommandTools = map[string]bool{
 
 // RequiredFieldsByTool maps tool names to their required fields.
 // If any of these fields are missing, the tool input is considered truncated.
-var RequiredFieldsByTool = map[string][]string{
-	"Write":              {"file_path", "content"},
-	"write_to_file":      {"path", "content"},
-	"fsWrite":            {"path", "content"},
-	"create_file":        {"path", "content"},
-	"edit_file":          {"path"},
-	"apply_diff":         {"path", "diff"},
-	"str_replace_editor": {"path", "old_str", "new_str"},
-	"Bash":        {"command", "cmd"},  // Ampcode uses "cmd", others use "command"
-	"execute":            {"command"},
-	"run_command":        {"command"},
+var RequiredFieldsByTool = map[string][][]string{
+	"Write":              {{"file_path"}, {"content"}},
+	"write_to_file":      {{"path"}, {"content"}},
+	"fsWrite":            {{"path"}, {"content"}},
+	"create_file":        {{"path"}, {"content"}},
+	"edit_file":          {{"path"}},
+	"apply_diff":         {{"path"}, {"diff"}},
+	"str_replace_editor": {{"path"}, {"old_str"}, {"new_str"}},
+	"Bash":               {{"cmd", "command"}},
+	"execute":            {{"command"}},
+	"run_command":        {{"command"}},
 }
 
 // DetectTruncation checks if the tool use input appears to be truncated.
@@ -104,9 +104,9 @@ func DetectTruncation(toolName, toolUseID, rawInput string, parsedInput map[stri
 
 	// Scenario 3: JSON parsed but critical fields are missing
 	if parsedInput != nil {
-		requiredFields, hasRequirements := RequiredFieldsByTool[toolName]
+		requiredGroups, hasRequirements := RequiredFieldsByTool[toolName]
 		if hasRequirements {
-			missingFields := findMissingRequiredFields(parsedInput, requiredFields)
+			missingFields := findMissingRequiredFields(parsedInput, requiredGroups)
 			if len(missingFields) > 0 {
 				info.IsTruncated = true
 				info.TruncationType = TruncationTypeMissingFields
@@ -254,11 +254,18 @@ func extractParsedFieldNames(parsed map[string]interface{}) map[string]string {
 }
 
 // findMissingRequiredFields checks which required fields are missing from the parsed input.
-func findMissingRequiredFields(parsed map[string]interface{}, required []string) []string {
+func findMissingRequiredFields(parsed map[string]interface{}, requiredGroups [][]string) []string {
 	var missing []string
-	for _, field := range required {
-		if _, exists := parsed[field]; !exists {
-			missing = append(missing, field)
+	for _, group := range requiredGroups {
+		satisfied := false
+		for _, field := range group {
+			if _, exists := parsed[field]; exists {
+				satisfied = true
+				break
+			}
+		}
+		if !satisfied {
+			missing = append(missing, strings.Join(group, "/"))
 		}
 	}
 	return missing
