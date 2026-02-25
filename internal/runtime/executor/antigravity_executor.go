@@ -133,13 +133,12 @@ func (e *AntigravityExecutor) Execute(ctx context.Context, auth *cliproxyauth.Au
 	from := opts.SourceFormat
 	to := sdktranslator.FromString("antigravity")
 
-	originalPayloadSource := req.Payload
+	originalPayload := bytes.Clone(req.Payload)
 	if len(opts.OriginalRequest) > 0 {
-		originalPayloadSource = opts.OriginalRequest
+		originalPayload = bytes.Clone(opts.OriginalRequest)
 	}
-	originalPayload := originalPayloadSource
 	originalTranslated := sdktranslator.TranslateRequest(from, to, baseModel, originalPayload, false)
-	translated := sdktranslator.TranslateRequest(from, to, baseModel, req.Payload, false)
+	translated := sdktranslator.TranslateRequest(from, to, baseModel, bytes.Clone(req.Payload), false)
 
 	translated, err = thinking.ApplyThinking(translated, req.Model, from.String(), to.String(), e.Identifier())
 	if err != nil {
@@ -231,8 +230,8 @@ attemptLoop:
 
 			reporter.publish(ctx, parseAntigravityUsage(bodyBytes))
 			var param any
-			converted := sdktranslator.TranslateNonStream(ctx, to, from, req.Model, opts.OriginalRequest, translated, bodyBytes, &param)
-			resp = cliproxyexecutor.Response{Payload: []byte(converted), Headers: httpResp.Header.Clone()}
+			converted := sdktranslator.TranslateNonStream(ctx, to, from, req.Model, bytes.Clone(opts.OriginalRequest), translated, bodyBytes, &param)
+			resp = cliproxyexecutor.Response{Payload: []byte(converted)}
 			reporter.ensurePublished(ctx)
 			return resp, nil
 		}
@@ -275,13 +274,12 @@ func (e *AntigravityExecutor) executeClaudeNonStream(ctx context.Context, auth *
 	from := opts.SourceFormat
 	to := sdktranslator.FromString("antigravity")
 
-	originalPayloadSource := req.Payload
+	originalPayload := bytes.Clone(req.Payload)
 	if len(opts.OriginalRequest) > 0 {
-		originalPayloadSource = opts.OriginalRequest
+		originalPayload = bytes.Clone(opts.OriginalRequest)
 	}
-	originalPayload := originalPayloadSource
 	originalTranslated := sdktranslator.TranslateRequest(from, to, baseModel, originalPayload, true)
-	translated := sdktranslator.TranslateRequest(from, to, baseModel, req.Payload, true)
+	translated := sdktranslator.TranslateRequest(from, to, baseModel, bytes.Clone(req.Payload), true)
 
 	translated, err = thinking.ApplyThinking(translated, req.Model, from.String(), to.String(), e.Identifier())
 	if err != nil {
@@ -435,8 +433,8 @@ attemptLoop:
 
 			reporter.publish(ctx, parseAntigravityUsage(resp.Payload))
 			var param any
-			converted := sdktranslator.TranslateNonStream(ctx, to, from, req.Model, opts.OriginalRequest, translated, resp.Payload, &param)
-			resp = cliproxyexecutor.Response{Payload: []byte(converted), Headers: httpResp.Header.Clone()}
+			converted := sdktranslator.TranslateNonStream(ctx, to, from, req.Model, bytes.Clone(opts.OriginalRequest), translated, resp.Payload, &param)
+			resp = cliproxyexecutor.Response{Payload: []byte(converted)}
 			reporter.ensurePublished(ctx)
 
 			return resp, nil
@@ -645,7 +643,7 @@ func (e *AntigravityExecutor) convertStreamToNonStream(stream []byte) []byte {
 }
 
 // ExecuteStream performs a streaming request to the Antigravity API.
-func (e *AntigravityExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.Auth, req cliproxyexecutor.Request, opts cliproxyexecutor.Options) (_ *cliproxyexecutor.StreamResult, err error) {
+func (e *AntigravityExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.Auth, req cliproxyexecutor.Request, opts cliproxyexecutor.Options) (stream <-chan cliproxyexecutor.StreamChunk, err error) {
 	if opts.Alt == "responses/compact" {
 		return nil, statusErr{code: http.StatusNotImplemented, msg: "/responses/compact not supported"}
 	}
@@ -667,13 +665,12 @@ func (e *AntigravityExecutor) ExecuteStream(ctx context.Context, auth *cliproxya
 	from := opts.SourceFormat
 	to := sdktranslator.FromString("antigravity")
 
-	originalPayloadSource := req.Payload
+	originalPayload := bytes.Clone(req.Payload)
 	if len(opts.OriginalRequest) > 0 {
-		originalPayloadSource = opts.OriginalRequest
+		originalPayload = bytes.Clone(opts.OriginalRequest)
 	}
-	originalPayload := originalPayloadSource
 	originalTranslated := sdktranslator.TranslateRequest(from, to, baseModel, originalPayload, true)
-	translated := sdktranslator.TranslateRequest(from, to, baseModel, req.Payload, true)
+	translated := sdktranslator.TranslateRequest(from, to, baseModel, bytes.Clone(req.Payload), true)
 
 	translated, err = thinking.ApplyThinking(translated, req.Model, from.String(), to.String(), e.Identifier())
 	if err != nil {
@@ -775,6 +772,7 @@ attemptLoop:
 			}
 
 			out := make(chan cliproxyexecutor.StreamChunk)
+			stream = out
 			go func(resp *http.Response) {
 				defer close(out)
 				defer func() {
@@ -802,12 +800,12 @@ attemptLoop:
 						reporter.publish(ctx, detail)
 					}
 
-					chunks := sdktranslator.TranslateStream(ctx, to, from, req.Model, opts.OriginalRequest, translated, bytes.Clone(payload), &param)
+					chunks := sdktranslator.TranslateStream(ctx, to, from, req.Model, bytes.Clone(opts.OriginalRequest), translated, bytes.Clone(payload), &param)
 					for i := range chunks {
 						out <- cliproxyexecutor.StreamChunk{Payload: []byte(chunks[i])}
 					}
 				}
-				tail := sdktranslator.TranslateStream(ctx, to, from, req.Model, opts.OriginalRequest, translated, []byte("[DONE]"), &param)
+				tail := sdktranslator.TranslateStream(ctx, to, from, req.Model, bytes.Clone(opts.OriginalRequest), translated, []byte("[DONE]"), &param)
 				for i := range tail {
 					out <- cliproxyexecutor.StreamChunk{Payload: []byte(tail[i])}
 				}
@@ -819,7 +817,7 @@ attemptLoop:
 					reporter.ensurePublished(ctx)
 				}
 			}(httpResp)
-			return &cliproxyexecutor.StreamResult{Headers: httpResp.Header.Clone(), Chunks: out}, nil
+			return stream, nil
 		}
 
 		switch {
@@ -874,7 +872,7 @@ func (e *AntigravityExecutor) CountTokens(ctx context.Context, auth *cliproxyaut
 	respCtx := context.WithValue(ctx, "alt", opts.Alt)
 
 	// Prepare payload once (doesn't depend on baseURL)
-	payload := sdktranslator.TranslateRequest(from, to, baseModel, req.Payload, false)
+	payload := sdktranslator.TranslateRequest(from, to, baseModel, bytes.Clone(req.Payload), false)
 
 	payload, err := thinking.ApplyThinking(payload, req.Model, from.String(), to.String(), e.Identifier())
 	if err != nil {
@@ -967,7 +965,7 @@ func (e *AntigravityExecutor) CountTokens(ctx context.Context, auth *cliproxyaut
 		if httpResp.StatusCode >= http.StatusOK && httpResp.StatusCode < http.StatusMultipleChoices {
 			count := gjson.GetBytes(bodyBytes, "totalTokens").Int()
 			translated := sdktranslator.TranslateTokenCount(respCtx, to, from, count, bodyBytes)
-			return cliproxyexecutor.Response{Payload: []byte(translated), Headers: httpResp.Header.Clone()}, nil
+			return cliproxyexecutor.Response{Payload: []byte(translated)}, nil
 		}
 
 		lastStatus = httpResp.StatusCode
@@ -1006,12 +1004,7 @@ func (e *AntigravityExecutor) CountTokens(ctx context.Context, auth *cliproxyaut
 func FetchAntigravityModels(ctx context.Context, auth *cliproxyauth.Auth, cfg *config.Config) []*registry.ModelInfo {
 	exec := &AntigravityExecutor{cfg: cfg}
 	token, updatedAuth, errToken := exec.ensureAccessToken(ctx, auth)
-	if errToken != nil {
-		log.Warnf("antigravity executor: fetch models failed for %s: token error: %v", auth.ID, errToken)
-		return nil
-	}
-	if token == "" {
-		log.Warnf("antigravity executor: fetch models failed for %s: got empty token", auth.ID)
+	if errToken != nil || token == "" {
 		return nil
 	}
 	if updatedAuth != nil {
@@ -1025,7 +1018,6 @@ func FetchAntigravityModels(ctx context.Context, auth *cliproxyauth.Auth, cfg *c
 		modelsURL := baseURL + antigravityModelsPath
 		httpReq, errReq := http.NewRequestWithContext(ctx, http.MethodPost, modelsURL, bytes.NewReader([]byte(`{}`)))
 		if errReq != nil {
-			log.Warnf("antigravity executor: fetch models failed for %s: create request error: %v", auth.ID, errReq)
 			return nil
 		}
 		httpReq.Header.Set("Content-Type", "application/json")
@@ -1038,14 +1030,12 @@ func FetchAntigravityModels(ctx context.Context, auth *cliproxyauth.Auth, cfg *c
 		httpResp, errDo := httpClient.Do(httpReq)
 		if errDo != nil {
 			if errors.Is(errDo, context.Canceled) || errors.Is(errDo, context.DeadlineExceeded) {
-				log.Warnf("antigravity executor: fetch models failed for %s: context canceled: %v", auth.ID, errDo)
 				return nil
 			}
 			if idx+1 < len(baseURLs) {
 				log.Debugf("antigravity executor: models request error on base url %s, retrying with fallback base url: %s", baseURL, baseURLs[idx+1])
 				continue
 			}
-			log.Warnf("antigravity executor: fetch models failed for %s: request error: %v", auth.ID, errDo)
 			return nil
 		}
 
@@ -1058,7 +1048,6 @@ func FetchAntigravityModels(ctx context.Context, auth *cliproxyauth.Auth, cfg *c
 				log.Debugf("antigravity executor: models read error on base url %s, retrying with fallback base url: %s", baseURL, baseURLs[idx+1])
 				continue
 			}
-			log.Warnf("antigravity executor: fetch models failed for %s: read body error: %v", auth.ID, errRead)
 			return nil
 		}
 		if httpResp.StatusCode < http.StatusOK || httpResp.StatusCode >= http.StatusMultipleChoices {
@@ -1066,13 +1055,11 @@ func FetchAntigravityModels(ctx context.Context, auth *cliproxyauth.Auth, cfg *c
 				log.Debugf("antigravity executor: models request rate limited on base url %s, retrying with fallback base url: %s", baseURL, baseURLs[idx+1])
 				continue
 			}
-			log.Warnf("antigravity executor: fetch models failed for %s: unexpected status %d, body: %s", auth.ID, httpResp.StatusCode, string(bodyBytes))
 			return nil
 		}
 
 		result := gjson.GetBytes(bodyBytes, "models")
 		if !result.Exists() {
-			log.Warnf("antigravity executor: fetch models failed for %s: no models field in response, body: %s", auth.ID, string(bodyBytes))
 			return nil
 		}
 
@@ -1293,40 +1280,51 @@ func (e *AntigravityExecutor) buildRequest(ctx context.Context, auth *cliproxyau
 	payload = geminiToAntigravity(modelName, payload, projectID)
 	payload, _ = sjson.SetBytes(payload, "model", modelName)
 
-	useAntigravitySchema := strings.Contains(modelName, "claude") || strings.Contains(modelName, "gemini-3-pro-high")
-	payloadStr := string(payload)
-	paths := make([]string, 0)
-	util.Walk(gjson.Parse(payloadStr), "", "parametersJsonSchema", &paths)
-	for _, p := range paths {
-		payloadStr, _ = util.RenameKey(payloadStr, p, p[:len(p)-len("parametersJsonSchema")]+"parameters")
-	}
+	if strings.Contains(modelName, "claude") || strings.Contains(modelName, "gemini-3-pro-high") {
+		strJSON := string(payload)
+		paths := make([]string, 0)
+		util.Walk(gjson.ParseBytes(payload), "", "parametersJsonSchema", &paths)
+		for _, p := range paths {
+			strJSON, _ = util.RenameKey(strJSON, p, p[:len(p)-len("parametersJsonSchema")]+"parameters")
+		}
 
-	if useAntigravitySchema {
-		payloadStr = util.CleanJSONSchemaForAntigravity(payloadStr)
+		// Use the centralized schema cleaner to handle unsupported keywords,
+		// const->enum conversion, and flattening of types/anyOf.
+		strJSON = util.CleanJSONSchemaForAntigravity(strJSON)
+		payload = []byte(strJSON)
 	} else {
-		payloadStr = util.CleanJSONSchemaForGemini(payloadStr)
+		strJSON := string(payload)
+		paths := make([]string, 0)
+		util.Walk(gjson.Parse(strJSON), "", "parametersJsonSchema", &paths)
+		for _, p := range paths {
+			strJSON, _ = util.RenameKey(strJSON, p, p[:len(p)-len("parametersJsonSchema")]+"parameters")
+		}
+		// Clean tool schemas for Gemini to remove unsupported JSON Schema keywords
+		// without adding empty-schema placeholders.
+		strJSON = util.CleanJSONSchemaForGemini(strJSON)
+		payload = []byte(strJSON)
 	}
 
-	if useAntigravitySchema {
-		systemInstructionPartsResult := gjson.Get(payloadStr, "request.systemInstruction.parts")
-		payloadStr, _ = sjson.Set(payloadStr, "request.systemInstruction.role", "user")
-		payloadStr, _ = sjson.Set(payloadStr, "request.systemInstruction.parts.0.text", systemInstruction)
-		payloadStr, _ = sjson.Set(payloadStr, "request.systemInstruction.parts.1.text", fmt.Sprintf("Please ignore following [ignore]%s[/ignore]", systemInstruction))
+	if strings.Contains(modelName, "claude") || strings.Contains(modelName, "gemini-3-pro-high") {
+		systemInstructionPartsResult := gjson.GetBytes(payload, "request.systemInstruction.parts")
+		payload, _ = sjson.SetBytes(payload, "request.systemInstruction.role", "user")
+		payload, _ = sjson.SetBytes(payload, "request.systemInstruction.parts.0.text", systemInstruction)
+		payload, _ = sjson.SetBytes(payload, "request.systemInstruction.parts.1.text", fmt.Sprintf("Please ignore following [ignore]%s[/ignore]", systemInstruction))
 
 		if systemInstructionPartsResult.Exists() && systemInstructionPartsResult.IsArray() {
 			for _, partResult := range systemInstructionPartsResult.Array() {
-				payloadStr, _ = sjson.SetRaw(payloadStr, "request.systemInstruction.parts.-1", partResult.Raw)
+				payload, _ = sjson.SetRawBytes(payload, "request.systemInstruction.parts.-1", []byte(partResult.Raw))
 			}
 		}
 	}
 
 	if strings.Contains(modelName, "claude") {
-		payloadStr, _ = sjson.Set(payloadStr, "request.toolConfig.functionCallingConfig.mode", "VALIDATED")
+		payload, _ = sjson.SetBytes(payload, "request.toolConfig.functionCallingConfig.mode", "VALIDATED")
 	} else {
-		payloadStr, _ = sjson.Delete(payloadStr, "request.generationConfig.maxOutputTokens")
+		payload, _ = sjson.DeleteBytes(payload, "request.generationConfig.maxOutputTokens")
 	}
 
-	httpReq, errReq := http.NewRequestWithContext(ctx, http.MethodPost, requestURL.String(), strings.NewReader(payloadStr))
+	httpReq, errReq := http.NewRequestWithContext(ctx, http.MethodPost, requestURL.String(), bytes.NewReader(payload))
 	if errReq != nil {
 		return nil, errReq
 	}
@@ -1348,15 +1346,11 @@ func (e *AntigravityExecutor) buildRequest(ctx context.Context, auth *cliproxyau
 		authLabel = auth.Label
 		authType, authValue = auth.AccountInfo()
 	}
-	var payloadLog []byte
-	if e.cfg != nil && e.cfg.RequestLog {
-		payloadLog = []byte(payloadStr)
-	}
 	recordAPIRequest(ctx, e.cfg, upstreamRequestLog{
 		URL:       requestURL.String(),
 		Method:    http.MethodPost,
 		Headers:   httpReq.Header.Clone(),
-		Body:      payloadLog,
+		Body:      payload,
 		Provider:  e.Identifier(),
 		AuthID:    authID,
 		AuthLabel: authLabel,

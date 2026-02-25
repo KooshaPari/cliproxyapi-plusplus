@@ -6,6 +6,7 @@ package util
 import (
 	"bytes"
 	"fmt"
+	"strings"
 
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
@@ -32,15 +33,15 @@ func Walk(value gjson.Result, path, field string, paths *[]string) {
 			// . -> \.
 			// * -> \*
 			// ? -> \?
-			keyStr := key.String()
-			safeKey := escapeGJSONPathKey(keyStr)
+			var keyReplacer = strings.NewReplacer(".", "\\.", "*", "\\*", "?", "\\?")
+			safeKey := keyReplacer.Replace(key.String())
 
 			if path == "" {
 				childPath = safeKey
 			} else {
 				childPath = path + "." + safeKey
 			}
-			if keyStr == field {
+			if key.String() == field {
 				*paths = append(*paths, childPath)
 			}
 			Walk(val, childPath, field, paths)
@@ -84,6 +85,15 @@ func RenameKey(jsonStr, oldKeyPath, newKeyPath string) (string, error) {
 	}
 
 	return finalJson, nil
+}
+
+func DeleteKey(jsonStr, keyName string) string {
+	paths := make([]string, 0)
+	Walk(gjson.Parse(jsonStr), "", keyName, &paths)
+	for _, p := range paths {
+		jsonStr, _ = sjson.Delete(jsonStr, p)
+	}
+	return jsonStr
 }
 
 // FixJSON converts non-standard JSON that uses single quotes for strings into

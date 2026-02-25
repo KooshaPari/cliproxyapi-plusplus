@@ -213,23 +213,6 @@ func (a *Auth) DisableCoolingOverride() (bool, bool) {
 	return false, false
 }
 
-// ToolPrefixDisabled returns whether the proxy_ tool name prefix should be
-// skipped for this auth. When true, tool names are sent to Anthropic unchanged.
-// The value is read from metadata key "tool_prefix_disabled" (or "tool-prefix-disabled").
-func (a *Auth) ToolPrefixDisabled() bool {
-	if a == nil || a.Metadata == nil {
-		return false
-	}
-	for _, key := range []string{"tool_prefix_disabled", "tool-prefix-disabled"} {
-		if val, ok := a.Metadata[key]; ok {
-			if parsed, okParse := parseBoolAny(val); okParse {
-				return parsed
-			}
-		}
-	}
-	return false
-}
-
 // RequestRetryOverride returns the auth-file scoped request_retry override when present.
 // The value is read from metadata key "request_retry" (or legacy "request-retry").
 func (a *Auth) RequestRetryOverride() (int, bool) {
@@ -341,18 +324,6 @@ func (a *Auth) AccountInfo() (string, string) {
 				email = strings.TrimSpace(email)
 				if email != "" {
 					return "oauth", email
-				}
-			}
-		}
-	}
-
-	// For GitHub provider (including github-copilot), return username
-	if strings.HasPrefix(strings.ToLower(a.Provider), "github") {
-		if a.Metadata != nil {
-			if username, ok := a.Metadata["username"].(string); ok {
-				username = strings.TrimSpace(username)
-				if username != "" {
-					return "oauth", username
 				}
 			}
 		}

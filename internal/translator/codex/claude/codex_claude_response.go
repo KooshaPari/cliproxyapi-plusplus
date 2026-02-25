@@ -22,9 +22,8 @@ var (
 
 // ConvertCodexResponseToClaudeParams holds parameters for response conversion.
 type ConvertCodexResponseToClaudeParams struct {
-	HasToolCall              bool
-	BlockIndex               int
-	HasReceivedArgumentsDelta bool
+	HasToolCall bool
+	BlockIndex  int
 }
 
 // ConvertCodexResponseToClaude performs sophisticated streaming response format conversion.
@@ -114,10 +113,10 @@ func ConvertCodexResponseToClaude(_ context.Context, _ string, originalRequestRa
 		template = `{"type":"message_delta","delta":{"stop_reason":"tool_use","stop_sequence":null},"usage":{"input_tokens":0,"output_tokens":0}}`
 		p := (*param).(*ConvertCodexResponseToClaudeParams).HasToolCall
 		stopReason := rootResult.Get("response.stop_reason").String()
-		if p {
-			template, _ = sjson.Set(template, "delta.stop_reason", "tool_use")
-		} else if stopReason == "max_tokens" || stopReason == "stop" {
+		if stopReason != "" {
 			template, _ = sjson.Set(template, "delta.stop_reason", stopReason)
+		} else if p {
+			template, _ = sjson.Set(template, "delta.stop_reason", "tool_use")
 		} else {
 			template, _ = sjson.Set(template, "delta.stop_reason", "end_turn")
 		}
@@ -138,7 +137,6 @@ func ConvertCodexResponseToClaude(_ context.Context, _ string, originalRequestRa
 		itemType := itemResult.Get("type").String()
 		if itemType == "function_call" {
 			(*param).(*ConvertCodexResponseToClaudeParams).HasToolCall = true
-			(*param).(*ConvertCodexResponseToClaudeParams).HasReceivedArgumentsDelta = false
 			template = `{"type":"content_block_start","index":0,"content_block":{"type":"tool_use","id":"","name":"","input":{}}}`
 			template, _ = sjson.Set(template, "index", (*param).(*ConvertCodexResponseToClaudeParams).BlockIndex)
 			template, _ = sjson.Set(template, "content_block.id", itemResult.Get("call_id").String())
@@ -173,29 +171,12 @@ func ConvertCodexResponseToClaude(_ context.Context, _ string, originalRequestRa
 			output += fmt.Sprintf("data: %s\n\n", template)
 		}
 	} else if typeStr == "response.function_call_arguments.delta" {
-		(*param).(*ConvertCodexResponseToClaudeParams).HasReceivedArgumentsDelta = true
 		template = `{"type":"content_block_delta","index":0,"delta":{"type":"input_json_delta","partial_json":""}}`
 		template, _ = sjson.Set(template, "index", (*param).(*ConvertCodexResponseToClaudeParams).BlockIndex)
 		template, _ = sjson.Set(template, "delta.partial_json", rootResult.Get("delta").String())
 
 		output += "event: content_block_delta\n"
 		output += fmt.Sprintf("data: %s\n\n", template)
-	} else if typeStr == "response.function_call_arguments.done" {
-		// Some models (e.g. gpt-5.3-codex-spark) send function call arguments
-		// in a single "done" event without preceding "delta" events.
-		// Emit the full arguments as a single input_json_delta so the
-		// downstream Claude client receives the complete tool input.
-		// When delta events were already received, skip to avoid duplicating arguments.
-		if !(*param).(*ConvertCodexResponseToClaudeParams).HasReceivedArgumentsDelta {
-			if args := rootResult.Get("arguments").String(); args != "" {
-				template = `{"type":"content_block_delta","index":0,"delta":{"type":"input_json_delta","partial_json":""}}`
-				template, _ = sjson.Set(template, "index", (*param).(*ConvertCodexResponseToClaudeParams).BlockIndex)
-				template, _ = sjson.Set(template, "delta.partial_json", args)
-
-				output += "event: content_block_delta\n"
-				output += fmt.Sprintf("data: %s\n\n", template)
-			}
-		}
 	}
 
 	return []string{output}

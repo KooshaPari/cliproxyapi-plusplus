@@ -3,6 +3,7 @@
 package chat_completions
 
 import (
+	"bytes"
 	"github.com/tidwall/sjson"
 )
 
@@ -24,7 +25,7 @@ func ConvertOpenAIRequestToOpenAI(modelName string, inputRawJSON []byte, _ bool)
 		// If there's an error, return the original JSON or handle the error appropriately.
 		// For now, we'll return the original, but in a real scenario, logging or a more robust error
 		// handling mechanism would be needed.
-		return inputRawJSON
+		return bytes.Clone(inputRawJSON)
 	}
 	return updatedJSON
 }

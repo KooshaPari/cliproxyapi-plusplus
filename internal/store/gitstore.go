@@ -21,9 +21,6 @@ import (
 	cliproxyauth "github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/auth"
 )
 
-// gcInterval defines minimum time between garbage collection runs.
-const gcInterval = 5 * time.Minute
-
 // GitTokenStore persists token records and auth metadata using git as the backing storage.
 type GitTokenStore struct {
 	mu        sync.Mutex
@@ -34,7 +31,6 @@ type GitTokenStore struct {
 	remote    string
 	username  string
 	password  string
-	lastGC    time.Time
 }
 
 // NewGitTokenStore creates a token store that saves credentials to disk through the
@@ -617,7 +613,6 @@ func (s *GitTokenStore) commitAndPushLocked(message string, relPaths ...string) 
 	} else if errRewrite := s.rewriteHeadAsSingleCommit(repo, headRef.Name(), commitHash, message, signature); errRewrite != nil {
 		return errRewrite
 	}
-	s.maybeRunGC(repo)
 	if err = repo.Push(&git.PushOptions{Auth: s.gitAuth(), Force: true}); err != nil {
 		if errors.Is(err, git.NoErrAlreadyUpToDate) {
 			return nil
@@ -655,23 +650,6 @@ func (s *GitTokenStore) rewriteHeadAsSingleCommit(repo *git.Repository, branch p
 		return fmt.Errorf("git token store: update branch reference: %w", err)
 	}
 	return nil
-}
-
-func (s *GitTokenStore) maybeRunGC(repo *git.Repository) {
-	now := time.Now()
-	if now.Sub(s.lastGC) < gcInterval {
-		return
-	}
-	s.lastGC = now
-
-	pruneOpts := git.PruneOptions{
-		OnlyObjectsOlderThan: now,
-		Handler:              repo.DeleteObject,
-	}
-	if err := repo.Prune(pruneOpts); err != nil && !errors.Is(err, git.ErrLooseObjectsNotSupported) {
-		return
-	}
-	_ = repo.RepackObjects(&git.RepackConfig{})
 }
 
 // PersistConfig commits and pushes configuration changes to git.

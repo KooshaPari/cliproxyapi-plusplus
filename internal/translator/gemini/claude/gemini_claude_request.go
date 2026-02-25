@@ -28,7 +28,7 @@ const geminiClaudeThoughtSignature = "skip_thought_signature_validator"
 // Returns:
 //   - []byte: The transformed request in Gemini CLI format.
 func ConvertClaudeRequestToGemini(modelName string, inputRawJSON []byte, _ bool) []byte {
-	rawJSON := inputRawJSON
+	rawJSON := bytes.Clone(inputRawJSON)
 	rawJSON = bytes.Replace(rawJSON, []byte(`"url":{"type":"string","format":"uri",`), []byte(`"url":{"type":"string",`), -1)
 
 	// Build output Gemini CLI request JSON
@@ -154,18 +154,12 @@ func ConvertClaudeRequestToGemini(modelName string, inputRawJSON []byte, _ bool)
 	// Map Anthropic thinking -> Gemini thinkingBudget/include_thoughts when enabled
 	// Translator only does format conversion, ApplyThinking handles model capability validation.
 	if t := gjson.GetBytes(rawJSON, "thinking"); t.Exists() && t.IsObject() {
-		switch t.Get("type").String() {
-		case "enabled":
+		if t.Get("type").String() == "enabled" {
 			if b := t.Get("budget_tokens"); b.Exists() && b.Type == gjson.Number {
 				budget := int(b.Int())
 				out, _ = sjson.Set(out, "generationConfig.thinkingConfig.thinkingBudget", budget)
 				out, _ = sjson.Set(out, "generationConfig.thinkingConfig.includeThoughts", true)
 			}
-		case "adaptive":
-			// Keep adaptive as a high level sentinel; ApplyThinking resolves it
-			// to model-specific max capability.
-			out, _ = sjson.Set(out, "generationConfig.thinkingConfig.thinkingLevel", "high")
-			out, _ = sjson.Set(out, "generationConfig.thinkingConfig.includeThoughts", true)
 		}
 	}
 	if v := gjson.GetBytes(rawJSON, "temperature"); v.Exists() && v.Type == gjson.Number {

@@ -14,7 +14,6 @@ import (
 	"time"
 
 	. "github.com/router-for-me/CLIProxyAPI/v6/internal/translator/gemini/openai/chat-completions"
-	log "github.com/sirupsen/logrus"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
 )
@@ -78,20 +77,14 @@ func ConvertCliResponseToOpenAI(_ context.Context, _ string, originalRequestRawJ
 		template, _ = sjson.Set(template, "id", responseIDResult.String())
 	}
 
-	finishReason := ""
-	if stopReasonResult := gjson.GetBytes(rawJSON, "response.stop_reason"); stopReasonResult.Exists() {
-		finishReason = stopReasonResult.String()
+	// Extract and set the finish reason.
+	if finishReasonResult := gjson.GetBytes(rawJSON, "response.candidates.0.finishReason"); finishReasonResult.Exists() {
+		template, _ = sjson.Set(template, "choices.0.finish_reason", strings.ToLower(finishReasonResult.String()))
+		template, _ = sjson.Set(template, "choices.0.native_finish_reason", strings.ToLower(finishReasonResult.String()))
 	}
-	if finishReason == "" {
-		if finishReasonResult := gjson.GetBytes(rawJSON, "response.candidates.0.finishReason"); finishReasonResult.Exists() {
-			finishReason = finishReasonResult.String()
-		}
-	}
-	finishReason = strings.ToLower(finishReason)
 
 	// Extract and set usage metadata (token counts).
 	if usageResult := gjson.GetBytes(rawJSON, "response.usageMetadata"); usageResult.Exists() {
-		cachedTokenCount := usageResult.Get("cachedContentTokenCount").Int()
 		if candidatesTokenCountResult := usageResult.Get("candidatesTokenCount"); candidatesTokenCountResult.Exists() {
 			template, _ = sjson.Set(template, "usage.completion_tokens", candidatesTokenCountResult.Int())
 		}
@@ -103,14 +96,6 @@ func ConvertCliResponseToOpenAI(_ context.Context, _ string, originalRequestRawJ
 		template, _ = sjson.Set(template, "usage.prompt_tokens", promptTokenCount+thoughtsTokenCount)
 		if thoughtsTokenCount > 0 {
 			template, _ = sjson.Set(template, "usage.completion_tokens_details.reasoning_tokens", thoughtsTokenCount)
-		}
-		// Include cached token count if present (indicates prompt caching is working)
-		if cachedTokenCount > 0 {
-			var err error
-			template, err = sjson.Set(template, "usage.prompt_tokens_details.cached_tokens", cachedTokenCount)
-			if err != nil {
-				log.Warnf("gemini-cli openai response: failed to set cached_tokens: %v", err)
-			}
 		}
 	}
 
@@ -202,12 +187,6 @@ func ConvertCliResponseToOpenAI(_ context.Context, _ string, originalRequestRawJ
 	if hasFunctionCall {
 		template, _ = sjson.Set(template, "choices.0.finish_reason", "tool_calls")
 		template, _ = sjson.Set(template, "choices.0.native_finish_reason", "tool_calls")
-	} else if finishReason != "" && (*param).(*convertCliResponseToOpenAIChatParams).FunctionIndex == 0 {
-		// Only pass through specific finish reasons
-		if finishReason == "max_tokens" || finishReason == "stop" {
-			template, _ = sjson.Set(template, "choices.0.finish_reason", finishReason)
-			template, _ = sjson.Set(template, "choices.0.native_finish_reason", finishReason)
-		}
 	}
 
 	return []string{template}

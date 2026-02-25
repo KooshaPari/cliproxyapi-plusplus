@@ -12,7 +12,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/router-for-me/CLIProxyAPI/v6/internal/thinking"
 	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/executor"
 )
 
@@ -20,7 +19,6 @@ import (
 type RoundRobinSelector struct {
 	mu      sync.Mutex
 	cursors map[string]int
-	maxKeys int
 }
 
 // FillFirstSelector selects the first available credential (deterministic ordering).
@@ -121,75 +119,6 @@ func authPriority(auth *Auth) int {
 	return parsed
 }
 
-func canonicalModelKey(model string) string {
-	model = strings.TrimSpace(model)
-	if model == "" {
-		return ""
-	}
-	parsed := thinking.ParseSuffix(model)
-	modelName := strings.TrimSpace(parsed.ModelName)
-	if modelName == "" {
-		return model
-	}
-	return modelName
-}
-
-func authWebsocketsEnabled(auth *Auth) bool {
-	if auth == nil {
-		return false
-	}
-	if len(auth.Attributes) > 0 {
-		if raw := strings.TrimSpace(auth.Attributes["websockets"]); raw != "" {
-			parsed, errParse := strconv.ParseBool(raw)
-			if errParse == nil {
-				return parsed
-			}
-		}
-	}
-	if len(auth.Metadata) == 0 {
-		return false
-	}
-	raw, ok := auth.Metadata["websockets"]
-	if !ok || raw == nil {
-		return false
-	}
-	switch v := raw.(type) {
-	case bool:
-		return v
-	case string:
-		parsed, errParse := strconv.ParseBool(strings.TrimSpace(v))
-		if errParse == nil {
-			return parsed
-		}
-	default:
-	}
-	return false
-}
-
-func preferCodexWebsocketAuths(ctx context.Context, provider string, available []*Auth) []*Auth {
-	if len(available) == 0 {
-		return available
-	}
-	if !cliproxyexecutor.DownstreamWebsocket(ctx) {
-		return available
-	}
-	if !strings.EqualFold(strings.TrimSpace(provider), "codex") {
-		return available
-	}
-
-	wsEnabled := make([]*Auth, 0, len(available))
-	for i := 0; i < len(available); i++ {
-		candidate := available[i]
-		if authWebsocketsEnabled(candidate) {
-			wsEnabled = append(wsEnabled, candidate)
-		}
-	}
-	if len(wsEnabled) > 0 {
-		return wsEnabled
-	}
-	return available
-}
-
 func collectAvailableByPriority(auths []*Auth, model string, now time.Time) (available map[int][]*Auth, cooldownCount int, earliest time.Time) {
 	available = make(map[int][]*Auth)
 	for i := 0; i < len(auths); i++ {
@@ -249,23 +178,16 @@ func getAvailableAuths(auths []*Auth, provider, model string, now time.Time) ([]
 
 // Pick selects the next available auth for the provider in a round-robin manner.
 func (s *RoundRobinSelector) Pick(ctx context.Context, provider, model string, opts cliproxyexecutor.Options, auths []*Auth) (*Auth, error) {
+	_ = ctx
 	_ = opts
 	now := time.Now()
 	available, err := getAvailableAuths(auths, provider, model, now)
 	if err != nil {
 		return nil, err
 	}
-	available = preferCodexWebsocketAuths(ctx, provider, available)
-	key := provider + ":" + canonicalModelKey(model)
+	key := provider + ":" + model
 	s.mu.Lock()
 	if s.cursors == nil {
-		s.cursors = make(map[string]int)
-	}
-	limit := s.maxKeys
-	if limit <= 0 {
-		limit = 4096
-	}
-	if _, ok := s.cursors[key]; !ok && len(s.cursors) >= limit {
 		s.cursors = make(map[string]int)
 	}
 	index := s.cursors[key]
@@ -282,13 +204,13 @@ func (s *RoundRobinSelector) Pick(ctx context.Context, provider, model string, o
 
 // Pick selects the first available auth for the provider in a deterministic manner.
 func (s *FillFirstSelector) Pick(ctx context.Context, provider, model string, opts cliproxyexecutor.Options, auths []*Auth) (*Auth, error) {
+	_ = ctx
 	_ = opts
 	now := time.Now()
 	available, err := getAvailableAuths(auths, provider, model, now)
 	if err != nil {
 		return nil, err
 	}
-	available = preferCodexWebsocketAuths(ctx, provider, available)
 	return available[0], nil
 }
 
@@ -301,14 +223,7 @@ func isAuthBlockedForModel(auth *Auth, model string, now time.Time) (bool, block
 	}
 	if model != "" {
 		if len(auth.ModelStates) > 0 {
-			state, ok := auth.ModelStates[model]
-			if (!ok || state == nil) && model != "" {
-				baseModel := canonicalModelKey(model)
-				if baseModel != "" && baseModel != model {
-					state, ok = auth.ModelStates[baseModel]
-				}
-			}
-			if ok && state != nil {
+			if state, ok := auth.ModelStates[model]; ok && state != nil {
 				if state.Status == StatusDisabled {
 					return true, blockReasonDisabled, time.Time{}
 				}

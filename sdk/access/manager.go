@@ -2,6 +2,7 @@ package access
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"sync"
 )
@@ -42,7 +43,7 @@ func (m *Manager) Providers() []Provider {
 }
 
 // Authenticate evaluates providers until one succeeds.
-func (m *Manager) Authenticate(ctx context.Context, r *http.Request) (*Result, *AuthError) {
+func (m *Manager) Authenticate(ctx context.Context, r *http.Request) (*Result, error) {
 	if m == nil {
 		return nil, nil
 	}
@@ -60,29 +61,29 @@ func (m *Manager) Authenticate(ctx context.Context, r *http.Request) (*Result, *
 		if provider == nil {
 			continue
 		}
-		res, authErr := provider.Authenticate(ctx, r)
-		if authErr == nil {
+		res, err := provider.Authenticate(ctx, r)
+		if err == nil {
 			return res, nil
 		}
-		if IsAuthErrorCode(authErr, AuthErrorCodeNotHandled) {
+		if errors.Is(err, ErrNotHandled) {
 			continue
 		}
-		if IsAuthErrorCode(authErr, AuthErrorCodeNoCredentials) {
+		if errors.Is(err, ErrNoCredentials) {
 			missing = true
 			continue
 		}
-		if IsAuthErrorCode(authErr, AuthErrorCodeInvalidCredential) {
+		if errors.Is(err, ErrInvalidCredential) {
 			invalid = true
 			continue
 		}
-		return nil, authErr
+		return nil, err
 	}
 
 	if invalid {
-		return nil, NewInvalidCredentialError()
+		return nil, ErrInvalidCredential
 	}
 	if missing {
-		return nil, NewNoCredentialsError()
+		return nil, ErrNoCredentials
 	}
-	return nil, NewNoCredentialsError()
+	return nil, ErrNoCredentials
 }

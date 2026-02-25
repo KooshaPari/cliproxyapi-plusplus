@@ -40,7 +40,8 @@ func DoClaudeLogin(cfg *config.Config, options *LoginOptions) {
 
 	_, savedPath, err := manager.Login(context.Background(), "claude", cfg, authOpts)
 	if err != nil {
-		if authErr, ok := errors.AsType[*claude.AuthenticationError](err); ok {
+		var authErr *claude.AuthenticationError
+		if errors.As(err, &authErr) {
 			log.Error(claude.GetUserFriendlyMessage(authErr))
 			if authErr.Type == claude.ErrPortInUse.Type {
 				os.Exit(claude.ErrPortInUse.Code)

@@ -1,6 +1,7 @@
 package responses
 
 import (
+	"bytes"
 	"fmt"
 
 	"github.com/tidwall/gjson"
@@ -8,13 +9,7 @@ import (
 )
 
 func ConvertOpenAIResponsesRequestToCodex(modelName string, inputRawJSON []byte, _ bool) []byte {
-	rawJSON := inputRawJSON
-
-	inputResult := gjson.GetBytes(rawJSON, "input")
-	if inputResult.Type == gjson.String {
-		input, _ := sjson.Set(`[{"type":"message","role":"user","content":[{"type":"input_text","text":""}]}]`, "0.content.0.text", inputResult.String())
-		rawJSON, _ = sjson.SetRawBytes(rawJSON, "input", []byte(input))
-	}
+	rawJSON := bytes.Clone(inputRawJSON)
 
 	rawJSON, _ = sjson.SetBytes(rawJSON, "stream", true)
 	rawJSON, _ = sjson.SetBytes(rawJSON, "store", false)
@@ -26,9 +21,6 @@ func ConvertOpenAIResponsesRequestToCodex(modelName string, inputRawJSON []byte,
 	rawJSON, _ = sjson.DeleteBytes(rawJSON, "temperature")
 	rawJSON, _ = sjson.DeleteBytes(rawJSON, "top_p")
 	rawJSON, _ = sjson.DeleteBytes(rawJSON, "service_tier")
-
-	// Delete the user field as it is not supported by the Codex upstream.
-	rawJSON, _ = sjson.DeleteBytes(rawJSON, "user")
 
 	// Convert role "system" to "developer" in input array to comply with Codex API requirements.
 	rawJSON = convertSystemRoleToDeveloper(rawJSON)

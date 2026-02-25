@@ -85,7 +85,6 @@ func (m *LogFormatter) Format(entry *log.Entry) ([]byte, error) {
 func SetupBaseLogger() {
 	setupOnce.Do(func() {
 		log.SetOutput(os.Stdout)
-		log.SetLevel(log.InfoLevel)
 		log.SetReportCaller(true)
 		log.SetFormatter(&LogFormatter{})
 
@@ -132,10 +131,7 @@ func ResolveLogDirectory(cfg *config.Config) string {
 		return logDir
 	}
 	if !isDirWritable(logDir) {
-		authDir, err := util.ResolveAuthDir(cfg.AuthDir)
-		if err != nil {
-			log.Warnf("Failed to resolve auth-dir %q for log directory: %v", cfg.AuthDir, err)
-		}
+		authDir := strings.TrimSpace(cfg.AuthDir)
 		if authDir != "" {
 			logDir = filepath.Join(authDir, "logs")
 		}

@@ -18,7 +18,6 @@ type ManagementTokenRequester interface {
 	RequestCodexToken(*gin.Context)
 	RequestAntigravityToken(*gin.Context)
 	RequestQwenToken(*gin.Context)
-	RequestKimiToken(*gin.Context)
 	RequestIFlowToken(*gin.Context)
 	RequestIFlowCookieToken(*gin.Context)
 	GetAuthStatus(c *gin.Context)
@@ -54,10 +53,6 @@ func (m *managementTokenRequester) RequestAntigravityToken(c *gin.Context) {
 
 func (m *managementTokenRequester) RequestQwenToken(c *gin.Context) {
 	m.handler.RequestQwenToken(c)
-}
-
-func (m *managementTokenRequester) RequestKimiToken(c *gin.Context) {
-	m.handler.RequestKimiToken(c)
 }
 
 func (m *managementTokenRequester) RequestIFlowToken(c *gin.Context) {

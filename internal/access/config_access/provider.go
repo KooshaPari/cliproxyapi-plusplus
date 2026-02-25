@@ -4,28 +4,19 @@ import (
 	"context"
 	"net/http"
 	"strings"
+	"sync"
 
 	sdkaccess "github.com/router-for-me/CLIProxyAPI/v6/sdk/access"
 	sdkconfig "github.com/router-for-me/CLIProxyAPI/v6/sdk/config"
 )
 
+var registerOnce sync.Once
+
 // Register ensures the config-access provider is available to the access manager.
-func Register(cfg *sdkconfig.SDKConfig) {
-	if cfg == nil {
-		sdkaccess.UnregisterProvider(sdkaccess.AccessProviderTypeConfigAPIKey)
-		return
-	}
-
-	keys := normalizeKeys(cfg.APIKeys)
-	if len(keys) == 0 {
-		sdkaccess.UnregisterProvider(sdkaccess.AccessProviderTypeConfigAPIKey)
-		return
-	}
-
-	sdkaccess.RegisterProvider(
-		sdkaccess.AccessProviderTypeConfigAPIKey,
-		newProvider(sdkaccess.DefaultAccessProviderName, keys),
-	)
+func Register() {
+	registerOnce.Do(func() {
+		sdkaccess.RegisterProvider(sdkconfig.AccessProviderTypeConfigAPIKey, newProvider)
+	})
 }
 
 type provider struct {
@@ -33,31 +24,34 @@ type provider struct {
 	keys map[string]struct{}
 }
 
-func newProvider(name string, keys []string) *provider {
-	providerName := strings.TrimSpace(name)
-	if providerName == "" {
-		providerName = sdkaccess.DefaultAccessProviderName
+func newProvider(cfg *sdkconfig.AccessProvider, _ *sdkconfig.SDKConfig) (sdkaccess.Provider, error) {
+	name := cfg.Name
+	if name == "" {
+		name = sdkconfig.DefaultAccessProviderName
 	}
-	keySet := make(map[string]struct{}, len(keys))
-	for _, key := range keys {
-		keySet[key] = struct{}{}
+	keys := make(map[string]struct{}, len(cfg.APIKeys))
+	for _, key := range cfg.APIKeys {
+		if key == "" {
+			continue
+		}
+		keys[key] = struct{}{}
 	}
-	return &provider{name: providerName, keys: keySet}
+	return &provider{name: name, keys: keys}, nil
 }
 
 func (p *provider) Identifier() string {
 	if p == nil || p.name == "" {
-		return sdkaccess.DefaultAccessProviderName
+		return sdkconfig.DefaultAccessProviderName
 	}
 	return p.name
 }
 
-func (p *provider) Authenticate(_ context.Context, r *http.Request) (*sdkaccess.Result, *sdkaccess.AuthError) {
+func (p *provider) Authenticate(_ context.Context, r *http.Request) (*sdkaccess.Result, error) {
 	if p == nil {
-		return nil, sdkaccess.NewNotHandledError()
+		return nil, sdkaccess.ErrNotHandled
 	}
 	if len(p.keys) == 0 {
-		return nil, sdkaccess.NewNotHandledError()
+		return nil, sdkaccess.ErrNotHandled
 	}
 	authHeader := r.Header.Get("Authorization")
 	authHeaderGoogle := r.Header.Get("X-Goog-Api-Key")
@@ -69,7 +63,7 @@ func (p *provider) Authenticate(_ context.Context, r *http.Request) (*sdkaccess.
 		queryAuthToken = r.URL.Query().Get("auth_token")
 	}
 	if authHeader == "" && authHeaderGoogle == "" && authHeaderAnthropic == "" && queryKey == "" && queryAuthToken == "" {
-		return nil, sdkaccess.NewNoCredentialsError()
+		return nil, sdkaccess.ErrNoCredentials
 	}
 
 	apiKey := extractBearerToken(authHeader)
@@ -100,7 +94,7 @@ func (p *provider) Authenticate(_ context.Context, r *http.Request) (*sdkaccess.
 		}
 	}
 
-	return nil, sdkaccess.NewInvalidCredentialError()
+	return nil, sdkaccess.ErrInvalidCredential
 }
 
 func extractBearerToken(header string) string {
@@ -115,27 +109,4 @@ func extractBearerToken(header string) string {
 		return header
 	}
 	return strings.TrimSpace(parts[1])
-}
-
-func normalizeKeys(keys []string) []string {
-	if len(keys) == 0 {
-		return nil
-	}
-	normalized := make([]string, 0, len(keys))
-	seen := make(map[string]struct{}, len(keys))
-	for _, key := range keys {
-		trimmedKey := strings.TrimSpace(key)
-		if trimmedKey == "" {
-			continue
-		}
-		if _, exists := seen[trimmedKey]; exists {
-			continue
-		}
-		seen[trimmedKey] = struct{}{}
-		normalized = append(normalized, trimmedKey)
-	}
-	if len(normalized) == 0 {
-		return nil
-	}
-	return normalized
 }

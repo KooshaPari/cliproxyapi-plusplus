@@ -6,6 +6,7 @@
 package gemini
 
 import (
+	"bytes"
 	"crypto/rand"
 	"fmt"
 	"math/big"
@@ -36,7 +37,7 @@ import (
 // Returns:
 //   - []byte: The transformed request data in Codex API format
 func ConvertGeminiRequestToCodex(modelName string, inputRawJSON []byte, _ bool) []byte {
-	rawJSON := inputRawJSON
+	rawJSON := bytes.Clone(inputRawJSON)
 	// Base template
 	out := `{"model":"","instructions":"","input":[]}`
 
@@ -242,30 +243,19 @@ func ConvertGeminiRequestToCodex(modelName string, inputRawJSON []byte, _ bool) 
 	out, _ = sjson.Set(out, "parallel_tool_calls", true)
 
 	// Convert Gemini thinkingConfig to Codex reasoning.effort.
-	// Note: Google official Python SDK sends snake_case fields (thinking_level/thinking_budget).
 	effortSet := false
 	if genConfig := root.Get("generationConfig"); genConfig.Exists() {
 		if thinkingConfig := genConfig.Get("thinkingConfig"); thinkingConfig.Exists() && thinkingConfig.IsObject() {
-			thinkingLevel := thinkingConfig.Get("thinkingLevel")
-			if !thinkingLevel.Exists() {
-				thinkingLevel = thinkingConfig.Get("thinking_level")
-			}
-			if thinkingLevel.Exists() {
+			if thinkingLevel := thinkingConfig.Get("thinkingLevel"); thinkingLevel.Exists() {
 				effort := strings.ToLower(strings.TrimSpace(thinkingLevel.String()))
 				if effort != "" {
 					out, _ = sjson.Set(out, "reasoning.effort", effort)
 					effortSet = true
 				}
-			} else {
-				thinkingBudget := thinkingConfig.Get("thinkingBudget")
-				if !thinkingBudget.Exists() {
-					thinkingBudget = thinkingConfig.Get("thinking_budget")
-				}
-				if thinkingBudget.Exists() {
-					if effort, ok := thinking.ConvertBudgetToLevel(int(thinkingBudget.Int())); ok {
-						out, _ = sjson.Set(out, "reasoning.effort", effort)
-						effortSet = true
-					}
+			} else if thinkingBudget := thinkingConfig.Get("thinkingBudget"); thinkingBudget.Exists() {
+				if effort, ok := thinking.ConvertBudgetToLevel(int(thinkingBudget.Int())); ok {
+					out, _ = sjson.Set(out, "reasoning.effort", effort)
+					effortSet = true
 				}
 			}
 		}

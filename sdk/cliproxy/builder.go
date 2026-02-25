@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"strings"
 
-	configaccess "github.com/router-for-me/CLIProxyAPI/v6/internal/access/config_access"
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/api"
 	sdkaccess "github.com/router-for-me/CLIProxyAPI/v6/sdk/access"
 	sdkAuth "github.com/router-for-me/CLIProxyAPI/v6/sdk/auth"
@@ -187,8 +186,11 @@ func (b *Builder) Build() (*Service, error) {
 		accessManager = sdkaccess.NewManager()
 	}
 
-	configaccess.Register(&b.cfg.SDKConfig)
-	accessManager.SetProviders(sdkaccess.RegisteredProviders())
+	providers, err := sdkaccess.BuildProviders(&b.cfg.SDKConfig)
+	if err != nil {
+		return nil, err
+	}
+	accessManager.SetProviders(providers)
 
 	coreManager := b.coreManager
 	if coreManager == nil {

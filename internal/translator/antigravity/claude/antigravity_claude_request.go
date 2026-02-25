@@ -6,6 +6,7 @@
 package claude
 
 import (
+	"bytes"
 	"strings"
 
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/cache"
@@ -36,7 +37,7 @@ import (
 //   - []byte: The transformed request data in Gemini CLI API format
 func ConvertClaudeRequestToAntigravity(modelName string, inputRawJSON []byte, _ bool) []byte {
 	enableThoughtTranslate := true
-	rawJSON := inputRawJSON
+	rawJSON := bytes.Clone(inputRawJSON)
 
 	// system instruction
 	systemInstructionJSON := ""
@@ -114,6 +115,8 @@ func ConvertClaudeRequestToAntigravity(modelName string, inputRawJSON []byte, _ 
 							if signatureResult.Exists() && signatureResult.String() != "" {
 								arrayClientSignatures := strings.SplitN(signatureResult.String(), "#", 2)
 								if len(arrayClientSignatures) == 2 {
+									// Compare using model group to handle model mapping
+									// e.g., claude-opus-4-5-thinking -> "claude" group should match "claude#signature"
 									if cache.GetModelGroup(modelName) == arrayClientSignatures[0] {
 										clientSignature = arrayClientSignatures[1]
 									}
@@ -231,12 +234,8 @@ func ConvertClaudeRequestToAntigravity(modelName string, inputRawJSON []byte, _ 
 
 							} else if functionResponseResult.IsObject() {
 								functionResponseJSON, _ = sjson.SetRaw(functionResponseJSON, "response.result", functionResponseResult.Raw)
-							} else if functionResponseResult.Raw != "" {
-								functionResponseJSON, _ = sjson.SetRaw(functionResponseJSON, "response.result", functionResponseResult.Raw)
 							} else {
-								// Content field is missing entirely — .Raw is empty which
-								// causes sjson.SetRaw to produce invalid JSON (e.g. "result":}).
-								functionResponseJSON, _ = sjson.Set(functionResponseJSON, "response.result", "")
+								functionResponseJSON, _ = sjson.SetRaw(functionResponseJSON, "response.result", functionResponseResult.Raw)
 							}
 
 							partJSON := `{}`
@@ -348,8 +347,7 @@ func ConvertClaudeRequestToAntigravity(modelName string, inputRawJSON []byte, _ 
 	// Inject interleaved thinking hint when both tools and thinking are active
 	hasTools := toolDeclCount > 0
 	thinkingResult := gjson.GetBytes(rawJSON, "thinking")
-	thinkingType := thinkingResult.Get("type").String()
-	hasThinking := thinkingResult.Exists() && thinkingResult.IsObject() && (thinkingType == "enabled" || thinkingType == "adaptive")
+	hasThinking := thinkingResult.Exists() && thinkingResult.IsObject() && thinkingResult.Get("type").String() == "enabled"
 	isClaudeThinking := util.IsClaudeThinkingModel(modelName)
 
 	if hasTools && hasThinking && isClaudeThinking {
@@ -382,18 +380,12 @@ func ConvertClaudeRequestToAntigravity(modelName string, inputRawJSON []byte, _ 
 
 	// Map Anthropic thinking -> Gemini thinkingBudget/include_thoughts when type==enabled
 	if t := gjson.GetBytes(rawJSON, "thinking"); enableThoughtTranslate && t.Exists() && t.IsObject() {
-		switch t.Get("type").String() {
-		case "enabled":
+		if t.Get("type").String() == "enabled" {
 			if b := t.Get("budget_tokens"); b.Exists() && b.Type == gjson.Number {
 				budget := int(b.Int())
 				out, _ = sjson.Set(out, "request.generationConfig.thinkingConfig.thinkingBudget", budget)
 				out, _ = sjson.Set(out, "request.generationConfig.thinkingConfig.includeThoughts", true)
 			}
-		case "adaptive":
-			// Keep adaptive as a high level sentinel; ApplyThinking resolves it
-			// to model-specific max capability.
-			out, _ = sjson.Set(out, "request.generationConfig.thinkingConfig.thinkingLevel", "high")
-			out, _ = sjson.Set(out, "request.generationConfig.thinkingConfig.includeThoughts", true)
 		}
 	}
 	if v := gjson.GetBytes(rawJSON, "temperature"); v.Exists() && v.Type == gjson.Number {

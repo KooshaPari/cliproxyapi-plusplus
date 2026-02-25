@@ -35,7 +35,7 @@ const geminiCLIClaudeThoughtSignature = "skip_thought_signature_validator"
 // Returns:
 //   - []byte: The transformed request data in Gemini CLI API format
 func ConvertClaudeRequestToCLI(modelName string, inputRawJSON []byte, _ bool) []byte {
-	rawJSON := inputRawJSON
+	rawJSON := bytes.Clone(inputRawJSON)
 	rawJSON = bytes.Replace(rawJSON, []byte(`"url":{"type":"string","format":"uri",`), []byte(`"url":{"type":"string",`), -1)
 
 	// Build output Gemini CLI request JSON
@@ -116,19 +116,6 @@ func ConvertClaudeRequestToCLI(modelName string, inputRawJSON []byte, _ bool) []
 						part, _ = sjson.Set(part, "functionResponse.name", funcName)
 						part, _ = sjson.Set(part, "functionResponse.response.result", responseData)
 						contentJSON, _ = sjson.SetRaw(contentJSON, "parts.-1", part)
-
-					case "image":
-						source := contentResult.Get("source")
-						if source.Get("type").String() == "base64" {
-							mimeType := source.Get("media_type").String()
-							data := source.Get("data").String()
-							if mimeType != "" && data != "" {
-								part := `{"inlineData":{"mime_type":"","data":""}}`
-								part, _ = sjson.Set(part, "inlineData.mime_type", mimeType)
-								part, _ = sjson.Set(part, "inlineData.data", data)
-								contentJSON, _ = sjson.SetRaw(contentJSON, "parts.-1", part)
-							}
-						}
 					}
 					return true
 				})
@@ -173,18 +160,12 @@ func ConvertClaudeRequestToCLI(modelName string, inputRawJSON []byte, _ bool) []
 
 	// Map Anthropic thinking -> Gemini thinkingBudget/include_thoughts when type==enabled
 	if t := gjson.GetBytes(rawJSON, "thinking"); t.Exists() && t.IsObject() {
-		switch t.Get("type").String() {
-		case "enabled":
+		if t.Get("type").String() == "enabled" {
 			if b := t.Get("budget_tokens"); b.Exists() && b.Type == gjson.Number {
 				budget := int(b.Int())
 				out, _ = sjson.Set(out, "request.generationConfig.thinkingConfig.thinkingBudget", budget)
 				out, _ = sjson.Set(out, "request.generationConfig.thinkingConfig.includeThoughts", true)
 			}
-		case "adaptive":
-			// Keep adaptive as a high level sentinel; ApplyThinking resolves it
-			// to model-specific max capability.
-			out, _ = sjson.Set(out, "request.generationConfig.thinkingConfig.thinkingLevel", "high")
-			out, _ = sjson.Set(out, "request.generationConfig.thinkingConfig.includeThoughts", true)
 		}
 	}
 	if v := gjson.GetBytes(rawJSON, "temperature"); v.Exists() && v.Type == gjson.Number {

@@ -14,7 +14,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/interfaces"
+	"github.com/router-for-me/CLIProxyAPI/v6/internal/interfaces"
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/logging"
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/thinking"
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/util"
@@ -51,45 +51,6 @@ const (
 	defaultStreamingKeepAliveSeconds = 0
 	defaultStreamingBootstrapRetries = 0
 )
-
-type pinnedAuthContextKey struct{}
-type selectedAuthCallbackContextKey struct{}
-type executionSessionContextKey struct{}
-
-// WithPinnedAuthID returns a child context that requests execution on a specific auth ID.
-func WithPinnedAuthID(ctx context.Context, authID string) context.Context {
-	authID = strings.TrimSpace(authID)
-	if authID == "" {
-		return ctx
-	}
-	if ctx == nil {
-		ctx = context.Background()
-	}
-	return context.WithValue(ctx, pinnedAuthContextKey{}, authID)
-}
-
-// WithSelectedAuthIDCallback returns a child context that receives the selected auth ID.
-func WithSelectedAuthIDCallback(ctx context.Context, callback func(string)) context.Context {
-	if callback == nil {
-		return ctx
-	}
-	if ctx == nil {
-		ctx = context.Background()
-	}
-	return context.WithValue(ctx, selectedAuthCallbackContextKey{}, callback)
-}
-
-// WithExecutionSessionID returns a child context tagged with a long-lived execution session ID.
-func WithExecutionSessionID(ctx context.Context, sessionID string) context.Context {
-	sessionID = strings.TrimSpace(sessionID)
-	if sessionID == "" {
-		return ctx
-	}
-	if ctx == nil {
-		ctx = context.Background()
-	}
-	return context.WithValue(ctx, executionSessionContextKey{}, sessionID)
-}
 
 // BuildErrorResponseBody builds an OpenAI-compatible JSON error response body.
 // If errText is already valid JSON, it is returned as-is to preserve upstream error payloads.
@@ -179,12 +140,6 @@ func StreamingBootstrapRetries(cfg *config.SDKConfig) int {
 	return retries
 }
 
-// PassthroughHeadersEnabled returns whether upstream response headers should be forwarded to clients.
-// Default is false.
-func PassthroughHeadersEnabled(cfg *config.SDKConfig) bool {
-	return cfg != nil && cfg.PassthroughHeaders
-}
-
 func requestExecutionMetadata(ctx context.Context) map[string]any {
 	// Idempotency-Key is an optional client-supplied header used to correlate retries.
 	// It is forwarded as execution metadata; when absent we generate a UUID.
@@ -197,59 +152,21 @@ func requestExecutionMetadata(ctx context.Context) map[string]any {
 	if key == "" {
 		key = uuid.NewString()
 	}
-
-	meta := map[string]any{idempotencyKeyMetadataKey: key}
-	if pinnedAuthID := pinnedAuthIDFromContext(ctx); pinnedAuthID != "" {
-		meta[coreexecutor.PinnedAuthMetadataKey] = pinnedAuthID
-	}
-	if selectedCallback := selectedAuthIDCallbackFromContext(ctx); selectedCallback != nil {
-		meta[coreexecutor.SelectedAuthCallbackMetadataKey] = selectedCallback
-	}
-	if executionSessionID := executionSessionIDFromContext(ctx); executionSessionID != "" {
-		meta[coreexecutor.ExecutionSessionMetadataKey] = executionSessionID
-	}
-	return meta
+	return map[string]any{idempotencyKeyMetadataKey: key}
 }
 
-func pinnedAuthIDFromContext(ctx context.Context) string {
-	if ctx == nil {
-		return ""
-	}
-	raw := ctx.Value(pinnedAuthContextKey{})
-	switch v := raw.(type) {
-	case string:
-		return strings.TrimSpace(v)
-	case []byte:
-		return strings.TrimSpace(string(v))
-	default:
-		return ""
-	}
-}
-
-func selectedAuthIDCallbackFromContext(ctx context.Context) func(string) {
-	if ctx == nil {
+func mergeMetadata(base, overlay map[string]any) map[string]any {
+	if len(base) == 0 && len(overlay) == 0 {
 		return nil
 	}
-	raw := ctx.Value(selectedAuthCallbackContextKey{})
-	if callback, ok := raw.(func(string)); ok && callback != nil {
-		return callback
+	out := make(map[string]any, len(base)+len(overlay))
+	for k, v := range base {
+		out[k] = v
 	}
-	return nil
-}
-
-func executionSessionIDFromContext(ctx context.Context) string {
-	if ctx == nil {
-		return ""
+	for k, v := range overlay {
+		out[k] = v
 	}
-	raw := ctx.Value(executionSessionContextKey{})
-	switch v := raw.(type) {
-	case string:
-		return strings.TrimSpace(v)
-	case []byte:
-		return strings.TrimSpace(string(v))
-	default:
-		return ""
-	}
+	return out
 }
 
 // BaseAPIHandler contains the handlers for API endpoints.
@@ -273,11 +190,10 @@ type BaseAPIHandler struct {
 // Returns:
 //   - *BaseAPIHandler: A new API handlers instance
 func NewBaseAPIHandlers(cfg *config.SDKConfig, authManager *coreauth.Manager) *BaseAPIHandler {
-	h := &BaseAPIHandler{
+	return &BaseAPIHandler{
 		Cfg:         cfg,
 		AuthManager: authManager,
 	}
-	return h
 }
 
 // UpdateClients updates the handlers' client list and configuration.
@@ -339,16 +255,15 @@ func (h *BaseAPIHandler) GetContextWithCancel(handler interfaces.APIHandler, c *
 			parentCtx = logging.WithRequestID(parentCtx, requestID)
 		}
 	}
-	newCtx, cancel := context.WithCancel(parentCtx)
-	if requestCtx != nil && requestCtx != parentCtx {
-		go func() {
-			select {
-			case <-requestCtx.Done():
-				cancel()
-			case <-newCtx.Done():
-			}
-		}()
+
+	// Use requestCtx as base if available to preserve amp context values (fallback_models, etc.)
+	// Falls back to parentCtx if no request context
+	baseCtx := parentCtx
+	if requestCtx != nil {
+		baseCtx = requestCtx
 	}
+
+	newCtx, cancel := context.WithCancel(baseCtx)
 	newCtx = context.WithValue(newCtx, "gin", c)
 	newCtx = context.WithValue(newCtx, "handler", handler)
 	return newCtx, func(params ...interface{}) {
@@ -468,25 +383,21 @@ func appendAPIResponse(c *gin.Context, data []byte) {
 
 // ExecuteWithAuthManager executes a non-streaming request via the core auth manager.
 // This path is the only supported execution route.
-func (h *BaseAPIHandler) ExecuteWithAuthManager(ctx context.Context, handlerType, modelName string, rawJSON []byte, alt string) ([]byte, http.Header, *interfaces.ErrorMessage) {
+func (h *BaseAPIHandler) ExecuteWithAuthManager(ctx context.Context, handlerType, modelName string, rawJSON []byte, alt string) ([]byte, *interfaces.ErrorMessage) {
 	providers, normalizedModel, errMsg := h.getRequestDetails(modelName)
 	if errMsg != nil {
-		return nil, nil, errMsg
+		return nil, errMsg
 	}
 	reqMeta := requestExecutionMetadata(ctx)
 	reqMeta[coreexecutor.RequestedModelMetadataKey] = normalizedModel
-	payload := rawJSON
-	if len(payload) == 0 {
-		payload = nil
-	}
 	req := coreexecutor.Request{
 		Model:   normalizedModel,
-		Payload: payload,
+		Payload: cloneBytes(rawJSON),
 	}
 	opts := coreexecutor.Options{
 		Stream:          false,
 		Alt:             alt,
-		OriginalRequest: rawJSON,
+		OriginalRequest: cloneBytes(rawJSON),
 		SourceFormat:    sdktranslator.FromString(handlerType),
 	}
 	opts.Metadata = reqMeta
@@ -504,35 +415,28 @@ func (h *BaseAPIHandler) ExecuteWithAuthManager(ctx context.Context, handlerType
 				addon = hdr.Clone()
 			}
 		}
-		return nil, nil, &interfaces.ErrorMessage{StatusCode: status, Error: err, Addon: addon}
+		return nil, &interfaces.ErrorMessage{StatusCode: status, Error: err, Addon: addon}
 	}
-	if !PassthroughHeadersEnabled(h.Cfg) {
-		return resp.Payload, nil, nil
-	}
-	return resp.Payload, FilterUpstreamHeaders(resp.Headers), nil
+	return cloneBytes(resp.Payload), nil
 }
 
 // ExecuteCountWithAuthManager executes a non-streaming request via the core auth manager.
 // This path is the only supported execution route.
-func (h *BaseAPIHandler) ExecuteCountWithAuthManager(ctx context.Context, handlerType, modelName string, rawJSON []byte, alt string) ([]byte, http.Header, *interfaces.ErrorMessage) {
+func (h *BaseAPIHandler) ExecuteCountWithAuthManager(ctx context.Context, handlerType, modelName string, rawJSON []byte, alt string) ([]byte, *interfaces.ErrorMessage) {
 	providers, normalizedModel, errMsg := h.getRequestDetails(modelName)
 	if errMsg != nil {
-		return nil, nil, errMsg
+		return nil, errMsg
 	}
 	reqMeta := requestExecutionMetadata(ctx)
 	reqMeta[coreexecutor.RequestedModelMetadataKey] = normalizedModel
-	payload := rawJSON
-	if len(payload) == 0 {
-		payload = nil
-	}
 	req := coreexecutor.Request{
 		Model:   normalizedModel,
-		Payload: payload,
+		Payload: cloneBytes(rawJSON),
 	}
 	opts := coreexecutor.Options{
 		Stream:          false,
 		Alt:             alt,
-		OriginalRequest: rawJSON,
+		OriginalRequest: cloneBytes(rawJSON),
 		SourceFormat:    sdktranslator.FromString(handlerType),
 	}
 	opts.Metadata = reqMeta
@@ -550,43 +454,35 @@ func (h *BaseAPIHandler) ExecuteCountWithAuthManager(ctx context.Context, handle
 				addon = hdr.Clone()
 			}
 		}
-		return nil, nil, &interfaces.ErrorMessage{StatusCode: status, Error: err, Addon: addon}
+		return nil, &interfaces.ErrorMessage{StatusCode: status, Error: err, Addon: addon}
 	}
-	if !PassthroughHeadersEnabled(h.Cfg) {
-		return resp.Payload, nil, nil
-	}
-	return resp.Payload, FilterUpstreamHeaders(resp.Headers), nil
+	return cloneBytes(resp.Payload), nil
 }
 
 // ExecuteStreamWithAuthManager executes a streaming request via the core auth manager.
 // This path is the only supported execution route.
-// The returned http.Header carries upstream response headers captured before streaming begins.
-func (h *BaseAPIHandler) ExecuteStreamWithAuthManager(ctx context.Context, handlerType, modelName string, rawJSON []byte, alt string) (<-chan []byte, http.Header, <-chan *interfaces.ErrorMessage) {
+func (h *BaseAPIHandler) ExecuteStreamWithAuthManager(ctx context.Context, handlerType, modelName string, rawJSON []byte, alt string) (<-chan []byte, <-chan *interfaces.ErrorMessage) {
 	providers, normalizedModel, errMsg := h.getRequestDetails(modelName)
 	if errMsg != nil {
 		errChan := make(chan *interfaces.ErrorMessage, 1)
 		errChan <- errMsg
 		close(errChan)
-		return nil, nil, errChan
+		return nil, errChan
 	}
 	reqMeta := requestExecutionMetadata(ctx)
 	reqMeta[coreexecutor.RequestedModelMetadataKey] = normalizedModel
-	payload := rawJSON
-	if len(payload) == 0 {
-		payload = nil
-	}
 	req := coreexecutor.Request{
 		Model:   normalizedModel,
-		Payload: payload,
+		Payload: cloneBytes(rawJSON),
 	}
 	opts := coreexecutor.Options{
 		Stream:          true,
 		Alt:             alt,
-		OriginalRequest: rawJSON,
+		OriginalRequest: cloneBytes(rawJSON),
 		SourceFormat:    sdktranslator.FromString(handlerType),
 	}
 	opts.Metadata = reqMeta
-	streamResult, err := h.AuthManager.ExecuteStream(ctx, providers, req, opts)
+	chunks, err := h.AuthManager.ExecuteStream(ctx, providers, req, opts)
 	if err != nil {
 		errChan := make(chan *interfaces.ErrorMessage, 1)
 		status := http.StatusInternalServerError
@@ -603,19 +499,8 @@ func (h *BaseAPIHandler) ExecuteStreamWithAuthManager(ctx context.Context, handl
 		}
 		errChan <- &interfaces.ErrorMessage{StatusCode: status, Error: err, Addon: addon}
 		close(errChan)
-		return nil, nil, errChan
+		return nil, errChan
 	}
-	passthroughHeadersEnabled := PassthroughHeadersEnabled(h.Cfg)
-	// Capture upstream headers from the initial connection synchronously before the goroutine starts.
-	// Keep a mutable map so bootstrap retries can replace it before first payload is sent.
-	var upstreamHeaders http.Header
-	if passthroughHeadersEnabled {
-		upstreamHeaders = cloneHeader(FilterUpstreamHeaders(streamResult.Headers))
-		if upstreamHeaders == nil {
-			upstreamHeaders = make(http.Header)
-		}
-	}
-	chunks := streamResult.Chunks
 	dataChan := make(chan []byte)
 	errChan := make(chan *interfaces.ErrorMessage, 1)
 	go func() {
@@ -689,12 +574,9 @@ func (h *BaseAPIHandler) ExecuteStreamWithAuthManager(ctx context.Context, handl
 					if !sentPayload {
 						if bootstrapRetries < maxBootstrapRetries && bootstrapEligible(streamErr) {
 							bootstrapRetries++
-							retryResult, retryErr := h.AuthManager.ExecuteStream(ctx, providers, req, opts)
+							retryChunks, retryErr := h.AuthManager.ExecuteStream(ctx, providers, req, opts)
 							if retryErr == nil {
-								if passthroughHeadersEnabled {
-									replaceHeader(upstreamHeaders, FilterUpstreamHeaders(retryResult.Headers))
-								}
-								chunks = retryResult.Chunks
+								chunks = retryChunks
 								continue outer
 							}
 							streamErr = retryErr
@@ -725,7 +607,7 @@ func (h *BaseAPIHandler) ExecuteStreamWithAuthManager(ctx context.Context, handl
 			}
 		}
 	}()
-	return dataChan, upstreamHeaders, errChan
+	return dataChan, errChan
 }
 
 func statusFromError(err error) int {
@@ -785,24 +667,15 @@ func cloneBytes(src []byte) []byte {
 	return dst
 }
 
-func cloneHeader(src http.Header) http.Header {
-	if src == nil {
+func cloneMetadata(src map[string]any) map[string]any {
+	if len(src) == 0 {
 		return nil
 	}
-	dst := make(http.Header, len(src))
-	for key, values := range src {
-		dst[key] = append([]string(nil), values...)
+	dst := make(map[string]any, len(src))
+	for k, v := range src {
+		dst[k] = v
 	}
 	return dst
-}
-
-func replaceHeader(dst http.Header, src http.Header) {
-	for key := range dst {
-		delete(dst, key)
-	}
-	for key, values := range src {
-		dst[key] = append([]string(nil), values...)
-	}
 }
 
 // WriteErrorResponse writes an error message to the response writer using the HTTP status embedded in the message.
@@ -811,7 +684,7 @@ func (h *BaseAPIHandler) WriteErrorResponse(c *gin.Context, msg *interfaces.Erro
 	if msg != nil && msg.StatusCode > 0 {
 		status = msg.StatusCode
 	}
-	if msg != nil && msg.Addon != nil && PassthroughHeadersEnabled(h.Cfg) {
+	if msg != nil && msg.Addon != nil {
 		for key, values := range msg.Addon {
 			if len(values) == 0 {
 				continue
@@ -835,7 +708,7 @@ func (h *BaseAPIHandler) WriteErrorResponse(c *gin.Context, msg *interfaces.Erro
 	var previous []byte
 	if existing, exists := c.Get("API_RESPONSE"); exists {
 		if existingBytes, ok := existing.([]byte); ok && len(existingBytes) > 0 {
-			previous = existingBytes
+			previous = bytes.Clone(existingBytes)
 		}
 	}
 	appendAPIResponse(c, body)

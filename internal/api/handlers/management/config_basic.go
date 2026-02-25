@@ -19,8 +19,8 @@ import (
 )
 
 const (
-	latestReleaseURL       = "https://api.github.com/repos/router-for-me/CLIProxyAPIPlus/releases/latest"
-	latestReleaseUserAgent = "CLIProxyAPIPlus"
+	latestReleaseURL       = "https://api.github.com/repos/router-for-me/CLIProxyAPI/releases/latest"
+	latestReleaseUserAgent = "CLIProxyAPI"
 )
 
 func (h *Handler) GetConfig(c *gin.Context) {
@@ -28,7 +28,8 @@ func (h *Handler) GetConfig(c *gin.Context) {
 		c.JSON(200, gin.H{})
 		return
 	}
-	c.JSON(200, new(*h.cfg))
+	cfgCopy := *h.cfg
+	c.JSON(200, &cfgCopy)
 }
 
 type releaseInfo struct {

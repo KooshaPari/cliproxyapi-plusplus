@@ -6,6 +6,7 @@
 package claude
 
 import (
+	"bytes"
 	"strings"
 
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/thinking"
@@ -17,7 +18,7 @@ import (
 // It extracts the model name, system instruction, message contents, and tool declarations
 // from the raw JSON request and returns them in the format expected by the OpenAI API.
 func ConvertClaudeRequestToOpenAI(modelName string, inputRawJSON []byte, stream bool) []byte {
-	rawJSON := inputRawJSON
+	rawJSON := bytes.Clone(inputRawJSON)
 	// Base OpenAI Chat Completions API template
 	out := `{"model":"","messages":[]}`
 
@@ -60,10 +61,13 @@ func ConvertClaudeRequestToOpenAI(modelName string, inputRawJSON []byte, stream 
 	out, _ = sjson.Set(out, "stream", stream)
 
 	// Thinking: Convert Claude thinking.budget_tokens to OpenAI reasoning_effort
+	// Also track if thinking is enabled to ensure reasoning_content is added for tool_calls
+	thinkingEnabled := false
 	if thinkingConfig := root.Get("thinking"); thinkingConfig.Exists() && thinkingConfig.IsObject() {
 		if thinkingType := thinkingConfig.Get("type"); thinkingType.Exists() {
 			switch thinkingType.String() {
 			case "enabled":
+				thinkingEnabled = true
 				if budgetTokens := thinkingConfig.Get("budget_tokens"); budgetTokens.Exists() {
 					budget := int(budgetTokens.Int())
 					if effort, ok := thinking.ConvertBudgetToLevel(budget); ok && effort != "" {
@@ -75,10 +79,6 @@ func ConvertClaudeRequestToOpenAI(modelName string, inputRawJSON []byte, stream 
 						out, _ = sjson.Set(out, "reasoning_effort", effort)
 					}
 				}
-			case "adaptive":
-				// Claude adaptive means "enable with max capacity"; keep it as highest level
-				// and let ApplyThinking normalize per target model capability.
-				out, _ = sjson.Set(out, "reasoning_effort", string(thinking.LevelXHigh))
 			case "disabled":
 				if effort, ok := thinking.ConvertBudgetToLevel(0); ok && effort != "" {
 					out, _ = sjson.Set(out, "reasoning_effort", effort)
@@ -220,6 +220,10 @@ func ConvertClaudeRequestToOpenAI(modelName string, inputRawJSON []byte, stream 
 						// Add reasoning_content if present
 						if hasReasoning {
 							msgJSON, _ = sjson.Set(msgJSON, "reasoning_content", reasoningContent)
+						} else if thinkingEnabled && hasToolCalls {
+							// Claude API requires reasoning_content in assistant messages with tool_calls
+							// when thinking mode is enabled, even if empty
+							msgJSON, _ = sjson.Set(msgJSON, "reasoning_content", "")
 						}
 
 						// Add tool_calls if present (in same message as content)

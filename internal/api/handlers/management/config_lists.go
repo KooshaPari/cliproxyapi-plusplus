@@ -109,13 +109,14 @@ func (h *Handler) GetAPIKeys(c *gin.Context) { c.JSON(200, gin.H{"api-keys": h.c
 func (h *Handler) PutAPIKeys(c *gin.Context) {
 	h.putStringList(c, func(v []string) {
 		h.cfg.APIKeys = append([]string(nil), v...)
+		h.cfg.Access.Providers = nil
 	}, nil)
 }
 func (h *Handler) PatchAPIKeys(c *gin.Context) {
-	h.patchStringList(c, &h.cfg.APIKeys, func() {})
+	h.patchStringList(c, &h.cfg.APIKeys, func() { h.cfg.Access.Providers = nil })
 }
 func (h *Handler) DeleteAPIKeys(c *gin.Context) {
-	h.deleteFromStringList(c, &h.cfg.APIKeys, func() {})
+	h.deleteFromStringList(c, &h.cfg.APIKeys, func() { h.cfg.Access.Providers = nil })
 }
 
 // gemini-api-key: []GeminiKey
@@ -753,22 +754,18 @@ func (h *Handler) PatchOAuthModelAlias(c *gin.Context) {
 	normalizedMap := sanitizedOAuthModelAlias(map[string][]config.OAuthModelAlias{channel: body.Aliases})
 	normalized := normalizedMap[channel]
 	if len(normalized) == 0 {
-		// Only delete if channel exists, otherwise just create empty entry
-		if h.cfg.OAuthModelAlias != nil {
-			if _, ok := h.cfg.OAuthModelAlias[channel]; ok {
-				delete(h.cfg.OAuthModelAlias, channel)
-				if len(h.cfg.OAuthModelAlias) == 0 {
-					h.cfg.OAuthModelAlias = nil
-				}
-				h.persist(c)
-				return
-			}
-		}
-		// Create new channel with empty aliases
 		if h.cfg.OAuthModelAlias == nil {
-			h.cfg.OAuthModelAlias = make(map[string][]config.OAuthModelAlias)
+			c.JSON(404, gin.H{"error": "channel not found"})
+			return
 		}
-		h.cfg.OAuthModelAlias[channel] = []config.OAuthModelAlias{}
+		if _, ok := h.cfg.OAuthModelAlias[channel]; !ok {
+			c.JSON(404, gin.H{"error": "channel not found"})
+			return
+		}
+		delete(h.cfg.OAuthModelAlias, channel)
+		if len(h.cfg.OAuthModelAlias) == 0 {
+			h.cfg.OAuthModelAlias = nil
+		}
 		h.persist(c)
 		return
 	}
@@ -796,10 +793,10 @@ func (h *Handler) DeleteOAuthModelAlias(c *gin.Context) {
 		c.JSON(404, gin.H{"error": "channel not found"})
 		return
 	}
-	// Set to nil instead of deleting the key so that the "explicitly disabled"
-	// marker survives config reload and prevents SanitizeOAuthModelAlias from
-	// re-injecting default aliases (fixes #222).
-	h.cfg.OAuthModelAlias[channel] = nil
+	delete(h.cfg.OAuthModelAlias, channel)
+	if len(h.cfg.OAuthModelAlias) == 0 {
+		h.cfg.OAuthModelAlias = nil
+	}
 	h.persist(c)
 }
 

@@ -6,6 +6,7 @@
 package gemini
 
 import (
+	"bytes"
 	"crypto/rand"
 	"fmt"
 	"math/big"
@@ -20,7 +21,7 @@ import (
 // It extracts the model name, generation config, message contents, and tool declarations
 // from the raw JSON request and returns them in the format expected by the OpenAI API.
 func ConvertGeminiRequestToOpenAI(modelName string, inputRawJSON []byte, stream bool) []byte {
-	rawJSON := inputRawJSON
+	rawJSON := bytes.Clone(inputRawJSON)
 	// Base OpenAI Chat Completions API template
 	out := `{"model":"","messages":[]}`
 
@@ -82,27 +83,16 @@ func ConvertGeminiRequestToOpenAI(modelName string, inputRawJSON []byte, stream 
 		}
 
 		// Map Gemini thinkingConfig to OpenAI reasoning_effort.
-		// Always perform conversion to support allowCompat models that may not be in registry.
-		// Note: Google official Python SDK sends snake_case fields (thinking_level/thinking_budget).
+		// Always perform conversion to support allowCompat models that may not be in registry
 		if thinkingConfig := genConfig.Get("thinkingConfig"); thinkingConfig.Exists() && thinkingConfig.IsObject() {
-			thinkingLevel := thinkingConfig.Get("thinkingLevel")
-			if !thinkingLevel.Exists() {
-				thinkingLevel = thinkingConfig.Get("thinking_level")
-			}
-			if thinkingLevel.Exists() {
+			if thinkingLevel := thinkingConfig.Get("thinkingLevel"); thinkingLevel.Exists() {
 				effort := strings.ToLower(strings.TrimSpace(thinkingLevel.String()))
 				if effort != "" {
 					out, _ = sjson.Set(out, "reasoning_effort", effort)
 				}
-			} else {
-				thinkingBudget := thinkingConfig.Get("thinkingBudget")
-				if !thinkingBudget.Exists() {
-					thinkingBudget = thinkingConfig.Get("thinking_budget")
-				}
-				if thinkingBudget.Exists() {
-					if effort, ok := thinking.ConvertBudgetToLevel(int(thinkingBudget.Int())); ok {
-						out, _ = sjson.Set(out, "reasoning_effort", effort)
-					}
+			} else if thinkingBudget := thinkingConfig.Get("thinkingBudget"); thinkingBudget.Exists() {
+				if effort, ok := thinking.ConvertBudgetToLevel(int(thinkingBudget.Int())); ok {
+					out, _ = sjson.Set(out, "reasoning_effort", effort)
 				}
 			}
 		}

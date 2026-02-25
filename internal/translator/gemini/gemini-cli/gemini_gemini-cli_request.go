@@ -6,6 +6,7 @@
 package geminiCLI
 
 import (
+	"bytes"
 	"fmt"
 
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/translator/gemini/common"
@@ -18,7 +19,7 @@ import (
 // It extracts the model name, system instruction, message contents, and tool declarations
 // from the raw JSON request and returns them in the format expected by the internal client.
 func ConvertGeminiCLIRequestToGemini(_ string, inputRawJSON []byte, _ bool) []byte {
-	rawJSON := inputRawJSON
+	rawJSON := bytes.Clone(inputRawJSON)
 	modelResult := gjson.GetBytes(rawJSON, "model")
 	rawJSON = []byte(gjson.GetBytes(rawJSON, "request").Raw)
 	rawJSON, _ = sjson.SetBytes(rawJSON, "model", modelResult.String())

@@ -2,15 +2,17 @@ package access
 
 import (
 	"context"
+	"fmt"
 	"net/http"
-	"strings"
 	"sync"
+
+	"github.com/router-for-me/CLIProxyAPI/v6/sdk/config"
 )
 
 // Provider validates credentials for incoming requests.
 type Provider interface {
 	Identifier() string
-	Authenticate(ctx context.Context, r *http.Request) (*Result, *AuthError)
+	Authenticate(ctx context.Context, r *http.Request) (*Result, error)
 }
 
 // Result conveys authentication outcome.
@@ -20,64 +22,66 @@ type Result struct {
 	Metadata  map[string]string
 }
 
+// ProviderFactory builds a provider from configuration data.
+type ProviderFactory func(cfg *config.AccessProvider, root *config.SDKConfig) (Provider, error)
+
 var (
 	registryMu sync.RWMutex
-	registry   = make(map[string]Provider)
-	order      []string
+	registry   = make(map[string]ProviderFactory)
 )
 
-// RegisterProvider registers a pre-built provider instance for a given type identifier.
-func RegisterProvider(typ string, provider Provider) {
-	normalizedType := strings.TrimSpace(typ)
-	if normalizedType == "" || provider == nil {
+// RegisterProvider registers a provider factory for a given type identifier.
+func RegisterProvider(typ string, factory ProviderFactory) {
+	if typ == "" || factory == nil {
 		return
 	}
-
 	registryMu.Lock()
-	if _, exists := registry[normalizedType]; !exists {
-		order = append(order, normalizedType)
-	}
-	registry[normalizedType] = provider
+	registry[typ] = factory
 	registryMu.Unlock()
 }
 
-// UnregisterProvider removes a provider by type identifier.
-func UnregisterProvider(typ string) {
-	normalizedType := strings.TrimSpace(typ)
-	if normalizedType == "" {
-		return
+func BuildProvider(cfg *config.AccessProvider, root *config.SDKConfig) (Provider, error) {
+	if cfg == nil {
+		return nil, fmt.Errorf("access: nil provider config")
 	}
-	registryMu.Lock()
-	if _, exists := registry[normalizedType]; !exists {
-		registryMu.Unlock()
-		return
+	registryMu.RLock()
+	factory, ok := registry[cfg.Type]
+	registryMu.RUnlock()
+	if !ok {
+		return nil, fmt.Errorf("access: provider type %q is not registered", cfg.Type)
 	}
-	delete(registry, normalizedType)
-	for index := range order {
-		if order[index] != normalizedType {
+	provider, err := factory(cfg, root)
+	if err != nil {
+		return nil, fmt.Errorf("access: failed to build provider %q: %w", cfg.Name, err)
+	}
+	return provider, nil
+}
+
+// BuildProviders constructs providers declared in configuration.
+func BuildProviders(root *config.SDKConfig) ([]Provider, error) {
+	if root == nil {
+		return nil, nil
+	}
+	providers := make([]Provider, 0, len(root.Access.Providers))
+	for i := range root.Access.Providers {
+		providerCfg := &root.Access.Providers[i]
+		if providerCfg.Type == "" {
 			continue
 		}
-		order = append(order[:index], order[index+1:]...)
-		break
-	}
-	registryMu.Unlock()
-}
-
-// RegisteredProviders returns the global provider instances in registration order.
-func RegisteredProviders() []Provider {
-	registryMu.RLock()
-	if len(order) == 0 {
-		registryMu.RUnlock()
-		return nil
-	}
-	providers := make([]Provider, 0, len(order))
-	for _, providerType := range order {
-		provider, exists := registry[providerType]
-		if !exists || provider == nil {
-			continue
+		provider, err := BuildProvider(providerCfg, root)
+		if err != nil {
+			return nil, err
 		}
 		providers = append(providers, provider)
 	}
-	registryMu.RUnlock()
-	return providers
+	if len(providers) == 0 {
+		if inline := config.MakeInlineAPIKeyProvider(root.APIKeys); inline != nil {
+			provider, err := BuildProvider(inline, root)
+			if err != nil {
+				return nil, err
+			}
+			providers = append(providers, provider)
+		}
+	}
+	return providers, nil
 }
