@@ -12,16 +12,6 @@ import (
 	"github.com/tidwall/sjson"
 )
 
-func pickRequestJSON(originalRequestRawJSON, requestRawJSON []byte) []byte {
-	if len(originalRequestRawJSON) > 0 && gjson.ValidBytes(originalRequestRawJSON) {
-		return originalRequestRawJSON
-	}
-	if len(requestRawJSON) > 0 && gjson.ValidBytes(requestRawJSON) {
-		return requestRawJSON
-	}
-	return nil
-}
-
 type oaiToResponsesStateReasoning struct {
 	ReasoningID   string
 	ReasoningData string
@@ -498,10 +488,9 @@ func ConvertOpenAIChatCompletionsResponseToOpenAIResponses(ctx context.Context, 
 				completed, _ = sjson.Set(completed, "sequence_number", nextSeq())
 				completed, _ = sjson.Set(completed, "response.id", st.ResponseID)
 				completed, _ = sjson.Set(completed, "response.created_at", st.Created)
-				// Inject original request fields into response as per docs/response.completed.json.
-				reqRawJSON := pickRequestJSON(originalRequestRawJSON, requestRawJSON)
-				if reqRawJSON != nil {
-					req := gjson.ParseBytes(reqRawJSON)
+				// Inject original request fields into response as per docs/response.completed.json
+				if requestRawJSON != nil {
+					req := gjson.ParseBytes(requestRawJSON)
 					if v := req.Get("instructions"); v.Exists() {
 						completed, _ = sjson.Set(completed, "response.instructions", v.String())
 					}
@@ -675,9 +664,8 @@ func ConvertOpenAIChatCompletionsResponseToOpenAIResponsesNonStream(_ context.Co
 	resp, _ = sjson.Set(resp, "created_at", created)
 
 	// Echo request fields when available (aligns with streaming path behavior)
-	reqRawJSON := pickRequestJSON(originalRequestRawJSON, requestRawJSON)
-	if reqRawJSON != nil {
-		req := gjson.ParseBytes(reqRawJSON)
+	if len(requestRawJSON) > 0 {
+		req := gjson.ParseBytes(requestRawJSON)
 		if v := req.Get("instructions"); v.Exists() {
 			resp, _ = sjson.Set(resp, "instructions", v.String())
 		}
@@ -755,8 +743,8 @@ func ConvertOpenAIChatCompletionsResponseToOpenAIResponsesNonStream(_ context.Co
 	// Detect and capture reasoning content if present
 	rcText := gjson.GetBytes(rawJSON, "choices.0.message.reasoning_content").String()
 	includeReasoning := rcText != ""
-	if !includeReasoning && reqRawJSON != nil {
-		includeReasoning = gjson.GetBytes(reqRawJSON, "reasoning").Exists()
+	if !includeReasoning && len(requestRawJSON) > 0 {
+		includeReasoning = gjson.GetBytes(requestRawJSON, "reasoning").Exists()
 	}
 	if includeReasoning {
 		rid := strings.TrimPrefix(id, "resp_")

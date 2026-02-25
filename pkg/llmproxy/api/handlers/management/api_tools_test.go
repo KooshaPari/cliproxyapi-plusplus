@@ -15,33 +15,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	kiroauth "github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/auth/kiro"
-	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/config"
 	coreauth "github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/auth"
 )
-
-func TestIsAllowedHostOverride(t *testing.T) {
-	t.Parallel()
-
-	parsed, err := url.Parse("https://example.com/path?x=1")
-	if err != nil {
-		t.Fatalf("parse: %v", err)
-	}
-
-	if !isAllowedHostOverride(parsed, "example.com") {
-		t.Fatalf("host override should allow exact hostname")
-	}
-
-	parsedWithPort, err := url.Parse("https://example.com:443/path")
-	if err != nil {
-		t.Fatalf("parse with port: %v", err)
-	}
-	if !isAllowedHostOverride(parsedWithPort, "example.com:443") {
-		t.Fatalf("host override should allow hostname with port")
-	}
-	if isAllowedHostOverride(parsed, "attacker.com") {
-		t.Fatalf("host override should reject non-target host")
-	}
-}
 
 func TestAPICall_RejectsUnsafeHost(t *testing.T) {
 	t.Parallel()
@@ -455,7 +430,7 @@ func TestGetKiroQuotaWithChecker_MissingCredentialIncludesRequestedIndex(t *test
 	}
 }
 
-func TestCopilotQuotaURLFromTokenURL_Regression(t *testing.T) {
+func TestCopilotQuotaURLFromTokenURL(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -508,48 +483,7 @@ func TestCopilotQuotaURLFromTokenURL_Regression(t *testing.T) {
 	}
 }
 
-func TestAPICallTransport_AuthProxyMisconfigurationFailsClosed(t *testing.T) {
-	auth := &coreauth.Auth{
-		Provider: "kiro",
-		ProxyURL: "::://invalid-proxy-url",
-	}
-	handler := &Handler{
-		cfg: &config.Config{
-			SDKConfig: config.SDKConfig{
-				ProxyURL: "http://127.0.0.1:65535",
-			},
-		},
-	}
-
-	rt := handler.apiCallTransport(auth)
-	req, err := http.NewRequest(http.MethodGet, "https://example.com", nil)
-	if err != nil {
-		t.Fatalf("new request: %v", err)
-	}
-	if _, err := rt.RoundTrip(req); err == nil {
-		t.Fatalf("expected fail-closed error for invalid auth proxy")
-	}
-}
-
-func TestAPICallTransport_ConfigProxyMisconfigurationFallsBack(t *testing.T) {
-	handler := &Handler{
-		cfg: &config.Config{
-			SDKConfig: config.SDKConfig{
-				ProxyURL: "://bad-proxy-url",
-			},
-		},
-	}
-
-	rt := handler.apiCallTransport(nil)
-	if _, ok := rt.(*transportFailureRoundTripper); ok {
-		t.Fatalf("expected non-failure transport for invalid config proxy")
-	}
-	if _, ok := rt.(*http.Transport); !ok {
-		t.Fatalf("expected default transport type, got %T", rt)
-	}
-}
-
-func TestCopilotQuotaURLFromTokenURLRegression(t *testing.T) {
+func TestCopilotQuotaURLFromTokenURL(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {

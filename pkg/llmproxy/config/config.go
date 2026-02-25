@@ -230,11 +230,6 @@ type AmpModelMapping struct {
 	// The target model must have available providers in the registry.
 	To string `yaml:"to" json:"to"`
 
-	// Params define provider-agnostic request overrides to apply when this mapping is used.
-	// Keys are merged into the request JSON at the root level unless they already exist.
-	// For example: params: {"custom_model": "iflow/tab-rt", "enable_stream": true}
-	Params map[string]interface{} `yaml:"params,omitempty" json:"params,omitempty"`
-
 	// Regex indicates whether the 'from' field should be interpreted as a regular
 	// expression for matching model names. When true, this mapping is evaluated
 	// after exact matches and in the order provided. Defaults to false (exact match).
@@ -985,7 +980,7 @@ func (cfg *Config) SanitizeOAuthModelAlias() {
 		return
 	}
 
-	// Inject default aliases for channels with built-in compatibility mappings.
+	// Inject default Kiro aliases if no user-configured kiro aliases exist
 	if cfg.OAuthModelAlias == nil {
 		cfg.OAuthModelAlias = make(map[string][]OAuthModelAlias)
 	}
@@ -1000,19 +995,6 @@ func (cfg *Config) SanitizeOAuthModelAlias() {
 		}
 		if !found {
 			cfg.OAuthModelAlias["kiro"] = defaultKiroAliases()
-		}
-	}
-	if _, hasGitHubCopilot := cfg.OAuthModelAlias["github-copilot"]; !hasGitHubCopilot {
-		// Check case-insensitive too
-		found := false
-		for k := range cfg.OAuthModelAlias {
-			if strings.EqualFold(strings.TrimSpace(k), "github-copilot") {
-				found = true
-				break
-			}
-		}
-		if !found {
-			cfg.OAuthModelAlias["github-copilot"] = defaultGitHubCopilotAliases()
 		}
 	}
 
@@ -1042,8 +1024,7 @@ func (cfg *Config) SanitizeOAuthModelAlias() {
 			if strings.EqualFold(name, alias) {
 				continue
 			}
-			// Dedupe by name+alias combination, not just alias
-			aliasKey := strings.ToLower(name) + ":" + strings.ToLower(alias)
+			aliasKey := strings.ToLower(alias)
 			if _, ok := seenAlias[aliasKey]; ok {
 				continue
 			}
