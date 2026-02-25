@@ -235,7 +235,7 @@ func (e *GeminiCLIExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth
 		logWithRequestID(ctx).Debugf("request error, error status: %d, error message: %s", httpResp.StatusCode, summarizeErrorBody(httpResp.Header.Get("Content-Type"), data))
 		if httpResp.StatusCode == 429 {
 			if idx+1 < len(models) {
-				log.Debug("gemini cli executor: rate limited, retrying with next model")
+				log.Debugf("gemini cli executor: rate limited, retrying with next model: %s", models[idx+1])
 			} else {
 				log.Debug("gemini cli executor: rate limited, no additional fallback model")
 			}
@@ -372,7 +372,7 @@ func (e *GeminiCLIExecutor) ExecuteStream(ctx context.Context, auth *cliproxyaut
 			logWithRequestID(ctx).Debugf("request error, error status: %d, error message: %s", httpResp.StatusCode, summarizeErrorBody(httpResp.Header.Get("Content-Type"), data))
 			if httpResp.StatusCode == 429 {
 				if idx+1 < len(models) {
-					log.Debug("gemini cli executor: rate limited, retrying with next model")
+					log.Debugf("gemini cli executor: rate limited, retrying with next model: %s", models[idx+1])
 				} else {
 					log.Debug("gemini cli executor: rate limited, no additional fallback model")
 				}
@@ -800,19 +800,6 @@ func geminiCLIClientMetadata() string {
 	return "ideType=IDE_UNSPECIFIED,platform=PLATFORM_UNSPECIFIED,pluginType=GEMINI"
 }
 
-// normalizeGeminiCLIModel normalizes Gemini CLI model names.
-// Maps gemini-3.* versions to their gemini-2.5-* equivalents.
-func normalizeGeminiCLIModel(model string) string {
-	switch model {
-	case "gemini-3-pro", "gemini-3.1-pro":
-		return "gemini-2.5-pro"
-	case "gemini-3-flash", "gemini-3.1-flash":
-		return "gemini-2.5-flash"
-	default:
-		return model
-	}
-}
-
 // cliPreviewFallbackOrder returns preview model candidates for a base model.
 func cliPreviewFallbackOrder(model string) []string {
 	switch model {
@@ -972,5 +959,3 @@ func parseRetryDelay(errorBody []byte) (*time.Duration, error) {
 
 	return nil, fmt.Errorf("no RetryInfo found")
 }
-
-func (e *GeminiCLIExecutor) CloseExecutionSession(sessionID string) {}

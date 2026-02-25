@@ -212,20 +212,6 @@ func TestSanitizeOAuthModelAlias_InjectsDefaultKiroWhenEmpty(t *testing.T) {
 	if len(kiroAliases) == 0 {
 		t.Fatal("expected default kiro aliases to be injected when OAuthModelAlias is nil")
 	}
-	copilotAliases := cfg.OAuthModelAlias["github-copilot"]
-	if len(copilotAliases) == 0 {
-		t.Fatal("expected default github-copilot aliases to be injected when OAuthModelAlias is nil")
-	}
-	aliasSet := make(map[string]bool)
-	for _, a := range copilotAliases {
-		aliasSet[a.Alias] = true
-	}
-	if !aliasSet["claude-opus-4-6"] {
-		t.Fatal("expected default github-copilot alias claude-opus-4-6")
-	}
-	if !aliasSet["claude-sonnet-4-6"] {
-		t.Fatal("expected default github-copilot alias claude-sonnet-4-6")
-	}
 }
 
 func TestSanitizeOAuthModelAlias_InjectsDefaultGitHubCopilotAliases(t *testing.T) {
@@ -234,17 +220,10 @@ func TestSanitizeOAuthModelAlias_InjectsDefaultGitHubCopilotAliases(t *testing.T
 	cfg.SanitizeOAuthModelAlias()
 
 	copilotAliases := cfg.OAuthModelAlias["github-copilot"]
-	if len(copilotAliases) != 2 {
-		t.Fatalf("expected 2 default github-copilot aliases, got %d", len(copilotAliases))
+	if len(copilotAliases) != 1 {
+		t.Fatalf("expected 1 default github-copilot alias, got %d", len(copilotAliases))
 	}
-	aliasMap := make(map[string]string)
-	for _, a := range copilotAliases {
-		aliasMap[a.Alias] = a.Name
-	}
-	if aliasMap["claude-opus-4-6"] != "claude-opus-4.6" {
-		t.Fatalf("expected alias claude-opus-4-6->claude-opus-4.6")
-	}
-	if aliasMap["claude-sonnet-4-6"] != "claude-sonnet-4.6" {
-		t.Fatalf("expected alias claude-sonnet-4-6->claude-sonnet-4.6")
+	if copilotAliases[0].Name != "claude-opus-4.6" || copilotAliases[0].Alias != "claude-opus-4-6" || !copilotAliases[0].Fork {
+		t.Fatalf("expected forked alias %q->%q, got name=%q alias=%q fork=%v", "claude-opus-4.6", "claude-opus-4-6", copilotAliases[0].Name, copilotAliases[0].Alias, copilotAliases[0].Fork)
 	}
 }

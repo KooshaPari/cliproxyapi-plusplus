@@ -528,19 +528,12 @@ func extractAndRemoveBetas(body []byte) ([]string, []byte) {
 	var betas []string
 	if betasResult.IsArray() {
 		for _, item := range betasResult.Array() {
-			if item.Type != gjson.String {
-				continue
-			}
 			if s := strings.TrimSpace(item.String()); s != "" {
 				betas = append(betas, s)
 			}
 		}
-	} else if betasResult.Type == gjson.String {
-		for _, token := range strings.Split(betasResult.Str, ",") {
-			if s := strings.TrimSpace(token); s != "" {
-				betas = append(betas, s)
-			}
-		}
+	} else if s := strings.TrimSpace(betasResult.String()); s != "" {
+		betas = append(betas, s)
 	}
 	body, _ = sjson.DeleteBytes(body, "betas")
 	return betas, body
@@ -827,15 +820,10 @@ func applyClaudeToolPrefix(body []byte, prefix string) []byte {
 	}
 
 	toolChoiceType := gjson.GetBytes(body, "tool_choice.type").String()
-	if toolChoiceType == "tool" || toolChoiceType == "function" {
+	if toolChoiceType == "tool" {
 		name := gjson.GetBytes(body, "tool_choice.name").String()
 		if name != "" && !strings.HasPrefix(name, prefix) && !builtinTools[name] {
 			body, _ = sjson.SetBytes(body, "tool_choice.name", prefix+name)
-		}
-
-		functionName := gjson.GetBytes(body, "tool_choice.function.name").String()
-		if functionName != "" && !strings.HasPrefix(functionName, prefix) && !builtinTools[functionName] {
-			body, _ = sjson.SetBytes(body, "tool_choice.function.name", prefix+functionName)
 		}
 	}
 	if toolChoiceType == "function" {
@@ -1048,24 +1036,17 @@ func resolveClaudeKeyCloakConfig(cfg *config.Config, auth *cliproxyauth.Auth) *c
 	return nil
 }
 
-func nextFakeUserID(apiKey string, useCache bool) string {
-	if useCache && apiKey != "" {
-		// Note: useCache param is not implemented; always generates new ID
-	}
-	return generateFakeUserID()
-}
-
 // injectFakeUserID generates and injects a fake user ID into the request metadata.
-func injectFakeUserID(payload []byte, apiKey string, useCache bool) []byte {
+func injectFakeUserID(payload []byte) []byte {
 	metadata := gjson.GetBytes(payload, "metadata")
 	if !metadata.Exists() {
-		payload, _ = sjson.SetBytes(payload, "metadata.user_id", nextFakeUserID(apiKey, useCache))
+		payload, _ = sjson.SetBytes(payload, "metadata.user_id", generateFakeUserID())
 		return payload
 	}
 
 	existingUserID := gjson.GetBytes(payload, "metadata.user_id").String()
 	if existingUserID == "" || !isValidUserID(existingUserID) {
-		payload, _ = sjson.SetBytes(payload, "metadata.user_id", nextFakeUserID(apiKey, useCache))
+		payload, _ = sjson.SetBytes(payload, "metadata.user_id", generateFakeUserID())
 	}
 	return payload
 }
@@ -1141,10 +1122,8 @@ func applyCloaking(ctx context.Context, cfg *config.Config, auth *cliproxyauth.A
 		payload = checkSystemInstructionsWithMode(payload, strictMode)
 	}
 
-	// Reuse a stable fake user ID when a matching ClaudeKey cloak config exists.
-	// This keeps consistent metadata across model variants for the same credential.
-	apiKey, _ := claudeCreds(auth)
-	payload = injectFakeUserID(payload, apiKey, cloakCfg != nil)
+	// Inject fake user ID
+	payload = injectFakeUserID(payload)
 
 	// Apply sensitive word obfuscation
 	if len(sensitiveWords) > 0 {
@@ -1410,5 +1389,3 @@ func injectSystemCacheControl(payload []byte) []byte {
 
 	return payload
 }
-
-func (e *ClaudeExecutor) CloseExecutionSession(sessionID string) {}
