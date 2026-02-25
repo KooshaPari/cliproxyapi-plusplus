@@ -53,9 +53,21 @@ func ConvertOpenAIRequestToCodex(modelName string, inputRawJSON []byte, stream b
 	// 	out, _ = sjson.Set(out, "max_output_tokens", v.Value())
 	// }
 
-	// Map reasoning effort
+	// Map reasoning effort (with variant as fallback for Claude-style clients)
 	if v := gjson.GetBytes(rawJSON, "reasoning_effort"); v.Exists() {
 		out, _ = sjson.Set(out, "reasoning.effort", v.Value())
+	} else if v := gjson.GetBytes(rawJSON, "variant"); v.Exists() {
+		// variant is used by some clients (e.g., OpenWork) as alternative to reasoning_effort
+		// Map variant values: high/x-high -> high, medium -> medium, low/minimal -> low
+		variant := v.String()
+		switch variant {
+		case "high", "x-high", "xhigh":
+			out, _ = sjson.Set(out, "reasoning.effort", "high")
+		case "low", "minimal":
+			out, _ = sjson.Set(out, "reasoning.effort", "low")
+		default:
+			out, _ = sjson.Set(out, "reasoning.effort", "medium")
+		}
 	} else {
 		out, _ = sjson.Set(out, "reasoning.effort", "medium")
 	}
@@ -180,7 +192,19 @@ func ConvertOpenAIRequestToCodex(modelName string, inputRawJSON []byte, stream b
 								msg, _ = sjson.SetRaw(msg, "content.-1", part)
 							}
 						case "file":
-							// Files are not specified in examples; skip for now
+							if role == "user" {
+								fileData := it.Get("file.file_data").String()
+								filename := it.Get("file.filename").String()
+								if fileData != "" {
+									part := `{}`
+									part, _ = sjson.Set(part, "type", "input_file")
+									part, _ = sjson.Set(part, "file_data", fileData)
+									if filename != "" {
+										part, _ = sjson.Set(part, "filename", filename)
+									}
+									msg, _ = sjson.SetRaw(msg, "content.-1", part)
+								}
+							}
 						}
 					}
 				}
