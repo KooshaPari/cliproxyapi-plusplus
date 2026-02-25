@@ -7,12 +7,12 @@ import (
 	"fmt"
 	"strings"
 
-	configaccess "github.com/router-for-me/CLIProxyAPI/v6/internal/access/config_access"
-	"github.com/router-for-me/CLIProxyAPI/v6/internal/api"
+	configaccess "github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/access/config_access"
+	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/api"
 	sdkaccess "github.com/router-for-me/CLIProxyAPI/v6/sdk/access"
 	sdkAuth "github.com/router-for-me/CLIProxyAPI/v6/sdk/auth"
 	coreauth "github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/auth"
-	"github.com/router-for-me/CLIProxyAPI/v6/sdk/config"
+	"github.com/router-for-me/CLIProxyAPI/v6/internal/config"
 )
 
 // Builder constructs a Service instance with customizable providers.
@@ -150,6 +150,16 @@ func (b *Builder) WithLocalManagementPassword(password string) *Builder {
 		return b
 	}
 	b.serverOptions = append(b.serverOptions, api.WithLocalManagementPassword(password))
+	return b
+}
+
+// WithPostAuthHook registers a hook to be called after an Auth record is created
+// but before it is persisted to storage.
+func (b *Builder) WithPostAuthHook(hook coreauth.PostAuthHook) *Builder {
+	if hook == nil {
+		return b
+	}
+	b.serverOptions = append(b.serverOptions, api.WithPostAuthHook(hook))
 	return b
 }
 
