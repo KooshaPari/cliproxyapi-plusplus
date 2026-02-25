@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/translator/util"
 	log "github.com/sirupsen/logrus"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
@@ -113,6 +112,13 @@ type WebSearchResult struct {
 	PublicDomain         *bool   `json:"publicDomain,omitempty"`
 }
 
+// isWebSearchTool checks if a tool name or type indicates a web_search tool.
+func isWebSearchTool(name, toolType string) bool {
+	return name == "web_search" ||
+		strings.HasPrefix(toolType, "web_search") ||
+		toolType == "web_search_20250305"
+}
+
 // HasWebSearchTool checks if the request contains ONLY a web_search tool.
 // Returns true only if tools array has exactly one tool named "web_search".
 // Only intercept pure web_search requests (single-tool array).
@@ -134,7 +140,7 @@ func HasWebSearchTool(body []byte) bool {
 	name := strings.ToLower(tool.Get("name").String())
 	toolType := strings.ToLower(tool.Get("type").String())
 
-	return util.IsWebSearchTool(name, toolType)
+	return isWebSearchTool(name, toolType)
 }
 
 // ExtractSearchQuery extracts the search query from the request.
@@ -228,7 +234,7 @@ func ReplaceWebSearchToolDescription(body []byte) ([]byte, error) {
 		name := strings.ToLower(tool.Get("name").String())
 		toolType := strings.ToLower(tool.Get("type").String())
 
-		if util.IsWebSearchTool(name, toolType) {
+		if isWebSearchTool(name, toolType) {
 			// Replace with a minimal web_search tool definition
 			minimalTool := map[string]interface{}{
 				"name":        "web_search",

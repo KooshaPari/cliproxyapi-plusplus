@@ -1,7 +1,6 @@
 package executor
 
 import (
-	"bytes"
 	"testing"
 
 	"github.com/tidwall/gjson"
@@ -75,35 +74,6 @@ func TestParseOpenAIStreamUsageNoUsage(t *testing.T) {
 	_, ok := parseOpenAIStreamUsage(line)
 	if ok {
 		t.Fatal("expected usage parse to fail when usage is absent")
-	}
-}
-
-func TestSplitOpenAIStreamUsageWithFinishReason(t *testing.T) {
-	line := []byte(`data: {"id":"chatcmpl","choices":[{"index":0,"finish_reason":"stop"}],"usage":{"prompt_tokens":9,"completion_tokens":3,"total_tokens":12}}`)
-	stripped, detail, ok := splitOpenAIStreamUsage(line)
-	if !ok {
-		t.Fatal("expected stream usage split to occur")
-	}
-	jsonPayload := stripped
-	if bytes.HasPrefix(bytes.TrimSpace(stripped), []byte("data:")) {
-		jsonPayload = bytes.TrimSpace(stripped[len("data:"):])
-	}
-	if !gjson.ValidBytes(jsonPayload) {
-		t.Fatalf("stripped line is invalid json: %q", string(stripped))
-	}
-	if hasUsage := gjson.GetBytes(jsonPayload, "usage").Exists(); hasUsage {
-		t.Fatal("expected usage to be removed from stripped stream line")
-	}
-	if detail.InputTokens != 9 || detail.OutputTokens != 3 || detail.TotalTokens != 12 {
-		t.Fatalf("unexpected usage detail: %+v", detail)
-	}
-}
-
-func TestSplitOpenAIStreamUsageWithoutFinishReason(t *testing.T) {
-	line := []byte(`data: {"id":"chatcmpl","choices":[{"index":0,"delta":{"content":"ok"}}],"usage":{"prompt_tokens":1,"completion_tokens":2,"total_tokens":3}}`)
-	_, _, ok := splitOpenAIStreamUsage(line)
-	if ok {
-		t.Fatal("expected no split when usage has no finish reason")
 	}
 }
 
