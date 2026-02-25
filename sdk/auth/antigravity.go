@@ -56,8 +56,12 @@ func (AntigravityAuthenticator) Login(ctx context.Context, cfg *config.Config, o
 	}
 
 	srv, port, cbChan, errServer := startAntigravityCallbackServer(callbackPort)
+	if errServer != nil && opts.CallbackPort == 0 && shouldFallbackToEphemeralCallbackPort(errServer) {
+		log.Warnf("antigravity callback port %d unavailable; retrying with an ephemeral port", callbackPort)
+		srv, port, cbChan, errServer = startAntigravityCallbackServer(-1)
+	}
 	if errServer != nil {
-		return nil, fmt.Errorf("antigravity: failed to start callback server: %w", errServer)
+		return nil, fmt.Errorf("%s", formatAntigravityCallbackServerError(callbackPort, errServer))
 	}
 	defer func() {
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
@@ -220,10 +224,13 @@ type callbackResult struct {
 }
 
 func startAntigravityCallbackServer(port int) (*http.Server, int, <-chan callbackResult, error) {
-	if port <= 0 {
+	if port == 0 {
 		port = antigravity.CallbackPort
 	}
-	addr := fmt.Sprintf(":%d", port)
+	addr := ":0"
+	if port > 0 {
+		addr = fmt.Sprintf(":%d", port)
+	}
 	listener, err := net.Listen("tcp", addr)
 	if err != nil {
 		return nil, 0, nil, err
@@ -255,6 +262,30 @@ func startAntigravityCallbackServer(port int) (*http.Server, int, <-chan callbac
 	}()
 
 	return srv, port, resultCh, nil
+}
+
+func shouldFallbackToEphemeralCallbackPort(err error) bool {
+	if err == nil {
+		return false
+	}
+	message := strings.ToLower(err.Error())
+	return strings.Contains(message, "address already in use") ||
+		strings.Contains(message, "permission denied") ||
+		strings.Contains(message, "access permissions")
+}
+
+func formatAntigravityCallbackServerError(port int, err error) string {
+	if err == nil {
+		return "antigravity: failed to start callback server"
+	}
+	lower := strings.ToLower(err.Error())
+	cause := "failed to start callback server"
+	if strings.Contains(lower, "address already in use") {
+		cause = "callback port is already in use"
+	} else if strings.Contains(lower, "permission denied") || strings.Contains(lower, "access permissions") {
+		cause = "callback port appears blocked by OS policy"
+	}
+	return fmt.Sprintf("antigravity: %s on port %d: %v (try --oauth-callback-port <free-port>)", cause, port, err)
 }
 
 // FetchAntigravityProjectID exposes project discovery for external callers.
