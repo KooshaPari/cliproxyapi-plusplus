@@ -86,16 +86,9 @@ func ApplyAccessProviders(manager *sdkaccess.Manager, oldCfg, newCfg *config.Con
 	}
 
 	existing := manager.Providers()
-	sdkCfg := sdkconfig.SDKConfig{
-		ProxyURL:                   newCfg.SDKConfig.ProxyURL,
-		ForceModelPrefix:           newCfg.SDKConfig.ForceModelPrefix,
-		RequestLog:                 newCfg.SDKConfig.RequestLog,
-		APIKeys:                    newCfg.SDKConfig.APIKeys,
-		PassthroughHeaders:         newCfg.SDKConfig.PassthroughHeaders,
-		Streaming:                  sdkconfig.StreamingConfig(newCfg.SDKConfig.Streaming),
-		NonStreamKeepAliveInterval: newCfg.SDKConfig.NonStreamKeepAliveInterval,
-	}
-	configaccess.Register(&sdkCfg)
+	configaccess.Register(&sdkconfig.SDKConfig{
+		APIKeys: append([]string(nil), newCfg.APIKeys...),
+	})
 	providers, added, updated, removed, err := ReconcileProviders(oldCfg, newCfg, existing)
 	if err != nil {
 		log.Errorf("failed to reconcile request auth providers: %v", err)
