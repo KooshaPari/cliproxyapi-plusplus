@@ -484,6 +484,32 @@ tasks:
     cmds:
       - docker compose down
 
+  # -- Service Operations --
+  service:status:
+    desc: "Show service status for installed system service"
+    cmds:
+      - ./scripts/cliproxy-service.sh status
+
+  service:start:
+    desc: "Start cliproxyapi++ service (systemd/launchd/Windows helper)"
+    cmds:
+      - ./scripts/cliproxy-service.sh start
+
+  service:stop:
+    desc: "Stop cliproxyapi++ service (systemd/launchd/Windows helper)"
+    cmds:
+      - ./scripts/cliproxy-service.sh stop
+
+  service:restart:
+    desc: "Restart cliproxyapi++ service (systemd/launchd/Windows helper)"
+    cmds:
+      - ./scripts/cliproxy-service.sh restart
+
+  service:install:
+    desc: "Install cliproxyapi++ service scaffold (systemd/launchd)"
+    cmds:
+      - ./scripts/cliproxy-service.sh install
+
   # -- Health & Diagnostics (UX/DX) --
   doctor:
     desc: "Check environment health for cliproxyapi++"

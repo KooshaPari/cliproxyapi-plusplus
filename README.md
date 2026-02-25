@@ -152,6 +152,24 @@ llm:
 agentapi --cliproxy http://localhost:8317
 ```
 
+## Managed service (Windows / Linux / macOS)
+
+Use the repo service helper to install/start/stop/restart from one command.
+
+```bash
+task service:install    # install platform service scaffold
+task service:start      # start service
+task service:status     # inspect service status
+task service:restart    # restart service
+task service:stop       # stop service
+```
+
+Platform behavior:
+
+- Linux: manages `cliproxyapi-plusplus.service` via systemd.
+- macOS: manages `com.router-for-me.cliproxyapi-plusplus` via launchd.
+- Windows: uses `examples/windows/cliproxyapi-plusplus-service.ps1` for install/start/stop/status.
+
 ## Development
 
 ```bash
