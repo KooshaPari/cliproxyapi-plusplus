@@ -615,5 +615,3 @@ func stripKimiPrefix(model string) string {
 	}
 	return model
 }
-
-func (e *KimiExecutor) CloseExecutionSession(sessionID string) {}

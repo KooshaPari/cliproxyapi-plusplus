@@ -2,8 +2,6 @@ package executor
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"net"
 	"net/http"
 	"net/url"
@@ -39,13 +37,10 @@ var (
 // Returns:
 //   - *http.Client: An HTTP client with configured proxy or transport
 func newProxyAwareHTTPClient(ctx context.Context, cfg *config.Config, auth *cliproxyauth.Auth, timeout time.Duration) *http.Client {
-	hasAuthProxy := false
-
 	// Priority 1: Use auth.ProxyURL if configured
 	var proxyURL string
 	if auth != nil {
 		proxyURL = strings.TrimSpace(auth.ProxyURL)
-		hasAuthProxy = proxyURL != ""
 	}
 
 	// Priority 2: Use cfg.ProxyURL if auth proxy is not configured
@@ -79,7 +74,7 @@ func newProxyAwareHTTPClient(ctx context.Context, cfg *config.Config, auth *clip
 
 	// If we have a proxy URL configured, set up the transport
 	if proxyURL != "" {
-		transport, errBuild := buildProxyTransportWithError(proxyURL)
+		transport := buildProxyTransport(proxyURL)
 		if transport != nil {
 			httpClient.Transport = transport
 			// Cache the client
@@ -88,16 +83,6 @@ func newProxyAwareHTTPClient(ctx context.Context, cfg *config.Config, auth *clip
 			httpClientCacheMutex.Unlock()
 			return httpClient
 		}
-
-		if hasAuthProxy {
-			errMsg := fmt.Sprintf("authentication proxy misconfigured: %v", errBuild)
-			httpClient.Transport = &transportFailureRoundTripper{err: errors.New(errMsg)}
-			httpClientCacheMutex.Lock()
-			httpClientCache[cacheKey] = httpClient
-			httpClientCacheMutex.Unlock()
-			return httpClient
-		}
-
 		// If proxy setup failed, log and fall through to context RoundTripper
 		log.Debugf("failed to setup proxy from URL: %s, falling back to context transport", proxyURL)
 	}
@@ -126,25 +111,14 @@ func newProxyAwareHTTPClient(ctx context.Context, cfg *config.Config, auth *clip
 // Returns:
 //   - *http.Transport: A configured transport, or nil if the proxy URL is invalid
 func buildProxyTransport(proxyURL string) *http.Transport {
-	transport, errBuild := buildProxyTransportWithError(proxyURL)
-	if errBuild != nil {
-		return nil
-	}
-	return transport
-}
-
-func buildProxyTransportWithError(proxyURL string) (*http.Transport, error) {
 	if proxyURL == "" {
-		return nil, fmt.Errorf("proxy url is empty")
+		return nil
 	}
 
 	parsedURL, errParse := url.Parse(proxyURL)
 	if errParse != nil {
 		log.Errorf("parse proxy URL failed: %v", errParse)
-		return nil, fmt.Errorf("parse proxy URL failed: %w", errParse)
-	}
-	if parsedURL.Scheme == "" || parsedURL.Host == "" {
-		return nil, fmt.Errorf("missing proxy scheme or host: %s", proxyURL)
+		return nil
 	}
 
 	var transport *http.Transport
@@ -162,7 +136,7 @@ func buildProxyTransportWithError(proxyURL string) (*http.Transport, error) {
 		dialer, errSOCKS5 := proxy.SOCKS5("tcp", parsedURL.Host, proxyAuth, proxy.Direct)
 		if errSOCKS5 != nil {
 			log.Errorf("create SOCKS5 dialer failed: %v", errSOCKS5)
-			return nil, fmt.Errorf("create SOCKS5 dialer failed: %w", errSOCKS5)
+			return nil
 		}
 		// Set up a custom transport using the SOCKS5 dialer
 		transport = &http.Transport{
@@ -175,16 +149,8 @@ func buildProxyTransportWithError(proxyURL string) (*http.Transport, error) {
 		transport = &http.Transport{Proxy: http.ProxyURL(parsedURL)}
 	default:
 		log.Errorf("unsupported proxy scheme: %s", parsedURL.Scheme)
-		return nil, fmt.Errorf("unsupported proxy scheme: %s", parsedURL.Scheme)
+		return nil
 	}
 
-	return transport, nil
-}
-
-type transportFailureRoundTripper struct {
-	err error
-}
-
-func (t *transportFailureRoundTripper) RoundTrip(*http.Request) (*http.Response, error) {
-	return nil, t.err
+	return transport
 }

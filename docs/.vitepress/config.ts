@@ -3,30 +3,21 @@ import { contentTabsPlugin } from "./plugins/content-tabs";
 
 const repo = process.env.GITHUB_REPOSITORY?.split("/")[1] ?? "cliproxyapi-plusplus";
 const isCI = process.env.GITHUB_ACTIONS === "true";
-const docsBase = isCI ? `/${repo}/` : "/";
-const faviconHref = `${docsBase}favicon.ico`;
 
 export default defineConfig({
   title: "cliproxy++",
   description: "cliproxyapi-plusplus documentation",
-  base: docsBase,
-  head: [
-    ["link", { rel: "icon", href: faviconHref }]
-  ],
+  base: isCI ? `/${repo}/` : "/",
   cleanUrls: true,
   ignoreDeadLinks: [/^http:\/\/localhost:\d+(\/.*)?$/],
   lastUpdated: true,
   themeConfig: {
     nav: [
       { text: "Home", link: "/" },
-      { text: "Start Here", link: "/start-here" },
-      { text: "Tutorials", link: "/tutorials/" },
-      { text: "How-to", link: "/how-to/" },
-      { text: "Explanation", link: "/explanation/" },
       { text: "Getting Started", link: "/getting-started" },
       { text: "Providers", link: "/provider-usage" },
       { text: "Provider Catalog", link: "/provider-catalog" },
-      { text: "Operations", link: "/operations/" },
+      { text: "Planning", link: "/planning/" },
       { text: "Reference", link: "/routing-reference" },
       { text: "API", link: "/api/" },
       { text: "Docsets", link: "/docsets/" }

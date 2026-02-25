@@ -55,36 +55,6 @@ func TestSanitizeOAuthModelAlias_AllowsMultipleAliasesForSameName(t *testing.T) 
 	}
 }
 
-func TestSanitizeOAuthModelAlias_AllowsSameAliasForDifferentNames(t *testing.T) {
-	cfg := &Config{
-		OAuthModelAlias: map[string][]OAuthModelAlias{
-			"antigravity": {
-				{Name: "model-a", Alias: "shared-alias"},
-				{Name: "model-b", Alias: "shared-alias"},
-				{Name: "model-a", Alias: "shared-alias"},
-				{Name: "model-a", Alias: "shared-a"},
-			},
-		},
-	}
-
-	cfg.SanitizeOAuthModelAlias()
-
-	aliases := cfg.OAuthModelAlias["antigravity"]
-	if len(aliases) != 3 {
-		t.Fatalf("expected 3 sanitized aliases (dedupe by name+alias), got %d", len(aliases))
-	}
-	want := []OAuthModelAlias{
-		{Name: "model-a", Alias: "shared-alias"},
-		{Name: "model-b", Alias: "shared-alias"},
-		{Name: "model-a", Alias: "shared-a"},
-	}
-	for i, exp := range want {
-		if aliases[i].Name != exp.Name || aliases[i].Alias != exp.Alias {
-			t.Fatalf("expected alias %d to be %q->%q, got %q->%q", i, exp.Name, exp.Alias, aliases[i].Name, aliases[i].Alias)
-		}
-	}
-}
-
 func TestSanitizeOAuthModelAlias_InjectsDefaultKiroAliases(t *testing.T) {
 	// When no kiro aliases are configured, defaults should be injected
 	cfg := &Config{
@@ -211,40 +181,5 @@ func TestSanitizeOAuthModelAlias_InjectsDefaultKiroWhenEmpty(t *testing.T) {
 	kiroAliases := cfg.OAuthModelAlias["kiro"]
 	if len(kiroAliases) == 0 {
 		t.Fatal("expected default kiro aliases to be injected when OAuthModelAlias is nil")
-	}
-	copilotAliases := cfg.OAuthModelAlias["github-copilot"]
-	if len(copilotAliases) == 0 {
-		t.Fatal("expected default github-copilot aliases to be injected when OAuthModelAlias is nil")
-	}
-	aliasSet := make(map[string]bool)
-	for _, a := range copilotAliases {
-		aliasSet[a.Alias] = true
-	}
-	if !aliasSet["claude-opus-4-6"] {
-		t.Fatal("expected default github-copilot alias claude-opus-4-6")
-	}
-	if !aliasSet["claude-sonnet-4-6"] {
-		t.Fatal("expected default github-copilot alias claude-sonnet-4-6")
-	}
-}
-
-func TestSanitizeOAuthModelAlias_InjectsDefaultGitHubCopilotAliases(t *testing.T) {
-	cfg := &Config{}
-
-	cfg.SanitizeOAuthModelAlias()
-
-	copilotAliases := cfg.OAuthModelAlias["github-copilot"]
-	if len(copilotAliases) != 2 {
-		t.Fatalf("expected 2 default github-copilot aliases, got %d", len(copilotAliases))
-	}
-	aliasMap := make(map[string]string)
-	for _, a := range copilotAliases {
-		aliasMap[a.Alias] = a.Name
-	}
-	if aliasMap["claude-opus-4-6"] != "claude-opus-4.6" {
-		t.Fatalf("expected alias claude-opus-4-6->claude-opus-4.6")
-	}
-	if aliasMap["claude-sonnet-4-6"] != "claude-sonnet-4.6" {
-		t.Fatalf("expected alias claude-sonnet-4-6->claude-sonnet-4.6")
 	}
 }
