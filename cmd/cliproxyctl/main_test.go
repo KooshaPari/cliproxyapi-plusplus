@@ -12,7 +12,7 @@ import (
 	"time"
 
 	cliproxycmd "github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/cmd"
-	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/config"
+	"github.com/router-for-me/CLIProxyAPI/v6/internal/config"
 )
 
 func TestRunSetupJSONResponseShape(t *testing.T) {
@@ -543,6 +543,28 @@ func TestSupportedProvidersSortedAndStable(t *testing.T) {
 	// got should already be sorted
 	if strings.Join(got, ",") != strings.Join(want, ",") {
 		t.Fatalf("supportedProviders order changed unexpectedly: %v", got)
+	}
+}
+
+func TestResolveLoginProviderNormalizesDroidAliases(t *testing.T) {
+	t.Parallel()
+	for _, input := range []string{"droid", "droid-cli", "droidcli"} {
+		got, details, err := resolveLoginProvider(input)
+		if err != nil {
+			t.Fatalf("resolveLoginProvider(%q) returned error: %v", input, err)
+		}
+		if got != "gemini" {
+			t.Fatalf("resolveLoginProvider(%q) = %q, want %q", input, got, "gemini")
+		}
+		if details["provider_supported"] != true {
+			t.Fatalf("expected provider_supported=true for %q, details=%#v", input, details)
+		}
+		if details["provider_alias"] != "gemini" {
+			t.Fatalf("expected provider_alias=gemini for %q, details=%#v", input, details)
+		}
+		if details["provider_aliased"] != true {
+			t.Fatalf("expected provider_aliased=true for %q, details=%#v", input, details)
+		}
 	}
 }
 

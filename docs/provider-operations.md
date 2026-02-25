@@ -17,12 +17,6 @@ This runbook is for operators who care about provider uptime, quota health, and 
 
 ## Quota Visibility (`#146` scope)
 
-<<<<<<< HEAD
-- Current operational source of truth is `v1/metrics/providers` plus provider auth/token files.
-- There is no dedicated unified "Kiro quota dashboard" endpoint in this repo today.
-- Treat repeated `429` + falling success ratio as quota pressure and rotate capacity accordingly.
-
-=======
 - Current operational source of truth:
   - `v1/metrics/providers`
   - Management auth snapshots (`/v0/management/auth-files`)
@@ -57,7 +51,6 @@ Suggested alert policy:
   - `quota-exceeded.switch-project=true`
   - `quota-exceeded.switch-preview-model=true`
 
->>>>>>> archive/pr-234-head-20260223
 ## Onboard a New Provider
 
 1. Add provider block in `config.yaml` (`openai-compatibility` preferred for OpenAI-style upstreams).
@@ -134,8 +127,6 @@ Suggested alert policy:
   - Do not assume upstream catalog parity after OAuth login.
   - Keep a known-good iFlow canary model and gate rollout on successful canary responses.
 
-<<<<<<< HEAD
-=======
 ### iFlow account errors shown in terminal
 
 - Symptom: terminal output shows account-level iFlow errors but requests keep retrying noisily.
@@ -147,7 +138,6 @@ Suggested alert policy:
   - Keep one known-good iFlow canary request in non-stream mode.
   - Rotate traffic away from iFlow prefix when account-level failures persist beyond cooldown windows.
 
->>>>>>> archive/pr-234-head-20260223
 ### Usage dashboard shows zeros under load
 
 - Symptom: traffic volume rises but usage counters remain `0`.
@@ -209,8 +199,6 @@ Suggested alert policy:
   - Standardize Amp launch wrappers to export proxy env explicitly.
   - Add startup validation that fails early when base URL does not target CLIProxyAPI.
 
-<<<<<<< HEAD
-=======
 ### Windows duplicate auth-file display safeguards
 
 - Symptom: auth records appear duplicated in management/UI surfaces on Windows.
@@ -240,7 +228,6 @@ Avoid per-tool aliases for these fields in ops docs to keep telemetry queries de
   - `apprise "<apprise-url>" -t "cliproxy canary" -b "provider routing notification check"`
 - Keep this notification path non-blocking for request handling; alerts should not gate proxy response paths.
 
->>>>>>> archive/pr-234-head-20260223
 ### Gemini thinking-length control drift (OpenAI-compatible clients)
 
 - Symptom: client requests a specific thinking level/budget but observed behavior looks unbounded or unchanged.
@@ -254,9 +241,27 @@ Avoid per-tool aliases for these fields in ops docs to keep telemetry queries de
   - Critical: processed thinking mode mismatch ratio > 5% over 10 minutes.
   - Warn: reasoning token growth > 25% above baseline for fixed-thinking workloads over 10 minutes.
 - Mitigation:
-  - Force explicit thinking-capable model alias for affected workloads.
-  - Reduce rollout blast radius by pinning the model suffix/level per workload class.
-  - Keep one non-stream and one stream canary for each affected client integration.
+- Force explicit thinking-capable model alias for affected workloads.
+- Reduce rollout blast radius by pinning the model suffix/level per workload class.
+- Keep one non-stream and one stream canary for each affected client integration.
+
+### Provider-specific proxy overrides (`CPB-0794`)
+
+- **Goal:** route some providers through a corporate proxy while letting others go direct (for example, Gemini through `socks5://corp-proxy:1080` while Claude works through the default gateway).
+- **Config knobs:** `config.yaml` already exposes `proxy-url` at the root (global egress) and a `proxy-url` field per credential or API key entry. Adding the override looks like:
+
+```yaml
+gemini-api-key:
+  - api-key: "AIzaSy..."
+    proxy-url: "socks5://corp-proxy:1080" # per-provider override
+```
+
+- **Validation steps:**
+  1. `rg -n "proxy-url" config.yaml` (or open `config.example.yaml`) to confirm the override is placed next to the target credential block.
+  2. `cliproxyctl doctor --json | jq '.config.providers | to_entries[] | {provider:.key,credentials:.value}'` to ensure each credential surfaces the intended `proxy_url` value.
+  3. After editing, save the file so the built-in watcher hot-reloads the settings (or run `docker compose restart cliproxyapi-plusplus` for a deterministic reload) and rerun an affected client request while tailing `docker compose logs cliproxyapi-plusplus --follow` to watch for proxy-specific connection errors.
+
+- **Fallback behavior:** When no per-credential override exists, the root `proxy-url` applies; clearing the override (set to empty string) forces a direct connection even if the root proxy is set.
 
 ## Recommended Production Pattern
 
