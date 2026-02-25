@@ -1307,7 +1307,7 @@ func logCodexWebsocketDisconnected(sessionID, authID, wsURL, reason string, err 
 }
 
 func sanitizeCodexWebsocketLogField(raw string) string {
-	return util.RedactAPIKey(strings.TrimSpace(raw))
+	return util.HideAPIKey(strings.TrimSpace(raw))
 }
 
 func sanitizeCodexWebsocketLogURL(raw string) string {

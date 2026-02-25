@@ -89,6 +89,10 @@ type Config struct {
 	// Nil means enabled (default behavior).
 	ResponsesWebsocketEnabled *bool `yaml:"responses-websocket-enabled,omitempty" json:"responses-websocket-enabled,omitempty"`
 
+	// ResponsesCompactEnabled gates the /v1/responses/compact route behavior for
+	// OpenAI-compatible execution paths. Nil means enabled (default behavior).
+	ResponsesCompactEnabled *bool `yaml:"responses-compact-enabled,omitempty" json:"responses-compact-enabled,omitempty"`
+
 	// GeminiKey defines Gemini API key configurations with optional routing overrides.
 	GeminiKey []GeminiKey `yaml:"gemini-api-key" json:"gemini-api-key"`
 
@@ -985,10 +989,11 @@ func (cfg *Config) SanitizeOAuthModelAlias() {
 		return
 	}
 
-	// Inject default aliases for channels with built-in compatibility mappings.
+	// Inject default Kiro aliases if no user-configured kiro aliases exist
 	if cfg.OAuthModelAlias == nil {
 		cfg.OAuthModelAlias = make(map[string][]OAuthModelAlias)
 	}
+	// Preserve explicitly configured aliases, including empty/nil markers, to support opt-out.
 	if _, hasKiro := cfg.OAuthModelAlias["kiro"]; !hasKiro {
 		// Check case-insensitive too
 		found := false
@@ -1002,8 +1007,8 @@ func (cfg *Config) SanitizeOAuthModelAlias() {
 			cfg.OAuthModelAlias["kiro"] = defaultKiroAliases()
 		}
 	}
-	if _, hasGitHubCopilot := cfg.OAuthModelAlias["github-copilot"]; !hasGitHubCopilot {
-		// Check case-insensitive too
+	// Inject default GitHub Copilot aliases if no user-configured channel exists.
+	if _, hasGithubCopilot := cfg.OAuthModelAlias["github-copilot"]; !hasGithubCopilot {
 		found := false
 		for k := range cfg.OAuthModelAlias {
 			if strings.EqualFold(strings.TrimSpace(k), "github-copilot") {
@@ -1042,8 +1047,7 @@ func (cfg *Config) SanitizeOAuthModelAlias() {
 			if strings.EqualFold(name, alias) {
 				continue
 			}
-			// Dedupe by name+alias combination, not just alias
-			aliasKey := strings.ToLower(name) + ":" + strings.ToLower(alias)
+			aliasKey := strings.ToLower(name) + "\x00" + strings.ToLower(alias)
 			if _, ok := seenAlias[aliasKey]; ok {
 				continue
 			}
@@ -1116,6 +1120,15 @@ func (cfg *Config) IsResponsesWebsocketEnabled() bool {
 		return true
 	}
 	return *cfg.ResponsesWebsocketEnabled
+}
+
+// IsResponsesCompactEnabled returns true when /v1/responses/compact behavior is enabled.
+// Default is enabled when unset.
+func (cfg *Config) IsResponsesCompactEnabled() bool {
+	if cfg == nil || cfg.ResponsesCompactEnabled == nil {
+		return true
+	}
+	return *cfg.ResponsesCompactEnabled
 }
 
 // SanitizeOpenAICompatibility removes OpenAI-compatibility provider entries that are

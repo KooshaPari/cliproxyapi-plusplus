@@ -9,7 +9,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/binary"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -215,14 +214,14 @@ attemptLoop:
 					}
 					if attempt+1 < attempts {
 						delay := antigravityNoCapacityRetryDelay(attempt)
-						log.Debugf("antigravity executor: no capacity, retrying in %s (attempt %d/%d)", delay, attempt+1, attempts)
+						log.Debugf("antigravity executor: no capacity for model %s, retrying in %s (attempt %d/%d)", baseModel, delay, attempt+1, attempts)
 						if errWait := antigravityWait(ctx, delay); errWait != nil {
 							return resp, errWait
 						}
 						continue attemptLoop
 					}
 				}
-				sErr := newAntigravityStatusErr(httpResp.StatusCode, bodyBytes)
+				sErr := statusErr{code: httpResp.StatusCode, msg: string(bodyBytes)}
 				if httpResp.StatusCode == http.StatusTooManyRequests {
 					if retryAfter, parseErr := parseRetryDelay(bodyBytes); parseErr == nil && retryAfter != nil {
 						sErr.retryAfter = retryAfter
@@ -242,7 +241,7 @@ attemptLoop:
 
 		switch {
 		case lastStatus != 0:
-			sErr := newAntigravityStatusErr(lastStatus, lastBody)
+			sErr := statusErr{code: lastStatus, msg: string(lastBody)}
 			if lastStatus == http.StatusTooManyRequests {
 				if retryAfter, parseErr := parseRetryDelay(lastBody); parseErr == nil && retryAfter != nil {
 					sErr.retryAfter = retryAfter
@@ -258,15 +257,6 @@ attemptLoop:
 	}
 
 	return resp, err
-}
-
-func antigravityModelFingerprint(model string) string {
-	trimmed := strings.TrimSpace(model)
-	if trimmed == "" {
-		return ""
-	}
-	sum := sha256.Sum256([]byte(trimmed))
-	return hex.EncodeToString(sum[:8])
 }
 
 // executeClaudeNonStream performs a claude non-streaming request to the Antigravity API.
@@ -385,7 +375,7 @@ attemptLoop:
 						continue attemptLoop
 					}
 				}
-				sErr := newAntigravityStatusErr(httpResp.StatusCode, bodyBytes)
+				sErr := statusErr{code: httpResp.StatusCode, msg: string(bodyBytes)}
 				if httpResp.StatusCode == http.StatusTooManyRequests {
 					if retryAfter, parseErr := parseRetryDelay(bodyBytes); parseErr == nil && retryAfter != nil {
 						sErr.retryAfter = retryAfter
@@ -456,7 +446,7 @@ attemptLoop:
 
 		switch {
 		case lastStatus != 0:
-			sErr := newAntigravityStatusErr(lastStatus, lastBody)
+			sErr := statusErr{code: lastStatus, msg: string(lastBody)}
 			if lastStatus == http.StatusTooManyRequests {
 				if retryAfter, parseErr := parseRetryDelay(lastBody); parseErr == nil && retryAfter != nil {
 					sErr.retryAfter = retryAfter
@@ -769,14 +759,14 @@ attemptLoop:
 					}
 					if attempt+1 < attempts {
 						delay := antigravityNoCapacityRetryDelay(attempt)
-						log.Debugf("antigravity executor: no capacity, retrying in %s (attempt %d/%d)", delay, attempt+1, attempts)
+						log.Debugf("antigravity executor: no capacity for model %s, retrying in %s (attempt %d/%d)", baseModel, delay, attempt+1, attempts)
 						if errWait := antigravityWait(ctx, delay); errWait != nil {
 							return nil, errWait
 						}
 						continue attemptLoop
 					}
 				}
-				sErr := newAntigravityStatusErr(httpResp.StatusCode, bodyBytes)
+				sErr := statusErr{code: httpResp.StatusCode, msg: string(bodyBytes)}
 				if httpResp.StatusCode == http.StatusTooManyRequests {
 					if retryAfter, parseErr := parseRetryDelay(bodyBytes); parseErr == nil && retryAfter != nil {
 						sErr.retryAfter = retryAfter
@@ -836,7 +826,7 @@ attemptLoop:
 
 		switch {
 		case lastStatus != 0:
-			sErr := newAntigravityStatusErr(lastStatus, lastBody)
+			sErr := statusErr{code: lastStatus, msg: string(lastBody)}
 			if lastStatus == http.StatusTooManyRequests {
 				if retryAfter, parseErr := parseRetryDelay(lastBody); parseErr == nil && retryAfter != nil {
 					sErr.retryAfter = retryAfter
@@ -921,6 +911,7 @@ func (e *AntigravityExecutor) CountTokens(ctx context.Context, auth *cliproxyaut
 		requestURL.WriteString(base)
 		requestURL.WriteString(antigravityCountTokensPath)
 		if opts.Alt != "" {
+			requestURL.WriteString("?$alt=")
 			requestURL.WriteString(url.QueryEscape(opts.Alt))
 		}
 
@@ -988,7 +979,7 @@ func (e *AntigravityExecutor) CountTokens(ctx context.Context, auth *cliproxyaut
 			log.Debugf("antigravity executor: rate limited on base url %s, retrying with fallback base url: %s", baseURL, baseURLs[idx+1])
 			continue
 		}
-		sErr := newAntigravityStatusErr(httpResp.StatusCode, bodyBytes)
+		sErr := statusErr{code: httpResp.StatusCode, msg: string(bodyBytes)}
 		if httpResp.StatusCode == http.StatusTooManyRequests {
 			if retryAfter, parseErr := parseRetryDelay(bodyBytes); parseErr == nil && retryAfter != nil {
 				sErr.retryAfter = retryAfter
@@ -999,7 +990,7 @@ func (e *AntigravityExecutor) CountTokens(ctx context.Context, auth *cliproxyaut
 
 	switch {
 	case lastStatus != 0:
-		sErr := newAntigravityStatusErr(lastStatus, lastBody)
+		sErr := statusErr{code: lastStatus, msg: string(lastBody)}
 		if lastStatus == http.StatusTooManyRequests {
 			if retryAfter, parseErr := parseRetryDelay(lastBody); parseErr == nil && retryAfter != nil {
 				sErr.retryAfter = retryAfter
@@ -1282,7 +1273,7 @@ func (e *AntigravityExecutor) refreshToken(ctx context.Context, auth *cliproxyau
 	}
 
 	if httpResp.StatusCode < http.StatusOK || httpResp.StatusCode >= http.StatusMultipleChoices {
-		sErr := newAntigravityStatusErr(httpResp.StatusCode, bodyBytes)
+		sErr := statusErr{code: httpResp.StatusCode, msg: string(bodyBytes)}
 		if httpResp.StatusCode == http.StatusTooManyRequests {
 			if retryAfter, parseErr := parseRetryDelay(bodyBytes); parseErr == nil && retryAfter != nil {
 				sErr.retryAfter = retryAfter
@@ -1551,16 +1542,6 @@ func resolveHost(base string) string {
 	return strings.TrimPrefix(strings.TrimPrefix(base, "https://"), "http://")
 }
 
-func sanitizeAntigravityBaseURL(base string) (string, error) {
-	normalized := strings.TrimSuffix(strings.TrimSpace(base), "/")
-	switch normalized {
-	case antigravityBaseURLDaily, antigravitySandboxBaseURLDaily, antigravityBaseURLProd:
-		return normalized, nil
-	default:
-		return "", fmt.Errorf("antigravity executor: unsupported base url %q", base)
-	}
-}
-
 func resolveUserAgent(auth *cliproxyauth.Auth) string {
 	if auth != nil {
 		if auth.Attributes != nil {
@@ -1595,30 +1576,6 @@ func antigravityRetryAttempts(auth *cliproxyauth.Auth, cfg *config.Config) int {
 		return 1
 	}
 	return attempts
-}
-
-func newAntigravityStatusErr(statusCode int, body []byte) statusErr {
-	return statusErr{
-		code: statusCode,
-		msg:  antigravityErrorMessage(statusCode, body),
-	}
-}
-
-func antigravityErrorMessage(statusCode int, body []byte) string {
-	msg := strings.TrimSpace(string(body))
-	if statusCode != http.StatusForbidden {
-		return msg
-	}
-	if msg == "" {
-		return msg
-	}
-	lower := strings.ToLower(msg)
-	if !strings.Contains(lower, "subscription_required") &&
-		!strings.Contains(lower, "gemini code assist license") &&
-		!strings.Contains(lower, "permission_denied") {
-		return msg
-	}
-	return msg + "\nHint: The current Google project/account does not have a Gemini Code Assist license. Re-run --antigravity-login with a licensed account/project, or switch providers."
 }
 
 func antigravityShouldRetryNoCapacity(statusCode int, body []byte) bool {
@@ -1770,5 +1727,3 @@ func generateProjectID() string {
 	randomPart := strings.ToLower(uuid.NewString())[:5]
 	return adj + "-" + noun + "-" + randomPart
 }
-
-func (e *AntigravityExecutor) CloseExecutionSession(sessionID string) {}

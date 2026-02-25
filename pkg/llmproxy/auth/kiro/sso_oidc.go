@@ -106,11 +106,22 @@ type CreateTokenResponse struct {
 }
 
 // getOIDCEndpoint returns the OIDC endpoint for the given region.
-func getOIDCEndpoint(region string) string {
+func getOIDCEndpoint(region string) (string, error) {
 	if region == "" {
 		region = defaultIDCRegion
 	}
-	return fmt.Sprintf("https://oidc.%s.amazonaws.com", region)
+	endpoint := fmt.Sprintf("https://oidc.%s.amazonaws.com", region)
+	parsed, err := url.Parse(endpoint)
+	if err != nil {
+		return "", fmt.Errorf("invalid OIDC endpoint %q: %w", endpoint, err)
+	}
+	if parsed.Scheme != "https" || parsed.Hostname() == "" {
+		return "", fmt.Errorf("invalid OIDC endpoint %q", endpoint)
+	}
+	if !strings.HasSuffix(strings.ToLower(parsed.Hostname()), ".amazonaws.com") {
+		return "", fmt.Errorf("invalid OIDC host %q", parsed.Hostname())
+	}
+	return endpoint, nil
 }
 
 func validateIDCRegion(region string) (string, error) {
@@ -122,40 +133,6 @@ func validateIDCRegion(region string) (string, error) {
 		return "", fmt.Errorf("invalid region %q", region)
 	}
 	return region, nil
-}
-
-func validateStartURL(startURL string) error {
-	trimmed := strings.TrimSpace(startURL)
-	if trimmed == "" {
-		return fmt.Errorf("start URL is required")
-	}
-	parsed, err := url.Parse(trimmed)
-	if err != nil {
-		return err
-	}
-	if !parsed.IsAbs() {
-		return fmt.Errorf("start URL must be absolute")
-	}
-	if parsed.User != nil {
-		return fmt.Errorf("start URL must not include user info")
-	}
-	scheme := strings.ToLower(strings.TrimSpace(parsed.Scheme))
-	if scheme != "https" {
-		return fmt.Errorf("unsupported start URL scheme")
-	}
-	host := strings.TrimSpace(parsed.Hostname())
-	if host == "" {
-		return fmt.Errorf("start URL host is required")
-	}
-	if strings.EqualFold(host, "localhost") {
-		return fmt.Errorf("start URL host is not allowed")
-	}
-	if ip := net.ParseIP(host); ip != nil {
-		if ip.IsLoopback() || ip.IsPrivate() || ip.IsUnspecified() || ip.IsMulticast() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() {
-			return fmt.Errorf("start URL host is not allowed")
-		}
-	}
-	return nil
 }
 
 func buildIDCRefreshPayload(clientID, clientSecret, refreshToken string) map[string]string {
@@ -245,7 +222,10 @@ func (c *SSOOIDCClient) RegisterClientWithRegion(ctx context.Context, region str
 	if err != nil {
 		return nil, err
 	}
-	endpoint := getOIDCEndpoint(validatedRegion)
+	endpoint, err := getOIDCEndpoint(validatedRegion)
+	if err != nil {
+		return nil, err
+	}
 
 	payload := map[string]interface{}{
 		"clientName": "Kiro IDE",
@@ -296,10 +276,10 @@ func (c *SSOOIDCClient) StartDeviceAuthorizationWithIDC(ctx context.Context, cli
 	if err != nil {
 		return nil, err
 	}
-	if err := validateStartURL(startURL); err != nil {
+	endpoint, err := getOIDCEndpoint(validatedRegion)
+	if err != nil {
 		return nil, err
 	}
-	endpoint := getOIDCEndpoint(validatedRegion)
 
 	payload := map[string]string{
 		"clientId":     clientID,
@@ -349,7 +329,10 @@ func (c *SSOOIDCClient) CreateTokenWithRegion(ctx context.Context, clientID, cli
 	if errRegion != nil {
 		return nil, errRegion
 	}
-	endpoint := getOIDCEndpoint(normalizedRegion)
+	endpoint, err := getOIDCEndpoint(normalizedRegion)
+	if err != nil {
+		return nil, err
+	}
 
 	payload := map[string]string{
 		"clientId":     clientID,
@@ -424,7 +407,14 @@ func normalizeOIDCRegion(region string) (string, error) {
 
 // RefreshTokenWithRegion refreshes an access token using the refresh token with a specific region.
 func (c *SSOOIDCClient) RefreshTokenWithRegion(ctx context.Context, clientID, clientSecret, refreshToken, region, startURL string) (*KiroTokenData, error) {
-	endpoint := getOIDCEndpoint(region)
+	validatedRegion, errRegion := validateIDCRegion(region)
+	if errRegion != nil {
+		return nil, errRegion
+	}
+	endpoint, err := getOIDCEndpoint(validatedRegion)
+	if err != nil {
+		return nil, err
+	}
 	payload := buildIDCRefreshPayload(clientID, clientSecret, refreshToken)
 
 	body, err := json.Marshal(payload)

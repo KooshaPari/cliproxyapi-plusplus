@@ -458,5 +458,3 @@ func FetchKiloModels(ctx context.Context, auth *cliproxyauth.Auth, cfg *config.C
 
 	return allModels
 }
-
-func (e *KiloExecutor) CloseExecutionSession(sessionID string) {}

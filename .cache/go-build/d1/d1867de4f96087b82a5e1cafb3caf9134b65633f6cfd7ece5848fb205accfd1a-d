@@ -1,0 +1,11 @@
+./config.go
+./config_generated.go
+./oauth_model_alias_migration.go
+./provider_registry_generated.go
+./sdk_config.go
+./vertex_compat.go
+./config_test.go
+./oauth_model_alias_migration_test.go
+./oauth_model_alias_test.go
+./oauth_upstream_test.go
+./responses_compact_toggle_test.go
