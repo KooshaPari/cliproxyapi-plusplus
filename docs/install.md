@@ -89,9 +89,6 @@ process-compose -f examples/process-compose.dev.yaml up
 
 Then edit `config.yaml` or files under `auth-dir`; the running process reloads changes automatically.
 
-<<<<<<< HEAD
-## Option D: Go SDK / Embedding
-=======
 For Antigravity quota/routing tuning, this is hot-reload friendly:
 
 - `quota-exceeded.switch-project`
@@ -155,6 +152,19 @@ sudo systemctl restart cliproxyapi-plusplus
 sudo systemctl stop cliproxyapi-plusplus
 ```
 
+Cross-platform helper (optional):
+
+```bash
+./scripts/service install
+./scripts/service start
+./scripts/service status
+./scripts/service restart
+./scripts/service stop
+./scripts/service remove
+```
+
+On Linux the script writes the systemd unit to `/etc/systemd/system` and requires root privileges.
+
 ### macOS (Homebrew + launchd)
 
 Homebrew installs typically place artifacts under `/opt/homebrew`. If installed elsewhere, keep the same launchd flow and swap the binary/config paths.
@@ -166,9 +176,10 @@ launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.router-for-me.clipro
 launchctl kickstart -k gui/$(id -u)/com.router-for-me.cliproxyapi-plusplus
 ```
 
-If your Homebrew formula supports service hooks:
+You can also use a local Homebrew formula with service hooks:
 
 ```bash
+brew install --HEAD --formula examples/homebrew/cliproxyapi-plusplus.rb
 brew services start cliproxyapi-plusplus
 brew services restart cliproxyapi-plusplus
 ```
@@ -184,7 +195,6 @@ Run as Administrator:
 ```
 
 ## Option E: Go SDK / Embedding
->>>>>>> archive/pr-234-head-20260223
 
 ```bash
 go get github.com/KooshaPari/cliproxyapi-plusplus/sdk/cliproxy
