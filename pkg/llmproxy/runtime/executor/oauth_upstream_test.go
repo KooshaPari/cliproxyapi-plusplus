@@ -3,8 +3,20 @@ package executor
 import (
 	"testing"
 
-	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/config"
+	"github.com/router-for-me/CLIProxyAPI/v6/internal/config"
 )
+
+func resolveOAuthBaseURLWithOverride(cfg *config.Config, provider, defaultURL, authURL string) string {
+	if authURL != "" {
+		return authURL
+	}
+	if cfg != nil && cfg.OAuthUpstream != nil {
+		if u, ok := cfg.OAuthUpstream[provider]; ok {
+			return u
+		}
+	}
+	return defaultURL
+}
 
 func TestResolveOAuthBaseURLWithOverride_PreferenceOrder(t *testing.T) {
 	cfg := &config.Config{

@@ -60,41 +60,6 @@ curl -sS http://localhost:8317/v1/metrics/providers | jq
 | `claude-opus-4-6` missing or returns `bad model` | Alias/prefix mapping is stale after Claude model refresh | `curl -sS http://localhost:8317/v1/models -H "Authorization: Bearer YOUR_CLIENT_KEY" | jq -r '.data[].id' | rg 'claude-opus-4-6|claude-sonnet-4-6'` | Update `claude-api-key` model alias mappings, reload config, then re-run non-stream Opus 4.6 request before stream rollout |
 | `/v1/responses/compact` fails or hangs | Wrong endpoint/mode expectations (streaming not supported for compact) | Retry with non-stream `POST /v1/responses/compact` and inspect JSON `object` field | Use compact only in non-stream mode; for streaming flows keep `/v1/responses` or `/v1/chat/completions` |
 | MCP memory tools fail (`tool not found`, invalid params, or empty result) | MCP server missing memory tool registration or request schema mismatch | Run `tools/list` then one minimal `tools/call` against the same MCP endpoint | Enable/register memory tools, align `tools/call` arguments to server schema, then repeat `tools/list` and `tools/call` smoke tests |
-| `Unable to Select Specific Model` | Provider model registry entry is absent, excluded, or feature-flag gated for this environment | `cliproxyctl doctor --json | jq '{feature_flags: .config.feature_flags, models, warnings}'` plus `GET /v1/models` for the same key | Align `feature-flags`, alias mappings, and `models`/`excluded-models` in config; only retry after model ID appears in `/v1/models` |
-
-## Specific Model Selection Failure (`CPB-0856`)
-
-Use this for deterministic triage of `Unable to Select Specific Model`:
-
-```bash
-cliproxyctl doctor --json | jq '{feature_flags: .config.feature_flags, models, warnings}'
-curl -sS http://localhost:8317/v1/models -H "Authorization: Bearer YOUR_CLIENT_KEY" | jq -r '.data[].id'
-```
-
-Decision rule:
-
-- If `models` includes the requested ID and `/v1/models` includes it too, inspect provider entitlement/logs.
-- If either output omits the requested ID, treat it as registry/config mismatch first (not random upstream flake).
-
-## JSON Marshal / Unicode Troubleshooting (`CPB-0866`)
-
-Use this when logs show JSON Marshal failures, escaped Unicode corruption, or unexpected `\uXXXX` drift:
-
-```bash
-# 1) Reproduce with one non-stream request using Unicode content.
-curl -sS -X POST http://localhost:8317/v1/chat/completions \
-  -H "Authorization: Bearer YOUR_CLIENT_KEY" \
-  -H "Content-Type: application/json; charset=utf-8" \
-  -d '{"model":"REPLACE_MODEL","messages":[{"role":"user","content":"unicode probe: café, 你好, ✅"}],"stream":false}' | jq '{model,error,choices}'
-
-# 2) Inspect warnings for marshal/encoding hints.
-cliproxyctl doctor --json | jq '.warnings[]? | select((.message // "") | test("JSON Marshal|unicode|encoding"; "i"))'
-```
-
-Remediation:
-
-- Ensure payloads are UTF-8 JSON end-to-end and avoid lossy re-encoding middleware.
-- Keep marshal diagnostics enabled in logs during triage, then re-run the same canary payload.
 
 ## `gemini-3-pro-preview` Tool-Use Triage
 
@@ -255,7 +220,6 @@ If non-stream succeeds but stream chunks are delayed/batched:
 | Sonnet 4.5 rollout confusion (`CPB-0789`, `CPB-0790`) | feature flag/metadata mismatch | `cliproxyctl doctor --json` + `/v1/models` metadata | align flag gating + static registry metadata |
 | Gemini thinking stream parity gap (`CPB-0791`) | reasoning metadata normalization splits between CLI/translator and upstream, so the stream response drops `thinking` results or mismatches non-stream output | `curl -sS -X POST http://localhost:8317/v1/chat/completions -H "Authorization: Bearer demo-client-key" -H "Content-Type: application/json" -d '{"model":"gemini-2.5-pro","messages":[{"role":"user","content":"reasoning normalization probe"}],"reasoning":{"effort":"x-high"},"stream":false}' | jq '{model,usage,error}'` then `curl -N -X POST http://localhost:8317/v1/chat/completions -H "Authorization: Bearer demo-client-key" -H "Content-Type: application/json" -d '{"model":"gemini-2.5-pro","messages":[{"role":"user","content":"reasoning normalization probe"}],"reasoning":{"effort":"x-high"},"stream":true}'` | align translator normalization and telemetry so thinking metadata survives stream translation, re-run the reasoning probe, and confirm matching `usage` counts in stream/non-stream outputs |
 | Gemini CLI/Antigravity prompt cache drift (`CPB-0792`, `CPB-0797`) | prompt cache keying or executor fallback lacks validation, letting round-robin slip to stale providers and emit unexpected usage totals | re-run the `gemini-2.5-pro` chat completion three times and repeat with `antigravity/claude-sonnet-4-5-thinking`, e.g. `curl -sS -X POST http://localhost:8317/v1/chat/completions -H "Authorization: Bearer demo-client-key" -H "Content-Type: application/json" -d '{"model":"<model>","messages":[{"role":"user","content":"cache guard probe"}],"stream":false}' | jq '{model,usage,error}'` | reset prompt caches, enforce provider-specific cache keys/fallbacks, and alert when round-robin reroutes to unexpected providers |
-| Reasoning/cache metrics inconsistent (`CPB-0791`, `CPB-0792`, `CPB-0797`) | reasoning normalization or usage mapping drift | check `usage` for stream/non-stream | normalize reasoning, keep usage metadata parity |
 | Docker compose startup error (`CPB-0793`) | service boot failure before bind | `docker compose ps` + `/health` | inspect startup logs, fix bind/config, restart |
 | AI Studio auth status unclear (`CPB-0795`) | auth-file toggle not visible/used | `GET/PATCH /v0/management/auth-files` | enable target auth file and re-run provider login |
 | Setup/login callback breaks (`CPB-0798`, `CPB-0800`) | callback mode mismatch/manual callback unset | inspect `cliproxyctl setup/login --help` | use `--manual-callback` and verify one stable auth-dir |
@@ -289,70 +253,11 @@ Copy the callback URL `cliproxyctl` prints, complete it from a reachable browser
 | Gemini OAuth guidance unclear (`CPB-0816`, `CPB-0817`) | login flow and docs out of sync | `cliproxyctl login --provider gemini` | keep CLI flow and quickstart steps aligned |
 | Droid CLI says unknown provider (`CPB-0821`) | alias normalization missing | `cliproxyctl login --provider droid-cli` | normalize alias to Gemini-compatible provider path |
 | Auth file sync misses fresh token (`CPB-0822`) | reload logic ignores newest credential | check management auth state + runtime logs | use validated sync path with metadata checks |
-| Kimi K2 thinking failures hard to triage (`CPB-0823`) | provider-specific logs/alerts absent | filter management logs for `kimi` | **implemented** - added tagged logs in kimi executor + runbook in `docs/operations/provider-error-runbook.md` |
-| Nano Banana translator path unstable (`CPB-0824`) | translator mapping not centralized | probe `nanobanana` model via `/v1/models` | consolidate translator alias/format helpers - needs implementation |
-| AI Studio runtime behavior drifts (`CPB-0825`, `CPB-0827`) | executor side-effects and WSS path gaps | compare stream/non-stream + WSS probes | **implemented** - added tagged logs in aistudio executor for WSS errors |
+| Kimi K2 thinking failures hard to triage (`CPB-0823`) | provider-specific logs/alerts absent | filter management logs for `kimi` | add tagged logs and alert thresholds |
+| Nano Banana translator path unstable (`CPB-0824`) | translator mapping not centralized | probe `nanobanana` model via `/v1/models` | consolidate translator alias/format helpers |
+| AI Studio runtime behavior drifts (`CPB-0825`, `CPB-0827`) | executor side-effects and WSS path gaps | compare stream/non-stream + WSS probes | split helper layers and gate WSS rollout with tests |
 | Gemini image integration routing uncertain (`CPB-0828`) | subprocess vs HTTP fallback path ambiguity | inspect management routes + logs | expose explicit non-subprocess + fallback controls |
 | GPT metadata migration risk (`CPB-0818`, `CPB-0819`, `CPB-0820`, `CPB-0830`) | model-version naming/contract drift | inspect `/v1/models` + compact endpoint | centralize normalization and document migration path |
-
-## Wave Batch 5 triage matrix (`CPB-0833` + selected `0835..0850`)
-
-| Symptom | Likely cause | Quick check | Action |
-|---|---|---|---|
-| ClawCloud + NanoBanana route fails (`CPB-0833`) | model alias exposure mismatch | `/v1/models` includes expected aliases | align alias map + quickstart sanity probes |
-| iFlow refresh error: missing access token (`CPB-0835`) | upstream refresh payload lacks token field | inspect refresh error body/log line | treat as explicit auth failure and re-auth path |
-| Chat contract edge-case break (`CPB-0839`, `CPB-0842`) | malformed/legacy request payload not normalized | replay malformed + baseline requests | enforce handler/translator contract tests |
-| Duplicate file upload naming confusion (`CPB-0840`) | migration naming mismatch between docs/changelog | compare changelog and migration matrix entries | keep one canonical naming note and compatibility caveat |
-| Amazon Q flow unstable (`CPB-0845`) | transformation and transport concerns coupled | run Amazon Q non-stream probe | split transformation logic and retain deterministic errors |
-| Gemini CLI 400 errors (`CPB-0846`) | mismatched payload/headers against upstream | run quickstart probe and inspect structured logs | apply documented remediation + config normalization |
-| `/v1/responese` connection failures (`CPB-0847`) | endpoint/path mismatch or transient connector errors | non-stream + stream parity probes | validate endpoint spelling/path and capture logs for retry policy |
-| HuggingFace path drift (`CPB-0848`) | openai-compat overrides not isolated | run HF non-stream probe | isolate overrides and benchmark helper path |
-| Git-backed config/token store confusion (`CPB-0850`) | sync assumptions not reflected in operator docs | `cliproxyctl doctor --json` + docs cross-check | use quickstart sync flow and migration notes |
-
-## Wave Batch 5.2 triage matrix (`CPB-0831`, `CPB-0832`, `CPB-0834`, `CPB-0836`, `CPB-0837`, `CPB-0838`, `CPB-0841`, `CPB-0843`, `CPB-0844`, `CPB-0849`)
-
-| Symptom | Likely cause | Quick check | Action |
-|---|---|---|---|
-| `--gemini-web-auth` compatibility breaks (`CPB-0831`) | legacy auth flow parameters drifted | run `cliproxyctl login --provider gemini --json` | normalize login path and verify provider telemetry |
-| Default request params behave unexpectedly (`CPB-0832`) | unsafe/default payload rule application | run non-stream request with minimal payload | enforce safer defaults and fallback validation |
-| Gemini CLI stream helper divergence (`CPB-0834`) | provider-specific streaming logic drift | stream vs non-stream parity probes | move behavior into shared translation utilities |
-| Codex Base URL confusion around `/v1` (`CPB-0836`) | ambiguous setup instructions | `cliproxyctl setup` + `doctor --json` | keep setup normalization deterministic and explicit |
-| `auto` model routing parity regressions (`CPB-0837`) | rollout toggles not uniformly applied | parity probe for `auto` model | gate with safe toggles and explicit defaults |
-| AI Studio imagen integration friction (`CPB-0838`) | execution flow not isolated from transport | run aistudio image probe | refactor transformation boundary and preserve fallbacks |
-| Dev refresh for token-caching paths (`CPB-0841`) | process-compose/HMR state out of sync | `docker compose ... config` + health check | perform deterministic refresh sequence |
-| iFlow MiniMax-M2 runbook gaps (`CPB-0843`) | missing provider-specific ops guidance | run iflow minimax probe | add runbook steps + remediation text |
-| Gemini-native feature loop risks (`CPB-0844`) | translator loop prevention logic unclear | run gemini-native compatibility probe | document/standardize provider-agnostic translation behavior |
-| Codex/Claude bash compatibility drift (`CPB-0849`) | malformed tool payload/flag mismatch | run contract tests for bash tool payloads | guard with explicit feature-gated compatibility handling |
-
-## Wave Batch 6 triage matrix (`CPB-0900..CPB-0910`)
-
-| Symptom | Likely cause | Quick check | Action |
-|---|---|---|---|
-| Gemini + Droid routing fails (`CPB-0900`) | alias normalization missing | `cliproxyctl login --provider droid-cli` | droid-cli alias resolves to gemini - already implemented |
-| Custom models not routing (`CPB-0901`) | openai-compat config missing | check config for openai-compatibility section | add model entries in config.yaml |
-| Web Search tool errors (`CPB-0902`) | tool schema/param mismatch | run non-stream tool call probe | check translator converts params correctly |
-| Terminal flicker on output (`CPB-0903`) | no bufio buffering in TUI | observe terminal output | TUI already uses appropriate buffering |
-| Vision/PDF upload fails (`CPB-0904`) | content-type or size limits | check request size < 20MB | content already handled in translators |
-| Claude Code + Gemini model errors (`CPB-0905`) | model prefix not normalized | run gemini model probe | model routing already works |
-| Usage notifications missing (`CPB-0906`) | usage endpoint not polled | `GET /v0/management/usage` | usage tracking already exists |
-| Thinking toggle ignored for GPT-5 (`CPB-0907`) | thinking param not mapped | check request thinking params | thinking already supported |
-| API key mode not working (`CPB-0908`) | config section missing | check config for api-key-entries | api-key-entries supported in config |
-| Homebrew config not found (`CPB-0909`) | default path mismatch | check `brew --prefix` + config location | uses standard config paths |
-
-## Wave Batch 7 triage matrix (`CPB-0910..CPB-0920`)
-
-| Symptom | Likely cause | Quick check | Action |
-|---|---|---|---|
-| Gemini CLI model not found (`CPB-0910`) | model alias missing | `GET /v1/models` | add model to config or use full name |
-| Thinking budget suffix ignored (`CPB-0911`) | params not mapped | check request thinking params | already supported via thinking param |
-| Function calling error Gemini (`CPB-0912`) | schema incompatibility | check tool definitions | SanitizeParametersJSONSchemaForGemini applied |
-| iFlow model missing (`CPB-0913`) | model not registered | `GET /v1/models` | add to config.iflow.models |
-| Grok usage not working (`CPB-0914`) | x-ai provider not configured | check config for x-ai/grok | add grok api-key to config |
-| Claude Code 2.0.X issues (`CPB-0915`) | version compatibility | check claude code version | use latest cliproxy + claude code |
-| Huge error message via Opencode/Gemini (`CPB-0916`) | JSON schema fields Gemini rejects | check request for `$id`, `patternProperties` | SanitizeSchemaForGemini auto-applied |
-| z.ai support request (`CPB-0917`) | provider not configured | check config for z.ai | add via openai-compatibility or z.ai block |
-| Gemini/Qwen Opencode fails (`CPB-0918`) | auth or model mismatch | check auth + model list | verify auth file + model aliases |
-| ACP protocol (`CPB-0919`) | new protocol request | check feature flags | feature request - not yet implemented |
 
 ## Useful Endpoints
 
