@@ -12,7 +12,7 @@ assignees: ''
 [  ] No, it's another issue.
 
 **If it's a request payload issue, you MUST know**
-Our team doesn't have any GODs or ORACLEs or MIND READERs. Please make sure to attach the request log or curl payload.
+To help us diagnose the problem, please provide as much detail as possible, including the request log or curl payload.
 
 **Describe the bug**
 A clear and concise description of what the bug is.
