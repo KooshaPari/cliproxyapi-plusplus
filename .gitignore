@@ -9,6 +9,9 @@ server
 # Hot-reload artifacts
 .air/
 
+# Hot-reload artifacts
+.air/
+
 
 # Configuration
 config.yaml
