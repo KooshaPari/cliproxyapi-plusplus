@@ -213,6 +213,9 @@ func validateCallbackForwarderTarget(targetBase string) (*url.URL, error) {
 	if !parsed.IsAbs() {
 		return nil, fmt.Errorf("target must be absolute")
 	}
+	if parsed.User != nil {
+		return nil, fmt.Errorf("target must not include user info")
+	}
 	scheme := strings.ToLower(parsed.Scheme)
 	if scheme != "http" && scheme != "https" {
 		return nil, fmt.Errorf("target scheme %q is not allowed", parsed.Scheme)
@@ -302,12 +305,7 @@ func normalizeManagementCallbackPath(rawPath string) string {
 		normalized = "/" + normalized
 	}
 	normalized = path.Clean(normalized)
-	// Security: Verify cleaned path is safe (no open redirect)
-	if normalized == "." || normalized == "" {
-		return "/"
-	}
-	// Prevent open redirect attacks (e.g., //evil.com or http://...)
-	if strings.Contains(normalized, "//") || strings.Contains(normalized, ":/") {
+	if normalized == "." {
 		return "/"
 	}
 	if !strings.HasPrefix(normalized, "/") {
@@ -628,12 +626,7 @@ func (h *Handler) UploadAuthFile(c *gin.Context) {
 			return
 		}
 		if errReg := h.registerAuthFromFile(ctx, dst, data); errReg != nil {
-			// Path traversal or other validation errors should return 400
-			if strings.Contains(errReg.Error(), "escapes") || strings.Contains(errReg.Error(), "traversal") {
-				c.JSON(400, gin.H{"error": "invalid auth file path"})
-			} else {
-				c.JSON(500, gin.H{"error": errReg.Error()})
-			}
+			c.JSON(500, gin.H{"error": errReg.Error()})
 			return
 		}
 		c.JSON(200, gin.H{"status": "ok"})
@@ -664,12 +657,7 @@ func (h *Handler) UploadAuthFile(c *gin.Context) {
 		return
 	}
 	if err = h.registerAuthFromFile(ctx, dst, data); err != nil {
-		// Path traversal or other validation errors should return 400
-		if strings.Contains(err.Error(), "escapes") || strings.Contains(err.Error(), "traversal") {
-			c.JSON(400, gin.H{"error": "invalid auth file path"})
-		} else {
-			c.JSON(500, gin.H{"error": err.Error()})
-		}
+		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(200, gin.H{"status": "ok"})
@@ -699,8 +687,8 @@ func (h *Handler) DeleteAuthFile(c *gin.Context) {
 			}
 			full, err := misc.ResolveSafeFilePathInDir(h.cfg.AuthDir, name)
 			if err != nil {
-				c.JSON(500, gin.H{"error": fmt.Sprintf("invalid auth file path: %v", err)})
-				return
+				log.WithError(err).Warnf("invalid auth file name while deleting all auth files: %s", name)
+				continue
 			}
 			if err = os.Remove(full); err == nil {
 				if errDel := h.deleteTokenRecord(ctx, full); errDel != nil {
@@ -873,7 +861,6 @@ func (h *Handler) PatchAuthFileStatus(c *gin.Context) {
 	var req struct {
 		Name     string `json:"name"`
 		Disabled *bool  `json:"disabled"`
-		Enabled  *bool  `json:"enabled"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
@@ -885,20 +872,26 @@ func (h *Handler) PatchAuthFileStatus(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "name is required"})
 		return
 	}
-	if req.Disabled == nil && req.Enabled == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "disabled or enabled is required"})
+	if req.Disabled == nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "disabled is required"})
 		return
-	}
-	desiredDisabled := false
-	if req.Disabled != nil {
-		desiredDisabled = *req.Disabled
-	} else {
-		desiredDisabled = !*req.Enabled
 	}
 
 	ctx := c.Request.Context()
 
-	targetAuth := h.findAuthByIdentifier(name)
+	// Find auth by name or ID
+	var targetAuth *coreauth.Auth
+	if auth, ok := h.authManager.GetByID(name); ok {
+		targetAuth = auth
+	} else {
+		auths := h.authManager.List()
+		for _, auth := range auths {
+			if auth.FileName == name {
+				targetAuth = auth
+				break
+			}
+		}
+	}
 
 	if targetAuth == nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "auth file not found"})
@@ -906,8 +899,8 @@ func (h *Handler) PatchAuthFileStatus(c *gin.Context) {
 	}
 
 	// Update disabled state
-	targetAuth.Disabled = desiredDisabled
-	if desiredDisabled {
+	targetAuth.Disabled = *req.Disabled
+	if *req.Disabled {
 		targetAuth.Status = coreauth.StatusDisabled
 		targetAuth.StatusMessage = "disabled via management API"
 	} else {
@@ -921,29 +914,7 @@ func (h *Handler) PatchAuthFileStatus(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"status": "ok", "disabled": desiredDisabled})
-}
-
-func (h *Handler) findAuthByIdentifier(name string) *coreauth.Auth {
-	name = strings.TrimSpace(name)
-	if name == "" || h.authManager == nil {
-		return nil
-	}
-	if auth, ok := h.authManager.GetByID(name); ok {
-		return auth
-	}
-	for _, auth := range h.authManager.List() {
-		if auth.FileName == name || filepath.Base(auth.FileName) == name {
-			return auth
-		}
-		if pathVal, ok := auth.Attributes["path"]; ok && (pathVal == name || filepath.Base(pathVal) == name) {
-			return auth
-		}
-		if sourceVal, ok := auth.Attributes["source"]; ok && (sourceVal == name || filepath.Base(sourceVal) == name) {
-			return auth
-		}
-	}
-	return nil
+	c.JSON(http.StatusOK, gin.H{"status": "ok", "disabled": *req.Disabled})
 }
 
 // PatchAuthFileFields updates editable fields (prefix, proxy_url, priority) of an auth file.
@@ -972,7 +943,19 @@ func (h *Handler) PatchAuthFileFields(c *gin.Context) {
 
 	ctx := c.Request.Context()
 
-	targetAuth := h.findAuthByIdentifier(name)
+	// Find auth by name or ID
+	var targetAuth *coreauth.Auth
+	if auth, ok := h.authManager.GetByID(name); ok {
+		targetAuth = auth
+	} else {
+		auths := h.authManager.List()
+		for _, auth := range auths {
+			if auth.FileName == name {
+				targetAuth = auth
+				break
+			}
+		}
+	}
 
 	if targetAuth == nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "auth file not found"})
