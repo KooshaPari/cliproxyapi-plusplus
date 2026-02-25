@@ -53,3 +53,17 @@ _bmad-output/*
 .DS_Store
 ._*
 *.bak
+server
+cli-proxy-api-plus-integration-test
+boardsync
+releasebatch
+.cache
+
+# Build artifacts (cherry-picked from fix/test-cleanups)
+cliproxyapi++
+.air/
+boardsync
+releasebatch
+.cache
+logs/
+
