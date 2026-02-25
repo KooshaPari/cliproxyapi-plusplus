@@ -151,13 +151,13 @@ func (h *Handler) APICall(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "missing url"})
 		return
 	}
-	safeURL, parsedURL, errSanitizeURL := sanitizeAPICallURL(urlStr)
-	if errSanitizeURL != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": errSanitizeURL.Error()})
+	parsedURL, errParseURL := url.Parse(urlStr)
+	if errParseURL != nil || parsedURL.Scheme == "" || parsedURL.Host == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid url"})
 		return
 	}
-	if errResolve := validateResolvedHostIPs(parsedURL.Hostname()); errResolve != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": errResolve.Error()})
+	if errValidateURL := validateAPICallURL(parsedURL); errValidateURL != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": errValidateURL.Error()})
 		return
 	}
 
@@ -212,7 +212,7 @@ func (h *Handler) APICall(c *gin.Context) {
 		}
 	}
 
-	req, errNewRequest := http.NewRequestWithContext(c.Request.Context(), method, safeURL, requestBody)
+	req, errNewRequest := http.NewRequestWithContext(c.Request.Context(), method, urlStr, requestBody)
 	if errNewRequest != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "failed to build request"})
 		return
@@ -226,10 +226,6 @@ func (h *Handler) APICall(c *gin.Context) {
 		req.Header.Set(key, value)
 	}
 	if hostOverride != "" {
-		if !isAllowedHostOverride(parsedURL, hostOverride) {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid host override"})
-			return
-		}
 		req.Host = hostOverride
 	}
 
@@ -272,8 +268,8 @@ func (h *Handler) APICall(c *gin.Context) {
 
 	// If this is a GitHub Copilot token endpoint response, try to enrich with quota information
 	if resp.StatusCode == http.StatusOK &&
-		strings.Contains(safeURL, "copilot_internal") &&
-		strings.Contains(safeURL, "/token") {
+		strings.Contains(urlStr, "copilot_internal") &&
+		strings.Contains(urlStr, "/token") {
 		response = h.enrichCopilotTokenResponse(c.Request.Context(), response, auth, urlStr)
 	}
 
@@ -302,35 +298,6 @@ func firstNonEmptyString(values ...*string) string {
 	return ""
 }
 
-func isAllowedHostOverride(parsedURL *url.URL, override string) bool {
-	if parsedURL == nil {
-		return false
-	}
-	trimmed := strings.TrimSpace(override)
-	if trimmed == "" {
-		return false
-	}
-	if strings.ContainsAny(trimmed, " \r\n\t") {
-		return false
-	}
-
-	requestHost := strings.TrimSpace(parsedURL.Host)
-	requestHostname := strings.TrimSpace(parsedURL.Hostname())
-	if requestHost == "" {
-		return false
-	}
-	if strings.EqualFold(trimmed, requestHost) {
-		return true
-	}
-	if strings.EqualFold(trimmed, requestHostname) {
-		return true
-	}
-	if len(trimmed) > 2 && trimmed[0] == '[' && trimmed[len(trimmed)-1] == ']' {
-		return false
-	}
-	return false
-}
-
 func validateAPICallURL(parsedURL *url.URL) error {
 	if parsedURL == nil {
 		return fmt.Errorf("invalid url")
@@ -338,9 +305,6 @@ func validateAPICallURL(parsedURL *url.URL) error {
 	scheme := strings.ToLower(strings.TrimSpace(parsedURL.Scheme))
 	if scheme != "http" && scheme != "https" {
 		return fmt.Errorf("unsupported url scheme")
-	}
-	if parsedURL.User != nil {
-		return fmt.Errorf("target host is not allowed")
 	}
 	host := strings.TrimSpace(parsedURL.Hostname())
 	if host == "" {
@@ -350,42 +314,6 @@ func validateAPICallURL(parsedURL *url.URL) error {
 		return fmt.Errorf("target host is not allowed")
 	}
 	if ip := net.ParseIP(host); ip != nil {
-		if ip.IsLoopback() || ip.IsPrivate() || ip.IsUnspecified() || ip.IsMulticast() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() {
-			return fmt.Errorf("target host is not allowed")
-		}
-	}
-	return nil
-}
-
-func sanitizeAPICallURL(raw string) (string, *url.URL, error) {
-	trimmed := strings.TrimSpace(raw)
-	if trimmed == "" {
-		return "", nil, fmt.Errorf("missing url")
-	}
-	parsedURL, errParseURL := url.Parse(trimmed)
-	if errParseURL != nil || parsedURL.Scheme == "" || parsedURL.Host == "" {
-		return "", nil, fmt.Errorf("invalid url")
-	}
-	if errValidateURL := validateAPICallURL(parsedURL); errValidateURL != nil {
-		return "", nil, errValidateURL
-	}
-	parsedURL.Fragment = ""
-	return parsedURL.String(), parsedURL, nil
-}
-
-func validateResolvedHostIPs(host string) error {
-	trimmed := strings.TrimSpace(host)
-	if trimmed == "" {
-		return fmt.Errorf("invalid url host")
-	}
-	resolved, errLookup := net.LookupIP(trimmed)
-	if errLookup != nil {
-		return fmt.Errorf("target host resolution failed")
-	}
-	for _, ip := range resolved {
-		if ip == nil {
-			continue
-		}
 		if ip.IsLoopback() || ip.IsPrivate() || ip.IsUnspecified() || ip.IsMulticast() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() {
 			return fmt.Errorf("target host is not allowed")
 		}
@@ -797,12 +725,10 @@ func (h *Handler) authByIndex(authIndex string) *coreauth.Auth {
 }
 
 func (h *Handler) apiCallTransport(auth *coreauth.Auth) http.RoundTripper {
-	hasAuthProxy := false
 	var proxyCandidates []string
 	if auth != nil {
 		if proxyStr := strings.TrimSpace(auth.ProxyURL); proxyStr != "" {
 			proxyCandidates = append(proxyCandidates, proxyStr)
-			hasAuthProxy = true
 		}
 	}
 	if h != nil && h.cfg != nil {
@@ -812,14 +738,9 @@ func (h *Handler) apiCallTransport(auth *coreauth.Auth) http.RoundTripper {
 	}
 
 	for _, proxyStr := range proxyCandidates {
-		transport, errBuild := buildProxyTransportWithError(proxyStr)
-		if transport != nil {
+		if transport := buildProxyTransport(proxyStr); transport != nil {
 			return transport
 		}
-		if hasAuthProxy {
-			return &transportFailureRoundTripper{err: fmt.Errorf("authentication proxy misconfigured: %v", errBuild)}
-		}
-		log.Debugf("failed to setup API call proxy from URL: %s, trying next candidate", proxyStr)
 	}
 
 	transport, ok := http.DefaultTransport.(*http.Transport)
@@ -831,20 +752,20 @@ func (h *Handler) apiCallTransport(auth *coreauth.Auth) http.RoundTripper {
 	return clone
 }
 
-func buildProxyTransportWithError(proxyStr string) (*http.Transport, error) {
+func buildProxyTransport(proxyStr string) *http.Transport {
 	proxyStr = strings.TrimSpace(proxyStr)
 	if proxyStr == "" {
-		return nil, fmt.Errorf("proxy URL is empty")
+		return nil
 	}
 
 	proxyURL, errParse := url.Parse(proxyStr)
 	if errParse != nil {
 		log.WithError(errParse).Debug("parse proxy URL failed")
-		return nil, fmt.Errorf("parse proxy URL failed: %w", errParse)
+		return nil
 	}
 	if proxyURL.Scheme == "" || proxyURL.Host == "" {
 		log.Debug("proxy URL missing scheme/host")
-		return nil, fmt.Errorf("missing proxy scheme or host: %s", proxyStr)
+		return nil
 	}
 
 	if proxyURL.Scheme == "socks5" {
@@ -857,30 +778,22 @@ func buildProxyTransportWithError(proxyStr string) (*http.Transport, error) {
 		dialer, errSOCKS5 := proxy.SOCKS5("tcp", proxyURL.Host, proxyAuth, proxy.Direct)
 		if errSOCKS5 != nil {
 			log.WithError(errSOCKS5).Debug("create SOCKS5 dialer failed")
-			return nil, fmt.Errorf("create SOCKS5 dialer failed: %w", errSOCKS5)
+			return nil
 		}
 		return &http.Transport{
 			Proxy: nil,
 			DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
 				return dialer.Dial(network, addr)
 			},
-		}, nil
+		}
 	}
 
 	if proxyURL.Scheme == "http" || proxyURL.Scheme == "https" {
-		return &http.Transport{Proxy: http.ProxyURL(proxyURL)}, nil
+		return &http.Transport{Proxy: http.ProxyURL(proxyURL)}
 	}
 
 	log.Debugf("unsupported proxy scheme: %s", proxyURL.Scheme)
-	return nil, fmt.Errorf("unsupported proxy scheme: %s", proxyURL.Scheme)
-}
-
-type transportFailureRoundTripper struct {
-	err error
-}
-
-func (t *transportFailureRoundTripper) RoundTrip(*http.Request) (*http.Response, error) {
-	return nil, t.err
+	return nil
 }
 
 // headerContainsValue checks whether a header map contains a target value (case-insensitive key and value).
@@ -1305,16 +1218,6 @@ func (h *Handler) enrichCopilotTokenResponse(ctx context.Context, response apiCa
 		log.WithError(errQuotaURL).Debug("enrichCopilotTokenResponse: rejected token URL for quota request")
 		return response
 	}
-	parsedQuotaURL, errParseQuotaURL := url.Parse(quotaURL)
-	if errParseQuotaURL != nil {
-		return response
-	}
-	if errValidate := validateAPICallURL(parsedQuotaURL); errValidate != nil {
-		return response
-	}
-	if errResolve := validateResolvedHostIPs(parsedQuotaURL.Hostname()); errResolve != nil {
-		return response
-	}
 
 	req, errNewRequest := http.NewRequestWithContext(ctx, http.MethodGet, quotaURL, nil)
 	if errNewRequest != nil {
@@ -1460,9 +1363,6 @@ func copilotQuotaURLFromTokenURL(originalURL string) (string, error) {
 	parsedURL, errParse := url.Parse(strings.TrimSpace(originalURL))
 	if errParse != nil {
 		return "", errParse
-	}
-	if parsedURL.User != nil {
-		return "", fmt.Errorf("unsupported host %q", parsedURL.Hostname())
 	}
 	host := strings.ToLower(parsedURL.Hostname())
 	if parsedURL.Scheme != "https" {
