@@ -4,30 +4,27 @@
 
 Multi-provider LLM proxy with unified OpenAI-compatible API, third-party auth, SDK generation, and enterprise features.
 
-## Overview
+---
 
-CLIProxyAPI++ provides a unified API gateway for multiple LLM providers with:
-- OpenAI-compatible endpoints
-- Third-party provider support (Kiro, GitHub Copilot, Ollama)
-- OAuth authentication flows
-- Built-in rate limiting and metrics
-- SDK auto-generation
+## What is CLIProxyAPI++?
 
-## Architecture
+CLIProxyAPI++ provides a unified API gateway that translates OpenAI-compatible requests to any LLM provider:
 
 ```
-┌──────────────┐     ┌─────────────────┐     ┌────────────┐
-│   Clients    │────▶│   CLIProxy++     │────▶│  Providers │
-│ (thegent,   │     │  (this repo)    │     │ (OpenAI,   │
-│  agentapi)   │     │                 │     │  Anthropic,│
-└──────────────┘     └─────────────────┘     │  AWS, etc) │
-                         │                   └────────────┘
-                         ▼
-                  ┌─────────────────┐
-                  │   SDK Gen      │
-                  │ (Python, Go)   │
-                  └─────────────────┘
+Client (OpenAI format) → CLIProxyAPI++ → OpenAI, Anthropic, Google, AWS, Ollama, etc.
 ```
+
+### Key Capabilities
+
+| Capability | Description |
+|------------|-------------|
+| **Multi-Provider Routing** | Single endpoint for OpenAI, Anthropic, Google, AWS Bedrock, Ollama, Kiro, GitHub Copilot |
+| **OAuth Authentication** | Built-in OAuth flows for Kiro (AWS CodeWhisperer) and GitHub Copilot |
+| **Rate Limiting** | Token bucket algorithm with per-provider limits |
+| **Metrics & Monitoring** | Prometheus metrics, cost tracking, latency monitoring |
+| **SDK Generation** | Auto-generated Python and Go SDKs |
+
+---
 
 ## Quick Start
 
@@ -44,7 +41,6 @@ services:
       - "8317:8317"
     volumes:
       - ./config.yaml:/CLIProxyAPI/config.yaml
-    restart: unless-stopped
 EOF
 
 curl -o config.yaml https://raw.githubusercontent.com/KooshaPari/cliproxyapi-plusplus/main/config.example.yaml
@@ -54,19 +50,17 @@ docker compose up -d
 ### From Source
 
 ```bash
-# Build
 go build -o cliproxy ./cmd/cliproxy
-
-# Run
 ./cliproxy --config config.yaml
 ```
 
+---
+
 ## Configuration
 
-```yaml
-server:
-  port: 8317
+### Provider Setup
 
+```yaml
 providers:
   openai:
     api_key: ${OPENAI_API_KEY}
@@ -76,18 +70,26 @@ providers:
     enabled: true
   github_copilot:
     enabled: true
+  ollama:
+    enabled: true
+    base_url: http://localhost:11434
+```
 
+### Rate Limiting
+
+```yaml
 rate_limit:
   requests_per_minute: 60
   tokens_per_minute: 100000
+  cooldown_seconds: 30
 ```
 
-## Features
+---
 
-### Provider Support
+## Supported Providers
 
-| Provider | Auth | Status |
-|----------|------|--------|
+| Provider | Auth Type | Status |
+|----------|-----------|--------|
 | OpenAI | API Key | ✅ |
 | Anthropic | API Key | ✅ |
 | Azure OpenAI | API Key/OAuth | ✅ |
@@ -96,85 +98,113 @@ rate_limit:
 | Kiro (CodeWhisperer) | OAuth | ✅ |
 | GitHub Copilot | OAuth | ✅ |
 | Ollama | Local | ✅ |
+| LM Studio | Local | ✅ |
 
-### Authentication
+---
 
-- **API Key** - Standard OpenAI-style
-- **OAuth** - Kiro, GitHub Copilot via web flow
-- **AWS IAM** - Bedrock credentials
+## API Endpoints
 
-### Rate Limiting
-
-- Token bucket algorithm
-- Per-provider limits
-- Cooldown management
-- Usage quotas
-
-### Observability
-
-- Request/response logging
-- Cost tracking
-- Latency metrics
-- Error rate monitoring
-
-## Endpoints
+### OpenAI-Compatible
 
 | Endpoint | Description |
 |----------|-------------|
 | `POST /v1/chat/completions` | Chat completions |
 | `POST /v1/completions` | Text completions |
-| `GET /v1/models` | List models |
+| `GET /v1/models` | List available models |
+
+### Management
+
+| Endpoint | Description |
+|----------|-------------|
 | `GET /health` | Health check |
 | `GET /metrics` | Prometheus metrics |
+| `GET /v1/providers` | Provider status |
+| `POST /v1/providers/{provider}/refresh` | Refresh credentials |
+
+---
 
 ## SDKs
 
-Auto-generated SDKs for:
+### Python
 
-- **Python** - `pip install cliproxy-sdk`
-- **Go** - `go get github.com/KooshaPari/cliproxy-sdk-go`
+```python
+from cliproxy import CliproxyClient
 
-## Integration
+client = CliproxyClient(
+    base_url="http://localhost:8317",
+    api_key="your-api-key"
+)
 
-### With thegent
-
-```yaml
-# thegent config
-llm:
-  provider: cliproxy
-  base_url: http://localhost:8317/v1
-  api_key: ${CLIPROXY_API_KEY}
+response = client.chat.completions.create(
+    model="gpt-4o",
+    messages=[{"role": "user", "content": "Hello!"}]
+)
 ```
 
-### With agentapi
+### Go
 
-```bash
-agentapi --cliproxy http://localhost:8317
+```go
+package main
+
+import (
+    "github.com/KooshaPari/cliproxy-sdk-go/client"
+)
+
+func main() {
+    c := client.New("http://localhost:8317", "your-api-key")
+    resp, _ := c.Chat.Completions(&.ChatCompletionRequest{
+        Model: "gpt-4o",
+        Messages: []map[string]string{{"role": "user", "content": "Hello!"}},
+    })
+}
 ```
 
-## Development
+---
 
-```bash
-# Lint
-go fmt ./...
-go vet ./...
+## Architecture
 
-# Test
-go test ./...
-
-# Generate SDKs
-./scripts/generate_sdks.sh
+```
+┌──────────────┐     ┌─────────────────┐     ┌────────────┐
+│   Clients    │────▶│   CLIProxy++     │────▶│  Providers │
+│ (thegent,   │     │  (this repo)    │     │ (OpenAI,   │
+│  agentapi)   │     │                 │     │  Anthropic,│
+└──────────────┘     └─────────────────┘     │  AWS, etc) │
+                         │                   └────────────┘
+                         ▼
+                  ┌─────────────────┐
+                  │   SDK Gen       │
+                  │ (Python, Go)     │
+                  └─────────────────┘
 ```
 
-## Fork Differences
+---
 
-This fork includes:
+## Documentation
 
-- ✅ SDK auto-generation workflow
-- ✅ Enhanced OpenAPI spec
-- ✅ Python client SDK (`pkg/sdk/python`)
-- ✅ Go client SDK (`pkg/sdk/go`)
-- ✅ Integration with tokenledger for cost tracking
+- [Start Here](docs/start-here.md) - Getting started guide
+- [Provider Usage](docs/provider-usage.md) - Provider configuration
+- [Provider Quickstarts](docs/provider-quickstarts.md) - 5-minute setup per provider
+- [API Reference](docs/api/) - Full API documentation
+- [SDK Usage](docs/sdk-usage.md) - SDK guides
+
+---
+
+## Development Philosophy
+
+### Extend, Never Duplicate
+- NEVER create a v2 file. Refactor the original.
+- NEVER create a new class if an existing one can be made generic.
+- NEVER create custom implementations when an OSS library exists.
+
+### Primitives First
+- Build generic building blocks before application logic.
+- A provider interface + registry is better than N isolated classes.
+
+### Research Before Implementing
+- Check pkg.go.dev for existing libraries.
+- Search GitHub for 80%+ implementations to fork/adapt.
+
+---
 
 ## License
 
