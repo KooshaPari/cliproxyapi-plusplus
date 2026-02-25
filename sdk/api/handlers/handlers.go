@@ -14,10 +14,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/interfaces"
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/logging"
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/thinking"
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/util"
+	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/interfaces"
 	coreauth "github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/auth"
 	coreexecutor "github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/executor"
 	"github.com/router-for-me/CLIProxyAPI/v6/sdk/config"
@@ -46,6 +46,7 @@ type ErrorDetail struct {
 }
 
 const idempotencyKeyMetadataKey = "idempotency_key"
+const ginContextLookupKeyToken = "gin"
 
 const (
 	defaultStreamingKeepAliveSeconds = 0
@@ -103,7 +104,13 @@ func BuildErrorResponseBody(status int, errText string) []byte {
 
 	trimmed := strings.TrimSpace(errText)
 	if trimmed != "" && json.Valid([]byte(trimmed)) {
-		return []byte(trimmed)
+		var payload map[string]any
+		if err := json.Unmarshal([]byte(trimmed), &payload); err == nil {
+			if _, ok := payload["error"]; ok {
+				return []byte(trimmed)
+			}
+			errText = fmt.Sprintf("upstream returned JSON payload without top-level error field: %s", trimmed)
+		}
 	}
 
 	errType := "invalid_request_error"
@@ -121,6 +128,10 @@ func BuildErrorResponseBody(status int, errText string) []byte {
 	case http.StatusNotFound:
 		errType = "invalid_request_error"
 		code = "model_not_found"
+		lower := strings.ToLower(errText)
+		if strings.Contains(lower, "model") && strings.Contains(lower, "does not exist") {
+			errText = strings.TrimSpace(errText + " Run GET /v1/models to list available models.")
+		}
 	default:
 		if status >= http.StatusInternalServerError {
 			errType = "server_error"
@@ -190,7 +201,7 @@ func requestExecutionMetadata(ctx context.Context) map[string]any {
 	// It is forwarded as execution metadata; when absent we generate a UUID.
 	key := ""
 	if ctx != nil {
-		if ginCtx, ok := ctx.Value("gin").(*gin.Context); ok && ginCtx != nil && ginCtx.Request != nil {
+		if ginCtx, ok := ctx.Value(ginContextLookupKeyToken).(*gin.Context); ok && ginCtx != nil && ginCtx.Request != nil {
 			key = strings.TrimSpace(ginCtx.GetHeader("Idempotency-Key"))
 		}
 	}
@@ -349,7 +360,7 @@ func (h *BaseAPIHandler) GetContextWithCancel(handler interfaces.APIHandler, c *
 			}
 		}()
 	}
-	newCtx = context.WithValue(newCtx, "gin", c)
+	newCtx = context.WithValue(newCtx, ginContextLookupKeyToken, c)
 	newCtx = context.WithValue(newCtx, "handler", handler)
 	return newCtx, func(params ...interface{}) {
 		if h.Cfg.RequestLog && len(params) == 1 {
@@ -857,7 +868,7 @@ func (h *BaseAPIHandler) WriteErrorResponse(c *gin.Context, msg *interfaces.Erro
 
 func (h *BaseAPIHandler) LoggingAPIResponseError(ctx context.Context, err *interfaces.ErrorMessage) {
 	if h.Cfg.RequestLog {
-		if ginContext, ok := ctx.Value("gin").(*gin.Context); ok {
+		if ginContext, ok := ctx.Value(ginContextLookupKeyToken).(*gin.Context); ok {
 			if apiResponseErrors, isExist := ginContext.Get("API_RESPONSE_ERROR"); isExist {
 				if slicesAPIResponseError, isOk := apiResponseErrors.([]*interfaces.ErrorMessage); isOk {
 					slicesAPIResponseError = append(slicesAPIResponseError, err)

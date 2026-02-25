@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/config"
+	"github.com/router-for-me/CLIProxyAPI/v6/internal/config"
 )
 
 func TestValidateKiroIncognitoFlags(t *testing.T) {

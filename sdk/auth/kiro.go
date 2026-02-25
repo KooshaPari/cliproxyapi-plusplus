@@ -354,6 +354,9 @@ func (a *KiroAuthenticator) Refresh(ctx context.Context, cfg *config.Config, aut
 			clientSecret = loadedClientSecret
 		}
 	}
+	if authMethod == "idc" && (clientID == "" || clientSecret == "") {
+		return nil, fmt.Errorf("missing idc client credentials for %s; re-authenticate with --kiro-aws-login", auth.ID)
+	}
 
 	var tokenData *kiroauth.KiroTokenData
 	var err error

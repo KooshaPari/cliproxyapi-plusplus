@@ -4,8 +4,8 @@ import (
 	"unsafe"
 
 	internalconfig "github.com/router-for-me/CLIProxyAPI/v6/internal/config"
-	sdkconfig "github.com/router-for-me/CLIProxyAPI/v6/sdk/config"
 	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/config"
+	sdkconfig "github.com/router-for-me/CLIProxyAPI/v6/sdk/config"
 )
 
 // castToInternalConfig converts a pkg/llmproxy/config.Config pointer to an internal/config.Config pointer.

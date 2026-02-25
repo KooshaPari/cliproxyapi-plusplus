@@ -63,6 +63,13 @@ func setKiroIncognitoMode(cfg *config.Config, useIncognito, noIncognito bool) {
 	}
 }
 
+func validateKiroIncognitoFlags(useIncognito, noIncognito bool) error {
+	if useIncognito && noIncognito {
+		return fmt.Errorf("--incognito and --no-incognito cannot be used together")
+	}
+	return nil
+}
+
 // main is the entry point of the application.
 // It parses command-line flags, loads configuration, and starts the appropriate
 // service based on the provided flags (login, codex-login, or server mode).
@@ -152,9 +159,13 @@ func main() {
 
 	// Parse the command-line flags.
 	flag.Parse()
+	var err error
+	if err = validateKiroIncognitoFlags(useIncognito, noIncognito); err != nil {
+		log.Errorf("invalid Kiro browser flags: %v", err)
+		return
+	}
 
 	// Core application variables.
-	var err error
 	var cfg *config.Config
 	var isCloudDeploy bool
 	var (
@@ -620,15 +631,15 @@ func main() {
 				}
 			}
 		} else {
-      // Start the main proxy service
-      managementasset.StartAutoUpdater(context.Background(), configFilePath)
+			// Start the main proxy service
+			managementasset.StartAutoUpdater(context.Background(), configFilePath)
 
-      if cfg.AuthDir != "" {
-        kiro.InitializeAndStart(cfg.AuthDir, cfg)
-        defer kiro.StopGlobalRefreshManager()
-      }
+			if cfg.AuthDir != "" {
+				kiro.InitializeAndStart(cfg.AuthDir, cfg)
+				defer kiro.StopGlobalRefreshManager()
+			}
 
-      cmd.StartService(cfg, configFilePath, password)
+			cmd.StartService(cfg, configFilePath, password)
 		}
 	}
 }

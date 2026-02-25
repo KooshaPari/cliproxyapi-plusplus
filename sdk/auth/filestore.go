@@ -162,14 +162,36 @@ func (s *FileTokenStore) Delete(ctx context.Context, id string) error {
 }
 
 func (s *FileTokenStore) resolveDeletePath(id string) (string, error) {
-	if strings.ContainsRune(id, os.PathSeparator) || filepath.IsAbs(id) {
-		return id, nil
-	}
 	dir := s.baseDirSnapshot()
 	if dir == "" {
 		return "", fmt.Errorf("auth filestore: directory not configured")
 	}
-	return filepath.Join(dir, id), nil
+	cleanID := filepath.Clean(strings.TrimSpace(id))
+	if cleanID == "" || cleanID == "." {
+		return "", fmt.Errorf("auth filestore: id is empty")
+	}
+	if filepath.IsAbs(cleanID) {
+		rel, err := filepath.Rel(dir, cleanID)
+		if err != nil {
+			return "", fmt.Errorf("auth filestore: resolve path failed: %w", err)
+		}
+		if rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
+			return "", fmt.Errorf("auth filestore: absolute path escapes base directory")
+		}
+		return cleanID, nil
+	}
+	if cleanID == ".." || strings.HasPrefix(cleanID, ".."+string(os.PathSeparator)) {
+		return "", fmt.Errorf("auth filestore: path traversal is not allowed")
+	}
+	path := filepath.Join(dir, cleanID)
+	rel, err := filepath.Rel(dir, path)
+	if err != nil {
+		return "", fmt.Errorf("auth filestore: resolve path failed: %w", err)
+	}
+	if rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
+		return "", fmt.Errorf("auth filestore: path traversal is not allowed")
+	}
+	return path, nil
 }
 
 func (s *FileTokenStore) readAuthFile(path, baseDir string) (*cliproxyauth.Auth, error) {
