@@ -58,11 +58,21 @@ _bmad-output/*
 .DS_Store
 ._*
 *.bak
-PROJECT-wtrees/
+server
+<<<<<<< HEAD
+=======
+server
 cli-proxy-api-plus-integration-test
+
 boardsync
 releasebatch
 .cache
+>>>>>>> a4e4c2b8 (chore: add build artifacts to .gitignore)
+
 # Build artifacts (cherry-picked from fix/test-cleanups)
 cliproxyapi++
 .air/
+boardsync
+releasebatch
+.cache
+logs/
