@@ -54,3 +54,9 @@ _bmad-output/*
 ._*
 *.bak
 server
+server
+cli-proxy-api-plus-integration-test
+
+boardsync
+releasebatch
+.cache
