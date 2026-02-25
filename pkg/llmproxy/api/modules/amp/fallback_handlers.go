@@ -147,22 +147,9 @@ func (fh *FallbackHandler) WrapHandler(handler gin.HandlerFunc) gin.HandlerFunc 
 				return "", nil
 			}
 
-			mappedModel, mappedParams := fh.modelMapper.MapModelWithParams(modelName)
+			mappedModel := fh.modelMapper.MapModel(modelName)
 			if mappedModel == "" {
-				mappedModel, mappedParams = fh.modelMapper.MapModelWithParams(normalizedModel)
-			}
-			if mappedModel != "" && len(mappedParams) > 0 {
-				for key, value := range mappedParams {
-					if key == "model" {
-						continue
-					}
-					var err error
-					bodyBytes, err = sjson.SetBytes(bodyBytes, key, value)
-					if err != nil {
-						log.Warnf("amp model mapping: failed to inject param %q from model-mapping into request body: %v", key, err)
-					}
-				}
-				c.Request.Body = io.NopCloser(bytes.NewReader(bodyBytes))
+				mappedModel = fh.modelMapper.MapModel(normalizedModel)
 			}
 			mappedModel = strings.TrimSpace(mappedModel)
 			if mappedModel == "" {

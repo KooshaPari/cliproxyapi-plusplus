@@ -6,9 +6,8 @@ Worktree: `cliproxyapi-plusplus-wave-cpb-2`
 ## Per-Issue Status
 
 ### #169
-- Status: `implemented`
-- Notes: verified OpenAI models URL/versioned-path behavior in runtime executor path.
-  - Evidence: `go test ./pkg/llmproxy/runtime/executor -run 'TestResolveOpenAIModelsURL|TestFetchOpenAIModels_UsesVersionedPath' -count=1`
+- Status: `pending`
+- Notes: not selected in this pass; kept pending while lane A closed five higher-confidence runtime/code items first.
 
 ### #165
 - Status: `implemented`
