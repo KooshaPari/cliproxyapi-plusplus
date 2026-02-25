@@ -2,17 +2,6 @@
 
 This docs site is organized by onboarding guides, API reference, and audience-specific docsets.
 
-## Canonical Documents
-
-> **For quick reference, start with these key documents:**
-
-| Document | Description |
-|----------|-------------|
-| [CHANGELOG.md](./CHANGELOG.md) | Version history and change log |
-| [WORKLOG.md](./WORKLOG.md) | Active work tracking |
-| [PRD.md](./PRD.md) | Product requirements |
-| [SPEC.md](./SPEC.md) | Technical architecture |
-
 ## Guides
 
 - [Getting Started](./getting-started.md)
