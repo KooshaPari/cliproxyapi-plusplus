@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/router-for-me/CLIProxyAPI/v6/internal/misc"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/misc"
 )
 
 func sanitizeTokenFilePath(path string) (string, error) {
