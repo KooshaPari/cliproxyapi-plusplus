@@ -724,13 +724,16 @@ func (m *Manager) executeStreamMixedOnce(ctx context.Context, providers []string
 		return nil, &Error{Code: "provider_not_found", Message: "no provider supplied"}
 	}
 
-	var chunks <-chan cliproxyexecutor.StreamChunk
+	var result *cliproxyexecutor.StreamResult
 	err := m.executeWithFallback(ctx, providers, req, opts, func(ctx context.Context, executor ProviderExecutor, auth *Auth, provider, routeModel string) error {
 		return m.executeMixedAttempt(ctx, auth, provider, routeModel, req, opts, func(execCtx context.Context, execReq cliproxyexecutor.Request) error {
 			var errExec error
-			chunks, errExec = executor.ExecuteStream(execCtx, auth, execReq, opts)
+			result, errExec = executor.ExecuteStream(execCtx, auth, execReq, opts)
 			if errExec != nil {
 				return errExec
+			}
+			if result == nil {
+				return errors.New("empty stream result")
 			}
 
 			out := make(chan cliproxyexecutor.StreamChunk)
@@ -764,12 +767,15 @@ func (m *Manager) executeStreamMixedOnce(ctx context.Context, providers []string
 				if !failed {
 					m.MarkResult(streamCtx, Result{AuthID: streamAuth.ID, Provider: streamProvider, Model: routeModel, Success: true})
 				}
-			}(execCtx, auth.Clone(), provider, chunks)
-			chunks = out
+			}(execCtx, auth.Clone(), provider, result.Chunks)
+			result = &cliproxyexecutor.StreamResult{
+				Headers: result.Headers,
+				Chunks:  out,
+			}
 			return nil
 		})
 	})
-	return chunks, err
+	return result, err
 }
 
 func ensureRequestedModelMetadata(opts cliproxyexecutor.Options, requestedModel string) cliproxyexecutor.Options {
