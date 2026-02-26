@@ -15,6 +15,7 @@ jobs:
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
     if: ${{ !startsWith(github.head_ref, 'ci/fix-migrated-router-20260225060000-feature_ampcode-alias') }}
 =======
 >>>>>>> eec7a0c9 (ci: align required check names and allow ci/fix-feat translator diffs)
@@ -29,6 +30,8 @@ jobs:
 =======
     if: ${{ !startsWith(github.head_ref, 'ci/fix-migrated-router-20260225060000-feature_ampcode-alias') }}
 >>>>>>> 8782f14f (ci: branch-scope build and codeql for migrated router compatibility)
+=======
+>>>>>>> 09dc6ea5 (ci: add workflow job names for required-checks enforcement)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
