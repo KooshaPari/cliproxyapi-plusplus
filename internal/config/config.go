@@ -92,6 +92,10 @@ type Config struct {
 	// Nil means enabled (default behavior).
 	ResponsesCompactEnabled *bool `yaml:"responses-compact-enabled,omitempty" json:"responses-compact-enabled,omitempty"`
 
+	// ResponsesCompactEnabled gates support for responses/compact endpoint.
+	// Nil means enabled (default behavior).
+	ResponsesCompactEnabled *bool `yaml:"responses-compact-enabled,omitempty" json:"responses-compact-enabled,omitempty"`
+
 	// GeminiKey defines Gemini API key configurations with optional routing overrides.
 	GeminiKey []GeminiKey `yaml:"gemini-api-key" json:"gemini-api-key"`
 
@@ -1121,8 +1125,8 @@ func (cfg *Config) IsResponsesWebsocketEnabled() bool {
 	return *cfg.ResponsesWebsocketEnabled
 }
 
-// IsResponsesCompactEnabled returns true when the dedicated responses compact
-// route should be mounted. Default is enabled when unset.
+// IsResponsesCompactEnabled returns true when /responses/compact should be enabled.
+// This defaults to true when unset to preserve previous behavior.
 func (cfg *Config) IsResponsesCompactEnabled() bool {
 	if cfg == nil || cfg.ResponsesCompactEnabled == nil {
 		return true

@@ -97,14 +97,15 @@ func (o *CodexAuth) ExchangeCodeForTokens(ctx context.Context, code string, pkce
 	return o.ExchangeCodeForTokensWithRedirect(ctx, code, RedirectURI, pkceCodes)
 }
 
-// ExchangeCodeForTokensWithRedirect exchanges an authorization code for access and refresh
-// tokens while allowing callers to override the redirect URI.
+// ExchangeCodeForTokensWithRedirect exchanges an authorization code for tokens using
+// a caller-provided redirect URI. This supports alternate auth flows such as device
+// login while preserving the existing token parsing and storage behavior.
 func (o *CodexAuth) ExchangeCodeForTokensWithRedirect(ctx context.Context, code, redirectURI string, pkceCodes *PKCECodes) (*CodexAuthBundle, error) {
 	if pkceCodes == nil {
 		return nil, fmt.Errorf("PKCE codes are required for token exchange")
 	}
 	if strings.TrimSpace(redirectURI) == "" {
-		redirectURI = RedirectURI
+		return nil, fmt.Errorf("redirect URI is required for token exchange")
 	}
 
 	// Prepare token exchange request
@@ -112,7 +113,7 @@ func (o *CodexAuth) ExchangeCodeForTokensWithRedirect(ctx context.Context, code,
 		"grant_type":    {"authorization_code"},
 		"client_id":     {ClientID},
 		"code":          {code},
-		"redirect_uri":  {redirectURI},
+		"redirect_uri":  {strings.TrimSpace(redirectURI)},
 		"code_verifier": {pkceCodes.CodeVerifier},
 	}
 
