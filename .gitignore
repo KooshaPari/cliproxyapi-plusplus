@@ -79,3 +79,4 @@ boardsync
 releasebatch
 .cache
 logs/
+!.gemini/config.yaml
