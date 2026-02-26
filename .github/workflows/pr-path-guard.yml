@@ -24,6 +24,7 @@ jobs:
       - name: Fail when restricted paths change
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         if: steps.changed-files.outputs.any_changed == 'true' && !(startsWith(github.head_ref, 'feature/koosh-migrate') || startsWith(github.head_ref, 'feature/migrate-') || startsWith(github.head_ref, 'migrated/') || startsWith(github.head_ref, 'ci/fix-feature-koosh-migrate') || startsWith(github.head_ref, 'ci/fix-feature-migrate-') || startsWith(github.head_ref, 'ci/fix-migrated/') || startsWith(github.head_ref, 'ci/fix-feat-'))
 =======
         if: steps.changed-files.outputs.any_changed == 'true' && !(startsWith(github.head_ref, 'feature/koosh-migrate') || startsWith(github.head_ref, 'feature/migrate-') || startsWith(github.head_ref, 'migrated/'))
@@ -31,6 +32,9 @@ jobs:
 =======
         if: steps.changed-files.outputs.any_changed == 'true' && !(startsWith(github.head_ref, 'feature/koosh-migrate') || startsWith(github.head_ref, 'feature/migrate-') || startsWith(github.head_ref, 'migrated/'))
 >>>>>>> 37bc97ef (ci: add required-checks manifest and migration translator path exception)
+=======
+        if: steps.changed-files.outputs.any_changed == 'true' && !(startsWith(github.head_ref, 'feature/koosh-migrate') || startsWith(github.head_ref, 'feature/migrate-') || startsWith(github.head_ref, 'migrated/'))
+>>>>>>> 4e6d2336 (ci: add required-checks manifest and migration translator path exception)
         run: |
           disallowed_files="$(printf '%s\n' \
             $(printf '%s' '${{ steps.changed-files.outputs.all_changed_files }}' | tr ',' '\n') \
