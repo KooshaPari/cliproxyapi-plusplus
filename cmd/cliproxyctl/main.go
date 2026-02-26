@@ -17,6 +17,7 @@ import (
 
 	cliproxycmd "github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/cmd"
 	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/config"
+	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/util"
 )
 
 const responseSchemaVersion = "cliproxyctl.response.v1"
@@ -78,7 +79,7 @@ func defaultCommandExecutor() commandExecutor {
 }
 
 func runProviderLogin(cfg *config.Config, provider string, projectID string, options *cliproxycmd.LoginOptions) error {
-	switch normalizeProvider(provider) {
+	switch util.NormalizeProviderAlias(provider) {
 	case "gemini":
 		cliproxycmd.DoLogin(cfg, strings.TrimSpace(projectID), options)
 	case "claude":
@@ -131,40 +132,6 @@ func runProviderLogin(cfg *config.Config, provider string, projectID string, opt
 		return fmt.Errorf("unsupported provider %q", provider)
 	}
 	return nil
-}
-
-func normalizeProvider(provider string) string {
-	normalized := strings.ToLower(strings.TrimSpace(provider))
-	switch normalized {
-	case "github-copilot":
-		return "copilot"
-	case "githubcopilot":
-		return "copilot"
-	case "ampcode":
-		return "amp"
-	case "amp-code":
-		return "amp"
-	case "kilo-code":
-		return "kilo"
-	case "kilocode":
-		return "kilo"
-	case "roo-code":
-		return "roo"
-	case "roocode":
-		return "roo"
-	case "droid":
-		return "gemini"
-	case "droid-cli":
-		return "gemini"
-	case "droidcli":
-		return "gemini"
-	case "factoryapi":
-		return "factory-api"
-	case "openai-compatible":
-		return "factory-api"
-	default:
-		return normalized
-	}
 }
 
 func main() {
@@ -712,7 +679,7 @@ func normalizeProviders(raw string) []string {
 	out := make([]string, 0, len(parts))
 	seen := map[string]bool{}
 	for _, part := range parts {
-		provider := normalizeProvider(strings.TrimSpace(part))
+		provider := util.NormalizeProviderAlias(strings.TrimSpace(part))
 		if provider == "" || seen[provider] {
 			continue
 		}
@@ -731,7 +698,7 @@ func resolveLoginProvider(raw string) (string, map[string]any, error) {
 			"error":           "missing provider",
 		}, errors.New("missing provider")
 	}
-	normalized := normalizeProvider(rawProvider)
+	normalized := util.NormalizeProviderAlias(rawProvider)
 	supported := supportedProviders()
 	if !isSupportedProvider(normalized) {
 		return "", map[string]any{
