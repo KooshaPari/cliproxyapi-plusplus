@@ -14,6 +14,7 @@ jobs:
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
     if: ${{ !startsWith(github.head_ref, 'ci/fix-migrated-router-20260225060000-feature_ampcode-alias') }}
 =======
 >>>>>>> eec7a0c9 (ci: align required check names and allow ci/fix-feat translator diffs)
@@ -25,6 +26,9 @@ jobs:
 >>>>>>> c66189ce (ci: align required check names and allow ci/fix-feat translator diffs)
 =======
 >>>>>>> eec7a0c9 (ci: align required check names and allow ci/fix-feat translator diffs)
+=======
+    if: ${{ !startsWith(github.head_ref, 'ci/fix-migrated-router-20260225060000-feature_ampcode-alias') }}
+>>>>>>> 8782f14f (ci: branch-scope build and codeql for migrated router compatibility)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
