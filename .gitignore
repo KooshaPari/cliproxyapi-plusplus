@@ -53,3 +53,8 @@ _bmad-output/*
 .DS_Store
 ._*
 *.bak
+
+# Phenotype Config
+.phenotype/
+config.db
+*.key

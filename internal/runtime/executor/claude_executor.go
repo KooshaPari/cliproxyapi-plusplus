@@ -15,14 +15,14 @@ import (
 
 	"github.com/andybalholm/brotli"
 	"github.com/klauspost/compress/zstd"
-	claudeauth "github.com/router-for-me/CLIProxyAPI/v6/internal/auth/claude"
-	"github.com/router-for-me/CLIProxyAPI/v6/internal/config"
-	"github.com/router-for-me/CLIProxyAPI/v6/internal/misc"
-	"github.com/router-for-me/CLIProxyAPI/v6/internal/thinking"
-	"github.com/router-for-me/CLIProxyAPI/v6/internal/util"
-	cliproxyauth "github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/auth"
-	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/executor"
-	sdktranslator "github.com/router-for-me/CLIProxyAPI/v6/sdk/translator"
+	claudeauth "github.com/kooshapari/cliproxyapi-plusplus/v6/internal/auth/claude"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/misc"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/thinking"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/util"
+	cliproxyauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
+	cliproxyexecutor "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/executor"
+	sdktranslator "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/translator"
 	log "github.com/sirupsen/logrus"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
@@ -135,7 +135,7 @@ func (e *ClaudeExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, r
 	extraBetas, body = extractAndRemoveBetas(body)
 	bodyForTranslation := body
 	bodyForUpstream := body
-	if isClaudeOAuthToken(apiKey) && !auth.ToolPrefixDisabled() {
+	if isClaudeOAuthToken(apiKey) && (auth == nil || !auth.ToolPrefixDisabled()) {
 		bodyForUpstream = applyClaudeToolPrefix(body, claudeToolPrefix)
 	}
 
@@ -209,7 +209,7 @@ func (e *ClaudeExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, r
 	} else {
 		reporter.publish(ctx, parseClaudeUsage(data))
 	}
-	if isClaudeOAuthToken(apiKey) && !auth.ToolPrefixDisabled() {
+	if isClaudeOAuthToken(apiKey) && (auth == nil || !auth.ToolPrefixDisabled()) {
 		data = stripClaudeToolPrefixFromResponse(data, claudeToolPrefix)
 	}
 	var param any
@@ -276,7 +276,7 @@ func (e *ClaudeExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.A
 	extraBetas, body = extractAndRemoveBetas(body)
 	bodyForTranslation := body
 	bodyForUpstream := body
-	if isClaudeOAuthToken(apiKey) && !auth.ToolPrefixDisabled() {
+	if isClaudeOAuthToken(apiKey) && (auth == nil || !auth.ToolPrefixDisabled()) {
 		bodyForUpstream = applyClaudeToolPrefix(body, claudeToolPrefix)
 	}
 
@@ -348,7 +348,7 @@ func (e *ClaudeExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.A
 				if detail, ok := parseClaudeStreamUsage(line); ok {
 					reporter.publish(ctx, detail)
 				}
-				if isClaudeOAuthToken(apiKey) && !auth.ToolPrefixDisabled() {
+				if isClaudeOAuthToken(apiKey) && (auth == nil || !auth.ToolPrefixDisabled()) {
 					line = stripClaudeToolPrefixFromStreamLine(line, claudeToolPrefix)
 				}
 				// Forward the line as-is to preserve SSE format
@@ -375,7 +375,7 @@ func (e *ClaudeExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.A
 			if detail, ok := parseClaudeStreamUsage(line); ok {
 				reporter.publish(ctx, detail)
 			}
-			if isClaudeOAuthToken(apiKey) && !auth.ToolPrefixDisabled() {
+			if isClaudeOAuthToken(apiKey) && (auth == nil || !auth.ToolPrefixDisabled()) {
 				line = stripClaudeToolPrefixFromStreamLine(line, claudeToolPrefix)
 			}
 			chunks := sdktranslator.TranslateStream(
@@ -423,7 +423,7 @@ func (e *ClaudeExecutor) CountTokens(ctx context.Context, auth *cliproxyauth.Aut
 	// Extract betas from body and convert to header (for count_tokens too)
 	var extraBetas []string
 	extraBetas, body = extractAndRemoveBetas(body)
-	if isClaudeOAuthToken(apiKey) && !auth.ToolPrefixDisabled() {
+	if isClaudeOAuthToken(apiKey) && (auth == nil || !auth.ToolPrefixDisabled()) {
 		body = applyClaudeToolPrefix(body, claudeToolPrefix)
 	}
 
