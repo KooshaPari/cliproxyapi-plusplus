@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	configaccess "github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/access/config_access"
-	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/api"
+	"github.com/router-for-me/CLIProxyAPI/v6/internal/api"
 	sdkaccess "github.com/router-for-me/CLIProxyAPI/v6/sdk/access"
 	sdkAuth "github.com/router-for-me/CLIProxyAPI/v6/sdk/auth"
 	coreauth "github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/auth"

@@ -5,50 +5,51 @@
 package config
 
 import pkgconfig "github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/config"
+import internalconfig "github.com/router-for-me/CLIProxyAPI/v6/internal/config"
 
 type SDKConfig = pkgconfig.SDKConfig
 
-type Config = pkgconfig.Config
+type Config = internalconfig.Config
 
 type StreamingConfig = pkgconfig.StreamingConfig
-type TLSConfig = pkgconfig.TLSConfig
-type RemoteManagement = pkgconfig.RemoteManagement
-type AmpCode = pkgconfig.AmpCode
-type OAuthModelAlias = pkgconfig.OAuthModelAlias
-type PayloadConfig = pkgconfig.PayloadConfig
-type PayloadRule = pkgconfig.PayloadRule
-type PayloadFilterRule = pkgconfig.PayloadFilterRule
-type PayloadModelRule = pkgconfig.PayloadModelRule
+type TLSConfig = internalconfig.TLSConfig
+type RemoteManagement = internalconfig.RemoteManagement
+type AmpCode = internalconfig.AmpCode
+type OAuthModelAlias = internalconfig.OAuthModelAlias
+type PayloadConfig = internalconfig.PayloadConfig
+type PayloadRule = internalconfig.PayloadRule
+type PayloadFilterRule = internalconfig.PayloadFilterRule
+type PayloadModelRule = internalconfig.PayloadModelRule
 
-type GeminiKey = pkgconfig.GeminiKey
-type CodexKey = pkgconfig.CodexKey
-type ClaudeKey = pkgconfig.ClaudeKey
-type VertexCompatKey = pkgconfig.VertexCompatKey
-type VertexCompatModel = pkgconfig.VertexCompatModel
-type OpenAICompatibility = pkgconfig.OpenAICompatibility
-type OpenAICompatibilityAPIKey = pkgconfig.OpenAICompatibilityAPIKey
-type OpenAICompatibilityModel = pkgconfig.OpenAICompatibilityModel
+type GeminiKey = internalconfig.GeminiKey
+type CodexKey = internalconfig.CodexKey
+type ClaudeKey = internalconfig.ClaudeKey
+type VertexCompatKey = internalconfig.VertexCompatKey
+type VertexCompatModel = internalconfig.VertexCompatModel
+type OpenAICompatibility = internalconfig.OpenAICompatibility
+type OpenAICompatibilityAPIKey = internalconfig.OpenAICompatibilityAPIKey
+type OpenAICompatibilityModel = internalconfig.OpenAICompatibilityModel
 
-type TLS = pkgconfig.TLSConfig
+type TLS = internalconfig.TLSConfig
 
 const (
-	DefaultPanelGitHubRepository = pkgconfig.DefaultPanelGitHubRepository
+	DefaultPanelGitHubRepository = internalconfig.DefaultPanelGitHubRepository
 )
 
-func LoadConfig(configFile string) (*Config, error) { return pkgconfig.LoadConfig(configFile) }
+func LoadConfig(configFile string) (*Config, error) { return internalconfig.LoadConfig(configFile) }
 
 func LoadConfigOptional(configFile string, optional bool) (*Config, error) {
-	return pkgconfig.LoadConfigOptional(configFile, optional)
+	return internalconfig.LoadConfigOptional(configFile, optional)
 }
 
 func SaveConfigPreserveComments(configFile string, cfg *Config) error {
-	return pkgconfig.SaveConfigPreserveComments(configFile, cfg)
+	return internalconfig.SaveConfigPreserveComments(configFile, cfg)
 }
 
 func SaveConfigPreserveCommentsUpdateNestedScalar(configFile string, path []string, value string) error {
-	return pkgconfig.SaveConfigPreserveCommentsUpdateNestedScalar(configFile, path, value)
+	return internalconfig.SaveConfigPreserveCommentsUpdateNestedScalar(configFile, path, value)
 }
 
 func NormalizeCommentIndentation(data []byte) []byte {
-	return pkgconfig.NormalizeCommentIndentation(data)
+	return internalconfig.NormalizeCommentIndentation(data)
 }
