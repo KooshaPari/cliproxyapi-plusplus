@@ -12,7 +12,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/config"
 	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/util"
-	sdkconfig "github.com/router-for-me/CLIProxyAPI/v6/sdk/config"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 )
@@ -45,7 +44,7 @@ func (h *Handler) GetLatestVersion(c *gin.Context) {
 		proxyURL = strings.TrimSpace(h.cfg.ProxyURL)
 	}
 	if proxyURL != "" {
-		sdkCfg := &sdkconfig.SDKConfig{ProxyURL: proxyURL}
+		sdkCfg := &config.SDKConfig{ProxyURL: proxyURL}
 		util.SetProxy(sdkCfg, client)
 	}
 
