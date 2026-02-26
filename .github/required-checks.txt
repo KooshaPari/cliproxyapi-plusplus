@@ -1,21 +1,3 @@
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
 # workflow_file|job_name
-=======
->>>>>>> 2c738a92 (ci: add required-checks manifest and migration translator path exception)
-=======
->>>>>>> 37bc97ef (ci: add required-checks manifest and migration translator path exception)
-=======
->>>>>>> 4e6d2336 (ci: add required-checks manifest and migration translator path exception)
-=======
->>>>>>> 2b4ff9bc (ci: add required-checks manifest and migration translator path exception)
-=======
->>>>>>> 975bd074 (ci: add required-checks manifest and migration translator path exception)
-=======
->>>>>>> f24e5aef (ci: add required-checks manifest and migration translator path exception)
 pr-test-build.yml|build
 pr-path-guard.yml|ensure-no-translator-changes
