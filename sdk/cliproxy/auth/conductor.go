@@ -3,7 +3,9 @@ package auth
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/json"
+	"encoding/hex"
 	"errors"
 	"io"
 	"net/http"
@@ -2264,6 +2266,19 @@ func formatOauthIdentity(auth *Auth, provider string, accountInfo string) string
 		return accountInfo
 	}
 	return strings.Join(parts, " ")
+}
+
+func authLogRef(auth *Auth) string {
+	if auth == nil {
+		return "provider=unknown auth_id_hash="
+	}
+	provider := strings.TrimSpace(auth.Provider)
+	if provider == "" {
+		provider = "unknown"
+	}
+	sum := sha256.Sum256([]byte(strings.TrimSpace(auth.ID)))
+	hash := hex.EncodeToString(sum[:8])
+	return "provider=" + provider + " auth_id_hash=" + hash
 }
 
 // InjectCredentials delegates per-provider HTTP request preparation when supported.

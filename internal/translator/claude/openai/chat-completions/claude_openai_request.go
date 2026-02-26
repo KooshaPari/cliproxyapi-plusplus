@@ -264,8 +264,10 @@ func ConvertOpenAIRequestToClaude(modelName string, inputRawJSON []byte, stream 
 					})
 				}
 
-				out, _ = sjson.SetRaw(out, "messages.-1", msg)
-				messageIndex++
+				if content := gjson.Parse(msg).Get("content"); content.Exists() && content.IsArray() && len(content.Array()) > 0 {
+					out, _ = sjson.SetRaw(out, "messages.-1", msg)
+					messageIndex++
+				}
 
 			case "tool":
 				// Handle tool result messages conversion
