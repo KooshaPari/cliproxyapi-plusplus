@@ -95,6 +95,19 @@ This project only accepts pull requests that relate to third-party provider supp
 
 If you need to submit any non-third-party provider changes, please open them against the [mainline](https://github.com/router-for-me/CLIProxyAPI) repository.
 
+### GitHub Safety Guard
+
+Use `scripts/gh-owned` for GitHub mutations that target issues/PRs.
+
+```bash
+./scripts/gh-owned issue create
+./scripts/gh-owned issue comment 123 --body "..."
+./scripts/gh-owned pr create
+./scripts/gh-owned pr comment 456 --body "..."
+```
+
+The command is blocked for repos outside owned spaces (`KooshaPari`, `atoms-tech`) and exits non-zero before the mutation runs.
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

@@ -1,0 +1,108 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REAL_GH="$(command -v gh)"
+GUARD_SCRIPT="${SCRIPT_DIR}/github-owned-guard.sh"
+
+if [[ -z "${REAL_GH}" ]]; then
+  echo "Missing 'gh' command on PATH." >&2
+  exit 2
+fi
+
+if [[ $# -lt 2 ]]; then
+  exec "$REAL_GH" "$@"
+fi
+
+top="$1"
+sub="$2"
+
+is_mutating_target() {
+  case "$top $sub" in
+    "issue create"|"issue comment"|"pr create"|"pr comment")
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+parse_repo_from_args() {
+  local args=("$@")
+  local previous=""
+  local repo_part
+  for arg in "${args[@]}"; do
+    if [[ "$previous" == "repo" ]]; then
+      echo "$arg"
+      return 0
+    fi
+
+    case "$arg" in
+      --repo)
+        previous="repo"
+        ;;
+      -R)
+        previous="repo"
+        ;;
+      --repo=*)
+        echo "${arg#--repo=}"
+        return 0
+        ;;
+      -R=*)
+        echo "${arg#-R=}"
+        return 0
+        ;;
+      *)
+        if [[ "$arg" == *\#* ]]; then
+          repo_part="${arg%%#*}"
+        else
+          repo_part="$arg"
+        fi
+
+        if [[ "$repo_part" == */* && "$repo_part" != *://* && "$repo_part" != git@* && "$repo_part" != -* ]]; then
+          echo "$repo_part"
+          return 0
+        fi
+        ;;
+    esac
+  done
+
+  return 1
+}
+
+resolve_target_repo() {
+  local target_repo
+  target_repo="$(parse_repo_from_args "$@")" || target_repo=""
+
+  if [[ -z "${target_repo:-}" ]]; then
+    local repo_root=""
+    if repo_root="$(git -C "${PWD}" rev-parse --show-toplevel 2>/dev/null)"; then
+      if target_repo="$(git -C "$repo_root" remote get-url origin 2>/dev/null)"; then
+        if [[ -z "$target_repo" ]]; then
+          target_repo="$(git -C "$repo_root" remote get-url upstream 2>/dev/null || true)"
+        fi
+      else
+        target_repo=""
+      fi
+    fi
+  fi
+  [[ -n "${target_repo:-}" ]] && printf '%s' "$target_repo"
+}
+
+if is_mutating_target "$top" "$sub"; then
+  target_repo="$(resolve_target_repo "$@")"
+
+  if [[ -z "${target_repo:-}" ]]; then
+    echo "Blocked: unable to determine target repository for '$top $sub' mutation." >&2
+    exit 2
+  fi
+
+  if ! "$GUARD_SCRIPT" "$target_repo" >/dev/null; then
+    echo "Blocked: cannot run mutation action on target '$target_repo'." >&2
+    exit 2
+  fi
+fi
+
+exec "$REAL_GH" "$@"
