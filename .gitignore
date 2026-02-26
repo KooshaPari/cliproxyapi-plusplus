@@ -54,3 +54,8 @@ _bmad-output/*
 ._*
 *.bak
 server
+
+# Phenotype Config
+.phenotype/
+config.db
+*.key
