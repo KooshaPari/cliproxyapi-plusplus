@@ -44,8 +44,6 @@ type ConvertOpenAIResponseToAnthropicParams struct {
 	MessageStarted bool
 	// Track if message_stop has been sent
 	MessageStopSent bool
-	// Accumulated annotations (url_citation) from OpenAI web search
-	AnnotationsRaw []string
 	// Tool call content block index mapping
 	ToolCallBlockIndexes map[int]int
 	// Index assigned to text content block
@@ -245,15 +243,6 @@ func convertOpenAIStreamingChunkToAnthropic(rawJSON []byte, param *ConvertOpenAI
 			param.ContentAccumulator.WriteString(content.String())
 		}
 
-		// Handle annotations (url_citation from web search)
-		if annotations := delta.Get("annotations"); annotations.Exists() && annotations.IsArray() {
-			annotations.ForEach(func(_, ann gjson.Result) bool {
-				compacted := strings.ReplaceAll(strings.ReplaceAll(ann.Raw, "\n", ""), "\r", "")
-				param.AnnotationsRaw = append(param.AnnotationsRaw, compacted)
-				return true
-			})
-		}
-
 		// Handle tool calls
 		if toolCalls := delta.Get("tool_calls"); toolCalls.Exists() && toolCalls.IsArray() {
 			if param.ToolCallsAccumulator == nil {
@@ -376,24 +365,9 @@ func convertOpenAIStreamingChunkToAnthropic(rawJSON []byte, param *ConvertOpenAI
 		usage := root.Get("usage")
 		var inputTokens, outputTokens int64
 		if usage.Exists() && usage.Type != gjson.Null {
-			inputTokens, outputTokens, cachedTokens = extractOpenAIUsage(usage)
-			// Send message_delta with usage
-			messageDeltaJSON := `{"type":"message_delta","delta":{"stop_reason":"","stop_sequence":null},"usage":{"input_tokens":0,"output_tokens":0}}`
-			messageDeltaJSON, _ = sjson.Set(messageDeltaJSON, "delta.stop_reason", mapOpenAIFinishReasonToAnthropic(param.FinishReason))
-			messageDeltaJSON, _ = sjson.Set(messageDeltaJSON, "usage.input_tokens", inputTokens)
-			messageDeltaJSON, _ = sjson.Set(messageDeltaJSON, "usage.output_tokens", outputTokens)
-			if cachedTokens > 0 {
-				messageDeltaJSON, _ = sjson.Set(messageDeltaJSON, "usage.cache_read_input_tokens", cachedTokens)
-			}
-			// Attach accumulated annotations as citations
-			if len(param.AnnotationsRaw) > 0 {
-				messageDeltaJSON, _ = sjson.SetRaw(messageDeltaJSON, "citations", "[]")
-				for _, raw := range param.AnnotationsRaw {
-					messageDeltaJSON, _ = sjson.SetRaw(messageDeltaJSON, "citations.-1", raw)
-				}
-			}
-			results = append(results, "event: message_delta\ndata: "+messageDeltaJSON+"\n\n")
-			param.MessageDeltaSent = true
+			// Check if usage has actual token counts
+			promptTokens := usage.Get("prompt_tokens")
+			completionTokens := usage.Get("completion_tokens")
 
 			if promptTokens.Exists() && completionTokens.Exists() {
 				inputTokens = promptTokens.Int()
@@ -568,16 +542,6 @@ func convertOpenAINonStreamingToAnthropic(rawJSON []byte) []string {
 		// Set stop reason
 		if finishReason := choice.Get("finish_reason"); finishReason.Exists() {
 			response["stop_reason"] = mapOpenAIFinishReasonToAnthropic(finishReason.String())
-		}
-
-		// Handle annotations (url_citation from web search)
-		if annotations := choice.Get("message.annotations"); annotations.Exists() && annotations.IsArray() && len(annotations.Array()) > 0 {
-			out, _ = sjson.SetRaw(out, "citations", "[]")
-			annotations.ForEach(func(_, ann gjson.Result) bool {
-				compacted := strings.ReplaceAll(strings.ReplaceAll(ann.Raw, "\n", ""), "\r", "")
-				out, _ = sjson.SetRaw(out, "citations.-1", compacted)
-				return true
-			})
 		}
 	}
 
@@ -864,16 +828,6 @@ func ConvertOpenAIResponseToClaudeNonStream(_ context.Context, _ string, origina
 					}
 
 					contentBlocks = append(contentBlocks, toolUseBlock)
-					return true
-				})
-			}
-
-			// Handle annotations (url_citation from web search)
-			if annotations := message.Get("annotations"); annotations.Exists() && annotations.IsArray() && len(annotations.Array()) > 0 {
-				out, _ = sjson.SetRaw(out, "citations", "[]")
-				annotations.ForEach(func(_, ann gjson.Result) bool {
-					compacted := strings.ReplaceAll(strings.ReplaceAll(ann.Raw, "\n", ""), "\r", "")
-					out, _ = sjson.SetRaw(out, "citations.-1", compacted)
 					return true
 				})
 			}
