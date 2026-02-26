@@ -10,9 +10,12 @@ jobs:
   build:
     name: build
 <<<<<<< HEAD
+<<<<<<< HEAD
     if: ${{ !startsWith(github.head_ref, 'ci/fix-migrated-router-20260225060000-feature_ampcode-alias') }}
 =======
 >>>>>>> eec7a0c9 (ci: align required check names and allow ci/fix-feat translator diffs)
+=======
+>>>>>>> bd745ed7 (ci: align required check names and allow ci/fix-feat translator diffs)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
