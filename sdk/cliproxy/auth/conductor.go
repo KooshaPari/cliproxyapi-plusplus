@@ -16,10 +16,10 @@ import (
 
 	"github.com/google/uuid"
 	internalconfig "github.com/router-for-me/CLIProxyAPI/v6/internal/config"
-	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/logging"
-	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/registry"
-	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/thinking"
-	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/util"
+	"github.com/router-for-me/CLIProxyAPI/v6/internal/logging"
+	"github.com/router-for-me/CLIProxyAPI/v6/internal/registry"
+	"github.com/router-for-me/CLIProxyAPI/v6/internal/thinking"
+	"github.com/router-for-me/CLIProxyAPI/v6/internal/util"
 	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/executor"
 	log "github.com/sirupsen/logrus"
 )
@@ -724,13 +724,16 @@ func (m *Manager) executeStreamMixedOnce(ctx context.Context, providers []string
 		return nil, &Error{Code: "provider_not_found", Message: "no provider supplied"}
 	}
 
-	var chunks <-chan cliproxyexecutor.StreamChunk
+	var result *cliproxyexecutor.StreamResult
 	err := m.executeWithFallback(ctx, providers, req, opts, func(ctx context.Context, executor ProviderExecutor, auth *Auth, provider, routeModel string) error {
 		return m.executeMixedAttempt(ctx, auth, provider, routeModel, req, opts, func(execCtx context.Context, execReq cliproxyexecutor.Request) error {
 			var errExec error
-			chunks, errExec = executor.ExecuteStream(execCtx, auth, execReq, opts)
+			result, errExec = executor.ExecuteStream(execCtx, auth, execReq, opts)
 			if errExec != nil {
 				return errExec
+			}
+			if result == nil {
+				return errors.New("empty stream result")
 			}
 
 			out := make(chan cliproxyexecutor.StreamChunk)
@@ -764,12 +767,15 @@ func (m *Manager) executeStreamMixedOnce(ctx context.Context, providers []string
 				if !failed {
 					m.MarkResult(streamCtx, Result{AuthID: streamAuth.ID, Provider: streamProvider, Model: routeModel, Success: true})
 				}
-			}(execCtx, auth.Clone(), provider, chunks)
-			chunks = out
+			}(execCtx, auth.Clone(), provider, result.Chunks)
+			result = &cliproxyexecutor.StreamResult{
+				Headers: result.Headers,
+				Chunks:  out,
+			}
 			return nil
 		})
 	})
-	return chunks, err
+	return result, err
 }
 
 func ensureRequestedModelMetadata(opts cliproxyexecutor.Options, requestedModel string) cliproxyexecutor.Options {
