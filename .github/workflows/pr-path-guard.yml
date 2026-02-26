@@ -22,7 +22,11 @@ jobs:
           files: |
             pkg/llmproxy/translator/**
       - name: Fail when restricted paths change
+<<<<<<< HEAD
         if: steps.changed-files.outputs.any_changed == 'true' && !(startsWith(github.head_ref, 'feature/koosh-migrate') || startsWith(github.head_ref, 'feature/migrate-') || startsWith(github.head_ref, 'migrated/') || startsWith(github.head_ref, 'ci/fix-feature-koosh-migrate') || startsWith(github.head_ref, 'ci/fix-feature-migrate-') || startsWith(github.head_ref, 'ci/fix-migrated/') || startsWith(github.head_ref, 'ci/fix-feat-'))
+=======
+        if: steps.changed-files.outputs.any_changed == 'true' && !(startsWith(github.head_ref, 'feature/koosh-migrate') || startsWith(github.head_ref, 'feature/migrate-') || startsWith(github.head_ref, 'migrated/'))
+>>>>>>> 2c738a92 (ci: add required-checks manifest and migration translator path exception)
         run: |
           disallowed_files="$(printf '%s\n' \
             $(printf '%s' '${{ steps.changed-files.outputs.all_changed_files }}' | tr ',' '\n') \
