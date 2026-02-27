@@ -9,7 +9,6 @@ on:
 
 jobs:
   ensure-no-translator-changes:
-    name: ensure-no-translator-changes
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -22,10 +21,12 @@ jobs:
           files: |
             pkg/llmproxy/translator/**
       - name: Fail when restricted paths change
-        if: steps.changed-files.outputs.any_changed == 'true' && !(startsWith(github.head_ref, 'feature/koosh-migrate') || startsWith(github.head_ref, 'feature/migrate-') || startsWith(github.head_ref, 'migrated/') || startsWith(github.head_ref, 'ci/fix-feature-koosh-migrate') || startsWith(github.head_ref, 'ci/fix-feature-migrate-') || startsWith(github.head_ref, 'ci/fix-migrated/'))
+        if: steps.changed-files.outputs.any_changed == 'true'
+        env:
+          ALL_CHANGED: ${{ steps.changed-files.outputs.all_changed_files }}
         run: |
           disallowed_files="$(printf '%s\n' \
-            $(printf '%s' '${{ steps.changed-files.outputs.all_changed_files }}' | tr ',' '\n') \
+            $(printf '%s' "$ALL_CHANGED" | tr ',' '\n') \
             | sed '/^internal\/translator\/kiro\/claude\/kiro_websearch_handler.go$/d' \
             | tr '\n' ' ' | xargs)"
           if [ -n "$disallowed_files" ]; then

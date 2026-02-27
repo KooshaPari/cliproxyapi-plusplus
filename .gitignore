@@ -3,8 +3,6 @@ cli-proxy-api
 cliproxy
 cliproxyapi++
 *.exe
-cli-proxy-api-plus
-server
 
 # Hot-reload artifacts
 .air/
@@ -63,6 +61,3 @@ cli-proxy-api-plus-integration-test
 boardsync
 releasebatch
 .cache
-# Build artifacts (cherry-picked from fix/test-cleanups)
-cliproxyapi++
-.air/
