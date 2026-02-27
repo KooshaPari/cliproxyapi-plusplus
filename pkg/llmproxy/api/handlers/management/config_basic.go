@@ -45,7 +45,7 @@ func (h *Handler) GetLatestVersion(c *gin.Context) {
 		proxyURL = strings.TrimSpace(h.cfg.ProxyURL)
 	}
 	if proxyURL != "" {
-		sdkCfg := &config.SDKConfig{ProxyURL: proxyURL}
+		sdkCfg := &sdkconfig.SDKConfig{ProxyURL: proxyURL}
 		util.SetProxy(sdkCfg, client)
 	}
 
