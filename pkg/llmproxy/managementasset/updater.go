@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/config"
+	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/config"
 	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/util"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/singleflight"
@@ -38,14 +39,14 @@ const ManagementFileName = managementAssetName
 var (
 	lastUpdateCheckMu   sync.Mutex
 	lastUpdateCheckTime time.Time
-	currentConfigPtr    atomic.Pointer[config.Config]
+	currentConfigPtr    atomic.Pointer[internalconfig.Config]
 	schedulerOnce       sync.Once
 	schedulerConfigPath atomic.Value
 	sfGroup             singleflight.Group
 )
 
 // SetCurrentConfig stores the latest configuration snapshot for management asset decisions.
-func SetCurrentConfig(cfg *config.Config) {
+func SetCurrentConfig(cfg *internalconfig.Config) {
 	if cfg == nil {
 		currentConfigPtr.Store(nil)
 		return

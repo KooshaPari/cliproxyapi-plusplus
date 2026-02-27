@@ -7,11 +7,12 @@ package config
 import pkgconfig "github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/config"
 import internalconfig "github.com/router-for-me/CLIProxyAPI/v6/internal/config"
 
-type SDKConfig = pkgconfig.SDKConfig
+type SDKConfig = internalconfig.SDKConfig
 
 type Config = internalconfig.Config
 
 type StreamingConfig = pkgconfig.StreamingConfig
+type StreamingConfig = internalconfig.StreamingConfig
 type TLSConfig = internalconfig.TLSConfig
 type RemoteManagement = internalconfig.RemoteManagement
 type AmpCode = internalconfig.AmpCode
