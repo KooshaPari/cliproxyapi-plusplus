@@ -89,6 +89,10 @@ type Config struct {
 	// Nil means enabled (default behavior).
 	ResponsesWebsocketEnabled *bool `yaml:"responses-websocket-enabled,omitempty" json:"responses-websocket-enabled,omitempty"`
 
+	// ResponsesCompactEnabled gates the /v1/responses/compact route rollout.
+	// Nil means enabled (default behavior).
+	ResponsesCompactEnabled *bool `yaml:"responses-compact-enabled,omitempty" json:"responses-compact-enabled,omitempty"`
+
 	// GeminiKey defines Gemini API key configurations with optional routing overrides.
 	GeminiKey []GeminiKey `yaml:"gemini-api-key" json:"gemini-api-key"`
 
