@@ -6,8 +6,16 @@ package config
 
 import internalconfig "github.com/router-for-me/CLIProxyAPI/v6/internal/config"
 
+// Config is an alias to internal/config.Config.
+type Config = internalconfig.Config
+
 // SDKConfig is an alias to internal/config.SDKConfig.
 type SDKConfig = internalconfig.SDKConfig
 
 // StreamingConfig is an alias to internal/config.StreamingConfig.
 type StreamingConfig = internalconfig.StreamingConfig
+
+var (
+	LoadConfig                 = internalconfig.LoadConfig
+	SaveConfigPreserveComments = internalconfig.SaveConfigPreserveComments
+)
