@@ -1,9 +1,13 @@
 # Binaries
 cli-proxy-api
 cliproxy
+cliproxyapi++
 *.exe
 cli-proxy-api-plus
 server
+
+# Hot-reload artifacts
+.air/
 
 
 # Configuration
@@ -43,7 +47,6 @@ GEMINI.md
 .gemini/*
 .serena/*
 .agent/*
-.agents/*
 .agents/*
 .opencode/*
 .bmad/*
