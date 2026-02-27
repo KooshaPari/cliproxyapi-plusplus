@@ -1,0 +1,5 @@
+# workflow_file|job_name
+pr-test-build.yml|build
+pr-path-guard.yml|ensure-no-translator-changes
+required-check-names-guard.yml|verify-required-check-names
+codeql.yml|Analyze (Go)
