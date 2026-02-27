@@ -19,7 +19,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/yaml.v3"
 
-	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/ratelimit"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/ratelimit"
 )
 
 const (
@@ -88,6 +88,9 @@ type Config struct {
 	// ResponsesWebsocketEnabled gates the dedicated /v1/responses/ws route rollout.
 	// Nil means enabled (default behavior).
 	ResponsesWebsocketEnabled *bool `yaml:"responses-websocket-enabled,omitempty" json:"responses-websocket-enabled,omitempty"`
+	// ResponsesCompactEnabled gates the dedicated /v1/responses/compact route rollout.
+	// Nil means enabled (default behavior).
+	ResponsesCompactEnabled *bool `yaml:"responses-compact-enabled,omitempty" json:"responses-compact-enabled,omitempty"`
 
 	// GeminiKey defines Gemini API key configurations with optional routing overrides.
 	GeminiKey []GeminiKey `yaml:"gemini-api-key" json:"gemini-api-key"`
@@ -1118,11 +1121,13 @@ func (cfg *Config) IsResponsesWebsocketEnabled() bool {
 	return *cfg.ResponsesWebsocketEnabled
 }
 
-// IsResponsesCompactEnabled returns true when /responses/compact is enabled.
-// The current internal config surface does not expose a dedicated toggle, so
-// the route remains enabled by default.
+// IsResponsesCompactEnabled returns true when the dedicated responses compact
+// route should be mounted. Default is enabled when unset.
 func (cfg *Config) IsResponsesCompactEnabled() bool {
-	return true
+	if cfg == nil || cfg.ResponsesCompactEnabled == nil {
+		return true
+	}
+	return *cfg.ResponsesCompactEnabled
 }
 
 // SanitizeOpenAICompatibility removes OpenAI-compatibility provider entries that are

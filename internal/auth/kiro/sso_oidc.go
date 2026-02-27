@@ -15,12 +15,13 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
-	"github.com/router-for-me/CLIProxyAPI/v6/internal/browser"
-	"github.com/router-for-me/CLIProxyAPI/v6/internal/config"
-	"github.com/router-for-me/CLIProxyAPI/v6/internal/util"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/browser"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/util"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -52,6 +53,7 @@ const (
 var (
 	ErrAuthorizationPending = errors.New("authorization_pending")
 	ErrSlowDown             = errors.New("slow_down")
+	oidcRegionPattern       = regexp.MustCompile(`^[a-z]{2}-[a-z]{2,3}-\d$`)
 )
 
 // SSOOIDCClient handles AWS SSO OIDC authentication.
@@ -249,7 +251,11 @@ func (c *SSOOIDCClient) StartDeviceAuthorizationWithIDC(ctx context.Context, cli
 
 // CreateTokenWithRegion polls for the access token after user authorization using a specific region.
 func (c *SSOOIDCClient) CreateTokenWithRegion(ctx context.Context, clientID, clientSecret, deviceCode, region string) (*CreateTokenResponse, error) {
-	endpoint := getOIDCEndpoint(region)
+	normalizedRegion, errRegion := normalizeOIDCRegion(region)
+	if errRegion != nil {
+		return nil, errRegion
+	}
+	endpoint := getOIDCEndpoint(normalizedRegion)
 
 	payload := map[string]string{
 		"clientId":     clientID,
@@ -311,6 +317,16 @@ func (c *SSOOIDCClient) CreateTokenWithRegion(ctx context.Context, clientID, cli
 	return &result, nil
 }
 
+func normalizeOIDCRegion(region string) (string, error) {
+	trimmed := strings.TrimSpace(region)
+	if trimmed == "" {
+		return defaultIDCRegion, nil
+	}
+	if !oidcRegionPattern.MatchString(trimmed) {
+		return "", fmt.Errorf("invalid OIDC region %q", region)
+	}
+	return trimmed, nil
+}
 // RefreshTokenWithRegion refreshes an access token using the refresh token with a specific region.
 func (c *SSOOIDCClient) RefreshTokenWithRegion(ctx context.Context, clientID, clientSecret, refreshToken, region, startURL string) (*KiroTokenData, error) {
 	endpoint := getOIDCEndpoint(region)
