@@ -86,8 +86,6 @@ func (a GitHubCopilotAuthenticator) Login(ctx context.Context, cfg *config.Confi
 	metadata := map[string]any{
 		"type":         "github-copilot",
 		"username":     authBundle.Username,
-		"email":        authBundle.Email,
-		"name":         authBundle.Name,
 		"access_token": authBundle.TokenData.AccessToken,
 		"token_type":   authBundle.TokenData.TokenType,
 		"scope":        authBundle.TokenData.Scope,
@@ -100,10 +98,7 @@ func (a GitHubCopilotAuthenticator) Login(ctx context.Context, cfg *config.Confi
 
 	fileName := fmt.Sprintf("github-copilot-%s.json", authBundle.Username)
 
-	label := authBundle.Email
-	if label == "" {
-		label = authBundle.Username
-	}
+	label := authBundle.Username
 
 	fmt.Printf("\nGitHub Copilot authentication successful for user: %s\n", authBundle.Username)
 
