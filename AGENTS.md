@@ -119,3 +119,16 @@ kush/
 - Require policy gating, auditability, and traceable correlation IDs for agent and workflow actions.
 - Document architectural and protocol decisions before broad rollout changes.
 
+
+## Bot Review Retrigger and Rate-Limit Governance
+
+- Retrigger commands:
+  - CodeRabbit: `@coderabbitai full review`
+  - Gemini Code Assist: `@gemini-code-assist review` (fallback: `/gemini review`)
+- Rate-limit contract:
+  - Maximum one retrigger per bot per PR every 15 minutes.
+  - Before triggering, check latest PR comments for existing trigger markers and bot quota/rate-limit responses.
+  - If rate-limited, queue the retry for the later of 15 minutes or bot-provided retry time.
+  - After two consecutive rate-limit responses for the same bot/PR, stop auto-retries and post queued status with next attempt time.
+- Tracking marker required in PR comments for each trigger:
+  - `bot-review-trigger: <bot> <iso8601-time> <reason>`
