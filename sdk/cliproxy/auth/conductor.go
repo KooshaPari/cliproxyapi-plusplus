@@ -15,12 +15,12 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	internalconfig "github.com/router-for-me/CLIProxyAPI/v6/internal/config"
-	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/logging"
-	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/registry"
-	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/thinking"
-	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/util"
-	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/executor"
+	internalconfig "github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/logging"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/registry"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/thinking"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/util"
+	cliproxyexecutor "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/executor"
 	log "github.com/sirupsen/logrus"
 )
 
