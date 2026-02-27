@@ -98,13 +98,15 @@ func (a GitHubCopilotAuthenticator) Login(ctx context.Context, cfg *config.Confi
 
 	fileName := fmt.Sprintf("github-copilot-%s.json", authBundle.Username)
 
+	label := authBundle.Username
+
 	fmt.Printf("\nGitHub Copilot authentication successful for user: %s\n", authBundle.Username)
 
 	return &coreauth.Auth{
 		ID:       fileName,
 		Provider: a.Provider(),
 		FileName: fileName,
-		Label:    authBundle.Username,
+		Label:    label,
 		Storage:  tokenStorage,
 		Metadata: metadata,
 	}, nil

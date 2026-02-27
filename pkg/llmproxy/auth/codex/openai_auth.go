@@ -94,8 +94,17 @@ func (o *CodexAuth) GenerateAuthURL(state string, pkceCodes *PKCECodes) (string,
 // It performs an HTTP POST request to the OpenAI token endpoint with the provided
 // authorization code and PKCE verifier.
 func (o *CodexAuth) ExchangeCodeForTokens(ctx context.Context, code string, pkceCodes *PKCECodes) (*CodexAuthBundle, error) {
+	return o.ExchangeCodeForTokensWithRedirect(ctx, code, RedirectURI, pkceCodes)
+}
+
+// ExchangeCodeForTokensWithRedirect exchanges an authorization code for access and refresh
+// tokens while allowing callers to override the redirect URI.
+func (o *CodexAuth) ExchangeCodeForTokensWithRedirect(ctx context.Context, code, redirectURI string, pkceCodes *PKCECodes) (*CodexAuthBundle, error) {
 	if pkceCodes == nil {
 		return nil, fmt.Errorf("PKCE codes are required for token exchange")
+	}
+	if strings.TrimSpace(redirectURI) == "" {
+		redirectURI = RedirectURI
 	}
 
 	// Prepare token exchange request
@@ -103,7 +112,7 @@ func (o *CodexAuth) ExchangeCodeForTokens(ctx context.Context, code string, pkce
 		"grant_type":    {"authorization_code"},
 		"client_id":     {ClientID},
 		"code":          {code},
-		"redirect_uri":  {RedirectURI},
+		"redirect_uri":  {redirectURI},
 		"code_verifier": {pkceCodes.CodeVerifier},
 	}
 
