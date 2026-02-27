@@ -59,3 +59,10 @@ _bmad-output/*
 ._*
 *.bak
 PROJECT-wtrees/
+cli-proxy-api-plus-integration-test
+boardsync
+releasebatch
+.cache
+# Build artifacts (cherry-picked from fix/test-cleanups)
+cliproxyapi++
+.air/
