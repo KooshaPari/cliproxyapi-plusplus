@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/auth/copilot"
-	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/browser"
-	"github.com/router-for-me/CLIProxyAPI/v6/internal/config"
-	coreauth "github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/auth"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/copilot"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/browser"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
+	coreauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -98,15 +98,13 @@ func (a GitHubCopilotAuthenticator) Login(ctx context.Context, cfg *config.Confi
 
 	fileName := fmt.Sprintf("github-copilot-%s.json", authBundle.Username)
 
-	label := authBundle.Username
-
 	fmt.Printf("\nGitHub Copilot authentication successful for user: %s\n", authBundle.Username)
 
 	return &coreauth.Auth{
 		ID:       fileName,
 		Provider: a.Provider(),
 		FileName: fileName,
-		Label:    label,
+		Label:    authBundle.Username,
 		Storage:  tokenStorage,
 		Metadata: metadata,
 	}, nil

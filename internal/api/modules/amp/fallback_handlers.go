@@ -2,16 +2,14 @@ package amp
 
 import (
 	"bytes"
-	"errors"
 	"io"
-	"net/http"
 	"net/http/httputil"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/router-for-me/CLIProxyAPI/v6/internal/thinking"
-	"github.com/router-for-me/CLIProxyAPI/v6/internal/util"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/thinking"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/util"
 	log "github.com/sirupsen/logrus"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
@@ -33,10 +31,6 @@ const (
 
 // MappedModelContextKey is the Gin context key for passing mapped model names.
 const MappedModelContextKey = "mapped_model"
-
-// FallbackModelsContextKey is the Gin context key for passing fallback model names.
-// When the primary mapped model fails (e.g., quota exceeded), these models can be tried.
-const FallbackModelsContextKey = "fallback_models"
 
 // logAmpRouting logs the routing decision for an Amp request with structured fields
 func logAmpRouting(routeType AmpRouteType, requestedModel, resolvedModel, provider, path string) {
@@ -119,16 +113,6 @@ func (fh *FallbackHandler) SetModelMapper(mapper ModelMapper) {
 // If the model's provider is not configured in CLIProxyAPI, it forwards to ampcode.com
 func (fh *FallbackHandler) WrapHandler(handler gin.HandlerFunc) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Swallow ErrAbortHandler panics from ReverseProxy copyResponse to avoid noisy stack traces
-		defer func() {
-			if rec := recover(); rec != nil {
-				if err, ok := rec.(error); ok && errors.Is(err, http.ErrAbortHandler) {
-					return
-				}
-				panic(rec)
-			}
-		}()
-
 		requestPath := c.Request.URL.Path
 
 		// Read the request body to extract the model name
@@ -158,57 +142,36 @@ func (fh *FallbackHandler) WrapHandler(handler gin.HandlerFunc) gin.HandlerFunc 
 			thinkingSuffix = "(" + suffixResult.RawSuffix + ")"
 		}
 
-		// resolveMappedModels returns all mapped models (primary + fallbacks) and providers for the first one.
-		resolveMappedModels := func() ([]string, []string) {
+		resolveMappedModel := func() (string, []string) {
 			if fh.modelMapper == nil {
-				return nil, nil
+				return "", nil
 			}
 
-			mapper, ok := fh.modelMapper.(*DefaultModelMapper)
-			if !ok {
-				// Fallback to single model for non-DefaultModelMapper
-				mappedModel := fh.modelMapper.MapModel(modelName)
-				if mappedModel == "" {
-					mappedModel = fh.modelMapper.MapModel(normalizedModel)
-				}
-				if mappedModel == "" {
-					return nil, nil
-				}
-				mappedBaseModel := thinking.ParseSuffix(mappedModel).ModelName
-				mappedProviders := util.GetProviderName(mappedBaseModel)
-				if len(mappedProviders) == 0 {
-					return nil, nil
-				}
-				return []string{mappedModel}, mappedProviders
+			mappedModel := fh.modelMapper.MapModel(modelName)
+			if mappedModel == "" {
+				mappedModel = fh.modelMapper.MapModel(normalizedModel)
+			}
+			mappedModel = strings.TrimSpace(mappedModel)
+			if mappedModel == "" {
+				return "", nil
 			}
 
-			// Use MapModelWithFallbacks for DefaultModelMapper
-			mappedModels := mapper.MapModelWithFallbacks(modelName)
-			if len(mappedModels) == 0 {
-				mappedModels = mapper.MapModelWithFallbacks(normalizedModel)
-			}
-			if len(mappedModels) == 0 {
-				return nil, nil
-			}
-
-			// Apply thinking suffix if needed
-			for i, model := range mappedModels {
-				if thinkingSuffix != "" {
-					suffixResult := thinking.ParseSuffix(model)
-					if !suffixResult.HasSuffix {
-						mappedModels[i] = model + thinkingSuffix
-					}
+			// Preserve dynamic thinking suffix (e.g. "(xhigh)") when mapping applies, unless the target
+			// already specifies its own thinking suffix.
+			if thinkingSuffix != "" {
+				mappedSuffixResult := thinking.ParseSuffix(mappedModel)
+				if !mappedSuffixResult.HasSuffix {
+					mappedModel += thinkingSuffix
 				}
 			}
 
-			// Get providers for the first model
-			firstBaseModel := thinking.ParseSuffix(mappedModels[0]).ModelName
-			providers := util.GetProviderName(firstBaseModel)
-			if len(providers) == 0 {
-				return nil, nil
+			mappedBaseModel := thinking.ParseSuffix(mappedModel).ModelName
+			mappedProviders := util.GetProviderName(mappedBaseModel)
+			if len(mappedProviders) == 0 {
+				return "", nil
 			}
 
-			return mappedModels, providers
+			return mappedModel, mappedProviders
 		}
 
 		// Track resolved model for logging (may change if mapping is applied)
@@ -222,16 +185,13 @@ func (fh *FallbackHandler) WrapHandler(handler gin.HandlerFunc) gin.HandlerFunc 
 		if forceMappings {
 			// FORCE MODE: Check model mappings FIRST (takes precedence over local API keys)
 			// This allows users to route Amp requests to their preferred OAuth providers
-			if mappedModels, mappedProviders := resolveMappedModels(); len(mappedModels) > 0 {
+			if mappedModel, mappedProviders := resolveMappedModel(); mappedModel != "" {
 				// Mapping found and provider available - rewrite the model in request body
-				bodyBytes = rewriteModelInRequest(bodyBytes, mappedModels[0])
+				bodyBytes = rewriteModelInRequest(bodyBytes, mappedModel)
 				c.Request.Body = io.NopCloser(bytes.NewReader(bodyBytes))
-				// Store mapped model and fallbacks in context for handlers
-				c.Set(MappedModelContextKey, mappedModels[0])
-				if len(mappedModels) > 1 {
-					c.Set(FallbackModelsContextKey, mappedModels[1:])
-				}
-				resolvedModel = mappedModels[0]
+				// Store mapped model in context for handlers that check it (like gemini bridge)
+				c.Set(MappedModelContextKey, mappedModel)
+				resolvedModel = mappedModel
 				usedMapping = true
 				providers = mappedProviders
 			}
@@ -246,16 +206,13 @@ func (fh *FallbackHandler) WrapHandler(handler gin.HandlerFunc) gin.HandlerFunc 
 
 			if len(providers) == 0 {
 				// No providers configured - check if we have a model mapping
-				if mappedModels, mappedProviders := resolveMappedModels(); len(mappedModels) > 0 {
+				if mappedModel, mappedProviders := resolveMappedModel(); mappedModel != "" {
 					// Mapping found and provider available - rewrite the model in request body
-					bodyBytes = rewriteModelInRequest(bodyBytes, mappedModels[0])
+					bodyBytes = rewriteModelInRequest(bodyBytes, mappedModel)
 					c.Request.Body = io.NopCloser(bytes.NewReader(bodyBytes))
-					// Store mapped model and fallbacks in context for handlers
-					c.Set(MappedModelContextKey, mappedModels[0])
-					if len(mappedModels) > 1 {
-						c.Set(FallbackModelsContextKey, mappedModels[1:])
-					}
-					resolvedModel = mappedModels[0]
+					// Store mapped model in context for handlers that check it (like gemini bridge)
+					c.Set(MappedModelContextKey, mappedModel)
+					resolvedModel = mappedModel
 					usedMapping = true
 					providers = mappedProviders
 				}

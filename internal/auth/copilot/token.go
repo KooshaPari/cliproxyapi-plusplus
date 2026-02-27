@@ -9,7 +9,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/router-for-me/CLIProxyAPI/v6/internal/misc"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/misc"
 )
 
 // CopilotTokenStorage stores OAuth2 token information for GitHub Copilot API authentication.
@@ -26,10 +26,6 @@ type CopilotTokenStorage struct {
 	ExpiresAt string `json:"expires_at,omitempty"`
 	// Username is the GitHub username associated with this token.
 	Username string `json:"username"`
-	// Email is the GitHub email address associated with this token.
-	Email string `json:"email,omitempty"`
-	// Name is the GitHub display name associated with this token.
-	Name string `json:"name,omitempty"`
 	// Type indicates the authentication provider type, always "github-copilot" for this storage.
 	Type string `json:"type"`
 }
@@ -50,10 +46,6 @@ type CopilotAuthBundle struct {
 	TokenData *CopilotTokenData
 	// Username is the GitHub username.
 	Username string
-	// Email is the GitHub email address.
-	Email string
-	// Name is the GitHub display name.
-	Name string
 }
 
 // DeviceCodeResponse represents GitHub's device code response.

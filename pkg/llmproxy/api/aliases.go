@@ -2,7 +2,7 @@
 // This allows both "internal/api" and "pkg/llmproxy/api" import paths to work seamlessly.
 package api
 
-import "github.com/router-for-me/CLIProxyAPI/v6/internal/api"
+import "github.com/kooshapari/cliproxyapi-plusplus/v6/internal/api"
 
 // Type aliases
 type ServerOption = api.ServerOption
@@ -13,7 +13,6 @@ var (
 	WithMiddleware                = api.WithMiddleware
 	WithEngineConfigurator        = api.WithEngineConfigurator
 	WithLocalManagementPassword   = api.WithLocalManagementPassword
-	WithPostAuthHook              = api.WithPostAuthHook
 	WithKeepAliveEndpoint         = api.WithKeepAliveEndpoint
 	WithRequestLoggerFactory      = api.WithRequestLoggerFactory
 	NewServer                     = api.NewServer

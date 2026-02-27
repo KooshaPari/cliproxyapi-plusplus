@@ -14,7 +14,7 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
-	"github.com/router-for-me/CLIProxyAPI/v6/internal/thinking"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/thinking"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
 )
@@ -156,12 +156,8 @@ func ConvertOpenAIRequestToClaude(modelName string, inputRawJSON []byte, stream 
 				} else if contentResult.Exists() && contentResult.IsArray() {
 					contentResult.ForEach(func(_, part gjson.Result) bool {
 						if part.Get("type").String() == "text" {
-							textContent := part.Get("text").String()
-							if textContent == "" {
-								return true
-							}
 							textPart := `{"type":"text","text":""}`
-							textPart, _ = sjson.Set(textPart, "text", textContent)
+							textPart, _ = sjson.Set(textPart, "text", part.Get("text").String())
 							out, _ = sjson.SetRaw(out, fmt.Sprintf("messages.%d.content.-1", systemMessageIndex), textPart)
 						}
 						return true
@@ -182,12 +178,8 @@ func ConvertOpenAIRequestToClaude(modelName string, inputRawJSON []byte, stream 
 
 						switch partType {
 						case "text":
-							textContent := part.Get("text").String()
-							if textContent == "" {
-								return true
-							}
 							textPart := `{"type":"text","text":""}`
-							textPart, _ = sjson.Set(textPart, "text", textContent)
+							textPart, _ = sjson.Set(textPart, "text", part.Get("text").String())
 							msg, _ = sjson.SetRaw(msg, "content.-1", textPart)
 
 						case "image_url":

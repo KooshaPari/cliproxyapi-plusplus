@@ -23,22 +23,22 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/router-for-me/CLIProxyAPI/v6/internal/auth/antigravity"
-	"github.com/router-for-me/CLIProxyAPI/v6/internal/auth/claude"
-	"github.com/router-for-me/CLIProxyAPI/v6/internal/auth/codex"
-	"github.com/router-for-me/CLIProxyAPI/v6/internal/auth/copilot"
-	geminiAuth "github.com/router-for-me/CLIProxyAPI/v6/internal/auth/gemini"
-	iflowauth "github.com/router-for-me/CLIProxyAPI/v6/internal/auth/iflow"
-	"github.com/router-for-me/CLIProxyAPI/v6/internal/auth/kilo"
-	"github.com/router-for-me/CLIProxyAPI/v6/internal/auth/kimi"
-	kiroauth "github.com/router-for-me/CLIProxyAPI/v6/internal/auth/kiro"
-	"github.com/router-for-me/CLIProxyAPI/v6/internal/auth/qwen"
-	"github.com/router-for-me/CLIProxyAPI/v6/internal/interfaces"
-	"github.com/router-for-me/CLIProxyAPI/v6/internal/misc"
-	"github.com/router-for-me/CLIProxyAPI/v6/internal/registry"
-	"github.com/router-for-me/CLIProxyAPI/v6/internal/util"
-	sdkAuth "github.com/router-for-me/CLIProxyAPI/v6/sdk/auth"
-	coreauth "github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/auth"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/auth/antigravity"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/auth/claude"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/auth/codex"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/auth/copilot"
+	geminiAuth "github.com/kooshapari/cliproxyapi-plusplus/v6/internal/auth/gemini"
+	iflowauth "github.com/kooshapari/cliproxyapi-plusplus/v6/internal/auth/iflow"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/auth/kilo"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/auth/kimi"
+	kiroauth "github.com/kooshapari/cliproxyapi-plusplus/v6/internal/auth/kiro"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/auth/qwen"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/interfaces"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/misc"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/registry"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/util"
+	sdkAuth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/auth"
+	coreauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
 	log "github.com/sirupsen/logrus"
 	"github.com/tidwall/gjson"
 	"golang.org/x/oauth2"
@@ -1929,6 +1929,8 @@ func (h *Handler) RequestGitHubToken(c *gin.Context) {
 	state := fmt.Sprintf("gh-%d", time.Now().UnixNano())
 
 	// Initialize Copilot auth service
+	// We need to import "github.com/kooshapari/cliproxyapi-plusplus/v6/internal/auth/copilot" first if not present
+	// Assuming copilot package is imported as "copilot"
 	deviceClient := copilot.NewDeviceFlowClient(h.cfg)
 
 	// Initiate device flow
@@ -1942,7 +1944,7 @@ func (h *Handler) RequestGitHubToken(c *gin.Context) {
 	authURL := deviceCode.VerificationURI
 	userCode := deviceCode.UserCode
 
-	RegisterOAuthSession(state, "github-copilot")
+	RegisterOAuthSession(state, "github")
 
 	go func() {
 		fmt.Printf("Please visit %s and enter code: %s\n", authURL, userCode)
@@ -1954,13 +1956,9 @@ func (h *Handler) RequestGitHubToken(c *gin.Context) {
 			return
 		}
 
-		userInfo, errUser := deviceClient.FetchUserInfo(ctx, tokenData.AccessToken)
+		username, errUser := deviceClient.FetchUserInfo(ctx, tokenData.AccessToken)
 		if errUser != nil {
 			log.Warnf("Failed to fetch user info: %v", errUser)
-		}
-
-		username := userInfo.Login
-		if username == "" {
 			username = "github-user"
 		}
 
@@ -1969,26 +1967,18 @@ func (h *Handler) RequestGitHubToken(c *gin.Context) {
 			TokenType:   tokenData.TokenType,
 			Scope:       tokenData.Scope,
 			Username:    username,
-			Email:       userInfo.Email,
-			Name:        userInfo.Name,
 			Type:        "github-copilot",
 		}
 
-		fileName := fmt.Sprintf("github-copilot-%s.json", username)
-		label := userInfo.Email
-		if label == "" {
-			label = username
-		}
+		fileName := fmt.Sprintf("github-%s.json", username)
 		record := &coreauth.Auth{
 			ID:       fileName,
-			Provider: "github-copilot",
-			Label:    label,
+			Provider: "github",
 			FileName: fileName,
 			Storage:  tokenStorage,
 			Metadata: map[string]any{
-				"email":    userInfo.Email,
+				"email":    username,
 				"username": username,
-				"name":     userInfo.Name,
 			},
 		}
 
@@ -2002,7 +1992,7 @@ func (h *Handler) RequestGitHubToken(c *gin.Context) {
 		fmt.Printf("Authentication successful! Token saved to %s\n", savedPath)
 		fmt.Println("You can now use GitHub Copilot services through this CLI")
 		CompleteOAuthSession(state)
-		CompleteOAuthSessionsByProvider("github-copilot")
+		CompleteOAuthSessionsByProvider("github")
 	}()
 
 	c.JSON(200, gin.H{

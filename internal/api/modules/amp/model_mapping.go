@@ -7,9 +7,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/router-for-me/CLIProxyAPI/v6/internal/config"
-	"github.com/router-for-me/CLIProxyAPI/v6/internal/thinking"
-	"github.com/router-for-me/CLIProxyAPI/v6/internal/util"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/thinking"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/util"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -30,110 +30,16 @@ type DefaultModelMapper struct {
 	mu       sync.RWMutex
 	mappings map[string]string // exact: from -> to (normalized lowercase keys)
 	regexps  []regexMapping    // regex rules evaluated in order
-
-	// oauthAliasForward maps channel -> name (lower) -> []alias for oauth-model-alias lookup.
-	// This allows model-mappings targets to find providers via their aliases.
-	oauthAliasForward map[string]map[string][]string
 }
 
 // NewModelMapper creates a new model mapper with the given initial mappings.
 func NewModelMapper(mappings []config.AmpModelMapping) *DefaultModelMapper {
 	m := &DefaultModelMapper{
-		mappings:          make(map[string]string),
-		regexps:           nil,
-		oauthAliasForward: nil,
+		mappings: make(map[string]string),
+		regexps:  nil,
 	}
 	m.UpdateMappings(mappings)
 	return m
-}
-
-// UpdateOAuthModelAlias updates the oauth-model-alias lookup table.
-// This is called during initialization and on config hot-reload.
-func (m *DefaultModelMapper) UpdateOAuthModelAlias(aliases map[string][]config.OAuthModelAlias) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	if len(aliases) == 0 {
-		m.oauthAliasForward = nil
-		return
-	}
-
-	forward := make(map[string]map[string][]string, len(aliases))
-	for rawChannel, entries := range aliases {
-		channel := strings.ToLower(strings.TrimSpace(rawChannel))
-		if channel == "" || len(entries) == 0 {
-			continue
-		}
-		channelMap := make(map[string][]string)
-		for _, entry := range entries {
-			name := strings.TrimSpace(entry.Name)
-			alias := strings.TrimSpace(entry.Alias)
-			if name == "" || alias == "" {
-				continue
-			}
-			if strings.EqualFold(name, alias) {
-				continue
-			}
-			nameKey := strings.ToLower(name)
-			channelMap[nameKey] = append(channelMap[nameKey], alias)
-		}
-		if len(channelMap) > 0 {
-			forward[channel] = channelMap
-		}
-	}
-	if len(forward) == 0 {
-		m.oauthAliasForward = nil
-		return
-	}
-	m.oauthAliasForward = forward
-	log.Debugf("amp model mapping: loaded oauth-model-alias for %d channel(s)", len(forward))
-}
-
-// findProviderViaOAuthAlias checks if targetModel is an oauth-model-alias name
-// and returns all aliases that have available providers.
-// Returns the first alias and its providers for backward compatibility,
-// and also populates allAliases with all available alias models.
-func (m *DefaultModelMapper) findProviderViaOAuthAlias(targetModel string) (aliasModel string, providers []string) {
-	aliases := m.findAllAliasesWithProviders(targetModel)
-	if len(aliases) == 0 {
-		return "", nil
-	}
-	// Return first one for backward compatibility
-	first := aliases[0]
-	return first, util.GetProviderName(first)
-}
-
-// findAllAliasesWithProviders returns all oauth-model-alias aliases for targetModel
-// that have available providers. Useful for fallback when one alias is quota-exceeded.
-func (m *DefaultModelMapper) findAllAliasesWithProviders(targetModel string) []string {
-	if m.oauthAliasForward == nil {
-		return nil
-	}
-
-	targetKey := strings.ToLower(strings.TrimSpace(targetModel))
-	if targetKey == "" {
-		return nil
-	}
-
-	var result []string
-	seen := make(map[string]struct{})
-
-	// Check all channels for this model name
-	for _, channelMap := range m.oauthAliasForward {
-		aliases := channelMap[targetKey]
-		for _, alias := range aliases {
-			aliasLower := strings.ToLower(alias)
-			if _, exists := seen[aliasLower]; exists {
-				continue
-			}
-			providers := util.GetProviderName(alias)
-			if len(providers) > 0 {
-				result = append(result, alias)
-				seen[aliasLower] = struct{}{}
-			}
-		}
-	}
-	return result
 }
 
 // MapModel checks if a mapping exists for the requested model and if the
@@ -145,19 +51,8 @@ func (m *DefaultModelMapper) findAllAliasesWithProviders(targetModel string) []s
 // However, if the mapping target already contains a suffix, the config suffix
 // takes priority over the user's suffix.
 func (m *DefaultModelMapper) MapModel(requestedModel string) string {
-	models := m.MapModelWithFallbacks(requestedModel)
-	if len(models) == 0 {
-		return ""
-	}
-	return models[0]
-}
-
-// MapModelWithFallbacks returns all possible target models for the requested model,
-// including fallback aliases from oauth-model-alias. The first model is the primary target,
-// and subsequent models are fallbacks to try if the primary is unavailable (e.g., quota exceeded).
-func (m *DefaultModelMapper) MapModelWithFallbacks(requestedModel string) []string {
 	if requestedModel == "" {
-		return nil
+		return ""
 	}
 
 	m.mu.RLock()
@@ -183,54 +78,34 @@ func (m *DefaultModelMapper) MapModelWithFallbacks(requestedModel string) []stri
 			}
 		}
 		if !exists {
-			return nil
+			return ""
 		}
 	}
 
 	// Check if target model already has a thinking suffix (config priority)
 	targetResult := thinking.ParseSuffix(targetModel)
-	targetBase := targetResult.ModelName
-
-	// Helper to apply suffix to a model
-	applySuffix := func(model string) string {
-		modelResult := thinking.ParseSuffix(model)
-		if modelResult.HasSuffix {
-			return model
-		}
-		if requestResult.HasSuffix && requestResult.RawSuffix != "" {
-			return model + "(" + requestResult.RawSuffix + ")"
-		}
-		return model
-	}
 
 	// Verify target model has available providers (use base model for lookup)
-	providers := util.GetProviderName(targetBase)
-
-	// If direct provider available, return it as primary
-	if len(providers) > 0 {
-		return []string{applySuffix(targetModel)}
-	}
-
-	// No direct providers - check oauth-model-alias for all aliases that have providers
-	allAliases := m.findAllAliasesWithProviders(targetBase)
-	if len(allAliases) == 0 {
+	providers := util.GetProviderName(targetResult.ModelName)
+	if len(providers) == 0 {
 		log.Debugf("amp model mapping: target model %s has no available providers, skipping mapping", targetModel)
-		return nil
+		return ""
 	}
 
-	// Log resolution
-	if len(allAliases) == 1 {
-		log.Debugf("amp model mapping: resolved %s -> %s via oauth-model-alias", targetModel, allAliases[0])
-	} else {
-		log.Debugf("amp model mapping: resolved %s -> %v via oauth-model-alias (%d fallbacks)", targetModel, allAliases, len(allAliases))
+	// Suffix handling: config suffix takes priority, otherwise preserve user suffix
+	if targetResult.HasSuffix {
+		// Config's "to" already contains a suffix - use it as-is (config priority)
+		return targetModel
 	}
 
-	// Apply suffix to all aliases
-	result := make([]string, len(allAliases))
-	for i, alias := range allAliases {
-		result[i] = applySuffix(alias)
+	// Preserve user's thinking suffix on the mapped model
+	// (skip empty suffixes to avoid returning "model()")
+	if requestResult.HasSuffix && requestResult.RawSuffix != "" {
+		return targetModel + "(" + requestResult.RawSuffix + ")"
 	}
-	return result
+
+	// Note: Detailed routing log is handled by logAmpRouting in fallback_handlers.go
+	return targetModel
 }
 
 // UpdateMappings refreshes the mapping configuration from config.

@@ -9,9 +9,9 @@ import (
 	"sync"
 
 	"github.com/gin-gonic/gin"
-	"github.com/router-for-me/CLIProxyAPI/v6/internal/api/modules"
-	"github.com/router-for-me/CLIProxyAPI/v6/internal/config"
-	sdkaccess "github.com/router-for-me/CLIProxyAPI/v6/sdk/access"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/api/modules"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
+	sdkaccess "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/access"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -125,8 +125,6 @@ func (m *AmpModule) Register(ctx modules.Context) error {
 	m.registerOnce.Do(func() {
 		// Initialize model mapper from config (for routing unavailable models to alternatives)
 		m.modelMapper = NewModelMapper(settings.ModelMappings)
-		// Load oauth-model-alias for provider lookup via aliases
-		m.modelMapper.UpdateOAuthModelAlias(ctx.Config.OAuthModelAlias)
 
 		// Store initial config for partial reload comparison
 		m.lastConfig = new(settings)
@@ -211,11 +209,6 @@ func (m *AmpModule) OnConfigUpdated(cfg *config.Config) error {
 		} else if m.enabled {
 			log.Warnf("amp model mapper not initialized, skipping model mapping update")
 		}
-	}
-
-	// Always update oauth-model-alias for model mapper (used for provider lookup)
-	if m.modelMapper != nil {
-		m.modelMapper.UpdateOAuthModelAlias(cfg.OAuthModelAlias)
 	}
 
 	if m.enabled {

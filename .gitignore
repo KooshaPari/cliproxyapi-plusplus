@@ -2,8 +2,6 @@
 cli-proxy-api
 cliproxy
 *.exe
-cli-proxy-api-plus
-server
 
 
 # Configuration
@@ -55,4 +53,3 @@ _bmad-output/*
 .DS_Store
 ._*
 *.bak
-PROJECT-wtrees/

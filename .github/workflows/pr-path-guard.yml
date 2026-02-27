@@ -9,7 +9,6 @@ on:
 
 jobs:
   ensure-no-translator-changes:
-    name: ensure-no-translator-changes
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -22,17 +21,8 @@ jobs:
           files: |
             internal/translator/**
       - name: Fail when restricted paths change
-        if: steps.changed-files.outputs.any_changed == 'true' && !(startsWith(github.head_ref, 'feature/koosh-migrate') || startsWith(github.head_ref, 'feature/migrate-') || startsWith(github.head_ref, 'migrated/') || startsWith(github.head_ref, 'ci/fix-feature-koosh-migrate') || startsWith(github.head_ref, 'ci/fix-feature-migrate-') || startsWith(github.head_ref, 'ci/fix-migrated/'))
+        if: steps.changed-files.outputs.any_changed == 'true'
         run: |
-          disallowed_files="$(printf '%s\n' \
-            $(printf '%s' '${{ steps.changed-files.outputs.all_changed_files }}' | tr ',' '\n') \
-            | sed '/^internal\/translator\/claude\/openai\/chat-completions\/claude_openai_request.go$/d' \
-            | tr '\n' ' ' | xargs)"
-          if [ -n "$disallowed_files" ]; then
-            echo "Changes under internal/translator are not allowed in pull requests."
-            echo "Disallowed files:"
-            echo "$disallowed_files"
-            echo "You need to create an issue for our maintenance team to make the necessary changes."
-            exit 1
-          fi
-          echo "Only whitelisted translator hotfix path changed; allowing PR to continue."
+          echo "Changes under internal/translator are not allowed in pull requests."
+          echo "You need to create an issue for our maintenance team to make the necessary changes."
+          exit 1
