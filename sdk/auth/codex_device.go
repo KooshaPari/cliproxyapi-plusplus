@@ -27,7 +27,6 @@ const (
 	codexDeviceUserCodeURL                = "https://auth.openai.com/api/accounts/deviceauth/usercode"
 	codexDeviceTokenURL                   = "https://auth.openai.com/api/accounts/deviceauth/token"
 	codexDeviceVerificationURL            = "https://auth.openai.com/codex/device"
-	codexDeviceTokenExchangeRedirectURI   = "https://auth.openai.com/deviceauth/callback"
 	codexDeviceTimeout                    = 15 * time.Minute
 	codexDeviceDefaultPollIntervalSeconds = 5
 )
@@ -109,15 +108,10 @@ func (a *CodexAuthenticator) loginWithDeviceFlow(ctx context.Context, cfg *confi
 	}
 
 	authSvc := codex.NewCodexAuth(cfg)
-	authBundle, err := authSvc.ExchangeCodeForTokensWithRedirect(
-		ctx,
-		authCode,
-		codexDeviceTokenExchangeRedirectURI,
-		&codex.PKCECodes{
-			CodeVerifier:  codeVerifier,
-			CodeChallenge: codeChallenge,
-		},
-	)
+	authBundle, err := authSvc.ExchangeCodeForTokens(ctx, authCode, &codex.PKCECodes{
+		CodeVerifier:  codeVerifier,
+		CodeChallenge: codeChallenge,
+	})
 	if err != nil {
 		return nil, codex.NewAuthenticationError(codex.ErrCodeExchangeFailed, err)
 	}

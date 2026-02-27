@@ -1118,6 +1118,12 @@ func (cfg *Config) IsResponsesWebsocketEnabled() bool {
 	return *cfg.ResponsesWebsocketEnabled
 }
 
+// IsResponsesCompactEnabled returns true when /responses/compact is enabled.
+// Default is enabled when unset.
+func (cfg *Config) IsResponsesCompactEnabled() bool {
+	return true
+}
+
 // SanitizeOpenAICompatibility removes OpenAI-compatibility provider entries that are
 // not actionable, specifically those missing a BaseURL. It trims whitespace before
 // evaluation and preserves the relative order of remaining entries.
