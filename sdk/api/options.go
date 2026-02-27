@@ -9,6 +9,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	internalapi "github.com/router-for-me/CLIProxyAPI/v6/internal/api"
+	"github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/auth"
 	"github.com/router-for-me/CLIProxyAPI/v6/sdk/api/handlers"
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/config"
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/logging"
@@ -43,4 +44,9 @@ func WithKeepAliveEndpoint(timeout time.Duration, onTimeout func()) ServerOption
 // WithRequestLoggerFactory customises request logger creation.
 func WithRequestLoggerFactory(factory func(*config.Config, string) logging.RequestLogger) ServerOption {
 	return internalapi.WithRequestLoggerFactory(factory)
+}
+
+// WithPostAuthHook registers a hook to be called after auth record creation.
+func WithPostAuthHook(hook auth.PostAuthHook) ServerOption {
+	return internalapi.WithPostAuthHook(hook)
 }
