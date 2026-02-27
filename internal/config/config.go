@@ -88,6 +88,9 @@ type Config struct {
 	// ResponsesWebsocketEnabled gates the dedicated /v1/responses/ws route rollout.
 	// Nil means enabled (default behavior).
 	ResponsesWebsocketEnabled *bool `yaml:"responses-websocket-enabled,omitempty" json:"responses-websocket-enabled,omitempty"`
+	// ResponsesCompactEnabled gates the dedicated /v1/responses/compact route rollout.
+	// Nil means enabled (default behavior).
+	ResponsesCompactEnabled *bool `yaml:"responses-compact-enabled,omitempty" json:"responses-compact-enabled,omitempty"`
 
 	// GeminiKey defines Gemini API key configurations with optional routing overrides.
 	GeminiKey []GeminiKey `yaml:"gemini-api-key" json:"gemini-api-key"`
@@ -1116,6 +1119,15 @@ func (cfg *Config) IsResponsesWebsocketEnabled() bool {
 		return true
 	}
 	return *cfg.ResponsesWebsocketEnabled
+}
+
+// IsResponsesCompactEnabled returns true when the dedicated responses compact
+// route should be mounted. Default is enabled when unset.
+func (cfg *Config) IsResponsesCompactEnabled() bool {
+	if cfg == nil || cfg.ResponsesCompactEnabled == nil {
+		return true
+	}
+	return *cfg.ResponsesCompactEnabled
 }
 
 // SanitizeOpenAICompatibility removes OpenAI-compatibility provider entries that are
