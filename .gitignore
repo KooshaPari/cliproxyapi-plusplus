@@ -2,6 +2,8 @@
 cli-proxy-api
 cliproxy
 *.exe
+cli-proxy-api-plus
+server
 
 
 # Configuration
@@ -53,21 +55,11 @@ _bmad-output/*
 .DS_Store
 ._*
 *.bak
-server
-<<<<<<< HEAD
-=======
-server
+PROJECT-wtrees/
 cli-proxy-api-plus-integration-test
-
 boardsync
 releasebatch
 .cache
->>>>>>> a4e4c2b8 (chore: add build artifacts to .gitignore)
-
 # Build artifacts (cherry-picked from fix/test-cleanups)
 cliproxyapi++
 .air/
-boardsync
-releasebatch
-.cache
-logs/
