@@ -1,2 +1,3 @@
+# workflow_file|job_name
 pr-test-build.yml|build
 pr-path-guard.yml|ensure-no-translator-changes
