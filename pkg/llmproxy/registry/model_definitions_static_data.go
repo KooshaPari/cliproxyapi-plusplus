@@ -1032,7 +1032,15 @@ func GetKimiModels() []*ModelInfo {
 // GetCursorModels returns the Cursor model definitions
 func GetCursorModels() []*ModelInfo {
 	return []*ModelInfo{
-		{ID: "default", OwnedBy: "cursor"},
+		{
+			ID:          "default",
+			Object:      "model",
+			Created:     0,
+			OwnedBy:     "cursor",
+			Type:        "cursor",
+			DisplayName: "Cursor Default Model",
+			Description: "Default Cursor model (metadata stub; full details provided by executor)",
+		},
 	}
 }
 

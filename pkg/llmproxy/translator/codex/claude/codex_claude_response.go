@@ -183,7 +183,7 @@ func ConvertCodexResponseToClaude(_ context.Context, _ string, originalRequestRa
 	case "response.function_call_arguments.done":
 		// If we already received delta events, skip the done event to avoid duplication.
 		if (*param).(*ConvertCodexResponseToClaudeParams).HasReceivedArgumentsDelta {
-			// Return empty — the deltas already conveyed the full payload.
+			return nil
 		} else {
 			// No deltas were received; emit the full arguments as a single delta.
 			template = `{"type":"content_block_delta","index":0,"delta":{"type":"input_json_delta","partial_json":""}}`
