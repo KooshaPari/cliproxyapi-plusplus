@@ -19,7 +19,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/yaml.v3"
 
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/ratelimit"
+	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/ratelimit"
 )
 
 const (
@@ -1116,6 +1116,13 @@ func (cfg *Config) IsResponsesWebsocketEnabled() bool {
 		return true
 	}
 	return *cfg.ResponsesWebsocketEnabled
+}
+
+// IsResponsesCompactEnabled returns true when /responses/compact is enabled.
+// The current internal config surface does not expose a dedicated toggle, so
+// the route remains enabled by default.
+func (cfg *Config) IsResponsesCompactEnabled() bool {
+	return true
 }
 
 // SanitizeOpenAICompatibility removes OpenAI-compatibility provider entries that are

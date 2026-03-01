@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/cache"
+	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/cache"
 	"github.com/tidwall/gjson"
 )
 
