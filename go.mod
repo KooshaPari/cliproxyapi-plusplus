@@ -3,6 +3,7 @@ module github.com/kooshapari/cliproxyapi-plusplus/v6
 go 1.26.0
 
 require (
+	github.com/KooshaPari/phenotype-go-kit v0.0.0
 	github.com/andybalholm/brotli v1.2.0
 	github.com/atotto/clipboard v0.1.4
 	github.com/charmbracelet/bubbles v1.0.0
@@ -110,3 +111,5 @@ require (
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
 )
+
+replace github.com/KooshaPari/phenotype-go-kit => ../../template-commons/phenotype-go-kit
