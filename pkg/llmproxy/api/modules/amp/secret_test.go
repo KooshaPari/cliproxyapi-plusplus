@@ -202,8 +202,10 @@ func TestMultiSourceSecret_Concurrency(t *testing.T) {
 		}()
 	}
 
-	wg.Wait()
-	close(errors)
+	go func() {
+		wg.Wait()
+		close(errors)
+	}()
 
 	for err := range errors {
 		t.Errorf("concurrency error: %v", err)

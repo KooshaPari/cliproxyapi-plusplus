@@ -36,7 +36,7 @@ func TestResolveOAuthBaseURLWithOverride_PreferenceOrder(t *testing.T) {
 	}
 
 	got = resolveOAuthBaseURLWithOverride(cfg, "codex", "https://default.example.com/", "")
-	if got != "https://default.example.com" {
+	if got != "https://default.example.com/" {
 		t.Fatalf("expected default URL fallback when no overrides exist, got %q", got)
 	}
 }

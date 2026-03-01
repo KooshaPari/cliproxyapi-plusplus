@@ -49,6 +49,8 @@ func GetStaticModelDefinitionsByChannel(channel string) []*ModelInfo {
 		return GetKimiModels()
 	case "github-copilot":
 		return GetGitHubCopilotModels()
+	case "cursor":
+		return GetCursorModels()
 	case "kiro":
 		return GetKiroModels()
 	case "kilo":
