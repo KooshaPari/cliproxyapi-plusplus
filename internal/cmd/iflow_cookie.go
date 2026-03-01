@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/auth/iflow"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/iflow"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
 )
 
 // DoIFlowCookieAuth performs the iFlow cookie-based authentication.
@@ -50,7 +50,7 @@ func DoIFlowCookieAuth(cfg *config.Config, options *LoginOptions) {
 	}
 
 	// Authenticate with cookie
-	auth := iflow.NewIFlowAuth(cfg)
+	auth := iflow.NewIFlowAuth(cfg, nil)
 	ctx := context.Background()
 
 	tokenData, err := auth.AuthenticateWithCookie(ctx, cookie)

@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/auth/claude"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/claude"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
 	sdkAuth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/auth"
 	log "github.com/sirupsen/logrus"
 )
