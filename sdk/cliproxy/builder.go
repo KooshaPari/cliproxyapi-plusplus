@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	configaccess "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/access/config_access"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/api"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/api"
 	sdkaccess "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/access"
 	sdkAuth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/auth"
 	coreauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
