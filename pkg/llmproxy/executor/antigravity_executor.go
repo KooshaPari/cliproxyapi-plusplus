@@ -1683,20 +1683,39 @@ func antigravityBaseURLFallbackOrder(cfg *config.Config, auth *cliproxyauth.Auth
 	}
 }
 
+// validateAntigravityBaseURL checks that a custom base URL is a well-formed
+// https URL whose host ends with ".googleapis.com", preventing SSRF via a
+// user-supplied base_url attribute in auth credentials.
+func validateAntigravityBaseURL(rawURL string) bool {
+	parsed, err := url.Parse(rawURL)
+	if err != nil || parsed.Scheme != "https" || parsed.Host == "" {
+		return false
+	}
+	return strings.HasSuffix(parsed.Hostname(), ".googleapis.com")
+}
+
 func resolveCustomAntigravityBaseURL(auth *cliproxyauth.Auth) string {
 	if auth == nil {
 		return ""
 	}
 	if auth.Attributes != nil {
 		if v := strings.TrimSpace(auth.Attributes["base_url"]); v != "" {
-			return strings.TrimSuffix(v, "/")
+			v = strings.TrimSuffix(v, "/")
+			if validateAntigravityBaseURL(v) {
+				return v
+			}
+			log.Warnf("antigravity executor: custom base_url %q rejected (not an allowed googleapis.com host)", v)
 		}
 	}
 	if auth.Metadata != nil {
 		if v, ok := auth.Metadata["base_url"].(string); ok {
 			v = strings.TrimSpace(v)
 			if v != "" {
-				return strings.TrimSuffix(v, "/")
+				v = strings.TrimSuffix(v, "/")
+				if validateAntigravityBaseURL(v) {
+					return v
+				}
+				log.Warnf("antigravity executor: custom base_url %q rejected (not an allowed googleapis.com host)", v)
 			}
 		}
 	}

@@ -40,6 +40,15 @@ type StickyRoundRobinSelector struct {
 	maxKeys  int
 }
 
+// NewStickyRoundRobinSelector creates a StickyRoundRobinSelector with the given max session keys.
+func NewStickyRoundRobinSelector(maxKeys int) *StickyRoundRobinSelector {
+	return &StickyRoundRobinSelector{
+		sessions: make(map[string]string),
+		cursors:  make(map[string]int),
+		maxKeys:  maxKeys,
+	}
+}
+
 type blockReason int
 
 const (

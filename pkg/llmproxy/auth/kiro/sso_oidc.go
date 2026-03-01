@@ -105,9 +105,25 @@ type CreateTokenResponse struct {
 	RefreshToken string `json:"refreshToken"`
 }
 
-// getOIDCEndpoint returns the OIDC endpoint for the given region.
-func getOIDCEndpoint(region string) string {
+// isValidAWSRegion returns true if region contains only lowercase letters, digits,
+// and hyphens — the only characters that appear in real AWS region names.
+// This prevents SSRF via a crafted region string embedding path/query characters.
+func isValidAWSRegion(region string) bool {
 	if region == "" {
+		return false
+	}
+	for _, c := range region {
+		if !((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-') {
+			return false
+		}
+	}
+	return true
+}
+
+// getOIDCEndpoint returns the OIDC endpoint for the given region.
+// Returns the default region endpoint if region is empty or invalid.
+func getOIDCEndpoint(region string) string {
+	if region == "" || !isValidAWSRegion(region) {
 		region = defaultIDCRegion
 	}
 	return fmt.Sprintf("https://oidc.%s.amazonaws.com", region)
