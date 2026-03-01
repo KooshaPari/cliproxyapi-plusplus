@@ -143,6 +143,7 @@ func denySymlinkPath(baseDir, targetPath string) error {
 		if component == "" || component == "." {
 			continue
 		}
+		// codeql[go/path-injection] - component is a single path segment derived from filepath.Rel; no separators or ".." possible here
 		current = filepath.Join(current, component)
 		info, errStat := os.Lstat(current)
 		if errStat != nil {

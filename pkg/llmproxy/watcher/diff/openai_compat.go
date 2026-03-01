@@ -178,6 +178,8 @@ func openAICompatSignature(entry config.OpenAICompatibility) string {
 	if len(parts) == 0 {
 		return ""
 	}
-	sum := sha256.Sum256([]byte(strings.Join(parts, "|")))
+	// SHA256 is used here to generate a content fingerprint for change detection, not for password hashing.
+	// The hash identifies structural differences in OpenAI compatibility config entries.
+	sum := sha256.Sum256([]byte(strings.Join(parts, "|"))) // codeql[go/weak-sensitive-data-hashing]
 	return hex.EncodeToString(sum[:])
 }

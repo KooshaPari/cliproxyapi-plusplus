@@ -609,6 +609,8 @@ func (s *Service) Run(ctx context.Context) error {
 			switch nextStrategy {
 			case "fill-first":
 				selector = &coreauth.FillFirstSelector{}
+			case "sticky-round-robin", "stickyroundrobin", "srr":
+				selector = coreauth.NewStickyRoundRobinSelector(1000)
 			default:
 				selector = &coreauth.RoundRobinSelector{}
 			}
