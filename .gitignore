@@ -57,6 +57,7 @@ _bmad-output/*
 *.bak
 # Local worktree shelves (canonical checkout must stay clean)
 PROJECT-wtrees/
+.worktrees/
 cli-proxy-api-plus-integration-test
 boardsync
 releasebatch
