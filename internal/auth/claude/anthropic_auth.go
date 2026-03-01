@@ -285,13 +285,12 @@ func (o *ClaudeAuth) RefreshTokens(ctx context.Context, refreshToken string) (*C
 // Returns:
 //   - *ClaudeTokenStorage: A new token storage instance
 func (o *ClaudeAuth) CreateTokenStorage(bundle *ClaudeAuthBundle) *ClaudeTokenStorage {
-	storage := &ClaudeTokenStorage{
-		AccessToken:  bundle.TokenData.AccessToken,
-		RefreshToken: bundle.TokenData.RefreshToken,
-		LastRefresh:  bundle.LastRefresh,
-		Email:        bundle.TokenData.Email,
-		Expire:       bundle.TokenData.Expire,
-	}
+	storage := NewClaudeTokenStorage("")
+	storage.AccessToken = bundle.TokenData.AccessToken
+	storage.RefreshToken = bundle.TokenData.RefreshToken
+	storage.LastRefresh = bundle.LastRefresh
+	storage.Email = bundle.TokenData.Email
+	storage.Expire = bundle.TokenData.Expire
 
 	return storage
 }

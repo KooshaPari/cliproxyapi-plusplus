@@ -203,13 +203,12 @@ func (g *GeminiAuth) createTokenStorage(ctx context.Context, config *oauth2.Conf
 	ifToken["scopes"] = Scopes
 	ifToken["universe_domain"] = "googleapis.com"
 
-	ts := GeminiTokenStorage{
-		Token:     ifToken,
-		ProjectID: projectID,
-		Email:     emailResult.String(),
-	}
+	ts := NewGeminiTokenStorage("")
+	ts.Token = ifToken
+	ts.ProjectID = projectID
+	ts.Email = emailResult.String()
 
-	return &ts, nil
+	return ts, nil
 }
 
 // getTokenFromWeb initiates the web-based OAuth2 authorization flow.
