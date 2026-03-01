@@ -1,8 +1,11 @@
 # Binaries
 cli-proxy-api
 cliproxy
+cliproxyapi++
 *.exe
 
+# Hot-reload artifacts
+.air/
 
 # Configuration
 config.yaml
@@ -42,7 +45,6 @@ GEMINI.md
 .serena/*
 .agent/*
 .agents/*
-.agents/*
 .opencode/*
 .bmad/*
 _bmad/*
@@ -55,3 +57,7 @@ _bmad-output/*
 *.bak
 # Local worktree shelves (canonical checkout must stay clean)
 PROJECT-wtrees/
+cli-proxy-api-plus-integration-test
+boardsync
+releasebatch
+.cache
