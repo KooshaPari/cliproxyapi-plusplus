@@ -801,6 +801,7 @@ func (h *BaseAPIHandler) getRequestDetails(modelName string) (providers []string
 	if len(providers) == 0 && baseModel != resolvedModelName {
 		providers = util.GetProviderName(resolvedModelName)
 	}
+	providers = prioritizeProvidersForModel(baseModel, providers, h.AuthManager)
 
 	if len(providers) == 0 {
 		return nil, "", &interfaces.ErrorMessage{StatusCode: http.StatusBadGateway, Error: fmt.Errorf("unknown provider for model %s", modelName)}
@@ -809,6 +810,69 @@ func (h *BaseAPIHandler) getRequestDetails(modelName string) (providers []string
 	// The thinking suffix is preserved in the model name itself, so no
 	// metadata-based configuration passing is needed.
 	return providers, resolvedModelName, nil
+}
+
+func prioritizeProvidersForModel(model string, providers []string, authManager *coreauth.Manager) []string {
+	if len(providers) == 0 {
+		return providers
+	}
+	lowerModel := strings.ToLower(strings.TrimSpace(model))
+	if !strings.HasPrefix(lowerModel, "minimax") {
+		return providers
+	}
+
+	seen := map[string]struct{}{}
+	out := make([]string, 0, len(providers)+1)
+	if hasProviderAuthAvailable("minimax", authManager) {
+		out = append(out, "minimax")
+		seen["minimax"] = struct{}{}
+	}
+	for _, provider := range providers {
+		normalized := strings.TrimSpace(strings.ToLower(provider))
+		if normalized == "" {
+			continue
+		}
+		// For unprefixed minimax model requests, do not silently route into iFlow.
+		// iFlow can still be targeted explicitly via provider-pinned model names.
+		if normalized == "iflow" {
+			continue
+		}
+		if _, ok := seen[normalized]; ok {
+			continue
+		}
+		seen[normalized] = struct{}{}
+		out = append(out, normalized)
+	}
+	if len(out) == 0 {
+		// No compatible non-iFlow provider was discovered for minimax.
+		// Return minimax explicitly so downstream reports auth/provider availability
+		// instead of routing to iFlow.
+		return []string{"minimax"}
+	}
+	return out
+}
+
+func hasProviderAuthAvailable(provider string, authManager *coreauth.Manager) bool {
+	if authManager == nil {
+		return false
+	}
+	provider = strings.ToLower(strings.TrimSpace(provider))
+	if provider == "" {
+		return false
+	}
+	for _, auth := range authManager.List() {
+		if auth == nil {
+			continue
+		}
+		if strings.ToLower(strings.TrimSpace(auth.Provider)) != provider {
+			continue
+		}
+		if auth.Unavailable {
+			continue
+		}
+		return true
+	}
+	return false
 }
 
 func cloneBytes(src []byte) []byte {
@@ -864,6 +928,7 @@ func (h *BaseAPIHandler) WriteErrorResponse(c *gin.Context, msg *interfaces.Erro
 			errText = v
 		}
 	}
+	status = normalizeUpstreamStatus(status, errText)
 
 	body := BuildErrorResponseBody(status, errText)
 	// Append first to preserve upstream response logs, then drop duplicate payloads if already recorded.
@@ -888,6 +953,30 @@ func (h *BaseAPIHandler) WriteErrorResponse(c *gin.Context, msg *interfaces.Erro
 	}
 	c.Status(status)
 	_, _ = c.Writer.Write(body)
+}
+
+func normalizeUpstreamStatus(status int, message string) int {
+	if status >= 100 && status <= 599 && http.StatusText(status) != "" {
+		return status
+	}
+	msg := strings.ToLower(strings.TrimSpace(message))
+	switch {
+	case strings.Contains(msg, "invalid api key"),
+		strings.Contains(msg, "unauthorized"),
+		strings.Contains(msg, "authentication"),
+		strings.Contains(msg, "auth failed"):
+		return http.StatusUnauthorized
+	case strings.Contains(msg, "forbidden"),
+		strings.Contains(msg, "blocked"),
+		strings.Contains(msg, "denied"):
+		return http.StatusForbidden
+	case strings.Contains(msg, "rate limit"),
+		strings.Contains(msg, "too many requests"),
+		strings.Contains(msg, "quota"):
+		return http.StatusTooManyRequests
+	default:
+		return http.StatusBadGateway
+	}
 }
 
 func (h *BaseAPIHandler) LoggingAPIResponseError(ctx context.Context, err *interfaces.ErrorMessage) {

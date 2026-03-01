@@ -432,7 +432,7 @@ func (s *ConfigSynthesizer) synthesizeCursorKeys(ctx *SynthesisContext) []*corea
 					log.Warnf("cursor config[%d] failed to expand ~: %v", i, err)
 					continue
 				}
-				tokenPath = filepath.Join(home, tokenPath[1:])
+				tokenPath = filepath.Join(home, strings.TrimPrefix(strings.TrimPrefix(tokenPath, "~/"), "~"))
 			}
 			data, err := os.ReadFile(tokenPath)
 			if err != nil {
@@ -536,7 +536,7 @@ func (s *ConfigSynthesizer) resolveAPIKeyFromEntry(tokenFile, apiKey string, _ i
 		if err != nil {
 			return ""
 		}
-		tokenPath = filepath.Join(home, tokenPath[1:])
+		tokenPath = filepath.Join(home, strings.TrimPrefix(strings.TrimPrefix(tokenPath, "~/"), "~"))
 	}
 	data, err := os.ReadFile(tokenPath)
 	if err != nil {

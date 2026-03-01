@@ -42,14 +42,14 @@ func (e *OpenAICompatExecutor) PrepareRequest(req *http.Request, auth *cliproxya
 		return nil
 	}
 	_, apiKey := e.resolveCredentials(auth)
-	if strings.TrimSpace(apiKey) != "" {
-		req.Header.Set("Authorization", "Bearer "+apiKey)
-	}
 	var attrs map[string]string
 	if auth != nil {
 		attrs = auth.Attributes
 	}
 	util.ApplyCustomHeadersFromAttrs(req, attrs)
+	if strings.TrimSpace(apiKey) != "" {
+		req.Header.Set("Authorization", "Bearer "+apiKey)
+	}
 	return nil
 }
 
@@ -88,13 +88,27 @@ func (e *OpenAICompatExecutor) Execute(ctx context.Context, auth *cliproxyauth.A
 		to = sdktranslator.FromString("openai-response")
 		endpoint = "/responses/compact"
 	}
+	if isAnthropicCompatBaseURL(baseURL) {
+		to = sdktranslator.FromString("claude")
+		endpoint = "/v1/messages?beta=true"
+	}
 	originalPayloadSource := req.Payload
 	if len(opts.OriginalRequest) > 0 {
 		originalPayloadSource = opts.OriginalRequest
 	}
 	originalPayload := originalPayloadSource
-	originalTranslated := sdktranslator.TranslateRequest(from, to, baseModel, originalPayload, opts.Stream)
+	translateAsStream := opts.Stream
+	if to.String() == "claude" {
+		translateAsStream = from != to
+	}
+	originalTranslated := sdktranslator.TranslateRequest(from, to, baseModel, originalPayload, translateAsStream)
 	translated := sdktranslator.TranslateRequest(from, to, baseModel, req.Payload, opts.Stream)
+	if to.String() == "claude" {
+		translated = sdktranslator.TranslateRequest(from, to, baseModel, req.Payload, translateAsStream)
+	}
+	if isAnthropicCompatBaseURL(baseURL) {
+		baseModel = normalizeMiniMaxAnthropicModel(baseModel)
+	}
 	requestedModel := payloadRequestedModel(opts, req.Model)
 	translated = applyPayloadConfigWithRoot(e.cfg, baseModel, to.String(), "", translated, originalTranslated, requestedModel)
 	if opts.Alt == "responses/compact" {
@@ -114,15 +128,17 @@ func (e *OpenAICompatExecutor) Execute(ctx context.Context, auth *cliproxyauth.A
 		return resp, err
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
-	if apiKey != "" {
-		httpReq.Header.Set("Authorization", "Bearer "+apiKey)
-	}
 	httpReq.Header.Set("User-Agent", "cli-proxy-openai-compat")
 	var attrs map[string]string
 	if auth != nil {
 		attrs = auth.Attributes
 	}
 	util.ApplyCustomHeadersFromAttrs(httpReq, attrs)
+	if isAnthropicCompatBaseURL(baseURL) {
+		applyClaudeHeaders(httpReq, auth, apiKey, false, nil, e.cfg)
+	} else if apiKey != "" {
+		httpReq.Header.Set("Authorization", "Bearer "+apiKey)
+	}
 	var authID, authLabel, authType, authValue string
 	if auth != nil {
 		authID = auth.ID
@@ -205,21 +221,28 @@ func (e *OpenAICompatExecutor) ExecuteStream(ctx context.Context, auth *cliproxy
 		return nil, err
 	}
 
+	to := sdktranslator.FromString("openai")
 	url := strings.TrimSuffix(baseURL, "/") + "/chat/completions"
+	if isAnthropicCompatBaseURL(baseURL) {
+		to = sdktranslator.FromString("claude")
+		url = strings.TrimSuffix(baseURL, "/") + "/v1/messages?beta=true"
+	}
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(translated))
 	if err != nil {
 		return nil, err
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
-	if apiKey != "" {
-		httpReq.Header.Set("Authorization", "Bearer "+apiKey)
-	}
 	httpReq.Header.Set("User-Agent", "cli-proxy-openai-compat")
 	var attrs map[string]string
 	if auth != nil {
 		attrs = auth.Attributes
 	}
 	util.ApplyCustomHeadersFromAttrs(httpReq, attrs)
+	if isAnthropicCompatBaseURL(baseURL) {
+		applyClaudeHeaders(httpReq, auth, apiKey, true, nil, e.cfg)
+	} else if apiKey != "" {
+		httpReq.Header.Set("Authorization", "Bearer "+apiKey)
+	}
 	httpReq.Header.Set("Accept", "text/event-stream")
 	httpReq.Header.Set("Cache-Control", "no-cache")
 	var authID, authLabel, authType, authValue string
@@ -271,9 +294,11 @@ func (e *OpenAICompatExecutor) ExecuteStream(ctx context.Context, auth *cliproxy
 		for scanner.Scan() {
 			line := scanner.Bytes()
 			appendAPIResponseChunk(ctx, e.cfg, line)
-			if detail, ok := parseOpenAIStreamUsage(line); ok {
-				reporter.publish(ctx, detail)
-			}
+		if detail, ok := parseOpenAIStreamUsage(line); ok {
+			reporter.publish(ctx, detail)
+		} else if detail, ok := parseClaudeStreamUsage(line); ok {
+			reporter.publish(ctx, detail)
+		}
 			if len(line) == 0 {
 				continue
 			}
@@ -344,6 +369,21 @@ func (e *OpenAICompatExecutor) resolveCredentials(auth *cliproxyauth.Auth) (base
 		baseURL = strings.TrimSpace(auth.Attributes["base_url"])
 		apiKey = strings.TrimSpace(auth.Attributes["api_key"])
 	}
+	if auth.Metadata != nil {
+		if baseURL == "" {
+			if v, ok := auth.Metadata["base_url"].(string); ok {
+				baseURL = strings.TrimSpace(v)
+			}
+		}
+		if apiKey == "" {
+			if v, ok := auth.Metadata["api_key"].(string); ok {
+				apiKey = strings.TrimSpace(v)
+			}
+		}
+	}
+	if baseURL == "" && strings.EqualFold(strings.TrimSpace(auth.Provider), "minimax") {
+		baseURL = "https://api.minimax.io/anthropic"
+	}
 	return
 }
 
@@ -380,6 +420,24 @@ func (e *OpenAICompatExecutor) overrideModel(payload []byte, model string) []byt
 	}
 	payload, _ = sjson.SetBytes(payload, "model", model)
 	return payload
+}
+
+func isAnthropicCompatBaseURL(baseURL string) bool {
+	normalized := strings.ToLower(strings.TrimSpace(baseURL))
+	if normalized == "" {
+		return false
+	}
+	return strings.Contains(normalized, "/anthropic")
+}
+
+func normalizeMiniMaxAnthropicModel(model string) string {
+	normalized := strings.ToLower(strings.TrimSpace(model))
+	switch normalized {
+	case "minimax-m2.5":
+		return "minimax-m2.5-highspeed"
+	default:
+		return model
+	}
 }
 
 type statusErr struct {

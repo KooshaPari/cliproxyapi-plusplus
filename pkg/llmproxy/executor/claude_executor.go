@@ -53,7 +53,7 @@ func (e *ClaudeExecutor) PrepareRequest(req *http.Request, auth *cliproxyauth.Au
 	}
 	useAPIKey := auth != nil && auth.Attributes != nil && strings.TrimSpace(auth.Attributes["api_key"]) != ""
 	isAnthropicBase := req.URL != nil && strings.EqualFold(req.URL.Scheme, "https") && strings.EqualFold(req.URL.Host, "api.anthropic.com")
-	if isAnthropicBase && useAPIKey {
+	if isAnthropicBase && useAPIKey && !(auth != nil && strings.EqualFold(strings.TrimSpace(auth.Provider), "minimax")) {
 		req.Header.Del("Authorization")
 		req.Header.Set("x-api-key", apiKey)
 	} else {
@@ -677,7 +677,7 @@ func applyClaudeHeaders(r *http.Request, auth *cliproxyauth.Auth, apiKey string,
 
 	useAPIKey := auth != nil && auth.Attributes != nil && strings.TrimSpace(auth.Attributes["api_key"]) != ""
 	isAnthropicBase := r.URL != nil && strings.EqualFold(r.URL.Scheme, "https") && strings.EqualFold(r.URL.Host, "api.anthropic.com")
-	if isAnthropicBase && useAPIKey {
+	if isAnthropicBase && useAPIKey && !(auth != nil && strings.EqualFold(strings.TrimSpace(auth.Provider), "minimax")) {
 		r.Header.Del("Authorization")
 		r.Header.Set("x-api-key", apiKey)
 	} else {

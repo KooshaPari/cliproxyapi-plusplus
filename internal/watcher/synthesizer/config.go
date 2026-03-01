@@ -1,10 +1,14 @@
 package synthesizer
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
+	"github.com/router-for-me/CLIProxyAPI/v6/internal/config"
 	kiroauth "github.com/router-for-me/CLIProxyAPI/v6/internal/auth/kiro"
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/watcher/diff"
 	coreauth "github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/auth"
@@ -35,12 +39,106 @@ func (s *ConfigSynthesizer) Synthesize(ctx *SynthesisContext) ([]*coreauth.Auth,
 	out = append(out, s.synthesizeCodexKeys(ctx)...)
 	// Kiro (AWS CodeWhisperer)
 	out = append(out, s.synthesizeKiroKeys(ctx)...)
+	// Dedicated OpenAI-compatible blocks (minimax, roo, kilo, deepseek, groq, etc.)
+	out = append(out, s.synthesizeOAICompatFromDedicatedBlocks(ctx)...)
 	// OpenAI-compat
 	out = append(out, s.synthesizeOpenAICompat(ctx)...)
 	// Vertex-compat
 	out = append(out, s.synthesizeVertexCompat(ctx)...)
 
 	return out, nil
+}
+
+// synthesizeOAICompatFromDedicatedBlocks creates Auth entries from dedicated provider blocks
+// (minimax, roo, kilo, deepseek, etc.) using a generic synthesizer path.
+func (s *ConfigSynthesizer) synthesizeOAICompatFromDedicatedBlocks(ctx *SynthesisContext) []*coreauth.Auth {
+	cfg := ctx.Config
+	now := ctx.Now
+	idGen := ctx.IDGenerator
+
+	out := make([]*coreauth.Auth, 0)
+	for _, p := range config.GetDedicatedProviders() {
+		entries := s.getDedicatedProviderEntries(p, cfg)
+		if len(entries) == 0 {
+			continue
+		}
+
+		for i := range entries {
+			entry := &entries[i]
+			apiKey := s.resolveAPIKeyFromEntry(entry.TokenFile, entry.APIKey)
+			if apiKey == "" {
+				continue
+			}
+			baseURL := strings.TrimSpace(entry.BaseURL)
+			if baseURL == "" {
+				baseURL = p.BaseURL
+			}
+			baseURL = strings.TrimSuffix(baseURL, "/")
+
+			id, _ := idGen.Next(p.Name+":key", apiKey, baseURL)
+			attrs := map[string]string{
+				"source":   fmt.Sprintf("config:%s[%d]", p.Name, i),
+				"base_url": baseURL,
+				"api_key":  apiKey,
+			}
+			if entry.Priority != 0 {
+				attrs["priority"] = strconv.Itoa(entry.Priority)
+			}
+			if hash := diff.ComputeOpenAICompatModelsHash(entry.Models); hash != "" {
+				attrs["models_hash"] = hash
+			}
+			addConfigHeadersToAttrs(entry.Headers, attrs)
+
+			a := &coreauth.Auth{
+				ID:         id,
+				Provider:   p.Name,
+				Label:      p.Name + "-key",
+				Prefix:     entry.Prefix,
+				Status:     coreauth.StatusActive,
+				ProxyURL:   strings.TrimSpace(entry.ProxyURL),
+				Attributes: attrs,
+				CreatedAt:  now,
+				UpdatedAt:  now,
+			}
+			ApplyAuthExcludedModelsMeta(a, cfg, entry.ExcludedModels, "key")
+			out = append(out, a)
+		}
+	}
+	return out
+}
+
+func (s *ConfigSynthesizer) resolveAPIKeyFromEntry(tokenFile, apiKey string) string {
+	if apiKey != "" {
+		return strings.TrimSpace(apiKey)
+	}
+	if tokenFile == "" {
+		return ""
+	}
+	tokenPath := tokenFile
+	if strings.HasPrefix(tokenPath, "~") {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return ""
+		}
+		tokenPath = filepath.Join(home, strings.TrimPrefix(strings.TrimPrefix(tokenPath, "~/"), "~"))
+	}
+	data, err := os.ReadFile(tokenPath)
+	if err != nil {
+		return ""
+	}
+	var parsed struct {
+		AccessToken string `json:"access_token"`
+		APIKey      string `json:"api_key"`
+	}
+	if err := json.Unmarshal(data, &parsed); err == nil {
+		if v := strings.TrimSpace(parsed.AccessToken); v != "" {
+			return v
+		}
+		if v := strings.TrimSpace(parsed.APIKey); v != "" {
+			return v
+		}
+	}
+	return strings.TrimSpace(string(data))
 }
 
 // synthesizeGeminiKeys creates Auth entries for Gemini API keys.

@@ -13,6 +13,7 @@ var (
 	WithMiddleware                = api.WithMiddleware
 	WithEngineConfigurator        = api.WithEngineConfigurator
 	WithLocalManagementPassword   = api.WithLocalManagementPassword
+	WithPostAuthHook              = api.WithPostAuthHook
 	WithKeepAliveEndpoint         = api.WithKeepAliveEndpoint
 	WithRequestLoggerFactory      = api.WithRequestLoggerFactory
 	NewServer                     = api.NewServer

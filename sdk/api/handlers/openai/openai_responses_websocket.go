@@ -153,6 +153,38 @@ func (h *OpenAIResponsesAPIHandler) ResponsesWebsocket(c *gin.Context) {
 				pinnedAuthID = strings.TrimSpace(authID)
 			})
 		}
+		if strings.Contains(strings.ToLower(strings.TrimSpace(modelName)), "minimax") {
+			nonStreamReq, errSet := sjson.SetBytes(requestJSON, "stream", false)
+			if errSet != nil {
+				nonStreamReq = requestJSON
+			}
+			resp, _, errMsg := h.ExecuteWithAuthManager(cliCtx, h.HandlerType(), modelName, nonStreamReq, "")
+			if errMsg != nil {
+				h.LoggingAPIResponseError(context.WithValue(context.Background(), "gin", c), errMsg)
+				markAPIResponseTimestamp(c)
+				errorPayload, errWrite := writeResponsesWebsocketError(conn, errMsg)
+				appendWebsocketEvent(&wsBodyLog, "response", errorPayload)
+				if errWrite != nil {
+					wsTerminateErr = errWrite
+					cliCancel(errWrite)
+					return
+				}
+				cliCancel(errMsg.Error)
+				continue
+			}
+			donePayload := websocketDonePayloadFromResponsesJSON(resp)
+			markAPIResponseTimestamp(c)
+			appendWebsocketEvent(&wsBodyLog, "response", donePayload)
+			if errWrite := conn.WriteMessage(websocket.TextMessage, donePayload); errWrite != nil {
+				wsTerminateErr = errWrite
+				cliCancel(errWrite)
+				return
+			}
+			lastResponseOutput = responseCompletedOutputFromPayload(donePayload)
+			cliCancel(nil)
+			continue
+		}
+
 		dataChan, _, errChan := h.ExecuteStreamWithAuthManager(cliCtx, h.HandlerType(), modelName, requestJSON, "")
 
 		completedOutput, errForward := h.forwardResponsesWebsocket(c, conn, cliCancel, dataChan, errChan, &wsBodyLog, passthroughSessionID)
@@ -208,6 +240,26 @@ func normalizeResponseCreateRequest(rawJSON []byte) ([]byte, []byte, *interfaces
 	normalized, errDelete := sjson.DeleteBytes(rawJSON, "type")
 	if errDelete != nil {
 		normalized = bytes.Clone(rawJSON)
+	}
+	if modelName := strings.TrimSpace(gjson.GetBytes(normalized, "model").String()); modelName == "" {
+		if nestedModel := strings.TrimSpace(gjson.GetBytes(normalized, "response.model").String()); nestedModel != "" {
+			normalized, _ = sjson.SetBytes(normalized, "model", nestedModel)
+		}
+	}
+	if !gjson.GetBytes(normalized, "input").Exists() {
+		if nestedInput := gjson.GetBytes(normalized, "response.input"); nestedInput.Exists() {
+			normalized, _ = sjson.SetRawBytes(normalized, "input", []byte(nestedInput.Raw))
+		}
+	}
+	if !gjson.GetBytes(normalized, "instructions").Exists() {
+		if nestedInstructions := gjson.GetBytes(normalized, "response.instructions"); nestedInstructions.Exists() {
+			normalized, _ = sjson.SetRawBytes(normalized, "instructions", []byte(nestedInstructions.Raw))
+		}
+	}
+	if !gjson.GetBytes(normalized, "stream").Exists() {
+		if nestedStream := gjson.GetBytes(normalized, "response.stream"); nestedStream.Exists() {
+			normalized, _ = sjson.SetBytes(normalized, "stream", nestedStream.Bool())
+		}
 	}
 	normalized, _ = sjson.SetBytes(normalized, "stream", true)
 	if !gjson.GetBytes(normalized, "input").Exists() {
@@ -505,6 +557,26 @@ func responseCompletedOutputFromPayload(payload []byte) []byte {
 		return bytes.Clone([]byte(output.Raw))
 	}
 	return []byte("[]")
+}
+
+func websocketDonePayloadFromResponsesJSON(payload []byte) []byte {
+	trimmed := bytes.TrimSpace(payload)
+	if len(trimmed) == 0 || !json.Valid(trimmed) {
+		return []byte(`{"type":"response.done","response":{"output":[]}}`)
+	}
+	eventType := strings.TrimSpace(gjson.GetBytes(trimmed, "type").String())
+	if eventType != "" {
+		if eventType == wsEventTypeCompleted {
+			normalized, errSet := sjson.SetBytes(trimmed, "type", wsEventTypeDone)
+			if errSet == nil {
+				return normalized
+			}
+		}
+		return bytes.Clone(trimmed)
+	}
+	wrapped := []byte(`{"type":"response.done","response":{}}`)
+	wrapped, _ = sjson.SetRawBytes(wrapped, "response", trimmed)
+	return wrapped
 }
 
 func websocketJSONPayloadsFromChunk(chunk []byte) [][]byte {

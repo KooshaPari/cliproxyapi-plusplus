@@ -15,8 +15,16 @@ const (
 	PinnedAuthMetadataKey = "pinned_auth_id"
 	// SelectedAuthMetadataKey stores the auth ID selected by the scheduler.
 	SelectedAuthMetadataKey = "selected_auth_id"
+	// SelectedAuthProviderMetadataKey stores the selected provider key.
+	SelectedAuthProviderMetadataKey = "selected_auth_provider"
+	// SelectedAuthLabelMetadataKey stores the selected auth label.
+	SelectedAuthLabelMetadataKey = "selected_auth_label"
 	// SelectedAuthCallbackMetadataKey carries an optional callback invoked with the selected auth ID.
 	SelectedAuthCallbackMetadataKey = "selected_auth_callback"
+	// RotationAttemptMetadataKey stores the latest per-request auth rotation attempt number.
+	RotationAttemptMetadataKey = "rotation_attempt"
+	// RotationReasonMetadataKey stores a compact reason for the latest auth rotation.
+	RotationReasonMetadataKey = "rotation_reason"
 	// ExecutionSessionMetadataKey identifies a long-lived downstream execution session.
 	ExecutionSessionMetadataKey = "execution_session_id"
 )

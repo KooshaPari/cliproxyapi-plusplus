@@ -607,7 +607,7 @@ func (m *Manager) executeMixedOnce(ctx context.Context, providers []string, req 
 
 		entry := logEntryWithRequestID(ctx)
 		debugLogAuthSelection(entry, auth, provider, req.Model)
-		publishSelectedAuthMetadata(opts.Metadata, auth.ID)
+			publishSelectedAuthMetadata(opts.Metadata, auth, provider)
 
 		tried[auth.ID] = struct{}{}
 		execCtx := ctx
@@ -622,6 +622,7 @@ func (m *Manager) executeMixedOnce(ctx context.Context, providers []string, req 
 		resp, errExec := executor.Execute(execCtx, auth, execReq, opts)
 		result := Result{AuthID: auth.ID, Provider: provider, Model: routeModel, Success: errExec == nil}
 		if errExec != nil {
+			errExec = normalizeProviderStatusError(errExec)
 			if errCtx := execCtx.Err(); errCtx != nil {
 				return cliproxyexecutor.Response{}, errCtx
 			}
@@ -632,15 +633,24 @@ func (m *Manager) executeMixedOnce(ctx context.Context, providers []string, req 
 			if ra := retryAfterFromError(errExec); ra != nil {
 				result.RetryAfter = ra
 			}
-			m.MarkResult(execCtx, result)
-			if isRequestInvalidError(errExec) {
-				return cliproxyexecutor.Response{}, errExec
+				m.MarkResult(execCtx, result)
+				if isRequestInvalidError(errExec) {
+					return cliproxyexecutor.Response{}, errExec
+				}
+				publishRotationMetadata(opts.Metadata, len(tried), compactRotationReason(errExec))
+				lastErr = errExec
+				continue
 			}
-			lastErr = errExec
-			continue
-		}
-		m.MarkResult(execCtx, result)
-		return resp, nil
+			if envErr, failed := minimaxProviderEnvelopeFailure(provider, routeModel, resp.Payload); failed {
+				result.Success = false
+				result.Error = envErr
+				m.MarkResult(execCtx, result)
+				publishRotationMetadata(opts.Metadata, len(tried), compactRotationReason(envErr))
+				lastErr = envErr
+				continue
+			}
+			m.MarkResult(execCtx, result)
+			return resp, nil
 	}
 }
 
@@ -663,7 +673,7 @@ func (m *Manager) executeCountMixedOnce(ctx context.Context, providers []string,
 
 		entry := logEntryWithRequestID(ctx)
 		debugLogAuthSelection(entry, auth, provider, req.Model)
-		publishSelectedAuthMetadata(opts.Metadata, auth.ID)
+			publishSelectedAuthMetadata(opts.Metadata, auth, provider)
 
 		tried[auth.ID] = struct{}{}
 		execCtx := ctx
@@ -678,6 +688,7 @@ func (m *Manager) executeCountMixedOnce(ctx context.Context, providers []string,
 		resp, errExec := executor.CountTokens(execCtx, auth, execReq, opts)
 		result := Result{AuthID: auth.ID, Provider: provider, Model: routeModel, Success: errExec == nil}
 		if errExec != nil {
+			errExec = normalizeProviderStatusError(errExec)
 			if errCtx := execCtx.Err(); errCtx != nil {
 				return cliproxyexecutor.Response{}, errCtx
 			}
@@ -688,15 +699,24 @@ func (m *Manager) executeCountMixedOnce(ctx context.Context, providers []string,
 			if ra := retryAfterFromError(errExec); ra != nil {
 				result.RetryAfter = ra
 			}
-			m.MarkResult(execCtx, result)
-			if isRequestInvalidError(errExec) {
-				return cliproxyexecutor.Response{}, errExec
+				m.MarkResult(execCtx, result)
+				if isRequestInvalidError(errExec) {
+					return cliproxyexecutor.Response{}, errExec
+				}
+				publishRotationMetadata(opts.Metadata, len(tried), compactRotationReason(errExec))
+				lastErr = errExec
+				continue
 			}
-			lastErr = errExec
-			continue
-		}
-		m.MarkResult(execCtx, result)
-		return resp, nil
+			if envErr, failed := minimaxProviderEnvelopeFailure(provider, routeModel, resp.Payload); failed {
+				result.Success = false
+				result.Error = envErr
+				m.MarkResult(execCtx, result)
+				publishRotationMetadata(opts.Metadata, len(tried), compactRotationReason(envErr))
+				lastErr = envErr
+				continue
+			}
+			m.MarkResult(execCtx, result)
+			return resp, nil
 	}
 }
 
@@ -719,7 +739,7 @@ func (m *Manager) executeStreamMixedOnce(ctx context.Context, providers []string
 
 		entry := logEntryWithRequestID(ctx)
 		debugLogAuthSelection(entry, auth, provider, req.Model)
-		publishSelectedAuthMetadata(opts.Metadata, auth.ID)
+			publishSelectedAuthMetadata(opts.Metadata, auth, provider)
 
 		tried[auth.ID] = struct{}{}
 		execCtx := ctx
@@ -733,6 +753,7 @@ func (m *Manager) executeStreamMixedOnce(ctx context.Context, providers []string
 		execReq.Model = m.applyAPIKeyModelAlias(auth, execReq.Model)
 		streamResult, errStream := executor.ExecuteStream(execCtx, auth, execReq, opts)
 		if errStream != nil {
+			errStream = normalizeProviderStatusError(errStream)
 			if errCtx := execCtx.Err(); errCtx != nil {
 				return nil, errCtx
 			}
@@ -742,44 +763,80 @@ func (m *Manager) executeStreamMixedOnce(ctx context.Context, providers []string
 			}
 			result := Result{AuthID: auth.ID, Provider: provider, Model: routeModel, Success: false, Error: rerr}
 			result.RetryAfter = retryAfterFromError(errStream)
-			m.MarkResult(execCtx, result)
-			if isRequestInvalidError(errStream) {
-				return nil, errStream
+				m.MarkResult(execCtx, result)
+				if isRequestInvalidError(errStream) {
+					return nil, errStream
+				}
+				publishRotationMetadata(opts.Metadata, len(tried), compactRotationReason(errStream))
+				lastErr = errStream
+				continue
 			}
-			lastErr = errStream
-			continue
-		}
-		out := make(chan cliproxyexecutor.StreamChunk)
-		go func(streamCtx context.Context, streamAuth *Auth, streamProvider string, streamChunks <-chan cliproxyexecutor.StreamChunk) {
-			defer close(out)
-			var failed bool
-			forward := true
-			for chunk := range streamChunks {
-				if chunk.Err != nil && !failed {
-					failed = true
-					rerr := &Error{Message: chunk.Err.Error()}
-					if se, ok := errors.AsType[cliproxyexecutor.StatusError](chunk.Err); ok && se != nil {
-						rerr.HTTPStatus = se.StatusCode()
+			if streamResult == nil || streamResult.Chunks == nil {
+				errNilStream := &Error{Code: "stream_unavailable", Message: "upstream stream unavailable", HTTPStatus: http.StatusBadGateway}
+				m.MarkResult(execCtx, Result{AuthID: auth.ID, Provider: provider, Model: routeModel, Success: false, Error: errNilStream})
+				publishRotationMetadata(opts.Metadata, len(tried), compactRotationReason(errNilStream))
+				lastErr = errNilStream
+				continue
+			}
+			firstChunk, ok := <-streamResult.Chunks
+			if !ok {
+				errClosed := &Error{Code: "stream_closed", Message: "upstream stream closed before first chunk", HTTPStatus: http.StatusBadGateway}
+				m.MarkResult(execCtx, Result{AuthID: auth.ID, Provider: provider, Model: routeModel, Success: false, Error: errClosed})
+				publishRotationMetadata(opts.Metadata, len(tried), compactRotationReason(errClosed))
+				lastErr = errClosed
+				continue
+			}
+			if firstChunk.Err != nil {
+				rerr := &Error{Message: firstChunk.Err.Error()}
+				if se, ok := errors.AsType[cliproxyexecutor.StatusError](firstChunk.Err); ok && se != nil {
+					rerr.HTTPStatus = se.StatusCode()
+				}
+				m.MarkResult(execCtx, Result{AuthID: auth.ID, Provider: provider, Model: routeModel, Success: false, Error: rerr})
+				publishRotationMetadata(opts.Metadata, len(tried), compactRotationReason(firstChunk.Err))
+				lastErr = firstChunk.Err
+				continue
+			}
+			if envErr, failed := minimaxProviderEnvelopeFailure(provider, routeModel, firstChunk.Payload); failed {
+				m.MarkResult(execCtx, Result{AuthID: auth.ID, Provider: provider, Model: routeModel, Success: false, Error: envErr})
+				publishRotationMetadata(opts.Metadata, len(tried), compactRotationReason(envErr))
+				lastErr = envErr
+				continue
+			}
+			out := make(chan cliproxyexecutor.StreamChunk)
+			go func(streamCtx context.Context, streamAuth *Auth, streamProvider string, first cliproxyexecutor.StreamChunk, streamChunks <-chan cliproxyexecutor.StreamChunk) {
+				defer close(out)
+				var failed bool
+				forward := true
+				handleChunk := func(chunk cliproxyexecutor.StreamChunk) {
+					if chunk.Err != nil && !failed {
+						failed = true
+						rerr := &Error{Message: chunk.Err.Error()}
+						if se, ok := errors.AsType[cliproxyexecutor.StatusError](chunk.Err); ok && se != nil {
+							rerr.HTTPStatus = se.StatusCode()
+						}
+						m.MarkResult(streamCtx, Result{AuthID: streamAuth.ID, Provider: streamProvider, Model: routeModel, Success: false, Error: rerr})
 					}
-					m.MarkResult(streamCtx, Result{AuthID: streamAuth.ID, Provider: streamProvider, Model: routeModel, Success: false, Error: rerr})
+					if !forward {
+						return
+					}
+					if streamCtx == nil {
+						out <- chunk
+						return
+					}
+					select {
+					case <-streamCtx.Done():
+						forward = false
+					case out <- chunk:
+					}
 				}
-				if !forward {
-					continue
+				handleChunk(first)
+				for chunk := range streamChunks {
+					handleChunk(chunk)
 				}
-				if streamCtx == nil {
-					out <- chunk
-					continue
+				if !failed {
+					m.MarkResult(streamCtx, Result{AuthID: streamAuth.ID, Provider: streamProvider, Model: routeModel, Success: true})
 				}
-				select {
-				case <-streamCtx.Done():
-					forward = false
-				case out <- chunk:
-				}
-			}
-			if !failed {
-				m.MarkResult(streamCtx, Result{AuthID: streamAuth.ID, Provider: streamProvider, Model: routeModel, Success: true})
-			}
-		}(execCtx, auth.Clone(), provider, streamResult.Chunks)
+			}(execCtx, auth.Clone(), provider, firstChunk, streamResult.Chunks)
 		return &cliproxyexecutor.StreamResult{
 			Headers: streamResult.Headers,
 			Chunks:  out,
@@ -844,18 +901,160 @@ func pinnedAuthIDFromMetadata(meta map[string]any) string {
 	}
 }
 
-func publishSelectedAuthMetadata(meta map[string]any, authID string) {
+func publishSelectedAuthMetadata(meta map[string]any, auth *Auth, provider string) {
 	if len(meta) == 0 {
 		return
+	}
+	authID := ""
+	if auth != nil {
+		authID = auth.ID
 	}
 	authID = strings.TrimSpace(authID)
 	if authID == "" {
 		return
 	}
 	meta[cliproxyexecutor.SelectedAuthMetadataKey] = authID
+	if auth != nil {
+		if label := strings.TrimSpace(auth.Label); label != "" {
+			meta[cliproxyexecutor.SelectedAuthLabelMetadataKey] = label
+		}
+	}
+	if normalizedProvider := strings.TrimSpace(provider); normalizedProvider != "" {
+		meta[cliproxyexecutor.SelectedAuthProviderMetadataKey] = normalizedProvider
+	}
 	if callback, ok := meta[cliproxyexecutor.SelectedAuthCallbackMetadataKey].(func(string)); ok && callback != nil {
 		callback(authID)
 	}
+}
+
+func publishRotationMetadata(meta map[string]any, attempt int, reason string) {
+	if len(meta) == 0 {
+		return
+	}
+	if attempt < 1 {
+		attempt = 1
+	}
+	meta[cliproxyexecutor.RotationAttemptMetadataKey] = attempt
+	reason = strings.TrimSpace(reason)
+	if reason != "" {
+		meta[cliproxyexecutor.RotationReasonMetadataKey] = reason
+	}
+}
+
+func compactRotationReason(err error) string {
+	if err == nil {
+		return ""
+	}
+	msg := strings.TrimSpace(err.Error())
+	if msg == "" {
+		return "upstream_error"
+	}
+	const maxLen = 200
+	if len(msg) > maxLen {
+		return msg[:maxLen]
+	}
+	return msg
+}
+
+func minimaxProviderEnvelopeFailure(provider, model string, payload []byte) (*Error, bool) {
+	if len(bytes.TrimSpace(payload)) == 0 {
+		return nil, false
+	}
+	p := strings.ToLower(strings.TrimSpace(provider))
+	m := strings.ToLower(strings.TrimSpace(model))
+	if !strings.Contains(p, "minimax") && !strings.Contains(m, "minimax") {
+		return nil, false
+	}
+
+	type compatEnvelope struct {
+		Status any             `json:"status"`
+		Msg    string          `json:"msg"`
+		Error  json.RawMessage `json:"error"`
+	}
+	var env compatEnvelope
+	if err := json.Unmarshal(payload, &env); err != nil {
+		return nil, false
+	}
+
+	if len(bytes.TrimSpace(env.Error)) > 0 && !bytes.Equal(bytes.TrimSpace(env.Error), []byte("null")) {
+		message := "provider_error"
+		var errorObj map[string]any
+		if err := json.Unmarshal(env.Error, &errorObj); err == nil {
+			if raw, ok := errorObj["message"].(string); ok && strings.TrimSpace(raw) != "" {
+				message = strings.TrimSpace(raw)
+			}
+		}
+		return &Error{Code: "provider_error", Message: message, HTTPStatus: http.StatusBadGateway}, true
+	}
+
+	statusCode := 0
+	switch raw := env.Status.(type) {
+	case float64:
+		statusCode = int(raw)
+	case string:
+		if parsed, err := strconv.Atoi(strings.TrimSpace(raw)); err == nil {
+			statusCode = parsed
+		}
+	}
+	if statusCode >= 200 && statusCode < 300 {
+		return nil, false
+	}
+	if statusCode == 0 && strings.TrimSpace(env.Msg) == "" {
+		return nil, false
+	}
+	if statusCode < 400 || statusCode > 599 {
+		statusCode = http.StatusBadGateway
+	}
+	message := strings.TrimSpace(env.Msg)
+	if message == "" {
+		message = "provider_error"
+	}
+	statusCode = normalizeProviderStatus(statusCode, message)
+	return &Error{Code: "provider_error", Message: message, HTTPStatus: statusCode}, true
+}
+
+func normalizeProviderStatus(statusCode int, message string) int {
+	msg := strings.ToLower(strings.TrimSpace(message))
+	if statusCode >= 100 && statusCode <= 599 && http.StatusText(statusCode) != "" {
+		return statusCode
+	}
+	switch {
+	case strings.Contains(msg, "invalid api key"),
+		strings.Contains(msg, "unauthorized"),
+		strings.Contains(msg, "authentication"),
+		strings.Contains(msg, "auth failed"):
+		return http.StatusUnauthorized
+	case strings.Contains(msg, "forbidden"),
+		strings.Contains(msg, "blocked"),
+		strings.Contains(msg, "denied"):
+		return http.StatusForbidden
+	case strings.Contains(msg, "rate limit"),
+		strings.Contains(msg, "too many requests"),
+		strings.Contains(msg, "quota"):
+		return http.StatusTooManyRequests
+	default:
+		return http.StatusBadGateway
+	}
+}
+
+func normalizeProviderStatusError(err error) error {
+	if err == nil {
+		return nil
+	}
+	se, ok := errors.AsType[cliproxyexecutor.StatusError](err)
+	if !ok || se == nil {
+		return err
+	}
+	code := se.StatusCode()
+	if code < 100 || code > 599 || http.StatusText(code) == "" {
+		normalized := normalizeProviderStatus(code, err.Error())
+		return &Error{
+			Code:       "provider_error",
+			Message:    err.Error(),
+			HTTPStatus: normalized,
+		}
+	}
+	return err
 }
 
 func rewriteModelForAuth(model string, auth *Auth) string {
@@ -1690,7 +1889,7 @@ func (m *Manager) pickNext(ctx context.Context, provider, model string, opts cli
 		if _, used := tried[candidate.ID]; used {
 			continue
 		}
-		if modelKey != "" && registryRef != nil && !registryRef.ClientSupportsModel(candidate.ID, modelKey) {
+		if modelKey != "" && !candidateSupportsModel(candidate, modelKey, registryRef) {
 			continue
 		}
 		candidates = append(candidates, candidate)
@@ -1724,20 +1923,24 @@ func (m *Manager) pickNext(ctx context.Context, provider, model string, opts cli
 func (m *Manager) pickNextMixed(ctx context.Context, providers []string, model string, opts cliproxyexecutor.Options, tried map[string]struct{}) (*Auth, ProviderExecutor, string, error) {
 	pinnedAuthID := pinnedAuthIDFromMetadata(opts.Metadata)
 
-	providerSet := make(map[string]struct{}, len(providers))
+	orderedProviders := make([]string, 0, len(providers))
+	seenProviders := make(map[string]struct{}, len(providers))
 	for _, provider := range providers {
 		p := strings.TrimSpace(strings.ToLower(provider))
 		if p == "" {
 			continue
 		}
-		providerSet[p] = struct{}{}
+		if _, exists := seenProviders[p]; exists {
+			continue
+		}
+		seenProviders[p] = struct{}{}
+		orderedProviders = append(orderedProviders, p)
 	}
-	if len(providerSet) == 0 {
+	if len(orderedProviders) == 0 {
 		return nil, nil, "", &Error{Code: "provider_not_found", Message: "no provider supplied"}
 	}
 
 	m.mu.RLock()
-	candidates := make([]*Auth, 0, len(m.auths))
 	modelKey := strings.TrimSpace(model)
 	// Always use base model name (without thinking suffix) for auth matching.
 	if modelKey != "" {
@@ -1747,61 +1950,81 @@ func (m *Manager) pickNextMixed(ctx context.Context, providers []string, model s
 		}
 	}
 	registryRef := registry.GetGlobalRegistry()
-	for _, candidate := range m.auths {
-		if candidate == nil || candidate.Disabled {
+
+	var lastPickErr error
+	for _, providerKey := range orderedProviders {
+		executor, okExecutor := m.executors[providerKey]
+		if !okExecutor {
 			continue
 		}
-		if pinnedAuthID != "" && candidate.ID != pinnedAuthID {
+		candidates := make([]*Auth, 0, len(m.auths))
+		for _, candidate := range m.auths {
+			if candidate == nil || candidate.Disabled {
+				continue
+			}
+			if pinnedAuthID != "" && candidate.ID != pinnedAuthID {
+				continue
+			}
+			candidateProvider := strings.TrimSpace(strings.ToLower(candidate.Provider))
+			if candidateProvider != providerKey {
+				continue
+			}
+			if _, used := tried[candidate.ID]; used {
+				continue
+			}
+			if modelKey != "" && !candidateSupportsModel(candidate, modelKey, registryRef) {
+				continue
+			}
+			candidates = append(candidates, candidate)
+		}
+		if len(candidates) == 0 {
 			continue
 		}
-		providerKey := strings.TrimSpace(strings.ToLower(candidate.Provider))
-		if providerKey == "" {
+		selected, errPick := m.selector.Pick(ctx, providerKey, model, opts, candidates)
+		if errPick != nil {
+			lastPickErr = errPick
 			continue
 		}
-		if _, ok := providerSet[providerKey]; !ok {
+		if selected == nil {
+			lastPickErr = &Error{Code: "auth_not_found", Message: "selector returned no auth"}
 			continue
 		}
-		if _, used := tried[candidate.ID]; used {
-			continue
-		}
-		if _, ok := m.executors[providerKey]; !ok {
-			continue
-		}
-		if modelKey != "" && registryRef != nil && !registryRef.ClientSupportsModel(candidate.ID, modelKey) {
-			continue
-		}
-		candidates = append(candidates, candidate)
-	}
-	if len(candidates) == 0 {
+		authCopy := selected.Clone()
 		m.mu.RUnlock()
-		return nil, nil, "", &Error{Code: "auth_not_found", Message: "no auth available"}
+		if !selected.indexAssigned {
+			m.mu.Lock()
+			if current := m.auths[authCopy.ID]; current != nil && !current.indexAssigned {
+				current.EnsureIndex()
+				authCopy = current.Clone()
+			}
+			m.mu.Unlock()
+		}
+		return authCopy, executor, providerKey, nil
 	}
-	selected, errPick := m.selector.Pick(ctx, "mixed", model, opts, candidates)
-	if errPick != nil {
-		m.mu.RUnlock()
-		return nil, nil, "", errPick
-	}
-	if selected == nil {
-		m.mu.RUnlock()
-		return nil, nil, "", &Error{Code: "auth_not_found", Message: "selector returned no auth"}
-	}
-	providerKey := strings.TrimSpace(strings.ToLower(selected.Provider))
-	executor, okExecutor := m.executors[providerKey]
-	if !okExecutor {
-		m.mu.RUnlock()
-		return nil, nil, "", &Error{Code: "executor_not_found", Message: "executor not registered"}
-	}
-	authCopy := selected.Clone()
 	m.mu.RUnlock()
-	if !selected.indexAssigned {
-		m.mu.Lock()
-		if current := m.auths[authCopy.ID]; current != nil && !current.indexAssigned {
-			current.EnsureIndex()
-			authCopy = current.Clone()
-		}
-		m.mu.Unlock()
+	if lastPickErr != nil {
+		return nil, nil, "", lastPickErr
 	}
-	return authCopy, executor, providerKey, nil
+	return nil, nil, "", &Error{Code: "auth_not_found", Message: "no auth available"}
+}
+
+func candidateSupportsModel(candidate *Auth, modelKey string, registryRef *registry.ModelRegistry) bool {
+	if candidate == nil {
+		return false
+	}
+	modelKey = strings.TrimSpace(modelKey)
+	if modelKey == "" {
+		return true
+	}
+	if registryRef != nil && registryRef.ClientSupportsModel(candidate.ID, modelKey) {
+		return true
+	}
+	providerKey := strings.ToLower(strings.TrimSpace(candidate.Provider))
+	modelLower := strings.ToLower(modelKey)
+	if providerKey == "minimax" && strings.HasPrefix(modelLower, "minimax") {
+		return true
+	}
+	return false
 }
 
 func (m *Manager) persist(ctx context.Context, auth *Auth) error {

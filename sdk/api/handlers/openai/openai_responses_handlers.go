@@ -11,6 +11,8 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	. "github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/constant"
@@ -88,6 +90,15 @@ func (h *OpenAIResponsesAPIHandler) Responses(c *gin.Context) {
 	stream := streamResult.Type == gjson.True
 
 	modelName := gjson.GetBytes(rawJSON, "model").String()
+	if strings.Contains(strings.ToLower(strings.TrimSpace(modelName)), "minimax") {
+		chatJSON := responsesconverter.ConvertOpenAIResponsesRequestToOpenAIChatCompletions(modelName, rawJSON, stream)
+		if stream {
+			h.handleStreamingResponseViaChat(c, rawJSON, chatJSON)
+		} else {
+			h.handleNonStreamingResponseViaChat(c, rawJSON, chatJSON)
+		}
+		return
+	}
 	if overrideEndpoint, ok := resolveEndpointOverride(modelName, openAIResponsesEndpoint); ok && overrideEndpoint == openAIChatEndpoint {
 		chatJSON := responsesconverter.ConvertOpenAIResponsesRequestToOpenAIChatCompletions(modelName, rawJSON, stream)
 		stream = gjson.GetBytes(chatJSON, "stream").Bool()
@@ -186,6 +197,11 @@ func (h *OpenAIResponsesAPIHandler) handleNonStreamingResponseViaChat(c *gin.Con
 	if errMsg != nil {
 		h.WriteErrorResponse(c, errMsg)
 		cliCancel(errMsg.Error)
+		return
+	}
+	if providerErr := extractCompatProviderError(resp); providerErr != nil {
+		h.WriteErrorResponse(c, providerErr)
+		cliCancel(providerErr.Error)
 		return
 	}
 	handlers.WriteUpstreamHeaders(c.Writer.Header(), upstreamHeaders)
@@ -298,6 +314,56 @@ func (h *OpenAIResponsesAPIHandler) handleStreamingResponseViaChat(c *gin.Contex
 	}
 
 	modelName := gjson.GetBytes(chatJSON, "model").String()
+	if strings.Contains(strings.ToLower(strings.TrimSpace(modelName)), "minimax") {
+		if updated, err := sjson.SetBytes(chatJSON, "stream", false); err == nil {
+			chatJSON = updated
+		}
+		cliCtx, cliCancel := h.GetContextWithCancel(h, c, context.Background())
+		resp, upstreamHeaders, errMsg := h.ExecuteWithAuthManager(cliCtx, OpenAI, modelName, chatJSON, "")
+		if errMsg != nil {
+			h.WriteErrorResponse(c, errMsg)
+			cliCancel(errMsg.Error)
+			return
+		}
+		if providerErr := extractCompatProviderError(resp); providerErr != nil {
+			h.WriteErrorResponse(c, providerErr)
+			cliCancel(providerErr.Error)
+			return
+		}
+		c.Header("Content-Type", "text/event-stream")
+		c.Header("Cache-Control", "no-cache")
+		c.Header("Connection", "keep-alive")
+		c.Header("X-Accel-Buffering", "no")
+		handlers.WriteUpstreamHeaders(c.Writer.Header(), upstreamHeaders)
+
+		var param any
+		converted := responsesconverter.ConvertOpenAIChatCompletionsResponseToOpenAIResponsesNonStream(
+			cliCtx,
+			modelName,
+			originalResponsesJSON,
+			originalResponsesJSON,
+			resp,
+			&param,
+		)
+		if converted == "" {
+			h.WriteErrorResponse(c, &interfaces.ErrorMessage{
+				StatusCode: http.StatusInternalServerError,
+				Error:      fmt.Errorf("failed to convert chat completion response to responses format"),
+			})
+			cliCancel(fmt.Errorf("response conversion failed"))
+			return
+		}
+
+		wrapped := wrapResponsesPayloadAsCompleted([]byte(converted))
+		if len(wrapped) > 0 {
+			writeSyntheticResponsesStreamFromCompleted(c, wrapped)
+		}
+		_, _ = fmt.Fprint(c.Writer, "data: [DONE]\n\n")
+		flusher.Flush()
+		cliCancel()
+		return
+	}
+
 	cliCtx, cliCancel := h.GetContextWithCancel(h, c, context.Background())
 	dataChan, upstreamHeaders, errChan := h.ExecuteStreamWithAuthManager(cliCtx, OpenAI, modelName, chatJSON, "")
 	var param any
@@ -338,8 +404,12 @@ func (h *OpenAIResponsesAPIHandler) handleStreamingResponseViaChat(c *gin.Contex
 
 			setSSEHeaders()
 			handlers.WriteUpstreamHeaders(c.Writer.Header(), upstreamHeaders)
-			writeChatAsResponsesChunk(c, cliCtx, modelName, originalResponsesJSON, chunk, &param)
+			providerErr := writeChatAsResponsesChunk(c, cliCtx, modelName, originalResponsesJSON, chunk, &param)
 			flusher.Flush()
+			if providerErr {
+				cliCancel(fmt.Errorf("provider error chunk"))
+				return
+			}
 
 			h.forwardChatAsResponsesStream(c, flusher, func(err error) { cliCancel(err) }, dataChan, errChan, cliCtx, modelName, originalResponsesJSON, &param)
 			return
@@ -347,7 +417,20 @@ func (h *OpenAIResponsesAPIHandler) handleStreamingResponseViaChat(c *gin.Contex
 	}
 }
 
-func writeChatAsResponsesChunk(c *gin.Context, ctx context.Context, modelName string, originalResponsesJSON, chunk []byte, param *any) {
+func writeChatAsResponsesChunk(c *gin.Context, ctx context.Context, modelName string, originalResponsesJSON, chunk []byte, param *any) bool {
+	if providerErr := extractCompatProviderErrorFromSSEChunk(chunk); providerErr != nil {
+		status := providerErr.StatusCode
+		if status <= 0 {
+			status = http.StatusBadGateway
+		}
+		errText := http.StatusText(status)
+		if providerErr.Error != nil && providerErr.Error.Error() != "" {
+			errText = providerErr.Error.Error()
+		}
+		body := handlers.BuildErrorResponseBody(status, errText)
+		_, _ = fmt.Fprintf(c.Writer, "\nevent: error\ndata: %s\n\n", string(body))
+		return true
+	}
 	outputs := responsesconverter.ConvertOpenAIChatCompletionsResponseToOpenAIResponses(ctx, modelName, originalResponsesJSON, originalResponsesJSON, chunk, param)
 	for _, out := range outputs {
 		if out == "" {
@@ -359,11 +442,25 @@ func writeChatAsResponsesChunk(c *gin.Context, ctx context.Context, modelName st
 		_, _ = c.Writer.Write([]byte(out))
 		_, _ = c.Writer.Write([]byte("\n"))
 	}
+	return false
 }
 
 func (h *OpenAIResponsesAPIHandler) forwardChatAsResponsesStream(c *gin.Context, flusher http.Flusher, cancel func(error), data <-chan []byte, errs <-chan *interfaces.ErrorMessage, ctx context.Context, modelName string, originalResponsesJSON []byte, param *any) {
 	h.ForwardStream(c, flusher, cancel, data, errs, handlers.StreamForwardOptions{
 		WriteChunk: func(chunk []byte) {
+			if providerErr := extractCompatProviderErrorFromSSEChunk(chunk); providerErr != nil {
+				status := providerErr.StatusCode
+				if status <= 0 {
+					status = http.StatusBadGateway
+				}
+				errText := http.StatusText(status)
+				if providerErr.Error != nil && providerErr.Error.Error() != "" {
+					errText = providerErr.Error.Error()
+				}
+				body := handlers.BuildErrorResponseBody(status, errText)
+				_, _ = fmt.Fprintf(c.Writer, "\nevent: error\ndata: %s\n\n", string(body))
+				return
+			}
 			outputs := responsesconverter.ConvertOpenAIChatCompletionsResponseToOpenAIResponses(ctx, modelName, originalResponsesJSON, originalResponsesJSON, chunk, param)
 			for _, out := range outputs {
 				if out == "" {
@@ -397,9 +494,83 @@ func (h *OpenAIResponsesAPIHandler) forwardChatAsResponsesStream(c *gin.Context,
 	})
 }
 
+func extractCompatProviderError(payload []byte) *interfaces.ErrorMessage {
+	if len(bytes.TrimSpace(payload)) == 0 {
+		return nil
+	}
+
+	errorNode := gjson.GetBytes(payload, "error")
+	if errorNode.Exists() {
+		message := strings.TrimSpace(errorNode.Get("message").String())
+		if message == "" {
+			message = strings.TrimSpace(errorNode.String())
+		}
+		if message == "" {
+			message = "upstream provider error"
+		}
+		statusCode := int(errorNode.Get("status").Int())
+		if statusCode <= 0 {
+			statusCode = http.StatusBadGateway
+		}
+		statusCode = normalizeProviderStatus(statusCode, message)
+		return &interfaces.ErrorMessage{StatusCode: statusCode, Error: fmt.Errorf("%s", message)}
+	}
+
+	msg := strings.TrimSpace(gjson.GetBytes(payload, "msg").String())
+	statusRaw := strings.TrimSpace(gjson.GetBytes(payload, "status").String())
+	if msg == "" || statusRaw == "" {
+		return nil
+	}
+	statusCode, err := strconv.Atoi(statusRaw)
+	if err != nil || statusCode < 400 || statusCode > 599 {
+		statusCode = http.StatusBadGateway
+	}
+	statusCode = normalizeProviderStatus(statusCode, msg)
+	return &interfaces.ErrorMessage{StatusCode: statusCode, Error: fmt.Errorf("%s", msg)}
+}
+
+func normalizeProviderStatus(statusCode int, message string) int {
+	msg := strings.ToLower(strings.TrimSpace(message))
+	if statusCode >= 100 && statusCode <= 599 && http.StatusText(statusCode) != "" {
+		return statusCode
+	}
+	switch {
+	case strings.Contains(msg, "invalid api key"),
+		strings.Contains(msg, "unauthorized"),
+		strings.Contains(msg, "authentication"),
+		strings.Contains(msg, "auth failed"):
+		return http.StatusUnauthorized
+	case strings.Contains(msg, "forbidden"),
+		strings.Contains(msg, "blocked"),
+		strings.Contains(msg, "denied"):
+		return http.StatusForbidden
+	case strings.Contains(msg, "rate limit"),
+		strings.Contains(msg, "too many requests"),
+		strings.Contains(msg, "quota"):
+		return http.StatusTooManyRequests
+	default:
+		return http.StatusBadGateway
+	}
+}
+
+func extractCompatProviderErrorFromSSEChunk(chunk []byte) *interfaces.ErrorMessage {
+	line := bytes.TrimSpace(chunk)
+	if !bytes.HasPrefix(line, []byte("data:")) {
+		return nil
+	}
+	payload := bytes.TrimSpace(bytes.TrimPrefix(line, []byte("data:")))
+	if len(payload) == 0 || bytes.Equal(payload, []byte("[DONE]")) {
+		return nil
+	}
+	return extractCompatProviderError(payload)
+}
+
 func (h *OpenAIResponsesAPIHandler) forwardResponsesStream(c *gin.Context, flusher http.Flusher, cancel func(error), data <-chan []byte, errs <-chan *interfaces.ErrorMessage) {
 	h.ForwardStream(c, flusher, cancel, data, errs, handlers.StreamForwardOptions{
 		WriteChunk: func(chunk []byte) {
+			if writeSyntheticResponsesStreamFromChunk(c, chunk) {
+				return
+			}
 			if bytes.HasPrefix(chunk, []byte("event:")) {
 				_, _ = c.Writer.Write([]byte("\n"))
 			}
@@ -425,4 +596,112 @@ func (h *OpenAIResponsesAPIHandler) forwardResponsesStream(c *gin.Context, flush
 			_, _ = c.Writer.Write([]byte("\n"))
 		},
 	})
+}
+
+func writeSyntheticResponsesStreamFromChunk(c *gin.Context, chunk []byte) bool {
+	payloads := websocketJSONPayloadsFromChunk(chunk)
+	if len(payloads) != 1 {
+		return false
+	}
+	return writeSyntheticResponsesStreamFromCompleted(c, payloads[0])
+}
+
+func writeSyntheticResponsesStreamFromCompleted(c *gin.Context, payload []byte) bool {
+	completed := wrapResponsesPayloadAsCompleted(payload)
+	if len(completed) == 0 {
+		return false
+	}
+	if gjson.GetBytes(completed, "type").String() != "response.completed" {
+		return false
+	}
+
+	text := extractResponsesOutputText(completed)
+	if strings.TrimSpace(text) == "" {
+		_, _ = fmt.Fprintf(c.Writer, "data: %s\n\n", string(completed))
+		return true
+	}
+
+	responseID := strings.TrimSpace(gjson.GetBytes(completed, "response.id").String())
+	if responseID == "" {
+		responseID = strings.TrimSpace(gjson.GetBytes(completed, "response.response_id").String())
+	}
+	itemID := strings.TrimSpace(gjson.GetBytes(completed, "response.output.0.id").String())
+	if itemID == "" && responseID != "" {
+		itemID = "msg_" + responseID + "_0"
+	}
+
+	created := `{"type":"response.created","sequence_number":0,"response":{"id":"","object":"response","created_at":0,"status":"in_progress","background":false,"error":null,"output":[]}}`
+	if responseID != "" {
+		created, _ = sjson.Set(created, "response.id", responseID)
+	}
+	if model := strings.TrimSpace(gjson.GetBytes(completed, "response.model").String()); model != "" {
+		created, _ = sjson.Set(created, "response.model", model)
+	}
+	if createdAt := gjson.GetBytes(completed, "response.created_at"); createdAt.Exists() {
+		created, _ = sjson.Set(created, "response.created_at", createdAt.Int())
+	}
+	_, _ = fmt.Fprintf(c.Writer, "data: %s\n\n", created)
+
+	itemAdded := `{"type":"response.output_item.added","sequence_number":1,"output_index":0,"item":{"id":"","type":"message","status":"in_progress","content":[],"role":"assistant"}}`
+	if itemID != "" {
+		itemAdded, _ = sjson.Set(itemAdded, "item.id", itemID)
+	}
+	_, _ = fmt.Fprintf(c.Writer, "data: %s\n\n", itemAdded)
+
+	contentPartAdded := `{"type":"response.content_part.added","sequence_number":2,"item_id":"","output_index":0,"content_index":0,"part":{"type":"output_text","annotations":[],"logprobs":[],"text":""}}`
+	if itemID != "" {
+		contentPartAdded, _ = sjson.Set(contentPartAdded, "item_id", itemID)
+	}
+	_, _ = fmt.Fprintf(c.Writer, "data: %s\n\n", contentPartAdded)
+
+	delta := `{"type":"response.output_text.delta","sequence_number":3,"item_id":"","output_index":0,"content_index":0,"delta":"","logprobs":[]}`
+	if itemID != "" {
+		delta, _ = sjson.Set(delta, "item_id", itemID)
+	}
+	delta, _ = sjson.Set(delta, "delta", text)
+	_, _ = fmt.Fprintf(c.Writer, "data: %s\n\n", delta)
+
+	done := `{"type":"response.output_text.done","sequence_number":4,"item_id":"","output_index":0,"content_index":0,"text":"","logprobs":[]}`
+	if itemID != "" {
+		done, _ = sjson.Set(done, "item_id", itemID)
+	}
+	done, _ = sjson.Set(done, "text", text)
+	_, _ = fmt.Fprintf(c.Writer, "data: %s\n\n", done)
+
+	contentPartDone := `{"type":"response.content_part.done","sequence_number":5,"item_id":"","output_index":0,"content_index":0,"part":{"type":"output_text","annotations":[],"logprobs":[],"text":""}}`
+	if itemID != "" {
+		contentPartDone, _ = sjson.Set(contentPartDone, "item_id", itemID)
+	}
+	contentPartDone, _ = sjson.Set(contentPartDone, "part.text", text)
+	_, _ = fmt.Fprintf(c.Writer, "data: %s\n\n", contentPartDone)
+
+	itemDone := `{"type":"response.output_item.done","sequence_number":6,"output_index":0,"item":{"id":"","type":"message","status":"completed","content":[{"type":"output_text","annotations":[],"logprobs":[],"text":""}],"role":"assistant"}}`
+	if itemID != "" {
+		itemDone, _ = sjson.Set(itemDone, "item.id", itemID)
+	}
+	itemDone, _ = sjson.Set(itemDone, "item.content.0.text", text)
+	_, _ = fmt.Fprintf(c.Writer, "data: %s\n\n", itemDone)
+
+	_, _ = fmt.Fprintf(c.Writer, "data: %s\n\n", string(completed))
+	return true
+}
+
+func extractResponsesOutputText(completed []byte) string {
+	if txt := strings.TrimSpace(gjson.GetBytes(completed, "response.output_text").String()); txt != "" {
+		return txt
+	}
+	parts := make([]string, 0, 2)
+	for _, item := range gjson.GetBytes(completed, "response.output").Array() {
+		for _, content := range item.Get("content").Array() {
+			contentType := strings.TrimSpace(content.Get("type").String())
+			if contentType != "output_text" && contentType != "text" {
+				continue
+			}
+			text := strings.TrimSpace(content.Get("text").String())
+			if text != "" {
+				parts = append(parts, text)
+			}
+		}
+	}
+	return strings.Join(parts, "\n")
 }
