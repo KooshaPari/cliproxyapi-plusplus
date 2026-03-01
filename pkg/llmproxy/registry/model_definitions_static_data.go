@@ -1029,9 +1029,11 @@ func GetKimiModels() []*ModelInfo {
 	}
 }
 
-// GetCursorModels returns the Cursor model definitions (fallback stubs)
+// GetCursorModels returns the Cursor model definitions
 func GetCursorModels() []*ModelInfo {
-	return nil // Cursor models are typically fetched from executor
+	return []*ModelInfo{
+		{ID: "default", OwnedBy: "cursor"},
+	}
 }
 
 // GetMiniMaxModels returns the MiniMax model definitions (fallback stubs)
