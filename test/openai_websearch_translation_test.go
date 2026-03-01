@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	_ "github.com/kooshapari/cliproxyapi-plusplus/v6/internal/translator"
+	_ "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/translator"
 
 	sdktranslator "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/translator"
 	"github.com/tidwall/gjson"

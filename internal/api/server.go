@@ -19,17 +19,17 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/access"
-	managementHandlers "github.com/kooshapari/cliproxyapi-plusplus/v6/internal/api/handlers/management"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/api/middleware"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/api/modules"
-	ampmodule "github.com/kooshapari/cliproxyapi-plusplus/v6/internal/api/modules/amp"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/auth/kiro"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/logging"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/managementasset"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/usage"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/util"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/access"
+	managementHandlers "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/api/handlers/management"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/api/middleware"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/api/modules"
+	ampmodule "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/api/modules/amp"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/kiro"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/logging"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/managementasset"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/usage"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/util"
 	sdkaccess "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/access"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/api/handlers"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/api/handlers/claude"
@@ -1007,8 +1007,8 @@ func (s *Server) UpdateClients(cfg *config.Config) {
 		s.mgmt.SetAuthManager(s.handlers.AuthManager)
 	}
 
-	// Notify Amp module when Amp config or OAuth model aliases have changed.
-	ampConfigChanged := oldCfg == nil || !reflect.DeepEqual(oldCfg.AmpCode, cfg.AmpCode) || !reflect.DeepEqual(oldCfg.OAuthModelAlias, cfg.OAuthModelAlias)
+	// Notify Amp module only when Amp config has changed.
+	ampConfigChanged := oldCfg == nil || !reflect.DeepEqual(oldCfg.AmpCode, cfg.AmpCode)
 	if ampConfigChanged {
 		if s.ampModule != nil {
 			log.Debugf("triggering amp module config update")

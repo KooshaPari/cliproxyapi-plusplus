@@ -11,7 +11,7 @@ import (
 	"time"
 
 	internalapi "github.com/kooshapari/cliproxyapi-plusplus/v6/internal/api"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy"
 	log "github.com/sirupsen/logrus"
 )

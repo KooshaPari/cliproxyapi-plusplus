@@ -3,12 +3,9 @@ cli-proxy-api
 cliproxy
 cliproxyapi++
 *.exe
-cli-proxy-api-plus
-server
 
 # Hot-reload artifacts
 .air/
-
 
 # Configuration
 config.yaml
@@ -58,11 +55,9 @@ _bmad-output/*
 .DS_Store
 ._*
 *.bak
+# Local worktree shelves (canonical checkout must stay clean)
 PROJECT-wtrees/
 cli-proxy-api-plus-integration-test
 boardsync
 releasebatch
 .cache
-# Build artifacts (cherry-picked from fix/test-cleanups)
-cliproxyapi++
-.air/
