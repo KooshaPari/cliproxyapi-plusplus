@@ -48,9 +48,9 @@ func TestGeminiTokenStorage_SaveAndLoad(t *testing.T) {
 	ts := &GeminiTokenStorage{
 		Token:     "raw-token-data",
 		ProjectID: "test-project",
-		Email:     "test@example.com",
-		Type:      "gemini",
 	}
+	ts.Email = "test@example.com"
+	ts.Type = "gemini"
 
 	err := ts.SaveTokenToFile(path)
 	if err != nil {

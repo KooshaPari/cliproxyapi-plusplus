@@ -51,12 +51,12 @@ func (h *Handler) RequestGitHubToken(c *gin.Context) {
 		}
 
 		tokenStorage := &copilot.CopilotTokenStorage{
-			AccessToken: tokenData.AccessToken,
 			TokenType:   tokenData.TokenType,
 			Scope:       tokenData.Scope,
 			Username:    username,
-			Type:        "github-copilot",
 		}
+		tokenStorage.AccessToken = tokenData.AccessToken
+		tokenStorage.Type = "github-copilot"
 
 		fileName := fmt.Sprintf("github-%s.json", username)
 		record := &coreauth.Auth{

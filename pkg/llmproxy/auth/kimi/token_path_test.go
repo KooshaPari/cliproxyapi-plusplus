@@ -6,7 +6,8 @@ import (
 )
 
 func TestKimiTokenStorage_SaveTokenToFile_RejectsTraversalPath(t *testing.T) {
-	ts := &KimiTokenStorage{AccessToken: "token"}
+	ts := &KimiTokenStorage{}
+	ts.AccessToken = "token"
 	badPath := t.TempDir() + "/../kimi-token.json"
 
 	err := ts.SaveTokenToFile(badPath)
