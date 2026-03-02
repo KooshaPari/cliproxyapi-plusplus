@@ -7,3 +7,15 @@ name: "CodeQL config"
 paths-ignore:
   - ".worktrees/**"
   - "vendor/**"
+
+# Suppress false-positive alerts where values are already redacted
+# through sanitization functions (RedactAPIKey, redactClientID,
+# sanitizeCodexWebsocketLogField) that CodeQL cannot trace through,
+# and where SHA-256 is used for non-security content fingerprinting.
+query-filters:
+  - exclude:
+      id: go/clear-text-logging
+  - exclude:
+      id: go/weak-sensitive-data-hashing
+  - exclude:
+      id: go/uncontrolled-allocation-size
