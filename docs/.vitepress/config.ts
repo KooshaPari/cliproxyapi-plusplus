@@ -40,6 +40,7 @@ export default defineConfig({
           { text: "Install", link: "/install" },
           { text: "Provider Usage", link: "/provider-usage" },
           { text: "Provider Catalog", link: "/provider-catalog" },
+          { text: "DevOps and CI/CD", link: "/operations/devops-cicd" },
           { text: "Provider Operations", link: "/provider-operations" },
           { text: "Troubleshooting", link: "/troubleshooting" },
           { text: "Planning Boards", link: "/planning/" }
