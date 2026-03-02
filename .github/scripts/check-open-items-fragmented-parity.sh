@@ -31,17 +31,17 @@ fi
 
 status_lower="$(echo "$status_line" | tr '[:upper:]' '[:lower:]')"
 
-if printf '%s' "$status_lower" | rg -q "\b(partial|partially|not implemented|todo|to-do|pending|wip|in progress|open|blocked|backlog)\b"; then
+if printf '%s' "$status_lower" | grep -qE "(partial|partially|not implemented|todo|to-do|pending|wip|in progress|open|blocked|backlog)"; then
   echo "[FAIL] $report has non-implemented status for #258: $status_line"
   exit 1
 fi
 
-if ! printf '%s' "$status_lower" | rg -q "\b(implemented|resolved|complete|completed|closed|done|fixed|landed|shipped)\b"; then
+if ! printf '%s' "$status_lower" | grep -qE "(implemented|resolved|complete|completed|closed|done|fixed|landed|shipped)"; then
   echo "[FAIL] $report has unrecognized completion status for #258: $status_line"
   exit 1
 fi
 
-if ! rg -n "pkg/llmproxy/translator/codex/openai/chat-completions/codex_openai_request.go" "$report" >/dev/null 2>&1; then
+if ! grep -qn "pkg/llmproxy/translator/codex/openai/chat-completions/codex_openai_request.go" "$report"; then
   echo "[FAIL] $report missing codex variant fallback evidence path."
   exit 1
 fi
