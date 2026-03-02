@@ -1,0 +1,25 @@
+name: Security Guard
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches:
+      - "**"
+
+permissions:
+  contents: read
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run pre-commit guard checks
+        uses: pre-commit/action@v3.0.1
+        with:
+          extra_args: --hook-stage pre-commit --config .pre-commit-config.yaml --show-diff-on-failure
