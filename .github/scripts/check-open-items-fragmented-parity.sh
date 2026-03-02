@@ -31,12 +31,12 @@ fi
 
 status_lower="$(echo "$status_line" | tr '[:upper:]' '[:lower:]')"
 
-if echo "$status_lower" | rg -q "\b(partial|partially|not implemented|todo|to-do|pending|wip|in progress|open|blocked|backlog)\b"; then
+if printf '%s' "$status_lower" | rg -q "\b(partial|partially|not implemented|todo|to-do|pending|wip|in progress|open|blocked|backlog)\b"; then
   echo "[FAIL] $report has non-implemented status for #258: $status_line"
   exit 1
 fi
 
-if ! echo "$status_lower" | rg -q "\b(implemented|resolved|complete|completed|closed|done|fixed|landed|shipped)\b"; then
+if ! printf '%s' "$status_lower" | rg -q "\b(implemented|resolved|complete|completed|closed|done|fixed|landed|shipped)\b"; then
   echo "[FAIL] $report has unrecognized completion status for #258: $status_line"
   exit 1
 fi
