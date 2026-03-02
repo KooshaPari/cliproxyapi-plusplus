@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	latestReleaseURL       = "https://api.github.com/repos/KooshaPari/cliproxyapi-plusplus/releases/latest"
+	latestReleaseURL       = "https://api.github.com/repos/kooshapari/cliproxyapi-plusplus/releases/latest"
 	latestReleaseUserAgent = "cliproxyapi++"
 )
 
