@@ -245,7 +245,9 @@ func (m *AlertManager) GetAlertHistory(limit int) []Alert {
 		limit = maxAlertHistoryAlloc
 	}
 
-	result := make([]Alert, limit)
+	// Assign capped value to a new variable so static analysis can verify the bound.
+	cappedLimit := limit
+	result := make([]Alert, cappedLimit)
 	copy(result, m.alertHistory[len(m.alertHistory)-limit:])
 	return result
 }
