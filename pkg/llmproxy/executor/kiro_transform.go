@@ -10,7 +10,7 @@ import (
 
 	kiroclaude "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/translator/kiro/claude"
 	kiroopenai "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/translator/kiro/openai"
-	clipproxyauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
+	cliproxyauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
 	sdktranslator "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/translator"
 	log "github.com/sirupsen/logrus"
 )
@@ -194,15 +194,6 @@ func getKiroEndpointConfigs(auth *cliproxyauth.Auth) []kiroEndpointConfig {
 	return append(sorted, remaining...)
 }
 
-// isIDCAuth checks if the auth uses IDC (Identity Center) authentication method.
-func isIDCAuth(auth *cliproxyauth.Auth) bool {
-	if auth == nil || auth.Metadata == nil {
-		return false
-	}
-	authMethod, _ := auth.Metadata["auth_method"].(string)
-	return strings.ToLower(authMethod) == "idc"
-}
-
 // buildKiroPayloadForFormat builds the Kiro API payload based on the source format.
 // This is critical because OpenAI and Claude formats have different tool structures:
 // - OpenAI: tools[].function.name, tools[].function.description
@@ -239,40 +230,6 @@ func sanitizeKiroPayload(body []byte) []byte {
 		return body
 	}
 	return sanitized
-}
-
-func kiroCredentials(auth *cliproxyauth.Auth) (accessToken, profileArn string) {
-	if auth == nil {
-		return "", ""
-	}
-
-	// Try Metadata first (wrapper format)
-	if auth.Metadata != nil {
-		if token, ok := auth.Metadata["access_token"].(string); ok {
-			accessToken = token
-		}
-		if arn, ok := auth.Metadata["profile_arn"].(string); ok {
-			profileArn = arn
-		}
-	}
-
-	// Try Attributes
-	if accessToken == "" && auth.Attributes != nil {
-		accessToken = auth.Attributes["access_token"]
-		profileArn = auth.Attributes["profile_arn"]
-	}
-
-	// Try direct fields from flat JSON format (new AWS Builder ID format)
-	if accessToken == "" && auth.Metadata != nil {
-		if token, ok := auth.Metadata["accessToken"].(string); ok {
-			accessToken = token
-		}
-		if arn, ok := auth.Metadata["profileArn"].(string); ok {
-			profileArn = arn
-		}
-	}
-
-	return accessToken, profileArn
 }
 
 // findRealThinkingEndTag finds the real </thinking> end tag, skipping false positives.

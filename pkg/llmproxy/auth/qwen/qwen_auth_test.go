@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
 )
 
 type rewriteTransport struct {
@@ -152,7 +153,7 @@ func TestPollForTokenUsesInjectedHTTPClient(t *testing.T) {
 func TestQwenTokenStorageSaveTokenToFileRejectsTraversalPath(t *testing.T) {
 	t.Parallel()
 
-	ts := &QwenTokenStorage{AccessToken: "token"}
+	ts := &QwenTokenStorage{BaseTokenStorage: &BaseTokenStorage{AccessToken: "token"}}
 	err := ts.SaveTokenToFile("../qwen.json")
 	if err == nil {
 		t.Fatal("expected error for traversal path")
