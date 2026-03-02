@@ -209,17 +209,6 @@ func validateCallbackForwarderTarget(targetBase string) (*url.URL, error) {
 	return parsed, nil
 }
 
-func stopCallbackForwarder(port int) {
-	callbackForwardersMu.Lock()
-	forwarder := callbackForwarders[port]
-	if forwarder != nil {
-		delete(callbackForwarders, port)
-	}
-	callbackForwardersMu.Unlock()
-
-	stopForwarderInstance(port, forwarder)
-}
-
 func stopCallbackForwarderInstance(port int, forwarder *callbackForwarder) {
 	if forwarder == nil {
 		return

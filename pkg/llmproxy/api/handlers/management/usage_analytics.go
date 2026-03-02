@@ -447,7 +447,7 @@ func (h *UsageAnalyticsHandler) GETProviderBreakdown(c *gin.Context) {
 // GETDailyTrend handles GET /v1/analytics/daily-trend
 func (h *UsageAnalyticsHandler) GETDailyTrend(c *gin.Context) {
 	days := 7
-	fmt.Sscanf(c.DefaultQuery("days", "7"), "%d", &days)
+	_, _ = fmt.Sscanf(c.DefaultQuery("days", "7"), "%d", &days)
 
 	trend, err := h.analytics.GetDailyTrend(c.Request.Context(), days)
 	if err != nil {

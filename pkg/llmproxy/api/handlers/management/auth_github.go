@@ -51,9 +51,9 @@ func (h *Handler) RequestGitHubToken(c *gin.Context) {
 		}
 
 		tokenStorage := &copilot.CopilotTokenStorage{
-			TokenType:   tokenData.TokenType,
-			Scope:       tokenData.Scope,
-			Username:    username,
+			TokenType: tokenData.TokenType,
+			Scope:     tokenData.Scope,
+			Username:  username,
 		}
 		tokenStorage.AccessToken = tokenData.AccessToken
 		tokenStorage.Type = "github-copilot"

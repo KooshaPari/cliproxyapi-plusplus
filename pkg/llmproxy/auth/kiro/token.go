@@ -159,14 +159,6 @@ func denySymlinkPath(baseDir, targetPath string) error {
 	return nil
 }
 
-func cleanAuthPath(path string) (string, error) {
-	abs, err := filepath.Abs(path)
-	if err != nil {
-		return "", fmt.Errorf("resolve auth file path: %w", err)
-	}
-	return filepath.Clean(abs), nil
-}
-
 // LoadFromFile loads token storage from the specified file path.
 func LoadFromFile(authFilePath string) (*KiroTokenStorage, error) {
 	cleanPath, err := cleanTokenPath(authFilePath, "kiro token")

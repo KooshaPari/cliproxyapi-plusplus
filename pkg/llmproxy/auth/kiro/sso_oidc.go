@@ -58,7 +58,6 @@ var (
 	ErrAuthorizationPending = errors.New("authorization_pending")
 	ErrSlowDown             = errors.New("slow_down")
 	awsRegionPattern        = regexp.MustCompile(`^[a-z]{2}(?:-[a-z0-9]+)+-\d+$`)
-	oidcRegionPattern       = regexp.MustCompile(`^[a-z]{2}(?:-[a-z0-9]+)+-\d+$`)
 )
 
 // SSOOIDCClient handles AWS SSO OIDC authentication.
@@ -113,7 +112,7 @@ func isValidAWSRegion(region string) bool {
 		return false
 	}
 	for _, c := range region {
-		if !((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-') {
+		if (c < 'a' || c > 'z') && (c < '0' || c > '9') && c != '-' {
 			return false
 		}
 	}

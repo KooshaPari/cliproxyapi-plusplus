@@ -805,4 +805,3 @@ func (e *KiroExecutor) CountTokens(ctx context.Context, auth *cliproxyauth.Auth,
 		Payload: []byte(fmt.Sprintf(`{"count":%d}`, totalTokens)),
 	}, nil
 }
-

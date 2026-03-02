@@ -9,7 +9,6 @@ import (
 	"strconv"
 	"strings"
 	"testing"
-
 )
 
 type rewriteTransport struct {

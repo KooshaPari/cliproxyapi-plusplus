@@ -362,7 +362,7 @@ func (h *AlertHandler) GETAlerts(c *gin.Context) {
 // GETAlertHistory handles GET /v1/alerts/history
 func (h *AlertHandler) GETAlertHistory(c *gin.Context) {
 	limit := 50
-	fmt.Sscanf(c.DefaultQuery("limit", "50"), "%d", &limit)
+	_, _ = fmt.Sscanf(c.DefaultQuery("limit", "50"), "%d", &limit)
 	if limit < 1 {
 		limit = 1
 	}

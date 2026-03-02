@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-report="${REPORT_PATH:-docs/reports/fragemented/OPEN_ITEMS_VALIDATION_2026-02-22.md}"
+report="${REPORT_PATH:-docs/reports/fragmented/OPEN_ITEMS_VALIDATION_2026-02-22.md}"
 if [[ ! -f "$report" ]]; then
   echo "[FAIL] Missing report: $report"
   exit 1
