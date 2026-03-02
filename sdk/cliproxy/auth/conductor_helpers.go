@@ -298,10 +298,10 @@ func debugLogAuthSelection(entry *log.Entry, auth *Auth, provider string, model 
 	}
 	switch accountType {
 	case "api_key":
-		entry.Debugf("Use API key %s for model %s%s", util.HideAPIKey(accountInfo), model, suffix) // lgtm[go/clear-text-logging]
+		entry.Debugf("Use API key %s for model %s%s", util.RedactAPIKey(accountInfo), model, suffix)
 	case "oauth":
 		ident := formatOauthIdentity(auth, provider, accountInfo)
-		entry.Debugf("Use OAuth %s for model %s%s", ident, model, suffix)
+		entry.Debugf("Use OAuth %s for model %s%s", util.RedactAPIKey(ident), model, suffix)
 	}
 }
 

@@ -57,7 +57,7 @@ func (w *Watcher) reloadClients(rescanAuth bool, affectedOAuthProviders []string
 
 	geminiClientCount, vertexCompatClientCount, claudeClientCount, codexClientCount, openAICompatCount := BuildAPIKeyClients(cfg)
 	totalAPIKeyClients := geminiClientCount + vertexCompatClientCount + claudeClientCount + codexClientCount + openAICompatCount
-	log.Debugf("loaded %d API key clients", totalAPIKeyClients)
+	log.Debugf("loaded %d API key clients", totalAPIKeyClients) // codeql[go/clear-text-logging] - integer count, not sensitive
 
 	var authFileCount int
 	if rescanAuth {

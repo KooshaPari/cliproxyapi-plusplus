@@ -15,6 +15,14 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// redactClientID redacts a client ID for safe logging, avoiding circular imports with util.
+func redactClientID(id string) string {
+	if id == "" {
+		return ""
+	}
+	return "[REDACTED]"
+}
+
 // ModelInfo represents information about an available model
 type ModelInfo struct {
 	// ID is the unique identifier for the model
@@ -602,7 +610,7 @@ func (r *ModelRegistry) SetModelQuotaExceeded(clientID, modelID string) {
 
 	if registration, exists := r.models[modelID]; exists {
 		registration.QuotaExceededClients[clientID] = new(time.Now())
-		log.Debugf("Marked model %s as quota exceeded for client %s", modelID, clientID)
+		log.Debugf("Marked model %s as quota exceeded for client %s", modelID, redactClientID(clientID))
 	}
 }
 
@@ -645,9 +653,9 @@ func (r *ModelRegistry) SuspendClientModel(clientID, modelID, reason string) {
 	registration.SuspendedClients[clientID] = reason
 	registration.LastUpdated = time.Now()
 	if reason != "" {
-		log.Debugf("Suspended client %s for model %s: %s", clientID, modelID, reason)
+		log.Debugf("Suspended client %s for model %s: %s", redactClientID(clientID), modelID, reason)
 	} else {
-		log.Debugf("Suspended client %s for model %s", clientID, modelID)
+		log.Debugf("Suspended client %s for model %s", redactClientID(clientID), modelID)
 	}
 }
 
@@ -671,8 +679,7 @@ func (r *ModelRegistry) ResumeClientModel(clientID, modelID string) {
 	}
 	delete(registration.SuspendedClients, clientID)
 	registration.LastUpdated = time.Now()
-	// codeql[go/clear-text-logging] - clientID and modelID are non-sensitive identifiers
-	log.Debugf("Resumed client %s for model %s", clientID, modelID)
+	log.Debugf("Resumed client %s for model %s", redactClientID(clientID), modelID)
 }
 
 // ClientSupportsModel reports whether the client registered support for modelID.
