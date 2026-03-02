@@ -1,0 +1,9 @@
+name: "CodeQL config"
+
+# Exclude paths that should not be scanned.
+# .worktrees/ contains git worktree checkouts of other branches/commits
+# that are placed inside this checkout by the agent tooling. They are
+# not part of the branch under review and must not contribute alerts.
+paths-ignore:
+  - ".worktrees/**"
+  - "vendor/**"
