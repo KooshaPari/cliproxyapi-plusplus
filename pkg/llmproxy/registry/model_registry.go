@@ -610,7 +610,7 @@ func (r *ModelRegistry) SetModelQuotaExceeded(clientID, modelID string) {
 
 	if registration, exists := r.models[modelID]; exists {
 		registration.QuotaExceededClients[clientID] = new(time.Now())
-		log.Debugf("Marked model %s as quota exceeded for client %s", modelID, redactClientID(clientID))
+		log.Debugf("Marked model %s as quota exceeded for client %s", modelID, redactClientID(clientID)) // codeql[go/clear-text-logging] - clientID is redacted via redactClientID
 	}
 }
 
@@ -653,9 +653,9 @@ func (r *ModelRegistry) SuspendClientModel(clientID, modelID, reason string) {
 	registration.SuspendedClients[clientID] = reason
 	registration.LastUpdated = time.Now()
 	if reason != "" {
-		log.Debugf("Suspended client %s for model %s: %s", redactClientID(clientID), modelID, reason)
+		log.Debugf("Suspended client %s for model %s: %s", redactClientID(clientID), modelID, reason) // codeql[go/clear-text-logging] - clientID is redacted via redactClientID
 	} else {
-		log.Debugf("Suspended client %s for model %s", redactClientID(clientID), modelID)
+		log.Debugf("Suspended client %s for model %s", redactClientID(clientID), modelID) // codeql[go/clear-text-logging] - clientID is redacted via redactClientID
 	}
 }
 
@@ -679,7 +679,7 @@ func (r *ModelRegistry) ResumeClientModel(clientID, modelID string) {
 	}
 	delete(registration.SuspendedClients, clientID)
 	registration.LastUpdated = time.Now()
-	log.Debugf("Resumed client %s for model %s", redactClientID(clientID), modelID)
+	log.Debugf("Resumed client %s for model %s", redactClientID(clientID), modelID) // codeql[go/clear-text-logging] - clientID is redacted via redactClientID
 }
 
 // ClientSupportsModel reports whether the client registered support for modelID.

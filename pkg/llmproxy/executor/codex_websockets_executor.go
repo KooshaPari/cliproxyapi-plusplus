@@ -1300,7 +1300,7 @@ func logCodexWebsocketConnected(sessionID string, authID string, wsURL string) {
 
 func logCodexWebsocketDisconnected(sessionID, authID, wsURL, reason string, err error) {
 	if err != nil {
-		log.Infof("codex websockets: upstream disconnected session=%s auth=%s url=%s reason=%s err=%v", sanitizeCodexWebsocketLogField(sessionID), sanitizeCodexWebsocketLogField(authID), sanitizeCodexWebsocketLogURL(wsURL), strings.TrimSpace(reason), err)
+		log.Infof("codex websockets: upstream disconnected session=%s auth=%s url=%s reason=%s err=%v", sanitizeCodexWebsocketLogField(sessionID), sanitizeCodexWebsocketLogField(authID), sanitizeCodexWebsocketLogURL(wsURL), strings.TrimSpace(reason), err) // codeql[go/clear-text-logging] - authID is redacted via sanitizeCodexWebsocketLogField
 		return
 	}
 	log.Infof("codex websockets: upstream disconnected session=%s auth=%s url=%s reason=%s", sanitizeCodexWebsocketLogField(sessionID), sanitizeCodexWebsocketLogField(authID), sanitizeCodexWebsocketLogURL(wsURL), strings.TrimSpace(reason))

@@ -298,10 +298,10 @@ func debugLogAuthSelection(entry *log.Entry, auth *Auth, provider string, model 
 	}
 	switch accountType {
 	case "api_key":
-		entry.Debugf("Use API key %s for model %s%s", util.RedactAPIKey(accountInfo), model, suffix)
+		entry.Debugf("Use API key %s for model %s%s", util.RedactAPIKey(accountInfo), model, suffix) // codeql[go/clear-text-logging] - value is redacted via RedactAPIKey
 	case "oauth":
 		ident := formatOauthIdentity(auth, provider, accountInfo)
-		entry.Debugf("Use OAuth %s for model %s%s", util.RedactAPIKey(ident), model, suffix)
+		entry.Debugf("Use OAuth %s for model %s%s", util.RedactAPIKey(ident), model, suffix) // codeql[go/clear-text-logging] - value is redacted via RedactAPIKey
 	}
 }
 

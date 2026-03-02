@@ -34,11 +34,12 @@ func (b *BaseTokenStorage) Save() error {
 	if b.FilePath == "" {
 		return fmt.Errorf("base token storage: file path is empty")
 	}
-	dir := filepath.Dir(b.FilePath)
+	cleanPath := filepath.Clean(b.FilePath)
+	dir := filepath.Dir(cleanPath)
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
-	f, err := os.Create(b.FilePath)
+	f, err := os.Create(cleanPath)
 	if err != nil {
 		return fmt.Errorf("failed to create token file: %w", err)
 	}
