@@ -51,7 +51,7 @@ type oaiToResponsesState struct {
 	// Accumulated annotations per output index
 	Annotations map[int][]interface{}
 	// usage aggregation
-	PromptTokens     int64
+	PromptTokens int64
 	CachedTokens     int64
 	CompletionTokens int64
 	TotalTokens      int64
