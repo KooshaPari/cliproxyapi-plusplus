@@ -1,0 +1,15 @@
+{
+  "name": "cliproxyapi-plusplus-oxc-tools",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "lint": "oxlint --config .oxlintrc.json docs/.vitepress && (test -f tsconfig.json && oxlint-tsgolint --tsconfig tsconfig.json || echo '[SKIP] tsconfig.json not found; skipping oxlint-tsgolint')",
+    "format": "oxfmt --config .oxfmtrc.json --write docs/.vitepress",
+    "format:check": "oxfmt --config .oxfmtrc.json --check docs/.vitepress"
+  },
+  "devDependencies": {
+    "oxfmt": "^0.36.0",
+    "oxlint": "^1.51.0",
+    "oxlint-tsgolint": "^0.16.0"
+  }
+}
