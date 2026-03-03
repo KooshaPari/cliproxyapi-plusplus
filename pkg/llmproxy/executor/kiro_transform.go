@@ -85,7 +85,7 @@ func buildKiroEndpointConfigs(region string) []kiroEndpointConfig {
 // 2. ProfileARN region - extracted from arn:aws:service:REGION:account:resource
 // 3. kiroDefaultRegion (us-east-1) - fallback
 // Note: OIDC "region" is NOT used - it's for token refresh, not API calls
-func resolveKiroAPIRegion(auth *cliproxyauth.Auth) string {
+func resolveKiroAPIRegion(auth *clipproxyauth.Auth) string {
 	if auth == nil || auth.Metadata == nil {
 		return kiroDefaultRegion
 	}
@@ -121,7 +121,7 @@ var kiroEndpointConfigs = buildKiroEndpointConfigs(kiroDefaultRegion)
 // 2. ProfileARN region - extracted from arn:aws:service:REGION:account:resource
 // 3. kiroDefaultRegion (us-east-1) - fallback
 // Note: OIDC "region" is NOT used - it's for token refresh, not API calls
-func getKiroEndpointConfigs(auth *cliproxyauth.Auth) []kiroEndpointConfig {
+func getKiroEndpointConfigs(auth *clipproxyauth.Auth) []kiroEndpointConfig {
 	if auth == nil {
 		return kiroEndpointConfigs
 	}
@@ -195,7 +195,7 @@ func getKiroEndpointConfigs(auth *cliproxyauth.Auth) []kiroEndpointConfig {
 }
 
 // isIDCAuth checks if the auth uses IDC (Identity Center) authentication method.
-func isIDCAuth(auth *cliproxyauth.Auth) bool {
+func isIDCAuth(auth *clipproxyauth.Auth) bool {
 	if auth == nil || auth.Metadata == nil {
 		return false
 	}
@@ -241,7 +241,7 @@ func sanitizeKiroPayload(body []byte) []byte {
 	return sanitized
 }
 
-func kiroCredentials(auth *cliproxyauth.Auth) (accessToken, profileArn string) {
+func kiroCredentials(auth *clipproxyauth.Auth) (accessToken, profileArn string) {
 	if auth == nil {
 		return "", ""
 	}
@@ -335,7 +335,7 @@ func getMetadataString(metadata map[string]any, keys ...string) string {
 // 1. Check auth_method field: "builder-id" or "idc"
 // 2. Check auth_type field: "aws_sso_oidc" (from kiro-cli tokens)
 // 3. Check for client_id + client_secret presence (AWS SSO OIDC signature)
-func getEffectiveProfileArnWithWarning(auth *cliproxyauth.Auth, profileArn string) string {
+func getEffectiveProfileArnWithWarning(auth *clipproxyauth.Auth, profileArn string) string {
 	if auth != nil && auth.Metadata != nil {
 		// Check 1: auth_method field (from CLIProxyAPI tokens)
 		authMethod := strings.ToLower(getMetadataString(auth.Metadata, "auth_method", "authMethod"))
