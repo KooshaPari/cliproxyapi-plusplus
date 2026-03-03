@@ -17,7 +17,7 @@ import (
 
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/auth/codex"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/browser"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/misc"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/util"
 	log "github.com/sirupsen/logrus"

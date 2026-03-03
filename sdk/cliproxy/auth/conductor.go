@@ -84,6 +84,9 @@ type Result struct {
 	Error *Error
 }
 
+// apiKeyModelAliasTable maps auth ID to alias->resolved model mapping.
+type apiKeyModelAliasTable map[string]map[string]string
+
 // Selector chooses an auth candidate for execution.
 type Selector interface {
 	Pick(ctx context.Context, provider, model string, opts cliproxyexecutor.Options, auths []*Auth) (*Auth, error)
@@ -204,4 +207,13 @@ func (m *Manager) SetConfig(cfg *internalconfig.Config) {
 	}
 	m.runtimeConfig.Store(cfg)
 	m.rebuildAPIKeyModelAliasFromRuntimeConfig()
+}
+
+// rebuildAPIKeyModelAliasFromRuntimeConfig refreshes per-auth alias mappings from runtime config.
+// This lane keeps behavior conservative by clearing the cache until full mapping logic is restored.
+func (m *Manager) rebuildAPIKeyModelAliasFromRuntimeConfig() {
+	if m == nil {
+		return
+	}
+	m.apiKeyModelAlias.Store(apiKeyModelAliasTable(nil))
 }
