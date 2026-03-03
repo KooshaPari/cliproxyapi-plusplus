@@ -79,7 +79,7 @@ func TestGeminiTokenStorage_SaveTokenToFile_RejectsTraversalPath(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for traversal path")
 	}
-	if !strings.Contains(err.Error(), "invalid token file path") {
+	if !strings.Contains(err.Error(), "path traversal is not allowed") {
 		t.Fatalf("expected invalid path error, got %v", err)
 	}
 }
