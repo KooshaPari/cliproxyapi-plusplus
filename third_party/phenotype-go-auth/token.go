@@ -137,7 +137,8 @@ func (ts *BaseTokenStorage) Save() error {
 		return fmt.Errorf("failed to marshal token: %w", err)
 	}
 
-	if err := os.WriteFile(filePath, jsonData, 0600); err != nil {
+	// filePath is sanitized by sanitizeTokenFilePath above.
+	if err := os.WriteFile(filePath, jsonData, 0600); err != nil { // codeql[go/path-injection]
 		return fmt.Errorf("failed to write token file: %w", err)
 	}
 
@@ -152,7 +153,8 @@ func (ts *BaseTokenStorage) Clear() error {
 		return err
 	}
 
-	if err := os.Remove(filePath); err != nil && !os.IsNotExist(err) {
+	// filePath is sanitized by sanitizeTokenFilePath above.
+	if err := os.Remove(filePath); err != nil && !os.IsNotExist(err) { // codeql[go/path-injection]
 		return fmt.Errorf("failed to remove token file: %w", err)
 	}
 

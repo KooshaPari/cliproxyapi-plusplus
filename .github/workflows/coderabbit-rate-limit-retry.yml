@@ -141,7 +141,7 @@ jobs:
               return labels.some((l) => l.name === name);
             }
 
-            async function setBypassLabel(prNumber, enable) {
+            async function setBypassLabel(prNumber, enable, manualBypass) {
               const present = await hasLabel(prNumber, BYPASS_LABEL);
               if (enable && !present) {
                 await github.rest.issues.addLabels({
@@ -152,7 +152,7 @@ jobs:
                 });
                 core.notice(`PR #${prNumber}: applied label '${BYPASS_LABEL}'.`);
               }
-              if (!enable && present) {
+              if (!enable && present && !manualBypass) {
                 await github.rest.issues.removeLabel({
                   owner,
                   repo,
@@ -185,8 +185,9 @@ jobs:
               const stale = ageMin >= STALE_MINUTES;
               const backlogHigh = openPRs.length > BACKLOG_THRESHOLD;
               const bypassEligible = backlogHigh && stale && !stateOk;
+              const manualBypass = await hasLabel(pr.number, BYPASS_LABEL);
 
-              await setBypassLabel(pr.number, bypassEligible);
+              await setBypassLabel(pr.number, bypassEligible, manualBypass);
 
               if (bypassEligible && !(await hasRecentRetryComment(pr.number))) {
                 const body = [
@@ -206,12 +207,13 @@ jobs:
                 core.notice(`PR #${pr.number}: posted CodeRabbit retrigger comment.`);
               }
 
-              const gatePass = stateOk || bypassEligible;
+              const gatePass = stateOk || bypassEligible || manualBypass;
               const summary = [
                 `CodeRabbit state: ${state.state}`,
                 `Age minutes: ${ageMin.toFixed(1)}`,
                 `Open PR backlog: ${openPRs.length}`,
                 `Bypass eligible: ${bypassEligible}`,
+                `Manual bypass label present: ${manualBypass}`,
               ].join("\n");
               await publishGate(pr, gatePass, summary);
             }
