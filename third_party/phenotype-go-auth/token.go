@@ -98,12 +98,12 @@ func NewBaseTokenStorage(filePath string) *BaseTokenStorage {
 // Load reads the token from the file path.
 // Returns an error if the operation fails or the file does not exist.
 func (ts *BaseTokenStorage) Load() error {
-	filePath, err := sanitizeTokenFilePath(ts.filePath)
+	safePath, err := resolveSafeTokenFilePath(ts.filePath)
 	if err != nil {
-		return err
+		return fmt.Errorf("invalid token file path: %w", err)
 	}
 
-	data, err := os.ReadFile(filePath)
+	data, err := os.ReadFile(safePath)
 	if err != nil {
 		return fmt.Errorf("failed to read token file: %w", err)
 	}
@@ -118,13 +118,13 @@ func (ts *BaseTokenStorage) Load() error {
 // Save writes the token to the file path.
 // Creates the necessary directory structure if it doesn't exist.
 func (ts *BaseTokenStorage) Save() error {
-	filePath, err := sanitizeTokenFilePath(ts.filePath)
+	safePath, err := resolveSafeTokenFilePath(ts.filePath)
 	if err != nil {
-		return err
+		return fmt.Errorf("invalid token file path: %w", err)
 	}
 
 	// Ensure directory exists
-	if err := os.MkdirAll(filepath.Dir(filePath), 0700); err != nil {
+	if err := os.MkdirAll(filepath.Dir(safePath), 0700); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
@@ -137,8 +137,7 @@ func (ts *BaseTokenStorage) Save() error {
 		return fmt.Errorf("failed to marshal token: %w", err)
 	}
 
-	// filePath is sanitized by sanitizeTokenFilePath above.
-	if err := os.WriteFile(filePath, jsonData, 0600); err != nil { // codeql[go/path-injection]
+	if err := os.WriteFile(safePath, jsonData, 0600); err != nil {
 		return fmt.Errorf("failed to write token file: %w", err)
 	}
 
@@ -148,13 +147,12 @@ func (ts *BaseTokenStorage) Save() error {
 // Clear removes the token file.
 // Returns nil if the file doesn't exist.
 func (ts *BaseTokenStorage) Clear() error {
-	filePath, err := sanitizeTokenFilePath(ts.filePath)
+	safePath, err := resolveSafeTokenFilePath(ts.filePath)
 	if err != nil {
-		return err
+		return fmt.Errorf("invalid token file path: %w", err)
 	}
 
-	// filePath is sanitized by sanitizeTokenFilePath above.
-	if err := os.Remove(filePath); err != nil && !os.IsNotExist(err) { // codeql[go/path-injection]
+	if err := os.Remove(safePath); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("failed to remove token file: %w", err)
 	}
 
@@ -238,20 +236,27 @@ func (ts *BaseTokenStorage) toJSONMap() map[string]any {
 	return result
 }
 
-func sanitizeTokenFilePath(rawPath string) (string, error) {
-	trimmed := strings.TrimSpace(rawPath)
+func resolveSafeTokenFilePath(path string) (string, error) {
+	trimmed := strings.TrimSpace(path)
 	if trimmed == "" {
-		return "", fmt.Errorf("token file path is empty")
+		return "", fmt.Errorf("path is empty")
 	}
-	normalized := filepath.ToSlash(trimmed)
-	for _, part := range strings.Split(normalized, "/") {
-		if part == ".." {
-			return "", fmt.Errorf("token file path cannot contain parent traversal segments")
-		}
+	if hasPathTraversalComponent(trimmed) {
+		return "", fmt.Errorf("path traversal is not allowed")
 	}
 	cleaned := filepath.Clean(trimmed)
 	if cleaned == "." {
-		return "", fmt.Errorf("token file path is invalid")
+		return "", fmt.Errorf("path is invalid")
 	}
 	return cleaned, nil
+}
+
+func hasPathTraversalComponent(path string) bool {
+	normalized := strings.ReplaceAll(path, "\\", "/")
+	for _, component := range strings.Split(normalized, "/") {
+		if component == ".." {
+			return true
+		}
+	}
+	return false
 }

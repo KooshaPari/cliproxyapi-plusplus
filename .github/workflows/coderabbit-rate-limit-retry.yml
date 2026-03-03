@@ -26,6 +26,7 @@ jobs:
             const repo = context.repo.repo;
             const STALE_MINUTES = 20;
             const BACKLOG_THRESHOLD = 10;
+            const RATE_LIMIT_GRACE_MINUTES = 90;
             const BYPASS_LABEL = "ci:coderabbit-bypass";
             const GATE_CHECK_NAME = "CodeRabbit Gate";
             const MARKER = "<!-- codex:coderabbit-rate-limit-retry -->";
@@ -42,7 +43,7 @@ jobs:
               return all;
             }
 
-            async function getCodeRabbitState(prNumber) {
+            async function getCodeRabbitState(prNumber, headSHA) {
               const checks = await github.graphql(
                 `query($owner:String!,$repo:String!,$number:Int!){
                   repository(owner:$owner,name:$repo){
@@ -63,6 +64,8 @@ jobs:
                                   ... on StatusContext {
                                     context
                                     state
+                                    description
+                                    targetUrl
                                     createdAt
                                   }
                                 }
@@ -78,21 +81,30 @@ jobs:
               );
 
               const nodes = checks.repository.pullRequest.commits.nodes[0]?.commit?.statusCheckRollup?.contexts?.nodes || [];
+              const state = { state: "MISSING", at: nowMs, description: "" };
               for (const n of nodes) {
                 if (n.__typename === "CheckRun" && n.name === "CodeRabbit") {
-                  return {
-                    state: (n.conclusion || n.status || "UNKNOWN").toUpperCase(),
-                    at: n.completedAt ? new Date(n.completedAt).getTime() : nowMs,
-                  };
+                  state.state = (n.conclusion || n.status || "UNKNOWN").toUpperCase();
+                  state.at = n.completedAt ? new Date(n.completedAt).getTime() : nowMs;
                 }
                 if (n.__typename === "StatusContext" && n.context === "CodeRabbit") {
-                  return {
-                    state: (n.state || "UNKNOWN").toUpperCase(),
-                    at: n.createdAt ? new Date(n.createdAt).getTime() : nowMs,
-                  };
+                  state.state = (n.state || "UNKNOWN").toUpperCase();
+                  state.at = n.createdAt ? new Date(n.createdAt).getTime() : nowMs;
+                  state.description = n.description || "";
                 }
               }
-              return { state: "MISSING", at: nowMs };
+              if (!state.description && headSHA) {
+                const combined = await github.rest.repos.getCombinedStatusForRef({
+                  owner,
+                  repo,
+                  ref: headSHA,
+                });
+                const ctx = (combined.data.statuses || []).find((s) => s.context === "CodeRabbit");
+                if (ctx) {
+                  state.description = ctx.description || "";
+                }
+              }
+              return state;
             }
 
             async function hasRecentRetryComment(prNumber) {
@@ -170,22 +182,25 @@ jobs:
             }
 
             async function processPR(pr) {
-              const state = await getCodeRabbitState(pr.number);
+              const state = await getCodeRabbitState(pr.number, pr.head.sha);
               const ageMin = (nowMs - state.at) / 60000;
               const stateOk = state.state === "SUCCESS" || state.state === "NEUTRAL";
+              const rateLimited = /rate limit exceeded/i.test(state.description || "");
               const stale = ageMin >= STALE_MINUTES;
               const backlogHigh = openPRs.length > BACKLOG_THRESHOLD;
               const bypassEligible = backlogHigh && stale && !stateOk;
               const manualBypass = await hasLabel(pr.number, BYPASS_LABEL);
+              const retryEligible = !stateOk && (rateLimited || stale) && (backlogHigh || rateLimited);
+              const transientRateLimitPass = rateLimited && ageMin < RATE_LIMIT_GRACE_MINUTES;
 
               await setBypassLabel(pr.number, bypassEligible);
 
-              if (bypassEligible && !(await hasRecentRetryComment(pr.number))) {
+              if (retryEligible && !(await hasRecentRetryComment(pr.number))) {
                 const body = [
                   MARKER,
                   "@coderabbitai full review",
                   "",
-                  `Automated retrigger: backlog > ${BACKLOG_THRESHOLD}, CodeRabbit state=${state.state}, age=${ageMin.toFixed(1)}m.`,
+                  `Automated retrigger: backlog > ${BACKLOG_THRESHOLD} or rate-limit detected, CodeRabbit state=${state.state}, age=${ageMin.toFixed(1)}m.`,
                 ].join("\n");
 
                 await github.rest.issues.createComment({
@@ -198,13 +213,16 @@ jobs:
                 core.notice(`PR #${pr.number}: posted CodeRabbit retrigger comment.`);
               }
 
-              const gatePass = stateOk || bypassEligible || manualBypass;
+              const gatePass = stateOk || bypassEligible || manualBypass || transientRateLimitPass;
               const summary = [
                 `CodeRabbit state: ${state.state}`,
+                `CodeRabbit description: ${state.description || "(none)"}`,
                 `Age minutes: ${ageMin.toFixed(1)}`,
                 `Open PR backlog: ${openPRs.length}`,
                 `Bypass eligible: ${bypassEligible}`,
                 `Manual bypass label present: ${manualBypass}`,
+                `Rate limited: ${rateLimited}`,
+                `Transient rate-limit pass: ${transientRateLimitPass}`,
               ].join("\n");
               await publishGate(pr, gatePass, summary);
             }
