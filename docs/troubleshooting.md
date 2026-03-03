@@ -50,7 +50,7 @@ curl -sS http://localhost:8317/v1/metrics/providers | jq
 | Gemini 3 Pro / Roo shows no response | Model is missing from current auth inventory or stream path dropped before translator dispatch | Check `/v1/models` for `gemini-3-pro-preview` and run one non-stream canary | Refresh auth inventory, re-login if needed, and only enable Roo stream mode after non-stream canary passes |
 | `candidate_count` > 1 returns only one answer | Provider path does not support multi-candidate fanout yet | Re-run with `candidate_count: 1` and compare logs/request payload | Treat multi-candidate as gated rollout: document unsupported path, keep deterministic single-candidate behavior, and avoid silent fanout assumptions |
 | Runtime config write errors | Read-only mount or immutable filesystem | `find /CLIProxyAPI -maxdepth 1 -name config.yaml -print` | Use writable mount, re-run with read-only warning, confirm management persistence status |
-| Kiro/OAuth auth loops | Expired or missing token refresh fields | Re-run `cliproxyapi++ auth`/reimport token path | Refresh credentials, run with fresh token file, avoid duplicate token imports |
+| Kiro/OAuth auth loops | Expired or missing token refresh fields | Re-run `cliproxyapi-plusplus auth`/reimport token path | Refresh credentials, run with fresh token file, avoid duplicate token imports |
 | Streaming hangs or truncation | Reverse proxy buffering / payload compatibility issue | Reproduce with `stream: false`, then compare SSE response | Verify reverse-proxy config, compare tool schema compatibility and payload shape |
 | `Cherry Studio can't find the model even though CLI runs succeed` (CPB-0373) | Workspace-specific model filters (Cherry Studio) do not include the alias/prefix that the CLI is routing, so the UI never lists the model. | `curl -sS http://localhost:8317/v1/models -H "Authorization: Bearer `CLIENT_KEY`" | jq '.data[].id' | rg '`WORKSPACE_PREFIX`'` and compare with the workspace filter used in Cherry Studio. | Add the missing alias/prefix to the workspace's allowed set or align the workspace selection with the alias returned by `/v1/models`, then reload Cherry Studio so it sees the same inventory as CLI. |
 | `Antigravity 2 API Opus model returns Error searching files` (CPB-0375) | The search tool block is missing or does not match the upstream tool schema, so translator rejects `tool_call` payloads when the Opus model tries to access files. | Replay the search payload against `/v1/chat/completions` and tail the translator logs for `tool_call`/`SearchFiles` entries to see why the tool request was pruned or reformatted. | Register the `searchFiles` alias for the Opus provider (or the tool name Cherry Studio sends), adjust the `tools` block to match upstream requirements, and rerun the flow so the translator forwards the tool call instead of aborting. |
@@ -163,10 +163,10 @@ Remediation:
 
 ```bash
 # Pick an unused callback port explicitly
-./cliproxyapi++ auth --provider antigravity --oauth-callback-port 51221
+./cliproxyapi-plusplus auth --provider antigravity --oauth-callback-port 51221
 
 # Server mode
-./cliproxyapi++ --oauth-callback-port 51221
+./cliproxyapi-plusplus --oauth-callback-port 51221
 ```
 
 If callback setup keeps failing, run with `--no-browser`, copy the printed URL manually, and paste the callback URL back into the CLI prompt.

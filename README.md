@@ -1,10 +1,10 @@
-# CLIProxyAPI Plus
+# cliproxyapi-plusplus
 
 English | [Chinese](README_CN.md)
 
-This is the Plus version of [CLIProxyAPI](https://github.com/router-for-me/CLIProxyAPI), adding support for third-party providers on top of the mainline project.
+This is the Plus version of [cliproxyapi-plusplus](https://github.com/kooshapari/cliproxyapi-plusplus), adding support for third-party providers on top of the mainline project.
 
-All third-party provider support is maintained by community contributors; CLIProxyAPI does not provide technical support. Please contact the corresponding community maintainer if you need assistance.
+All third-party provider support is maintained by community contributors; cliproxyapi-plusplus does not provide technical support. Please contact the corresponding community maintainer if you need assistance.
 
 The Plus release stays in lockstep with the mainline features.
 
@@ -64,7 +64,7 @@ services:
 EOF
 
 # Download example config
-curl -o config.yaml https://raw.githubusercontent.com/router-for-me/CLIProxyAPIPlus/main/config.example.yaml
+curl -o config.yaml https://raw.githubusercontent.com/kooshapari/cliproxyapi-plusplus/main/config.example.yaml
 
 # Pull and start
 docker compose pull && docker compose up -d
@@ -93,7 +93,7 @@ docker compose pull && docker compose up -d
 
 This project only accepts pull requests that relate to third-party provider support. Any pull requests unrelated to third-party provider support will be rejected.
 
-If you need to submit any non-third-party provider changes, please open them against the [mainline](https://github.com/router-for-me/CLIProxyAPI) repository.
+If you need to submit any non-third-party provider changes, please open them against the [mainline](https://github.com/kooshapari/cliproxyapi-plusplus) repository.
 
 ## License
 

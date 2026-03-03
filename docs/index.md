@@ -2,7 +2,7 @@
 layout: home
 
 hero:
-  name: cliproxyapi++
+  name: cliproxyapi-plusplus
   text: OpenAI-Compatible Multi-Provider Gateway
   tagline: One API surface for routing across heterogeneous model providers
   actions:
@@ -22,15 +22,15 @@ features:
     details: Start Here, Tutorials, How-to, Reference, Explanation, and API lanes
 ---
 
-# cliproxyapi++ Docs
+# cliproxyapi-plusplus Docs
 
-`cliproxyapi++` is an OpenAI-compatible proxy that routes one client API surface to multiple upstream providers.
+`cliproxyapi-plusplus` is an OpenAI-compatible proxy that routes one client API surface to multiple upstream providers.
 
 ## Who This Documentation Is For
 
 - Operators running a shared internal LLM gateway.
 - Platform engineers integrating existing OpenAI-compatible clients.
-- Developers embedding cliproxyapi++ in Go services.
+- Developers embedding cliproxyapi-plusplus in Go services.
 - Incident responders who need health, logs, and management endpoints.
 
 ## What You Can Do
@@ -80,5 +80,5 @@ curl -sS http://localhost:8317/v1/metrics/providers | jq
 
 ## Project Links
 
-- [Main Repository README](https://github.com/KooshaPari/cliproxyapi-plusplus/blob/main/README.md)
+- [Main Repository README](https://github.com/kooshapari/cliproxyapi-plusplus/blob/main/README.md)
 - [Feature Changes in ++](./FEATURE_CHANGES_PLUSPLUS.md)
