@@ -5,7 +5,6 @@ This section centralizes first-response runbooks for active incidents.
 ## Status Tracking
 
 - [Distributed FS/Compute Status](./distributed-fs-compute-status.md)
-- [DevOps and CI/CD](./devops-cicd.md)
 
 ## Use This Order During Incidents
 
@@ -13,8 +12,6 @@ This section centralizes first-response runbooks for active incidents.
 2. [Auth Refresh Failure Symptom/Fix Table](./auth-refresh-failure-symptom-fix.md)
 3. [Critical Endpoints Curl Pack](./critical-endpoints-curl-pack.md)
 4. [Checks-to-Owner Responder Map](./checks-owner-responder-map.md)
-5. [Provider Error Runbook Snippets](./provider-error-runbook.md)
-6. [DevOps and CI/CD](./devops-cicd.md)
 
 ## Freshness Pattern
 

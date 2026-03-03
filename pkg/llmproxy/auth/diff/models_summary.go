@@ -4,7 +4,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
 )
 
 type GeminiModelsSummary struct {

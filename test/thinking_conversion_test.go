@@ -6,20 +6,20 @@ import (
 	"testing"
 	"time"
 
-	_ "github.com/kooshapari/cliproxyapi-plusplus/v6/internal/translator"
+	_ "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/translator"
 
 	// Import provider packages to trigger init() registration of ProviderAppliers
-	_ "github.com/kooshapari/cliproxyapi-plusplus/v6/internal/thinking/provider/antigravity"
-	_ "github.com/kooshapari/cliproxyapi-plusplus/v6/internal/thinking/provider/claude"
-	_ "github.com/kooshapari/cliproxyapi-plusplus/v6/internal/thinking/provider/codex"
-	_ "github.com/kooshapari/cliproxyapi-plusplus/v6/internal/thinking/provider/gemini"
-	_ "github.com/kooshapari/cliproxyapi-plusplus/v6/internal/thinking/provider/geminicli"
-	_ "github.com/kooshapari/cliproxyapi-plusplus/v6/internal/thinking/provider/iflow"
-	_ "github.com/kooshapari/cliproxyapi-plusplus/v6/internal/thinking/provider/kimi"
-	_ "github.com/kooshapari/cliproxyapi-plusplus/v6/internal/thinking/provider/openai"
+	_ "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/thinking/provider/antigravity"
+	_ "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/thinking/provider/claude"
+	_ "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/thinking/provider/codex"
+	_ "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/thinking/provider/gemini"
+	_ "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/thinking/provider/geminicli"
+	_ "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/thinking/provider/iflow"
+	_ "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/thinking/provider/kimi"
+	_ "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/thinking/provider/openai"
 
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/registry"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/thinking"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/registry"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/thinking"
 	sdktranslator "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/translator"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
@@ -1353,7 +1353,7 @@ func TestThinkingE2EMatrix_Suffix(t *testing.T) {
 			expectValue: "none",
 			expectErr:   false,
 		},
-		// Case 115: OpenAI to gpt-5.2, level xhigh → high (xhigh not supported by github-copilot)
+		// Case 115: OpenAI to gpt-5.2, level xhigh → xhigh (gpt-5.2 supports xhigh)
 		{
 			name:        "115",
 			from:        "openai",
@@ -1361,7 +1361,7 @@ func TestThinkingE2EMatrix_Suffix(t *testing.T) {
 			model:       "gpt-5.2(xhigh)",
 			inputJSON:   `{"model":"gpt-5.2(xhigh)","messages":[{"role":"user","content":"hi"}]}`,
 			expectField: "reasoning_effort",
-			expectValue: "high",
+			expectValue: "xhigh",
 			expectErr:   false,
 		},
 		// Case 116: OpenAI to gpt-5, level xhigh (out of range) → error
@@ -2738,7 +2738,7 @@ func TestThinkingE2EMatrix_Body(t *testing.T) {
 			expectValue: "none",
 			expectErr:   false,
 		},
-		// Case 115: OpenAI to gpt-5.2, reasoning_effort=xhigh → high (xhigh not supported)
+		// Case 115: OpenAI to gpt-5.2, reasoning_effort=xhigh → xhigh (gpt-5.2 supports xhigh)
 		{
 			name:        "115",
 			from:        "openai",
@@ -2746,7 +2746,7 @@ func TestThinkingE2EMatrix_Body(t *testing.T) {
 			model:       "gpt-5.2",
 			inputJSON:   `{"model":"gpt-5.2","messages":[{"role":"user","content":"hi"}],"reasoning_effort":"xhigh"}`,
 			expectField: "reasoning_effort",
-			expectValue: "high",
+			expectValue: "xhigh",
 			expectErr:   false,
 		},
 		// Case 116: OpenAI to gpt-5, reasoning_effort=xhigh (out of range) → error

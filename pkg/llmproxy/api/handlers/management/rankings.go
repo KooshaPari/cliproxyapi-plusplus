@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/registry"
 )
 
 // RankingCategory represents a category for model rankings
@@ -38,24 +39,24 @@ type RankingsRequest struct {
 
 // RankingsResponse is the JSON response for GET /v1/rankings
 type RankingsResponse struct {
-	Category   string        `json:"category"`
-	TimeRange  string        `json:"timeRange"`
-	UpdatedAt  time.Time     `json:"updated_at"`
-	TotalCount int          `json:"total_count"`
-	Rankings   []ModelRank  `json:"rankings"`
+	Category   string      `json:"category"`
+	TimeRange  string      `json:"timeRange"`
+	UpdatedAt  time.Time   `json:"updated_at"`
+	TotalCount int         `json:"total_count"`
+	Rankings   []ModelRank `json:"rankings"`
 }
 
 // ModelRank represents a model's ranking entry
 type ModelRank struct {
-	Rank              int     `json:"rank"`
-	ModelID           string  `json:"model_id"`
-	Provider          string  `json:"provider"`
-	QualityScore      float64 `json:"quality_score"`
-	EstimatedCost     float64 `json:"estimated_cost"`
-	LatencyMs         int     `json:"latency_ms"`
-	WeeklyTokens      int64   `json:"weekly_tokens"`
+	Rank               int     `json:"rank"`
+	ModelID            string  `json:"model_id"`
+	Provider           string  `json:"provider"`
+	QualityScore       float64 `json:"quality_score"`
+	EstimatedCost      float64 `json:"estimated_cost"`
+	LatencyMs          int     `json:"latency_ms"`
+	WeeklyTokens       int64   `json:"weekly_tokens"`
 	MarketSharePercent float64 `json:"market_share_percent"`
-	Category          string  `json:"category,omitempty"`
+	Category           string  `json:"category,omitempty"`
 }
 
 // RankingsHandler handles the /v1/rankings endpoint
@@ -104,11 +105,11 @@ func (h *RankingsHandler) GETRankings(c *gin.Context) {
 func (h *RankingsHandler) generateRankings(req RankingsRequest) []ModelRank {
 	// This would be replaced with actual data from metrics storage
 	mockModels := []struct {
-		ModelID    string
-		Provider   string
-		Quality    float64
-		Cost       float64
-		Latency    int
+		ModelID      string
+		Provider     string
+		Quality      float64
+		Cost         float64
+		Latency      int
 		WeeklyTokens int64
 	}{
 		{"claude-opus-4.6", "anthropic", 0.95, 0.015, 4000, 651000000000},
@@ -127,14 +128,14 @@ func (h *RankingsHandler) generateRankings(req RankingsRequest) []ModelRank {
 
 	// Filter by provider if specified
 	var filtered []struct {
-		ModelID    string
-		Provider   string
-		Quality    float64
-		Cost       float64
-		Latency    int
+		ModelID      string
+		Provider     string
+		Quality      float64
+		Cost         float64
+		Latency      int
 		WeeklyTokens int64
 	}
-	
+
 	if req.Provider != "" {
 		for _, m := range mockModels {
 			if m.Provider == req.Provider {
@@ -222,33 +223,92 @@ func (h *RankingsHandler) GETCategoryRankings(c *gin.Context) {
 	// Mock category rankings
 	categories := []gin.H{
 		{
-			"category": "coding",
-			"top_model": "minimax-m2.5",
+			"category":      "coding",
+			"top_model":     "minimax-m2.5",
 			"weekly_tokens": 216000000000,
-			"percentage": 28.6,
+			"percentage":    28.6,
 		},
 		{
-			"category": "reasoning",
-			"top_model": "claude-opus-4.6",
+			"category":      "reasoning",
+			"top_model":     "claude-opus-4.6",
 			"weekly_tokens": 150000000000,
-			"percentage": 18.5,
+			"percentage":    18.5,
 		},
 		{
-			"category": "multimodal",
-			"top_model": "gemini-3-flash-preview",
+			"category":      "multimodal",
+			"top_model":     "gemini-3-flash-preview",
 			"weekly_tokens": 120000000000,
-			"percentage": 15.2,
+			"percentage":    15.2,
 		},
 		{
-			"category": "general",
-			"top_model": "gpt-5.2",
+			"category":      "general",
+			"top_model":     "gpt-5.2",
 			"weekly_tokens": 100000000000,
-			"percentage": 12.8,
+			"percentage":    12.8,
 		},
 	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"updated_at": time.Now(),
 		"categories": categories,
+	})
+}
+
+// RoutingSelectRequest is the JSON body for POST /v1/routing/select.
+type RoutingSelectRequest struct {
+	TaskComplexity  string  `json:"taskComplexity"`
+	MaxCostPerCall  float64 `json:"maxCostPerCall"`
+	MaxLatencyMs    int     `json:"maxLatencyMs"`
+	MinQualityScore float64 `json:"minQualityScore"`
+}
+
+// RoutingSelectResponse is the JSON response for POST /v1/routing/select.
+type RoutingSelectResponse struct {
+	ModelID            string  `json:"model_id"`
+	Provider           string  `json:"provider"`
+	EstimatedCost      float64 `json:"estimated_cost"`
+	EstimatedLatencyMs int     `json:"estimated_latency_ms"`
+	QualityScore       float64 `json:"quality_score"`
+}
+
+// RoutingSelectHandler handles the /v1/routing/select endpoint.
+type RoutingSelectHandler struct {
+	router *registry.ParetoRouter
+}
+
+// NewRoutingSelectHandler returns a new RoutingSelectHandler.
+func NewRoutingSelectHandler() *RoutingSelectHandler {
+	return &RoutingSelectHandler{
+		router: registry.NewParetoRouter(),
+	}
+}
+
+// POSTRoutingSelect handles POST /v1/routing/select.
+func (h *RoutingSelectHandler) POSTRoutingSelect(c *gin.Context) {
+	var req RoutingSelectRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	routingReq := &registry.RoutingRequest{
+		TaskComplexity:  req.TaskComplexity,
+		MaxCostPerCall:  req.MaxCostPerCall,
+		MaxLatencyMs:    req.MaxLatencyMs,
+		MinQualityScore: req.MinQualityScore,
+	}
+
+	selected, err := h.router.SelectModel(c.Request.Context(), routingReq)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, RoutingSelectResponse{
+		ModelID:            selected.ModelID,
+		Provider:           selected.Provider,
+		EstimatedCost:      selected.EstimatedCost,
+		EstimatedLatencyMs: selected.EstimatedLatencyMs,
+		QualityScore:       selected.QualityScore,
 	})
 }

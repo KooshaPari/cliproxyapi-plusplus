@@ -3,21 +3,18 @@ package usage
 
 import (
 	"strings"
+
+	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/util"
 )
 
 func normalizeProvider(apiKey string) string {
-	key := strings.ToLower(strings.TrimSpace(apiKey))
+	key := strings.TrimSpace(apiKey)
 	if key == "" {
 		return key
 	}
 	parts := strings.Split(key, "-")
 	provider := strings.TrimSpace(parts[0])
-	switch provider {
-	case "droid", "droidcli":
-		return "gemini"
-	default:
-		return provider
-	}
+	return util.NormalizeProviderAlias(provider)
 }
 
 // ProviderMetrics holds per-provider metrics for routing decisions.

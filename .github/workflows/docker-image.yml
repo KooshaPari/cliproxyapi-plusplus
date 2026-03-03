@@ -7,7 +7,7 @@ on:
       - v*
 
 env:
-  APP_NAME: cliproxyapi++
+  APP_NAME: cliproxyapi-plus
   DOCKERHUB_REPO: ${{ secrets.DOCKERHUB_USERNAME }}/cli-proxy-api-plus
 
 jobs:

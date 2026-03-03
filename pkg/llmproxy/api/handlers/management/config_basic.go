@@ -10,7 +10,8 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/registry"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/util"
 	sdkconfig "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/config"
 	log "github.com/sirupsen/logrus"
@@ -330,4 +331,43 @@ func (h *Handler) PutProxyURL(c *gin.Context) {
 func (h *Handler) DeleteProxyURL(c *gin.Context) {
 	h.cfg.ProxyURL = ""
 	h.persist(c)
+}
+
+// Quota exceeded toggles
+func (h *Handler) GetSwitchProject(c *gin.Context) {
+	c.JSON(200, gin.H{"switch-project": h.cfg.QuotaExceeded.SwitchProject})
+}
+func (h *Handler) PutSwitchProject(c *gin.Context) {
+	h.updateBoolField(c, func(v bool) { h.cfg.QuotaExceeded.SwitchProject = v })
+}
+
+func (h *Handler) GetSwitchPreviewModel(c *gin.Context) {
+	c.JSON(200, gin.H{"switch-preview-model": h.cfg.QuotaExceeded.SwitchPreviewModel})
+}
+func (h *Handler) PutSwitchPreviewModel(c *gin.Context) {
+	h.updateBoolField(c, func(v bool) { h.cfg.QuotaExceeded.SwitchPreviewModel = v })
+}
+
+// GetStaticModelDefinitions returns static model metadata for a given channel.
+// Channel is provided via path param (:channel) or query param (?channel=...).
+func (h *Handler) GetStaticModelDefinitions(c *gin.Context) {
+	channel := strings.TrimSpace(c.Param("channel"))
+	if channel == "" {
+		channel = strings.TrimSpace(c.Query("channel"))
+	}
+	if channel == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "channel is required"})
+		return
+	}
+
+	models := registry.GetStaticModelDefinitionsByChannel(channel)
+	if models == nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "unknown channel", "channel": channel})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"channel": strings.ToLower(strings.TrimSpace(channel)),
+		"models":  models,
+	})
 }
