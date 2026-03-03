@@ -13,11 +13,11 @@ jobs:
     steps:
       # Rebase onto upstream to handle drift
       - name: rebase
-        uses: airlock-hq/airlock/defaults/rebase@main
+        uses: airlock-hq/airlock/defaults/rebase@080690f64ffd0b1d08889bf800080e6776ed204f
 
       # Run linters and formatters, auto-fix issues
       - name: lint
-        uses: airlock-hq/airlock/defaults/lint@main
+        uses: airlock-hq/airlock/defaults/lint@080690f64ffd0b1d08889bf800080e6776ed204f
 
       # Commit auto-fix patches and lock the worktree
       - name: freeze
@@ -25,21 +25,21 @@ jobs:
 
       # Generate PR title and description from the diff
       - name: describe
-        uses: airlock-hq/airlock/defaults/describe@main
+        uses: airlock-hq/airlock/defaults/describe@080690f64ffd0b1d08889bf800080e6776ed204f
 
       # Update documentation to reflect changes
       - name: document
-        uses: airlock-hq/airlock/defaults/document@main
+        uses: airlock-hq/airlock/defaults/document@080690f64ffd0b1d08889bf800080e6776ed204f
 
       # Run tests
       - name: test
-        uses: airlock-hq/airlock/defaults/test@main
+        uses: airlock-hq/airlock/defaults/test@080690f64ffd0b1d08889bf800080e6776ed204f
 
       # Push changes to upstream (pauses for user approval first)
       - name: push
-        uses: airlock-hq/airlock/defaults/push@main
+        uses: airlock-hq/airlock/defaults/push@080690f64ffd0b1d08889bf800080e6776ed204f
         require-approval: true
 
       # Create pull/merge request
       - name: create-pr
-        uses: airlock-hq/airlock/defaults/create-pr@main
+        uses: airlock-hq/airlock/defaults/create-pr@080690f64ffd0b1d08889bf800080e6776ed204f

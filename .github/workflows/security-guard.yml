@@ -5,7 +5,7 @@ on:
     types: [opened, synchronize, reopened]
   push:
     branches:
-      - "**"
+      - "main"
 
 permissions:
   contents: read
@@ -20,6 +20,7 @@ jobs:
           fetch-depth: 0
 
       - name: Run pre-commit guard checks
-        uses: pre-commit/action@v3.0.1
+        # pre-commit/action@v3.0.1
+        uses: pre-commit/action@2c7b3805fd2a0fd8c1884dcaebf91fc102a13ecd
         with:
           extra_args: --hook-stage pre-commit --config .pre-commit-config.yaml --show-diff-on-failure

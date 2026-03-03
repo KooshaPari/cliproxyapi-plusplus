@@ -3,3 +3,4 @@ required-check-names-guard.yml|verify-required-check-names
 pr-test-build.yml|build
 pr-path-guard.yml|ensure-no-translator-changes
 lint-test.yml|lint-test
+security-guard.yml|guard
