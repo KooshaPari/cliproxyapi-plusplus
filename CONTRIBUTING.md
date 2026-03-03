@@ -26,7 +26,7 @@ By participating in this project, you agree to abide by our [Code of Conduct](CO
 
 #### Which repository to use?
 - **Third-party provider support**: Submit your PR directly to [kooshapari/cliproxyapi-plusplus](https://github.com/kooshapari/cliproxyapi-plusplus).
-- **Core logic improvements**: If the change is not specific to a third-party provider, please propose it to the [mainline project](https://github.com/kooshapari/cliproxyapi-plusplus) first.
+- **Core logic improvements**: If the change is not specific to a third-party provider, please propose it to the [mainline project](https://github.com/kooshapari/cliproxyapi) first.
 
 ## Governance
 

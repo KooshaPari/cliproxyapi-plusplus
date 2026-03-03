@@ -14,7 +14,7 @@ import (
     "errors"
     "time"
 
-    "github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
+    "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/config"
     "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy"
 )
 ```
