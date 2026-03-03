@@ -1,6 +1,6 @@
-# Contributing to cliproxyapi++
+# Contributing to cliproxyapi-plusplus
 
-First off, thank you for considering contributing to **cliproxyapi++**! It's people like you who make this tool better for everyone.
+First off, thank you for considering contributing to **cliproxyapi-plusplus**! It's people like you who make this tool better for everyone.
 
 ## Code of Conduct
 
@@ -26,7 +26,7 @@ By participating in this project, you agree to abide by our [Code of Conduct](CO
 
 #### Which repository to use?
 - **Third-party provider support**: Submit your PR directly to [kooshapari/cliproxyapi-plusplus](https://github.com/kooshapari/cliproxyapi-plusplus).
-- **Core logic improvements**: If the change is not specific to a third-party provider, please propose it to the [mainline project](https://github.com/kooshapari/cliproxyapi) first.
+- **Core logic improvements**: If the change is not specific to a third-party provider, please propose it to the [mainline project](https://github.com/kooshapari/cliproxyapi-plusplus) first.
 
 ## Governance
 

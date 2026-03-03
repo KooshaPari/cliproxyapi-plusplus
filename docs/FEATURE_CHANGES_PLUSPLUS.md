@@ -1,6 +1,6 @@
-# cliproxyapi++ Feature Change Reference (`++` vs baseline)
+# cliproxyapi-plusplus Feature Change Reference (`plusplus` vs baseline)
 
-This document explains what changed in `cliproxyapi++`, why it changed, and how it affects users, integrators, and maintainers.
+This document explains what changed in `cliproxyapi-plusplus`, why it changed, and how it affects users, integrators, and maintainers.
 
 ## 1. Architecture Changes
 
