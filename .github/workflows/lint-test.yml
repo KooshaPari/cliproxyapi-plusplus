@@ -14,10 +14,4 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Checkout template-commons
-        uses: actions/checkout@v4
-        with:
-          repository: KooshaPari/template-commons
-          path: template-commons
-
       - uses: KooshaPari/phenotypeActions/actions/lint-test@main
