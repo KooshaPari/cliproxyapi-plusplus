@@ -330,6 +330,18 @@ tasks:
         fi
         staticcheck ./...
 
+  quality:oxc:
+    desc: "Run OXC lint + format checks for docs TypeScript/JavaScript files"
+    cmds:
+      - |
+        if ! command -v bun >/dev/null 2>&1; then
+          echo "[WARN] bun not found; skipping OXC checks"
+          exit 0
+        fi
+        bun install --frozen-lockfile
+        bun run lint
+        bun run format:check
+
   quality:ci:
     desc: "Run non-mutating PR quality gates"
     cmds:
@@ -343,6 +355,7 @@ tasks:
       - task: quality:vet
       - task: quality:staticcheck
       - task: quality:shellcheck
+      - task: quality:oxc
       - task: lint:changed
 
   test:provider-smoke-matrix:test:
