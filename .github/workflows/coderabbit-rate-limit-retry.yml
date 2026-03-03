@@ -141,7 +141,7 @@ jobs:
               return labels.some((l) => l.name === name);
             }
 
-            async function setBypassLabel(prNumber, enable, manualBypass) {
+            async function setBypassLabel(prNumber, enable) {
               const present = await hasLabel(prNumber, BYPASS_LABEL);
               if (enable && !present) {
                 await github.rest.issues.addLabels({
@@ -151,15 +151,6 @@ jobs:
                   labels: [BYPASS_LABEL],
                 });
                 core.notice(`PR #${prNumber}: applied label '${BYPASS_LABEL}'.`);
-              }
-              if (!enable && present && !manualBypass) {
-                await github.rest.issues.removeLabel({
-                  owner,
-                  repo,
-                  issue_number: prNumber,
-                  name: BYPASS_LABEL,
-                });
-                core.notice(`PR #${prNumber}: removed label '${BYPASS_LABEL}'.`);
               }
             }
 
@@ -187,7 +178,7 @@ jobs:
               const bypassEligible = backlogHigh && stale && !stateOk;
               const manualBypass = await hasLabel(pr.number, BYPASS_LABEL);
 
-              await setBypassLabel(pr.number, bypassEligible, manualBypass);
+              await setBypassLabel(pr.number, bypassEligible);
 
               if (bypassEligible && !(await hasRecentRetryComment(pr.number))) {
                 const body = [
