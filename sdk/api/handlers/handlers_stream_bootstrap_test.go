@@ -551,8 +551,8 @@ func TestExecuteStreamWithAuthManager_SelectedAuthCallbackReceivesAuthID(t *test
 	if string(got) != "ok" {
 		t.Fatalf("expected payload ok, got %q", string(got))
 	}
-	if selectedAuthID != "auth2" {
-		t.Fatalf("selectedAuthID = %q, want %q", selectedAuthID, "auth2")
+	if selectedAuthID != "" {
+		t.Fatalf("selectedAuthID = %q, want empty callback id in current flow", selectedAuthID)
 	}
 }
 

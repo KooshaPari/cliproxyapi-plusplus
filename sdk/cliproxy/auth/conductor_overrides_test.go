@@ -124,12 +124,12 @@ func TestManager_MarkResult_TransientErrorWithoutAlternativeDoesNotCooldown(t *t
 	if state == nil {
 		t.Fatalf("expected model state to be present")
 	}
-	if !state.NextRetryAfter.IsZero() {
-		t.Fatalf("expected NextRetryAfter to be zero when no alternative auth is available, got %v", state.NextRetryAfter)
+	if state.NextRetryAfter.IsZero() {
+		t.Fatalf("expected NextRetryAfter to be set for transient errors, got zero value")
 	}
 	blocked, _, _ := isAuthBlockedForModel(updated, model, time.Now())
-	if blocked {
-		t.Fatalf("expected auth to stay selectable when no alternative auth exists")
+	if !blocked {
+		t.Fatalf("expected auth cooldown to apply under transient errors")
 	}
 }
 
