@@ -234,6 +234,11 @@ func (l *FileRequestLogger) logRequest(url, method string, requestHeaders map[st
 		filename = l.generateErrorFilename(url, requestID)
 	}
 	filePath := filepath.Join(l.logsDir, filename)
+	// Guard: ensure the resolved log file path stays within the logs directory.
+	cleanLogsDir := filepath.Clean(l.logsDir)
+	if !strings.HasPrefix(filepath.Clean(filePath), cleanLogsDir+string(os.PathSeparator)) {
+		return fmt.Errorf("log file path escapes logs directory")
+	}
 
 	requestBodyPath, errTemp := l.writeRequestBodyTempFile(body)
 	if errTemp != nil {

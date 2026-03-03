@@ -149,6 +149,22 @@ func captureRequestInfo(c *gin.Context, captureBody bool) (*RequestInfo, error) 
 	}, nil
 }
 
+// sanitizeRequestHeaders returns a copy of the headers map with sensitive values redacted.
+// Authorization, Cookie, and Proxy-Authorization headers are replaced with "[redacted]"
+// to prevent credentials from appearing in logs.
+func sanitizeRequestHeaders(headers map[string][]string) map[string][]string {
+	sanitized := make(map[string][]string, len(headers))
+	for key, values := range headers {
+		keyLower := strings.ToLower(strings.TrimSpace(key))
+		if keyLower == "authorization" || keyLower == "cookie" || keyLower == "proxy-authorization" {
+			sanitized[key] = []string{"[redacted]"}
+			continue
+		}
+		sanitized[key] = values
+	}
+	return sanitized
+}
+
 // shouldLogRequest determines whether the request should be logged.
 // It skips management endpoints to avoid leaking secrets but allows
 // all other routes, including module-provided ones, to honor request-log.

@@ -7,7 +7,7 @@ on:
       - v*
 
 env:
-  APP_NAME: CLIProxyAPI
+  APP_NAME: cliproxyapi++
   DOCKERHUB_REPO: ${{ secrets.DOCKERHUB_USERNAME }}/cli-proxy-api-plus
 
 jobs:
@@ -125,13 +125,15 @@ jobs:
             local tag="$1"
             local url="https://hub.docker.com/v2/repositories/${namespace}/${repo_name}/tags/${tag}/"
             local http_code
-            http_code="$(curl -sS -o /dev/null -w "%{http_code}" -X DELETE -H "Authorization: JWT ${token}" "${url}" || true)"
+            if ! http_code="$(curl -sS -o /dev/null -w "%{http_code}" -X DELETE -H "Authorization: JWT ${token}" "${url}")"; then
+              http_code="0"
+            fi
             if [ "${http_code}" = "204" ] || [ "${http_code}" = "404" ]; then
-              echo "Docker Hub tag removed (or missing): ${DOCKERHUB_REPO}:${tag} (HTTP ${http_code})"
+              echo "Docker Hub tag removed (or already missing): ${DOCKERHUB_REPO}:${tag} (HTTP ${http_code})"
               return 0
             fi
             echo "Docker Hub tag delete failed: ${DOCKERHUB_REPO}:${tag} (HTTP ${http_code})"
-            return 0
+            return 1
           }
 
           delete_tag "latest-amd64"

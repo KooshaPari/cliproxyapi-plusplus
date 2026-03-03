@@ -8,13 +8,13 @@ Use this guard before any scripted GitHub mutation (issue/PR/comment operations)
 
 It returns non-zero for non-owned repos:
 
-- allowed: `KooshaPari`
+- allowed: `kooshapari`
 - allowed: `atoms-tech`
 
 Example for a source URL:
 
 ```bash
-./scripts/github-owned-guard.sh https://github.com/router-for-me/CLIProxyAPI/pull/1699
+./scripts/github-owned-guard.sh https://github.com/kooshapari/cliproxyapi-plusplus/pull/1699
 ```
 
 Example for current git origin:

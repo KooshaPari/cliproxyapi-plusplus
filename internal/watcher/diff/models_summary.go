@@ -113,7 +113,8 @@ func SummarizeVertexModels(models []config.VertexCompatModel) VertexModelsSummar
 		return VertexModelsSummary{}
 	}
 	sort.Strings(names)
-	sum := sha256.Sum256([]byte(strings.Join(names, "|")))
+	// SHA256 is used here to fingerprint the set of model names for change detection, not for password hashing.
+	sum := sha256.Sum256([]byte(strings.Join(names, "|"))) // codeql[go/weak-sensitive-data-hashing]
 	return VertexModelsSummary{
 		hash:  hex.EncodeToString(sum[:]),
 		count: len(names),

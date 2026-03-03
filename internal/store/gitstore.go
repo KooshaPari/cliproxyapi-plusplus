@@ -399,14 +399,22 @@ func (s *GitTokenStore) PersistAuthFiles(_ context.Context, message string, path
 }
 
 func (s *GitTokenStore) resolveDeletePath(id string) (string, error) {
-	if strings.ContainsRune(id, os.PathSeparator) || filepath.IsAbs(id) {
-		return id, nil
-	}
 	dir := s.baseDirSnapshot()
 	if dir == "" {
 		return "", fmt.Errorf("auth filestore: directory not configured")
 	}
-	return filepath.Join(dir, id), nil
+	var candidate string
+	if filepath.IsAbs(id) {
+		candidate = filepath.Clean(id)
+	} else {
+		candidate = filepath.Clean(filepath.Join(dir, filepath.FromSlash(id)))
+	}
+	// Validate that the resolved path is contained within the configured base directory.
+	cleanBase := filepath.Clean(dir)
+	if candidate != cleanBase && !strings.HasPrefix(candidate, cleanBase+string(os.PathSeparator)) {
+		return "", fmt.Errorf("auth filestore: auth identifier escapes base directory")
+	}
+	return candidate, nil
 }
 
 func (s *GitTokenStore) readAuthFile(path, baseDir string) (*cliproxyauth.Auth, error) {

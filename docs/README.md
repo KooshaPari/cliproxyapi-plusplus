@@ -57,9 +57,9 @@ This docs site is organized by onboarding guides, API reference, and audience-sp
 
 ## Canonical Project Docs
 
-- [Root README](https://github.com/KooshaPari/cliproxyapi-plusplus/blob/main/README.md)
-- [Contributing](https://github.com/KooshaPari/cliproxyapi-plusplus/blob/main/CONTRIBUTING.md)
-- [Security Policy](https://github.com/KooshaPari/cliproxyapi-plusplus/blob/main/SECURITY.md)
+- [Root README](https://github.com/kooshapari/cliproxyapi-plusplus/blob/main/README.md)
+- [Contributing](https://github.com/kooshapari/cliproxyapi-plusplus/blob/main/CONTRIBUTING.md)
+- [Security Policy](https://github.com/kooshapari/cliproxyapi-plusplus/blob/main/SECURITY.md)
 
 ## Information Architecture Baseline
 

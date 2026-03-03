@@ -6,8 +6,20 @@ package config
 
 import internalconfig "github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
 
+// Config is an alias to internal/config.Config.
+type Config = internalconfig.Config
+
 // SDKConfig is an alias to internal/config.SDKConfig.
 type SDKConfig = internalconfig.SDKConfig
 
 // StreamingConfig is an alias to internal/config.StreamingConfig.
 type StreamingConfig = internalconfig.StreamingConfig
+
+// LoadConfig is an alias to internal/config.LoadConfig.
+var LoadConfig = internalconfig.LoadConfig
+
+// LoadConfigOptional is an alias to internal/config.LoadConfigOptional.
+var LoadConfigOptional = internalconfig.LoadConfigOptional
+
+// SaveConfigPreserveComments is an alias to internal/config.SaveConfigPreserveComments.
+var SaveConfigPreserveComments = internalconfig.SaveConfigPreserveComments

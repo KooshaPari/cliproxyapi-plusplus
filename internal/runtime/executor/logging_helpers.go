@@ -77,7 +77,7 @@ func recordAPIRequest(ctx context.Context, cfg *config.Config, info upstreamRequ
 		builder.WriteString(fmt.Sprintf("Auth: %s\n", auth))
 	}
 	builder.WriteString("\nHeaders:\n")
-	writeHeaders(builder, info.Headers)
+	writeHeaders(builder, sanitizeHeaders(info.Headers))
 	builder.WriteString("\nBody:\n")
 	if len(info.Body) > 0 {
 		builder.WriteString(string(info.Body))
@@ -257,6 +257,22 @@ func updateAggregatedResponse(ginCtx *gin.Context, attempts []*upstreamAttempt) 
 		}
 	}
 	ginCtx.Set(apiResponseKey, []byte(builder.String()))
+}
+
+// sanitizeHeaders returns a copy of the headers map with sensitive values redacted
+// to prevent credentials such as Authorization tokens from appearing in logs.
+func sanitizeHeaders(headers http.Header) http.Header {
+	if len(headers) == 0 {
+		return headers
+	}
+	sanitized := headers.Clone()
+	for key := range sanitized {
+		keyLower := strings.ToLower(strings.TrimSpace(key))
+		if keyLower == "authorization" || keyLower == "cookie" || keyLower == "proxy-authorization" {
+			sanitized[key] = []string{"[redacted]"}
+		}
+	}
+	return sanitized
 }
 
 func writeHeaders(builder *strings.Builder, headers http.Header) {

@@ -569,10 +569,21 @@ func (s *PostgresStore) resolveAuthPath(auth *cliproxyauth.Auth) (string, error)
 }
 
 func (s *PostgresStore) resolveDeletePath(id string) (string, error) {
-	if strings.ContainsRune(id, os.PathSeparator) || filepath.IsAbs(id) {
-		return id, nil
+	var candidate string
+	if filepath.IsAbs(id) {
+		candidate = filepath.Clean(id)
+	} else {
+		candidate = filepath.Clean(filepath.Join(s.authDir, filepath.FromSlash(id)))
 	}
-	return filepath.Join(s.authDir, filepath.FromSlash(id)), nil
+	// Validate that the resolved path is contained within the configured auth directory.
+	cleanBase := filepath.Clean(s.authDir)
+	if cleanBase == "" || cleanBase == "." {
+		return "", fmt.Errorf("postgres store: auth directory not configured")
+	}
+	if candidate != cleanBase && !strings.HasPrefix(candidate, cleanBase+string(os.PathSeparator)) {
+		return "", fmt.Errorf("postgres store: auth identifier escapes base directory")
+	}
+	return candidate, nil
 }
 
 func (s *PostgresStore) relativeAuthID(path string) (string, error) {

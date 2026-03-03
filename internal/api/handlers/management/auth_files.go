@@ -520,6 +520,11 @@ func (h *Handler) DownloadAuthFile(c *gin.Context) {
 		return
 	}
 	full := filepath.Join(h.cfg.AuthDir, name)
+	// Guard against path traversal: resolved path must remain inside AuthDir.
+	if !pathContainedIn(full, h.cfg.AuthDir) {
+		c.JSON(400, gin.H{"error": "invalid name"})
+		return
+	}
 	data, err := os.ReadFile(full)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -588,6 +593,11 @@ func (h *Handler) UploadAuthFile(c *gin.Context) {
 			dst = abs
 		}
 	}
+	// Guard against path traversal: resolved path must remain inside AuthDir.
+	if !pathContainedIn(dst, h.cfg.AuthDir) {
+		c.JSON(400, gin.H{"error": "invalid name"})
+		return
+	}
 	if errWrite := os.WriteFile(dst, data, 0o600); errWrite != nil {
 		c.JSON(500, gin.H{"error": fmt.Sprintf("failed to write file: %v", errWrite)})
 		return
@@ -650,6 +660,11 @@ func (h *Handler) DeleteAuthFile(c *gin.Context) {
 			full = abs
 		}
 	}
+	// Guard against path traversal: resolved path must remain inside AuthDir.
+	if !pathContainedIn(full, h.cfg.AuthDir) {
+		c.JSON(400, gin.H{"error": "invalid name"})
+		return
+	}
 	if err := os.Remove(full); err != nil {
 		if os.IsNotExist(err) {
 			c.JSON(404, gin.H{"error": "file not found"})
@@ -692,7 +707,12 @@ func (h *Handler) registerAuthFromFile(ctx context.Context, path string, data []
 		return fmt.Errorf("auth path is empty")
 	}
 	if data == nil {
+		// path must be contained within the configured auth directory.
+		if h.cfg != nil && !pathContainedIn(path, h.cfg.AuthDir) {
+			return fmt.Errorf("auth path escapes auth directory")
+		}
 		var err error
+		// codeql[go/path-injection] - path is validated above via pathContainedIn
 		data, err = os.ReadFile(path)
 		if err != nil {
 			return fmt.Errorf("failed to read auth file: %w", err)
@@ -2919,4 +2939,16 @@ func (h *Handler) RequestKiloToken(c *gin.Context) {
 		"user_code":        resp.Code,
 		"verification_uri": resp.VerificationURL,
 	})
+}
+
+// pathContainedIn reports whether path is contained within baseDir after cleaning both.
+// It returns false if baseDir is empty or if the resolved path escapes baseDir.
+func pathContainedIn(path, baseDir string) bool {
+	cleanBase := filepath.Clean(baseDir)
+	if cleanBase == "" || cleanBase == "." {
+		return false
+	}
+	cleanPath := filepath.Clean(path)
+	return cleanPath == cleanBase ||
+		strings.HasPrefix(cleanPath, cleanBase+string(os.PathSeparator))
 }

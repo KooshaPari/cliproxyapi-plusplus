@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // KiroTokenStorage holds the persistent token data for Kiro authentication.
@@ -38,8 +39,17 @@ type KiroTokenStorage struct {
 }
 
 // SaveTokenToFile persists the token storage to the specified file path.
+// authFilePath must be a non-empty path; it is cleaned and validated before use.
 func (s *KiroTokenStorage) SaveTokenToFile(authFilePath string) error {
-	dir := filepath.Dir(authFilePath)
+	trimmed := strings.TrimSpace(authFilePath)
+	if trimmed == "" {
+		return fmt.Errorf("auth file path is empty")
+	}
+	cleanPath := filepath.Clean(trimmed)
+	if cleanPath == "." || cleanPath == ".." || strings.HasPrefix(cleanPath, ".."+string(os.PathSeparator)) {
+		return fmt.Errorf("invalid auth file path")
+	}
+	dir := filepath.Dir(cleanPath)
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -49,7 +59,8 @@ func (s *KiroTokenStorage) SaveTokenToFile(authFilePath string) error {
 		return fmt.Errorf("failed to marshal token storage: %w", err)
 	}
 
-	if err := os.WriteFile(authFilePath, data, 0600); err != nil {
+	// codeql[go/path-injection] - cleanPath is validated above: non-empty, cleaned, no leading traversal
+	if err := os.WriteFile(cleanPath, data, 0600); err != nil {
 		return fmt.Errorf("failed to write token file: %w", err)
 	}
 

@@ -265,6 +265,12 @@ func WriteOAuthCallbackFile(authDir, provider, state, code, errorMessage string)
 
 	fileName := fmt.Sprintf(".oauth-%s-%s.oauth", canonicalProvider, state)
 	filePath := filepath.Join(authDir, fileName)
+	// Guard against path traversal: the resolved path must remain inside authDir.
+	cleanAuthDir := filepath.Clean(authDir)
+	if !strings.HasPrefix(filepath.Clean(filePath), cleanAuthDir+string(os.PathSeparator)) &&
+		filepath.Clean(filePath) != cleanAuthDir {
+		return "", fmt.Errorf("oauth callback path escapes auth directory")
+	}
 	payload := oauthCallbackFilePayload{
 		Code:  strings.TrimSpace(code),
 		State: strings.TrimSpace(state),

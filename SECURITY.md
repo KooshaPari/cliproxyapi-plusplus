@@ -11,7 +11,7 @@
 
 We take the security of **cliproxyapi++** seriously. If you discover a security vulnerability, please do NOT open a public issue. Instead, report it privately.
 
-Please report any security concerns directly to the maintainers at [kooshapari@gmail.com](mailto:kooshapari@gmail.com) (assuming this as the email for KooshaPari).
+Please report any security concerns directly to the maintainers at [kooshapari@gmail.com](mailto:kooshapari@gmail.com) (assuming this as the email for kooshapari).
 
 ### What to include
 - A detailed description of the vulnerability.
