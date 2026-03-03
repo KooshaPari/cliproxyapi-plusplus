@@ -5,7 +5,7 @@ package claude
 
 import (
 	"github.com/KooshaPari/phenotype-go-auth"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/misc"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/misc"
 )
 
 // ClaudeTokenStorage stores OAuth2 token information for Anthropic Claude API authentication.

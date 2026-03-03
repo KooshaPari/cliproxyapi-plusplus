@@ -1,3 +1,6 @@
+//go:build kiro_auth_split
+// +build kiro_auth_split
+
 // Package executor provides HTTP request execution for various AI providers.
 // This file contains Kiro-specific authentication handling logic.
 package executor

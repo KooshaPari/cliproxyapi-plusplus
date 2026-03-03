@@ -5,7 +5,7 @@ package copilot
 
 import (
 	"github.com/KooshaPari/phenotype-go-auth"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/misc"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/misc"
 )
 
 // CopilotTokenStorage stores OAuth2 token information for GitHub Copilot API authentication.

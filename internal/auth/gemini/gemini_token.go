@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/KooshaPari/phenotype-go-auth"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/misc"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/misc"
 )
 
 // GeminiTokenStorage stores OAuth2 token information for Google Gemini API authentication.
