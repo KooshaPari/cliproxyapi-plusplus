@@ -234,4 +234,3 @@ func (h *WebSearchHandler) CallMcpAPI(request *McpRequest) (*McpResponse, error)
 
 	return nil, lastErr
 }
-

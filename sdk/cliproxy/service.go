@@ -14,6 +14,7 @@ import (
 
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/api"
 	kiroauth "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/kiro"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/executor"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/registry"
 	_ "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/usage"
@@ -23,7 +24,6 @@ import (
 	sdkAuth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/auth"
 	coreauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/usage"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
 	log "github.com/sirupsen/logrus"
 )
 

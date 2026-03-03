@@ -26,8 +26,8 @@ const (
 	Endpoint = "/ws"
 
 	// Message types
-	TypeChat       = "chat"
-	TypeStream     = "stream"
+	TypeChat        = "chat"
+	TypeStream      = "stream"
 	TypeStreamChunk = "stream_chunk"
 	TypeStreamEnd   = "stream_end"
 	TypeError       = "error"
@@ -62,12 +62,12 @@ type StreamChunk struct {
 
 // HandlerConfig holds WebSocket handler configuration
 type HandlerConfig struct {
-	ReadBufferSize    int           `yaml:"read_buffer_size" json:"read_buffer_size"`
-	WriteBufferSize   int           `yaml:"write_buffer_size" json:"write_buffer_size"`
-	PingInterval      time.Duration `yaml:"ping_interval" json:"ping_interval"`
-	PongWait          time.Duration `yaml:"pong_wait" json:"pong_wait"`
-	MaxMessageSize    int64         `yaml:"max_message_size" json:"max_message_size"`
-	Compression       bool          `yaml:"compression" json:"compression"`
+	ReadBufferSize  int           `yaml:"read_buffer_size" json:"read_buffer_size"`
+	WriteBufferSize int           `yaml:"write_buffer_size" json:"write_buffer_size"`
+	PingInterval    time.Duration `yaml:"ping_interval" json:"ping_interval"`
+	PongWait        time.Duration `yaml:"pong_wait" json:"pong_wait"`
+	MaxMessageSize  int64         `yaml:"max_message_size" json:"max_message_size"`
+	Compression     bool          `yaml:"compression" json:"compression"`
 }
 
 // DefaultHandlerConfig returns default configuration

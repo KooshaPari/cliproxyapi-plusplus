@@ -28,10 +28,10 @@ const (
 
 // Config holds Unix socket configuration
 type Config struct {
-	Enabled   bool   `yaml:"enabled" json:"enabled"`
-	Path      string `yaml:"path" json:"path"`
-	Perm      int    `yaml:"perm" json:"perm"`
-	RemoveOnStop bool `yaml:"remove_on_stop" json:"remove_on_stop"`
+	Enabled      bool   `yaml:"enabled" json:"enabled"`
+	Path         string `yaml:"path" json:"path"`
+	Perm         int    `yaml:"perm" json:"perm"`
+	RemoveOnStop bool   `yaml:"remove_on_stop" json:"remove_on_stop"`
 }
 
 // DefaultConfig returns default Unix socket configuration
