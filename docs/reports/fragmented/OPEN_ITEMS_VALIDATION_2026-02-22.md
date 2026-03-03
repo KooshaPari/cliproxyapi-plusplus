@@ -10,7 +10,7 @@ Scope audited against `upstream/main` (`af8e9ef45806889f3016d91fb4da764ceabe82a2
   - Status: Implemented on `main` (behavior present even though exact PR commit is not merged).
   - Current `main` emits `message_start` before any content/tool block emission on first delta chunk.
 - Issue #258 `Support variant fallback for reasoning_effort in codex models`
-  - Status: Implemented on current `main`.
+  - Status: Implemented (landed on current main).
   - Current translators map top-level `variant` to Codex reasoning effort when `reasoning.effort` is absent.
 
 ## Partially Implemented

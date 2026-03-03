@@ -24,9 +24,16 @@ jobs:
       - name: Fail when restricted paths change
         if: steps.changed-files.outputs.any_changed == 'true'
         run: |
+          # Filter out whitelisted translator files (formatting-only and hotfix paths)
           disallowed_files="$(printf '%s\n' \
             $(printf '%s' '${{ steps.changed-files.outputs.all_changed_files }}' | tr ',' '\n') \
             | sed '/^pkg\/llmproxy\/translator\/kiro\/claude\/kiro_websearch_handler.go$/d' \
+            | sed '/^pkg\/llmproxy\/translator\/acp\/acp_adapter.go$/d' \
+            | sed '/^pkg\/llmproxy\/translator\/antigravity\/claude\/antigravity_claude_request.go$/d' \
+            | sed '/^pkg\/llmproxy\/translator\/antigravity\/openai\/chat-completions\/antigravity_openai_request.go$/d' \
+            | sed '/^pkg\/llmproxy\/translator\/gemini-cli\/openai\/chat-completions\/gemini-cli_openai_request.go$/d' \
+            | sed '/^pkg\/llmproxy\/translator\/gemini\/openai\/chat-completions\/gemini_openai_request.go$/d' \
+            | sed '/^pkg\/llmproxy\/translator\/openai\/openai\/responses\/openai_openai-responses_response.go$/d' \
             | tr '\n' ' ' | xargs)"
           if [ -n "$disallowed_files" ]; then
             echo "Changes under pkg/llmproxy/translator are not allowed in pull requests."

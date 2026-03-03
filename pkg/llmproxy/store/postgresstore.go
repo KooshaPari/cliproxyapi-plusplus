@@ -644,30 +644,6 @@ func (s *PostgresStore) absoluteAuthPath(id string) (string, error) {
 	return path, nil
 }
 
-func (s *PostgresStore) resolveManagedAuthPath(candidate string) (string, error) {
-	trimmed := strings.TrimSpace(candidate)
-	if trimmed == "" {
-		return "", fmt.Errorf("postgres store: auth path is empty")
-	}
-
-	var resolved string
-	if filepath.IsAbs(trimmed) {
-		resolved = filepath.Clean(trimmed)
-	} else {
-		resolved = filepath.Join(s.authDir, filepath.FromSlash(trimmed))
-		resolved = filepath.Clean(resolved)
-	}
-
-	rel, err := filepath.Rel(s.authDir, resolved)
-	if err != nil {
-		return "", fmt.Errorf("postgres store: compute relative path: %w", err)
-	}
-	if rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
-		return "", fmt.Errorf("postgres store: path %q outside managed directory", candidate)
-	}
-	return resolved, nil
-}
-
 func (s *PostgresStore) fullTableName(name string) string {
 	if strings.TrimSpace(s.cfg.Schema) == "" {
 		return quoteIdentifier(name)

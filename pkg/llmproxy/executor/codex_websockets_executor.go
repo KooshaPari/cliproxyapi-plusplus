@@ -1295,15 +1295,19 @@ func (e *CodexWebsocketsExecutor) closeExecutionSession(sess *codexWebsocketSess
 }
 
 func logCodexWebsocketConnected(sessionID string, authID string, wsURL string) {
-	log.Infof("codex websockets: upstream connected session=%s auth=%s url=%s", strings.TrimSpace(sessionID), sanitizeCodexWebsocketLogField(authID), sanitizeCodexWebsocketLogURL(wsURL))
+	log.Infof("codex websockets: upstream connected session=%s auth=%s url=%s", sanitizeCodexWebsocketLogField(sessionID), sanitizeCodexWebsocketLogField(authID), sanitizeCodexWebsocketLogURL(wsURL))
 }
 
 func logCodexWebsocketDisconnected(sessionID, authID, wsURL, reason string, err error) {
+	safeSession := sanitizeCodexWebsocketLogField(sessionID)
+	safeAuth := sanitizeCodexWebsocketLogField(authID)
+	safeURL := sanitizeCodexWebsocketLogURL(wsURL)
+	safeReason := strings.TrimSpace(reason)
 	if err != nil {
-		log.Infof("codex websockets: upstream disconnected session=%s auth=%s url=%s reason=%s err=%v", strings.TrimSpace(sessionID), sanitizeCodexWebsocketLogField(authID), sanitizeCodexWebsocketLogURL(wsURL), strings.TrimSpace(reason), err)
+		log.Infof("codex websockets: upstream disconnected session=%s auth=%s url=%s reason=%s err=%v", safeSession, safeAuth, safeURL, safeReason, err)
 		return
 	}
-	log.Infof("codex websockets: upstream disconnected session=%s auth=%s url=%s reason=%s", strings.TrimSpace(sessionID), sanitizeCodexWebsocketLogField(authID), sanitizeCodexWebsocketLogURL(wsURL), strings.TrimSpace(reason))
+	log.Infof("codex websockets: upstream disconnected session=%s auth=%s url=%s reason=%s", safeSession, safeAuth, safeURL, safeReason)
 }
 
 func sanitizeCodexWebsocketLogField(raw string) string {

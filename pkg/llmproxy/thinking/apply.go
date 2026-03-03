@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/registry"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/util"
 	log "github.com/sirupsen/logrus"
 	"github.com/tidwall/gjson"
 )
@@ -119,9 +120,8 @@ func ApplyThinking(body []byte, model string, fromFormat string, toFormat string
 	if modelInfo.Thinking == nil {
 		config := extractThinkingConfig(body, providerFormat)
 		if hasThinkingConfig(config) {
-			// nolint:gosec // false positive: logging model name, not secret
 			log.WithFields(log.Fields{
-				"model":    baseModel,
+				"model":    util.RedactAPIKey(baseModel),
 				"provider": providerFormat,
 			}).Debug("thinking: model does not support thinking, stripping config |")
 			return StripThinkingConfig(body, providerFormat), nil
@@ -158,10 +158,9 @@ func ApplyThinking(body []byte, model string, fromFormat string, toFormat string
 				"forced":   true,
 			}).Debug("thinking: forced thinking for thinking model |")
 		} else {
-			// nolint:gosec // false positive: logging model name, not secret
 			log.WithFields(log.Fields{
 				"provider": providerFormat,
-				"model":    modelInfo.ID,
+				"model":    util.RedactAPIKey(modelInfo.ID),
 			}).Debug("thinking: no config found, passthrough |")
 			return body, nil
 		}
@@ -181,7 +180,7 @@ func ApplyThinking(body []byte, model string, fromFormat string, toFormat string
 	if validated == nil {
 		log.WithFields(log.Fields{
 			"provider": providerFormat,
-			"model":    modelInfo.ID,
+			"model":    util.RedactAPIKey(modelInfo.ID),
 		}).Warn("thinking: ValidateConfig returned nil config without error, passthrough |")
 		return body, nil
 	}

@@ -17,9 +17,9 @@ func TestCopilotTokenStorage_SaveTokenToFile(t *testing.T) {
 	authFilePath := filepath.Join(tempDir, "token.json")
 
 	ts := &CopilotTokenStorage{
-		AccessToken: "access",
-		Username:    "user",
+		Username: "user",
 	}
+	ts.AccessToken = "access"
 
 	if err := ts.SaveTokenToFile(authFilePath); err != nil {
 		t.Fatalf("SaveTokenToFile failed: %v", err)

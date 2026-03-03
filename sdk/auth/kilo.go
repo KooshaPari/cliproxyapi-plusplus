@@ -39,7 +39,7 @@ func (a *KiloAuthenticator) Login(ctx context.Context, cfg *config.Config, opts 
 	}
 
 	kilocodeAuth := kilo.NewKiloAuth()
-	
+
 	fmt.Println("Initiating Kilo device authentication...")
 	resp, err := kilocodeAuth.InitiateDeviceFlow(ctx)
 	if err != nil {
@@ -48,7 +48,7 @@ func (a *KiloAuthenticator) Login(ctx context.Context, cfg *config.Config, opts 
 
 	fmt.Printf("Please visit: %s\n", resp.VerificationURL)
 	fmt.Printf("And enter code: %s\n", resp.Code)
-	
+
 	fmt.Println("Waiting for authorization...")
 	status, err := kilocodeAuth.PollForToken(ctx, resp.Code)
 	if err != nil {
@@ -68,7 +68,7 @@ func (a *KiloAuthenticator) Login(ctx context.Context, cfg *config.Config, opts 
 		for i, org := range profile.Orgs {
 			fmt.Printf("[%d] %s (%s)\n", i+1, org.Name, org.ID)
 		}
-		
+
 		if opts.Prompt != nil {
 			input, err := opts.Prompt("Enter the number of the organization: ")
 			if err != nil {
@@ -100,15 +100,15 @@ func (a *KiloAuthenticator) Login(ctx context.Context, cfg *config.Config, opts 
 		Token:          status.Token,
 		OrganizationID: orgID,
 		Model:          defaults.Model,
-		Email:          status.UserEmail,
-		Type:           "kilo",
 	}
+	ts.Email = status.UserEmail
+	ts.Type = "kilo"
 
 	fileName := kilo.CredentialFileName(status.UserEmail)
 	metadata := map[string]any{
 		"email":           status.UserEmail,
 		"organization_id": orgID,
-		"model":          defaults.Model,
+		"model":           defaults.Model,
 	}
 
 	return &coreauth.Auth{

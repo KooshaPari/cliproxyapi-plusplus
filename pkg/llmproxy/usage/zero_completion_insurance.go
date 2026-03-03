@@ -26,21 +26,21 @@ const (
 
 // RequestRecord tracks a request for insurance purposes
 type RequestRecord struct {
-	RequestID    string
+	RequestID   string
 	ModelID     string
 	Provider    string
 	APIKey      string
 	InputTokens int
 	// Completion fields set after response
-	OutputTokens    int
-	Status         CompletionStatus
-	Error          string
-	FinishReason   string
-	Timestamp      time.Time
-	PriceCharged  float64
-	RefundAmount   float64
-	IsInsured      bool
-	RefundReason   string
+	OutputTokens int
+	Status       CompletionStatus
+	Error        string
+	FinishReason string
+	Timestamp    time.Time
+	PriceCharged float64
+	RefundAmount float64
+	IsInsured    bool
+	RefundReason string
 }
 
 // ZeroCompletionInsurance tracks requests and provides refunds for failed completions
@@ -60,11 +60,11 @@ type ZeroCompletionInsurance struct {
 // NewZeroCompletionInsurance creates a new insurance service
 func NewZeroCompletionInsurance() *ZeroCompletionInsurance {
 	return &ZeroCompletionInsurance{
-		records:            make(map[string]*RequestRecord),
-		enabled:            true,
-		refundZeroTokens:  true,
-		refundErrors:      true,
-		refundFiltered:    false,
+		records:          make(map[string]*RequestRecord),
+		enabled:          true,
+		refundZeroTokens: true,
+		refundErrors:     true,
+		refundFiltered:   false,
 		filterErrorPatterns: []string{
 			"rate_limit",
 			"quota_exceeded",
@@ -79,12 +79,12 @@ func (z *ZeroCompletionInsurance) StartRequest(ctx context.Context, reqID, model
 	defer z.mu.Unlock()
 
 	record := &RequestRecord{
-		RequestID:    reqID,
+		RequestID:   reqID,
 		ModelID:     modelID,
 		Provider:    provider,
 		APIKey:      apiKey,
 		InputTokens: inputTokens,
-		Timestamp:  time.Now(),
+		Timestamp:   time.Now(),
 		IsInsured:   z.enabled,
 	}
 
@@ -214,22 +214,24 @@ func (z *ZeroCompletionInsurance) GetStats() InsuranceStats {
 	}
 
 	return InsuranceStats{
-		TotalRequests:      z.requestCount,
-		SuccessCount:      successCount,
-		ZeroTokenCount:    zeroTokenCount,
-		ErrorCount:        errorCount,
-		FilteredCount:     filteredCount,
-		TotalRefunded:     totalRefunded,
-		RefundPercent:     func() float64 { 
-			if z.requestCount == 0 { return 0 }
-			return float64(zeroTokenCount+errorCount) / float64(z.requestCount) * 100 
+		TotalRequests:  z.requestCount,
+		SuccessCount:   successCount,
+		ZeroTokenCount: zeroTokenCount,
+		ErrorCount:     errorCount,
+		FilteredCount:  filteredCount,
+		TotalRefunded:  totalRefunded,
+		RefundPercent: func() float64 {
+			if z.requestCount == 0 {
+				return 0
+			}
+			return float64(zeroTokenCount+errorCount) / float64(z.requestCount) * 100
 		}(),
 	}
 }
 
 // InsuranceStats holds insurance statistics
 type InsuranceStats struct {
-	TotalRequests   int64   `json:"total_requests"`
+	TotalRequests  int64   `json:"total_requests"`
 	SuccessCount   int64   `json:"success_count"`
 	ZeroTokenCount int64   `json:"zero_token_count"`
 	ErrorCount     int64   `json:"error_count"`

@@ -32,7 +32,7 @@ func (a *ACPAdapter) Translate(_ context.Context, req *ChatCompletionRequest) (*
 	}
 	acpMessages := make([]ACPMessage, len(req.Messages))
 	for i, m := range req.Messages {
-		acpMessages[i] = ACPMessage{Role: m.Role, Content: m.Content}
+		acpMessages[i] = ACPMessage(m)
 	}
 	return &ACPRequest{
 		Model:    req.Model,

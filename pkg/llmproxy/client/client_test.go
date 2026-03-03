@@ -250,12 +250,12 @@ func TestResponses_OK(t *testing.T) {
 
 func TestWithAPIKey_SetsAuthorizationHeader(t *testing.T) {
 	var gotAuth string
-	_, c := newTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	_, _ = newTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotAuth = r.Header.Get("Authorization")
 		writeJSON(w, 200, map[string]any{"models": []any{}})
 	}))
 	// Rebuild with API key
-	_, c = newTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	_, c := newTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotAuth = r.Header.Get("Authorization")
 		writeJSON(w, 200, map[string]any{"models": []any{}})
 	}))

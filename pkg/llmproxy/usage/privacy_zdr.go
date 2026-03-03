@@ -11,12 +11,12 @@ import (
 
 // DataPolicy represents a provider's data retention policy
 type DataPolicy struct {
-	Provider       string
-	RetainsData    bool // Whether provider retains any data
-	TrainsOnData   bool // Whether provider trains models on data
+	Provider        string
+	RetainsData     bool          // Whether provider retains any data
+	TrainsOnData    bool          // Whether provider trains models on data
 	RetentionPeriod time.Duration // How long data is retained
-	Jurisdiction   string // Data processing jurisdiction
-	Certifications []string // Compliance certifications (SOC2, HIPAA, etc.)
+	Jurisdiction    string        // Data processing jurisdiction
+	Certifications  []string      // Compliance certifications (SOC2, HIPAA, etc.)
 }
 
 // ZDRConfig configures Zero Data Retention settings
@@ -51,14 +51,14 @@ type ZDRRequest struct {
 type ZDRResult struct {
 	AllowedProviders []string
 	BlockedProviders []string
-	Reason          string
-	AllZDR         bool
+	Reason           string
+	AllZDR           bool
 }
 
 // ZDRController handles ZDR routing decisions
 type ZDRController struct {
-	mu       sync.RWMutex
-	config   *ZDRConfig
+	mu               sync.RWMutex
+	config           *ZDRConfig
 	providerPolicies map[string]*DataPolicy
 }
 
@@ -68,17 +68,17 @@ func NewZDRController(config *ZDRConfig) *ZDRController {
 		config:           config,
 		providerPolicies: make(map[string]*DataPolicy),
 	}
-	
+
 	// Initialize with default policies if provided
 	if config != nil && config.AllowedPolicies != nil {
 		for provider, policy := range config.AllowedPolicies {
 			c.providerPolicies[provider] = policy
 		}
 	}
-	
+
 	// Set defaults for common providers if not configured
 	c.initializeDefaultPolicies()
-	
+
 	return c
 }
 
@@ -86,55 +86,55 @@ func NewZDRController(config *ZDRConfig) *ZDRController {
 func (z *ZDRController) initializeDefaultPolicies() {
 	defaults := map[string]*DataPolicy{
 		"google": {
-			Provider:       "google",
-			RetainsData:    true,
-			TrainsOnData:   false, // Has ZDR option
+			Provider:        "google",
+			RetainsData:     true,
+			TrainsOnData:    false, // Has ZDR option
 			RetentionPeriod: 24 * time.Hour,
-			Jurisdiction:   "US",
+			Jurisdiction:    "US",
 			Certifications:  []string{"SOC2", "ISO27001"},
 		},
 		"anthropic": {
-			Provider:       "anthropic",
-			RetainsData:    true,
-			TrainsOnData:   false,
+			Provider:        "anthropic",
+			RetainsData:     true,
+			TrainsOnData:    false,
 			RetentionPeriod: time.Hour,
-			Jurisdiction:   "US",
+			Jurisdiction:    "US",
 			Certifications:  []string{"SOC2", "HIPAA"},
 		},
 		"openai": {
-			Provider:       "openai",
-			RetainsData:    true,
-			TrainsOnData:   true,
+			Provider:        "openai",
+			RetainsData:     true,
+			TrainsOnData:    true,
 			RetentionPeriod: 30 * 24 * time.Hour,
-			Jurisdiction:   "US",
+			Jurisdiction:    "US",
 			Certifications:  []string{"SOC2"},
 		},
 		"deepseek": {
-			Provider:       "deepseek",
-			RetainsData:    true,
-			TrainsOnData:   true,
+			Provider:        "deepseek",
+			RetainsData:     true,
+			TrainsOnData:    true,
 			RetentionPeriod: 90 * 24 * time.Hour,
-			Jurisdiction:   "CN",
+			Jurisdiction:    "CN",
 			Certifications:  []string{},
 		},
 		"minimax": {
-			Provider:       "minimax",
-			RetainsData:    true,
-			TrainsOnData:   true,
+			Provider:        "minimax",
+			RetainsData:     true,
+			TrainsOnData:    true,
 			RetentionPeriod: 30 * 24 * time.Hour,
-			Jurisdiction:   "CN",
+			Jurisdiction:    "CN",
 			Certifications:  []string{},
 		},
 		"moonshot": {
-			Provider:       "moonshot",
-			RetainsData:    true,
-			TrainsOnData:   true,
+			Provider:        "moonshot",
+			RetainsData:     true,
+			TrainsOnData:    true,
 			RetentionPeriod: 30 * 24 * time.Hour,
-			Jurisdiction:   "CN",
+			Jurisdiction:    "CN",
 			Certifications:  []string{},
 		},
 	}
-	
+
 	for provider, policy := range defaults {
 		if _, ok := z.providerPolicies[provider]; !ok {
 			z.providerPolicies[provider] = policy
@@ -163,7 +163,7 @@ func (z *ZDRController) CheckProviders(ctx context.Context, providers []string, 
 
 	for _, provider := range providers {
 		policy := z.getPolicy(provider)
-		
+
 		// Check exclusions first
 		if isExcluded(provider, req.ExcludedProviders) {
 			blocked = append(blocked, provider)
@@ -184,12 +184,9 @@ func (z *ZDRController) CheckProviders(ctx context.Context, providers []string, 
 			}
 		}
 
-		// Check jurisdiction
-		if req.PreferredJurisdiction != "" && policy != nil {
-			if policy.Jurisdiction != req.PreferredJurisdiction {
-				// Not blocked, but deprioritized in real implementation
-			}
-		}
+		// Check jurisdiction — mismatch is noted but not blocking;
+		// deprioritization is handled by the ranking layer.
+		_ = req.PreferredJurisdiction != "" && policy != nil && policy.Jurisdiction != req.PreferredJurisdiction
 
 		// Check certifications
 		if len(req.RequiredCertifications) > 0 && policy != nil {
@@ -224,8 +221,8 @@ func (z *ZDRController) CheckProviders(ctx context.Context, providers []string, 
 	return &ZDRResult{
 		AllowedProviders: allowed,
 		BlockedProviders: blocked,
-		Reason:          reason,
-		AllZDR:         allZDR,
+		Reason:           reason,
+		AllZDR:           allZDR,
 	}, nil
 }
 
@@ -233,12 +230,12 @@ func (z *ZDRController) CheckProviders(ctx context.Context, providers []string, 
 func (z *ZDRController) getPolicy(provider string) *DataPolicy {
 	z.mu.RLock()
 	defer z.mu.RUnlock()
-	
+
 	// Try exact match first
 	if policy, ok := z.providerPolicies[provider]; ok {
 		return policy
 	}
-	
+
 	// Try prefix match
 	lower := provider
 	for p, policy := range z.providerPolicies {
@@ -246,12 +243,12 @@ func (z *ZDRController) getPolicy(provider string) *DataPolicy {
 			return policy
 		}
 	}
-	
+
 	// Return default if configured
 	if z.config != nil && z.config.DefaultPolicy != nil {
 		return z.config.DefaultPolicy
 	}
-	
+
 	return nil
 }
 
@@ -307,17 +304,17 @@ func (z *ZDRController) GetAllPolicies() map[string]*DataPolicy {
 // NewZDRRequest creates a new ZDR request with sensible defaults
 func NewZDRRequest() *ZDRRequest {
 	return &ZDRRequest{
-		RequireZDR:        true,
-		AllowRetainData:   false,
-		AllowTrainData:    false,
+		RequireZDR:      true,
+		AllowRetainData: false,
+		AllowTrainData:  false,
 	}
 }
 
 // NewZDRConfig creates a new ZDR configuration
 func NewZDRConfig() *ZDRConfig {
 	return &ZDRConfig{
-		RequireZDR:     false,
-		PerRequestZDR:  true,
+		RequireZDR:      false,
+		PerRequestZDR:   true,
 		AllowedPolicies: make(map[string]*DataPolicy),
 	}
 }

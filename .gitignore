@@ -1,7 +1,7 @@
 # Binaries
 cli-proxy-api
-cliproxy
-cliproxyapi++
+/cliproxy
+/cliproxyapi++
 *.exe
 
 # Hot-reload artifacts

@@ -5,6 +5,7 @@ package handlers
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -14,15 +15,24 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/interfaces"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/logging"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/thinking"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/util"
 	coreauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
 	coreexecutor "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/executor"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
 	sdktranslator "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/translator"
-	"golang.org/x/net/context"
+)
+
+// CtxKey is a typed key for context values in the handlers package, preventing collisions.
+type CtxKey string
+
+const (
+	// CtxKeyGin is the context key for the gin.Context value.
+	CtxKeyGin CtxKey = "gin"
+	// ctxKeyHandler is the context key for the handler value.
+	ctxKeyHandler CtxKey = "handler"
 )
 
 // ErrorResponse represents a standard error response format for the API.
@@ -190,7 +200,7 @@ func requestExecutionMetadata(ctx context.Context) map[string]any {
 	// It is forwarded as execution metadata; when absent we generate a UUID.
 	key := ""
 	if ctx != nil {
-		if ginCtx, ok := ctx.Value("gin").(*gin.Context); ok && ginCtx != nil && ginCtx.Request != nil {
+		if ginCtx, ok := ctx.Value(CtxKeyGin).(*gin.Context); ok && ginCtx != nil && ginCtx.Request != nil {
 			key = strings.TrimSpace(ginCtx.GetHeader("Idempotency-Key"))
 		}
 	}
@@ -349,8 +359,8 @@ func (h *BaseAPIHandler) GetContextWithCancel(handler interfaces.APIHandler, c *
 			}
 		}()
 	}
-	newCtx = context.WithValue(newCtx, "gin", c)
-	newCtx = context.WithValue(newCtx, "handler", handler)
+	newCtx = context.WithValue(newCtx, CtxKeyGin, c)
+	newCtx = context.WithValue(newCtx, ctxKeyHandler, handler)
 	return newCtx, func(params ...interface{}) {
 		if h.Cfg.RequestLog && len(params) == 1 {
 			if existing, exists := c.Get("API_RESPONSE"); exists {
@@ -776,7 +786,7 @@ func statusFromError(err error) int {
 }
 
 func (h *BaseAPIHandler) getRequestDetails(modelName string) (providers []string, normalizedModel string, err *interfaces.ErrorMessage) {
-	resolvedModelName := modelName
+	var resolvedModelName string
 	initialSuffix := thinking.ParseSuffix(modelName)
 	if initialSuffix.ModelName == "auto" {
 		resolvedBase := util.ResolveAutoModel(initialSuffix.ModelName)
@@ -892,7 +902,7 @@ func (h *BaseAPIHandler) WriteErrorResponse(c *gin.Context, msg *interfaces.Erro
 
 func (h *BaseAPIHandler) LoggingAPIResponseError(ctx context.Context, err *interfaces.ErrorMessage) {
 	if h.Cfg.RequestLog {
-		if ginContext, ok := ctx.Value("gin").(*gin.Context); ok {
+		if ginContext, ok := ctx.Value(CtxKeyGin).(*gin.Context); ok {
 			if apiResponseErrors, isExist := ginContext.Get("API_RESPONSE_ERROR"); isExist {
 				if slicesAPIResponseError, isOk := apiResponseErrors.([]*interfaces.ErrorMessage); isOk {
 					slicesAPIResponseError = append(slicesAPIResponseError, err)
