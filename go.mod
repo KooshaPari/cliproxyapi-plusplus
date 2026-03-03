@@ -38,6 +38,8 @@ require (
 	modernc.org/sqlite v1.46.1
 )
 
+replace github.com/KooshaPari/phenotype-go-auth => ./third_party/phenotype-go-auth
+
 require (
 	cloud.google.com/go/compute/metadata v0.3.0 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
@@ -111,5 +113,3 @@ require (
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
 )
-
-replace github.com/KooshaPari/phenotype-go-auth => ../../../template-commons/phenotype-go-auth
