@@ -14,3 +14,4 @@ pr-test-build.yml|changelog-scope-classifier
 pr-test-build.yml|docs-build
 pr-test-build.yml|ci-summary
 pr-path-guard.yml|ensure-no-translator-changes
+security-guard.yml|guard

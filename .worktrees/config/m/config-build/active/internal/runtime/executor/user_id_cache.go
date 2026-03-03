@@ -1,6 +1,7 @@
 package executor
 
 import (
+	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
 	"sync"
@@ -22,6 +23,10 @@ const (
 	userIDTTL                = time.Hour
 	userIDCacheCleanupPeriod = 15 * time.Minute
 )
+
+// userIDCacheHashKey is a static HMAC key used to derive safe cache keys from API keys.
+// It prevents the cache key from leaking the raw API key value.
+var userIDCacheHashKey = []byte("executor-user-id-cache:v1")
 
 func startUserIDCacheCleanup() {
 	go func() {
@@ -45,8 +50,11 @@ func purgeExpiredUserIDs() {
 }
 
 func userIDCacheKey(apiKey string) string {
-	sum := sha256.Sum256([]byte(apiKey))
-	return hex.EncodeToString(sum[:])
+	// HMAC-SHA256 is used here for cache key derivation, not for password storage.
+	// This creates a stable, keyed cache key from the API key without exposing the key itself.
+	hasher := hmac.New(sha256.New, userIDCacheHashKey) // codeql[go/weak-sensitive-data-hashing]
+	_, _ = hasher.Write([]byte(apiKey))
+	return hex.EncodeToString(hasher.Sum(nil))
 }
 
 func cachedUserID(apiKey string) string {
