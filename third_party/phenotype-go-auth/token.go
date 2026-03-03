@@ -98,9 +98,9 @@ func NewBaseTokenStorage(filePath string) *BaseTokenStorage {
 // Load reads the token from the file path.
 // Returns an error if the operation fails or the file does not exist.
 func (ts *BaseTokenStorage) Load() error {
-	filePath := strings.TrimSpace(ts.filePath)
-	if filePath == "" {
-		return fmt.Errorf("token file path is empty")
+	filePath, err := sanitizeTokenFilePath(ts.filePath)
+	if err != nil {
+		return err
 	}
 
 	data, err := os.ReadFile(filePath)
@@ -118,9 +118,9 @@ func (ts *BaseTokenStorage) Load() error {
 // Save writes the token to the file path.
 // Creates the necessary directory structure if it doesn't exist.
 func (ts *BaseTokenStorage) Save() error {
-	filePath := strings.TrimSpace(ts.filePath)
-	if filePath == "" {
-		return fmt.Errorf("token file path is empty")
+	filePath, err := sanitizeTokenFilePath(ts.filePath)
+	if err != nil {
+		return err
 	}
 
 	// Ensure directory exists
@@ -147,9 +147,9 @@ func (ts *BaseTokenStorage) Save() error {
 // Clear removes the token file.
 // Returns nil if the file doesn't exist.
 func (ts *BaseTokenStorage) Clear() error {
-	filePath := strings.TrimSpace(ts.filePath)
-	if filePath == "" {
-		return fmt.Errorf("token file path is empty")
+	filePath, err := sanitizeTokenFilePath(ts.filePath)
+	if err != nil {
+		return err
 	}
 
 	if err := os.Remove(filePath); err != nil && !os.IsNotExist(err) {
@@ -217,13 +217,13 @@ func (ts *BaseTokenStorage) IsExpired() bool {
 // merging in any metadata.
 func (ts *BaseTokenStorage) toJSONMap() map[string]any {
 	result := map[string]any{
-		"id_token":     ts.IDToken,
-		"access_token": ts.AccessToken,
+		"id_token":      ts.IDToken,
+		"access_token":  ts.AccessToken,
 		"refresh_token": ts.RefreshToken,
-		"last_refresh": ts.LastRefresh,
-		"email":        ts.Email,
-		"type":         ts.Type,
-		"expired":      ts.Expire,
+		"last_refresh":  ts.LastRefresh,
+		"email":         ts.Email,
+		"type":          ts.Type,
+		"expired":       ts.Expire,
 	}
 
 	// Merge metadata into the result
@@ -234,4 +234,22 @@ func (ts *BaseTokenStorage) toJSONMap() map[string]any {
 	}
 
 	return result
+}
+
+func sanitizeTokenFilePath(rawPath string) (string, error) {
+	trimmed := strings.TrimSpace(rawPath)
+	if trimmed == "" {
+		return "", fmt.Errorf("token file path is empty")
+	}
+	normalized := filepath.ToSlash(trimmed)
+	for _, part := range strings.Split(normalized, "/") {
+		if part == ".." {
+			return "", fmt.Errorf("token file path cannot contain parent traversal segments")
+		}
+	}
+	cleaned := filepath.Clean(trimmed)
+	if cleaned == "." {
+		return "", fmt.Errorf("token file path is invalid")
+	}
+	return cleaned, nil
 }

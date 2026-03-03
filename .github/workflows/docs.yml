@@ -48,6 +48,7 @@ jobs:
 
   deploy:
     name: Deploy Pages
+    if: github.ref == 'refs/heads/main'
     needs: build
     runs-on: ubuntu-latest
     environment:
