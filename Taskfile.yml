@@ -330,6 +330,18 @@ tasks:
         fi
         staticcheck ./...
 
+  quality:oxc:
+    desc: "Run OXC lint + format checks for docs TypeScript/JavaScript files"
+    cmds:
+      - |
+        if ! command -v bun >/dev/null 2>&1; then
+          echo "[WARN] bun not found; skipping OXC checks"
+          exit 0
+        fi
+        bun install --frozen-lockfile
+        bun run lint
+        bun run format:check
+
   quality:ci:
     desc: "Run non-mutating PR quality gates"
     cmds:
@@ -343,6 +355,7 @@ tasks:
       - task: quality:vet
       - task: quality:staticcheck
       - task: quality:shellcheck
+      - task: quality:oxc
       - task: lint:changed
 
   test:provider-smoke-matrix:test:
@@ -375,6 +388,38 @@ tasks:
     cmds:
       - |
         go test -run 'TestServer_StartupSmokeEndpoints|TestServer_StartupSmokeEndpoints/GET_v1_models|TestServer_StartupSmokeEndpoints/GET_v1_metrics_providers|TestServer_RoutesNamespaceIsolation|TestServer_ControlPlane_MessageLifecycle|TestServer_ControlPlane_IdempotencyKey_ReplaysResponseAndPreventsDuplicateMessages|TestServer_ControlPlane_IdempotencyKey_DifferentKeysCreateDifferentMessages' ./pkg/llmproxy/api
+
+  devops:status:
+    desc: "Show git status, remotes, and branch state"
+    cmds:
+      - git status --short --branch
+      - git remote -v
+      - git log --oneline -n 5
+
+  devops:check:
+    desc: "Run shared DevOps checks for this repository"
+    cmds:
+      - bash scripts/devops-checker.sh
+
+  devops:check:ci:
+    desc: "Run shared DevOps checks including CI lane"
+    cmds:
+      - bash scripts/devops-checker.sh --check-ci
+
+  devops:check:ci-summary:
+    desc: "Run shared DevOps checks with CI lane and JSON summary"
+    cmds:
+      - bash scripts/devops-checker.sh --check-ci --emit-summary
+
+  devops:push:
+    desc: "Push branch with shared helper and fallback remote behavior"
+    cmds:
+      - bash scripts/push-cliproxyapi-plusplus-with-fallback.sh {{.CLI_ARGS}}
+
+  devops:push:origin:
+    desc: "Push using fallback remote only (skip primary)"
+    cmds:
+      - bash scripts/push-cliproxyapi-plusplus-with-fallback.sh --skip-primary {{.CLI_ARGS}}
 
   lint:changed:
     desc: "Run golangci-lint on changed/staged files only"
