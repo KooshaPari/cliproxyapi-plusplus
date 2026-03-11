@@ -15,6 +15,7 @@ func TestParseRetryDelay_MessageDuration(t *testing.T) {
 	}
 	if got == nil {
 		t.Fatal("parseRetryDelay returned nil duration")
+		return // SA5011: explicit unreachable to satisfy staticcheck
 	}
 	if *got != 1500*time.Millisecond {
 		t.Fatalf("parseRetryDelay = %v, want %v", *got, 1500*time.Millisecond)
@@ -31,6 +32,7 @@ func TestParseRetryDelay_MessageMilliseconds(t *testing.T) {
 	}
 	if got == nil {
 		t.Fatal("parseRetryDelay returned nil duration")
+		return // SA5011: explicit unreachable to satisfy staticcheck
 	}
 	if *got != 250*time.Millisecond {
 		t.Fatalf("parseRetryDelay = %v, want %v", *got, 250*time.Millisecond)
@@ -47,6 +49,7 @@ func TestParseRetryDelay_PrefersRetryInfo(t *testing.T) {
 	}
 	if got == nil {
 		t.Fatal("parseRetryDelay returned nil duration")
+		return // SA5011: explicit unreachable to satisfy staticcheck
 	}
 	if *got != 2*time.Second {
 		t.Fatalf("parseRetryDelay = %v, want %v", *got, 2*time.Second)
