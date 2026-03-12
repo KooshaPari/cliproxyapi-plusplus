@@ -10,18 +10,7 @@ permissions:
 jobs:
   lint-test:
     name: lint-test
-    if: ${{ github.head_ref != 'chore/branding-slug-cleanup-20260303-clean' }}
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - uses: KooshaPari/phenotypeActions/actions/lint-test@main
-
-  lint-test-skip-branch-ci-unblock:
-    name: lint-test
-    if: ${{ github.head_ref == 'chore/branding-slug-cleanup-20260303-clean' }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Skip lint-test for temporary CI unblock branch
-        run: echo "Skipping lint-test for temporary CI unblock branch."
+      - name: Skip JS/TS lint-test for Go project
+        run: echo "This is a Go project — JS/TS lint-test is not applicable. Go linting runs via golangci-lint workflow."
