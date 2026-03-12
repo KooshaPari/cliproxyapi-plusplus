@@ -18,7 +18,7 @@ require (
 	github.com/jackc/pgx/v5 v5.8.0
 	github.com/joho/godotenv v1.5.1
 	github.com/klauspost/compress v1.18.4
-	github.com/minio/minio-go/v7 v7.0.98
+	github.com/minio/minio-go/v7 v7.0.99
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c
 	github.com/refraction-networking/utls v1.8.2
 	github.com/sirupsen/logrus v1.9.4
