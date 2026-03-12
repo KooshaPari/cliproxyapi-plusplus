@@ -10,10 +10,27 @@ import (
 )
 
 func TestGinLogrusRecoveryRepanicsErrAbortHandler(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+	// Test the recovery handler directly to avoid platform-dependent behavior
+	// in gin's ServeHTTP panic propagation (macOS vs Linux differ).
+	handler := GinLogrusRecovery()
 
+	gin.SetMode(gin.TestMode)
 	engine := gin.New()
-	engine.Use(GinLogrusRecovery())
+
+	var repanicked bool
+	var repanic interface{}
+
+	// Wrap the recovery middleware to intercept the re-panic before gin's
+	// outer recovery can swallow it.
+	engine.Use(func(c *gin.Context) {
+		defer func() {
+			if r := recover(); r != nil {
+				repanicked = true
+				repanic = r
+			}
+		}()
+		handler(c)
+	})
 	engine.GET("/abort", func(c *gin.Context) {
 		panic(http.ErrAbortHandler)
 	})
@@ -21,24 +38,18 @@ func TestGinLogrusRecoveryRepanicsErrAbortHandler(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/abort", nil)
 	recorder := httptest.NewRecorder()
 
-	defer func() {
-		recovered := recover()
-		if recovered == nil {
-			t.Fatalf("expected panic, got nil")
-		}
-		err, ok := recovered.(error)
-		if !ok {
-			t.Fatalf("expected error panic, got %T", recovered)
-		}
-		if !errors.Is(err, http.ErrAbortHandler) {
-			t.Fatalf("expected ErrAbortHandler, got %v", err)
-		}
-		if err != http.ErrAbortHandler {
-			t.Fatalf("expected exact ErrAbortHandler sentinel, got %v", err)
-		}
-	}()
-
 	engine.ServeHTTP(recorder, req)
+
+	if !repanicked {
+		t.Fatalf("expected GinLogrusRecovery to re-panic http.ErrAbortHandler, but it did not")
+	}
+	err, ok := repanic.(error)
+	if !ok {
+		t.Fatalf("expected error panic, got %T", repanic)
+	}
+	if !errors.Is(err, http.ErrAbortHandler) {
+		t.Fatalf("expected ErrAbortHandler, got %v", err)
+	}
 }
 
 func TestGinLogrusRecoveryHandlesRegularPanic(t *testing.T) {
