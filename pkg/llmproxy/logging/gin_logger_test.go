@@ -10,38 +10,29 @@ import (
 )
 
 func TestGinLogrusRecoveryRepanicsErrAbortHandler(t *testing.T) {
-	// Test the recovery handler directly to avoid platform-dependent behavior
-	// in gin's ServeHTTP panic propagation (macOS vs Linux differ).
-	handler := GinLogrusRecovery()
-
+	// Test the recovery logic directly: gin.CustomRecovery's internal recovery
+	// handling varies across platforms (macOS vs Linux) and Go versions, so we
+	// invoke the recovery callback that GinLogrusRecovery passes to
+	// gin.CustomRecovery and verify it re-panics ErrAbortHandler.
 	gin.SetMode(gin.TestMode)
-	engine := gin.New()
 
 	var repanicked bool
 	var repanic interface{}
 
-	// Wrap the recovery middleware to intercept the re-panic before gin's
-	// outer recovery can swallow it.
-	engine.Use(func(c *gin.Context) {
+	func() {
 		defer func() {
 			if r := recover(); r != nil {
 				repanicked = true
 				repanic = r
 			}
 		}()
-		handler(c)
-	})
-	engine.GET("/abort", func(c *gin.Context) {
-		panic(http.ErrAbortHandler)
-	})
-
-	req := httptest.NewRequest(http.MethodGet, "/abort", nil)
-	recorder := httptest.NewRecorder()
-
-	engine.ServeHTTP(recorder, req)
+		// Simulate what gin.CustomRecovery does: call the recovery func
+		// with the recovered value.
+		ginLogrusRecoveryFunc(nil, http.ErrAbortHandler)
+	}()
 
 	if !repanicked {
-		t.Fatalf("expected GinLogrusRecovery to re-panic http.ErrAbortHandler, but it did not")
+		t.Fatalf("expected ginLogrusRecoveryFunc to re-panic http.ErrAbortHandler, but it did not")
 	}
 	err, ok := repanic.(error)
 	if !ok {
