@@ -532,7 +532,36 @@ func extractIFlowConfig(body []byte) ThinkingConfig {
 		return ThinkingConfig{Mode: ModeNone, Budget: 0}
 	}
 
+	if effort := gjson.GetBytes(body, "reasoning.effort"); effort.Exists() {
+		if config, ok := parseIFlowReasoningEffort(strings.TrimSpace(effort.String())); ok {
+			return config
+		}
+	}
+
+	if effort := gjson.GetBytes(body, "reasoning\\.effort"); effort.Exists() {
+		if config, ok := parseIFlowReasoningEffort(strings.TrimSpace(effort.String())); ok {
+			return config
+		}
+	}
+
 	return ThinkingConfig{}
+}
+
+func parseIFlowReasoningEffort(value string) (ThinkingConfig, bool) {
+	switch strings.ToLower(value) {
+	case "":
+		return ThinkingConfig{}, false
+	case "none":
+		return ThinkingConfig{Mode: ModeNone, Budget: 0}, true
+	case "low":
+		return ThinkingConfig{Mode: ModeLevel, Level: LevelLow}, true
+	case "medium":
+		return ThinkingConfig{Mode: ModeLevel, Level: LevelMedium}, true
+	case "high":
+		return ThinkingConfig{Mode: ModeLevel, Level: LevelHigh}, true
+	default:
+		return ThinkingConfig{}, false
+	}
 }
 
 // isForcedThinkingModel checks if a model should have thinking forced on.
