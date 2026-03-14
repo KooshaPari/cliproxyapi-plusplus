@@ -5,11 +5,18 @@ This file provides guidance to AI agents working with code in this repository.
 ## Quick Start
 
 ```bash
-# Build
-go build -o cliproxy ./cmd/cliproxy
+# Build the API server
+go build -o cliproxy-server ./cmd/server
 
-# Run
-./cliproxy --config config.yaml
+# Build the operational CLI
+go build -o cliproxyctl ./cmd/cliproxyctl
+
+# Run the API server
+./cliproxy-server --config config.yaml
+
+# Run diagnostics / setup
+./cliproxyctl doctor --config config.yaml
+./cliproxyctl setup --config config.yaml
 
 # Docker
 docker compose up -d

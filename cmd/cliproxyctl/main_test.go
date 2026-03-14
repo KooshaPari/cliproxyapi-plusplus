@@ -155,10 +155,6 @@ func TestRunDoctorJSONWithFixCreatesConfigFromTemplate(t *testing.T) {
 		return time.Date(2026, 2, 23, 11, 12, 13, 0, time.UTC)
 	}
 	wd := t.TempDir()
-	tpl := []byte("ServerAddress: 127.0.0.1\nServerPort: \"4141\"\n")
-	if err := os.WriteFile(filepath.Join(wd, "config.example.yaml"), tpl, 0o644); err != nil {
-		t.Fatalf("write template: %v", err)
-	}
 	target := filepath.Join(wd, "nested", "config.yaml")
 	prevWD, err := os.Getwd()
 	if err != nil {
@@ -187,6 +183,27 @@ func TestRunDoctorJSONWithFixCreatesConfigFromTemplate(t *testing.T) {
 	}
 	if !configFileExists(target) {
 		t.Fatalf("expected doctor --fix to create %s", target)
+	}
+}
+
+func TestResolveConfigTemplatePath_FallsBackToRepoRootTemplate(t *testing.T) {
+	prevWD, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("getwd: %v", err)
+	}
+	t.Cleanup(func() { _ = os.Chdir(prevWD) })
+	if err := os.Chdir(t.TempDir()); err != nil {
+		t.Fatalf("chdir: %v", err)
+	}
+	t.Setenv("CLIPROXY_CONFIG_TEMPLATE", "")
+
+	got, err := resolveConfigTemplatePath()
+	if err != nil {
+		t.Fatalf("resolveConfigTemplatePath() unexpected error: %v", err)
+	}
+	want := filepath.Join(repoRoot(), "config.example.yaml")
+	if got != want {
+		t.Fatalf("resolveConfigTemplatePath() = %q, want %q", got, want)
 	}
 }
 
