@@ -42,3 +42,30 @@ func TestStripThinkingConfigIflow(t *testing.T) {
 		t.Fatalf("expected unrelated messages to remain")
 	}
 }
+
+func TestStripThinkingConfigIflowPreservesUnrelatedChatTemplateKwargs(t *testing.T) {
+	body := []byte(`{
+		"chat_template_kwargs":{
+			"enable_thinking":true,
+			"clear_thinking":false,
+			"system_prompt":"keep-me"
+		},
+		"messages":[{"role":"user","content":"hi"}]
+	}`)
+
+	out := StripThinkingConfig(body, "iflow")
+	res := gjson.ParseBytes(out)
+
+	if res.Get("chat_template_kwargs.enable_thinking").Exists() {
+		t.Fatalf("expected enable_thinking to be removed")
+	}
+	if res.Get("chat_template_kwargs.clear_thinking").Exists() {
+		t.Fatalf("expected clear_thinking to be removed")
+	}
+	if res.Get("chat_template_kwargs.system_prompt").String() != "keep-me" {
+		t.Fatalf("expected unrelated chat_template_kwargs fields to remain")
+	}
+	if res.Get("messages.0.content").String() != "hi" {
+		t.Fatalf("expected unrelated messages to remain")
+	}
+}
