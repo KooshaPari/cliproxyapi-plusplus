@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-
 )
 
 func TestCodexTokenStorage_SaveTokenToFile(t *testing.T) {

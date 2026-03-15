@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-
 )
 
 func TestCopilotTokenStorage_SaveTokenToFile(t *testing.T) {

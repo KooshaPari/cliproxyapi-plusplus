@@ -4,7 +4,6 @@ import (
 	"sort"
 	"testing"
 
-	. "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/constant"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/registry"
 )
 

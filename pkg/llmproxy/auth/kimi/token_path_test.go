@@ -3,7 +3,6 @@ package kimi
 import (
 	"strings"
 	"testing"
-
 )
 
 func TestKimiTokenStorage_SaveTokenToFile_RejectsTraversalPath(t *testing.T) {
