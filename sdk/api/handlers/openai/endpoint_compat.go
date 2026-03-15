@@ -1,17 +1,32 @@
 package openai
 
-import "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/registry"
+import (
+	"strings"
+
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/registry"
+)
 
 const (
 	openAIChatEndpoint      = "/chat/completions"
 	openAIResponsesEndpoint = "/responses"
 )
 
-func resolveEndpointOverride(modelName, requestedEndpoint string) (string, bool) {
+func resolveEndpointOverride(modelName, requestedEndpoint, _ string) (string, bool) {
 	if modelName == "" {
 		return "", false
 	}
-	info := registry.GetGlobalRegistry().GetModelInfo(modelName, "")
+
+	reg := registry.GetGlobalRegistry()
+	for _, provider := range reg.GetModelProviders(modelName) {
+		if override, ok := resolveEndpointOverrideForInfo(reg.GetModelInfo(modelName, provider), requestedEndpoint); ok {
+			return override, true
+		}
+	}
+
+	return resolveEndpointOverrideForInfo(reg.GetModelInfo(modelName, ""), requestedEndpoint)
+}
+
+func resolveEndpointOverrideForInfo(info *registry.ModelInfo, requestedEndpoint string) (string, bool) {
 	if info == nil || len(info.SupportedEndpoints) == 0 {
 		return "", false
 	}
@@ -34,4 +49,8 @@ func endpointListContains(items []string, value string) bool {
 		}
 	}
 	return false
+}
+
+func shouldForceNonStreamingChatBridge(modelName string) bool {
+	return strings.HasPrefix(strings.ToLower(strings.TrimSpace(modelName)), "minimax")
 }

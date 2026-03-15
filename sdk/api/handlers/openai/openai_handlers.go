@@ -114,7 +114,7 @@ func (h *OpenAIAPIHandler) ChatCompletions(c *gin.Context) {
 	stream := streamResult.Type == gjson.True
 
 	modelName := gjson.GetBytes(rawJSON, "model").String()
-	if overrideEndpoint, ok := resolveEndpointOverride(modelName, openAIChatEndpoint); ok && overrideEndpoint == openAIResponsesEndpoint {
+	if overrideEndpoint, ok := resolveEndpointOverride(modelName, openAIChatEndpoint, ""); ok && overrideEndpoint == openAIResponsesEndpoint {
 		originalChat := rawJSON
 		if shouldTreatAsResponsesFormat(rawJSON) {
 			// Already responses-style payload; no conversion needed.

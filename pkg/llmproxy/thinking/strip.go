@@ -43,8 +43,10 @@ func StripThinkingConfig(body []byte, provider string) []byte {
 		paths = []string{
 			"chat_template_kwargs.enable_thinking",
 			"chat_template_kwargs.clear_thinking",
+			"reasoning",
 			"reasoning_split",
 			"reasoning_effort",
+			"variant",
 		}
 	default:
 		return body
@@ -53,6 +55,11 @@ func StripThinkingConfig(body []byte, provider string) []byte {
 	result := body
 	for _, path := range paths {
 		result, _ = sjson.DeleteBytes(result, path)
+	}
+	if provider == "iflow" {
+		if kwargs := gjson.GetBytes(result, "chat_template_kwargs"); kwargs.Exists() && len(kwargs.Map()) == 0 {
+			result, _ = sjson.DeleteBytes(result, "chat_template_kwargs")
+		}
 	}
 	return result
 }

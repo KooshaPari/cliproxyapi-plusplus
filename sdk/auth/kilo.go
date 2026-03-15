@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/base"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/kilo"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
 	coreauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
@@ -97,6 +98,10 @@ func (a *KiloAuthenticator) Login(ctx context.Context, cfg *config.Config, opts 
 	}
 
 	ts := &kilo.KiloTokenStorage{
+		BaseTokenStorage: base.BaseTokenStorage{
+			Email: status.UserEmail,
+			Type:  "kilo",
+		},
 		Token:          status.Token,
 		OrganizationID: orgID,
 		Model:          defaults.Model,
