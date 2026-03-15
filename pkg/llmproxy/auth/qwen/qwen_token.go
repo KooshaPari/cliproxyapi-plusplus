@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/KooshaPari/phenotype-go-kit/pkg/auth"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/base"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/misc"
 )
 
@@ -17,10 +17,16 @@ import (
 // access tokens, refresh tokens, and user account information.
 // It embeds auth.BaseTokenStorage to inherit shared token management functionality.
 type QwenTokenStorage struct {
-	*auth.BaseTokenStorage
+	base.BaseTokenStorage
+
+	// LastRefresh is the RFC3339 timestamp of the last successful refresh.
+	LastRefresh string `json:"last_refresh,omitempty"`
 
 	// ResourceURL is the base URL for API requests.
 	ResourceURL string `json:"resource_url"`
+
+	// Expire is the RFC3339 timestamp when the token expires.
+	Expire string `json:"expired,omitempty"`
 }
 
 // NewQwenTokenStorage creates a new QwenTokenStorage instance with the given file path.
@@ -31,7 +37,7 @@ type QwenTokenStorage struct {
 //   - *QwenTokenStorage: A new QwenTokenStorage instance
 func NewQwenTokenStorage(filePath string) *QwenTokenStorage {
 	return &QwenTokenStorage{
-		BaseTokenStorage: auth.NewBaseTokenStorage(filePath),
+		BaseTokenStorage: base.BaseTokenStorage{FilePath: filePath},
 	}
 }
 
@@ -46,16 +52,12 @@ func NewQwenTokenStorage(filePath string) *QwenTokenStorage {
 //   - error: An error if the operation fails, nil otherwise
 func (ts *QwenTokenStorage) SaveTokenToFile(authFilePath string) error {
 	misc.LogSavingCredentials(authFilePath)
-	if ts.BaseTokenStorage == nil {
-		return fmt.Errorf("qwen token: base token storage is nil")
-	}
-
 	if _, err := cleanTokenFilePath(authFilePath, "qwen token"); err != nil {
 		return err
 	}
 
 	ts.BaseTokenStorage.Type = "qwen"
-	return ts.BaseTokenStorage.Save()
+	return ts.BaseTokenStorage.Save(authFilePath, ts)
 }
 
 func cleanTokenFilePath(path, scope string) (string, error) {

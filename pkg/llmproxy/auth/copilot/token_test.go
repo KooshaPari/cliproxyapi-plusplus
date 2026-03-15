@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/base"
 )
 
 func TestCopilotTokenStorage_SaveTokenToFile(t *testing.T) {
@@ -17,8 +19,10 @@ func TestCopilotTokenStorage_SaveTokenToFile(t *testing.T) {
 	authFilePath := filepath.Join(tempDir, "token.json")
 
 	ts := &CopilotTokenStorage{
-		AccessToken: "access",
-		Username:    "user",
+		BaseTokenStorage: base.BaseTokenStorage{
+			AccessToken: "access",
+		},
+		Username: "user",
 	}
 
 	if err := ts.SaveTokenToFile(authFilePath); err != nil {

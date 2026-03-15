@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/base"
 	geminiAuth "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/gemini"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/interfaces"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/util"
@@ -138,9 +139,11 @@ func (h *Handler) RequestGeminiCLIToken(c *gin.Context) {
 		ifToken["universe_domain"] = "googleapis.com"
 
 		ts := geminiAuth.GeminiTokenStorage{
+			BaseTokenStorage: base.BaseTokenStorage{
+				Email: email,
+			},
 			Token:     ifToken,
 			ProjectID: requestedProjectID,
-			Email:     email,
 			Auto:      requestedProjectID == "",
 		}
 

@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 
@@ -95,6 +96,83 @@ func (m *Manager) GetByID(id string) (*Auth, bool) {
 		return nil, false
 	}
 	return auth.Clone(), true
+}
+
+func (m *Manager) Load(ctx context.Context) error {
+	if m == nil || m.store == nil {
+		return nil
+	}
+	auths, err := m.store.List(ctx)
+	if err != nil {
+		return err
+	}
+	next := make(map[string]*Auth, len(auths))
+	for _, auth := range auths {
+		if auth == nil || strings.TrimSpace(auth.ID) == "" {
+			continue
+		}
+		cloned := auth.Clone()
+		cloned.EnsureIndex()
+		next[cloned.ID] = cloned
+	}
+	m.mu.Lock()
+	m.auths = next
+	m.mu.Unlock()
+	return nil
+}
+
+func (m *Manager) List() []*Auth {
+	if m == nil {
+		return nil
+	}
+	if m.store != nil {
+		items, err := m.store.List(context.Background())
+		if err == nil {
+			return items
+		}
+	}
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	items := make([]*Auth, 0, len(m.auths))
+	for _, auth := range m.auths {
+		if auth != nil {
+			items = append(items, auth.Clone())
+		}
+	}
+	slices.SortFunc(items, func(a, b *Auth) int {
+		return strings.Compare(a.ID, b.ID)
+	})
+	return items
+}
+
+func (m *Manager) StartAutoRefresh(ctx context.Context, _ time.Duration) {
+	if m == nil {
+		return
+	}
+	m.StopAutoRefresh()
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	refreshCtx, cancel := context.WithCancel(ctx)
+	m.mu.Lock()
+	m.refreshCancel = cancel
+	m.mu.Unlock()
+	go func() {
+		<-refreshCtx.Done()
+	}()
+}
+
+func (m *Manager) StopAutoRefresh() {
+	if m == nil {
+		return
+	}
+	m.mu.Lock()
+	cancel := m.refreshCancel
+	m.refreshCancel = nil
+	m.mu.Unlock()
+	if cancel != nil {
+		cancel()
+	}
 }
 
 func (m *Manager) RegisterExecutor(executor ProviderExecutor) {
@@ -274,7 +352,7 @@ func (m *Manager) MarkResult(ctx context.Context, result Result) {
 		}
 		disableCooling, hasDisableCooling := auth.DisableCoolingOverride()
 		hasAlternative := m.hasAlternativeAuthLocked(auth.ID, auth.Provider)
-		if hasDisableCooling && disableCooling {
+		if (hasDisableCooling && disableCooling) || (!hasDisableCooling && isQuotaCooldownDisabled()) {
 			state.NextRetryAfter = time.Time{}
 			state.Unavailable = false
 		} else if !hasAlternative {
@@ -361,6 +439,16 @@ func (m *Manager) selectAuthAndExecutor(ctx context.Context, providers []string,
 		return nil, nil, &Error{Code: "manager_nil", Message: "auth manager is nil", HTTPStatus: http.StatusInternalServerError}
 	}
 	now := time.Now()
+	pinnedAuthID := ""
+	var selectedAuthCallback func(string)
+	if opts.Metadata != nil {
+		if rawPinned, ok := opts.Metadata[cliproxyexecutor.PinnedAuthMetadataKey].(string); ok {
+			pinnedAuthID = strings.TrimSpace(rawPinned)
+		}
+		if cb, ok := opts.Metadata[cliproxyexecutor.SelectedAuthCallbackMetadataKey].(func(string)); ok {
+			selectedAuthCallback = cb
+		}
+	}
 	var candidates []*Auth
 	var executor ProviderExecutor
 	m.mu.RLock()
@@ -371,6 +459,9 @@ func (m *Manager) selectAuthAndExecutor(ctx context.Context, providers []string,
 		}
 		for _, auth := range m.auths {
 			if auth == nil || !strings.EqualFold(auth.Provider, provider) {
+				continue
+			}
+			if pinnedAuthID != "" && auth.ID != pinnedAuthID {
 				continue
 			}
 			candidates = append(candidates, auth.Clone())
@@ -389,6 +480,9 @@ func (m *Manager) selectAuthAndExecutor(ctx context.Context, providers []string,
 		return nil, nil, err
 	}
 	updateAggregatedAvailability(auth, now)
+	if selectedAuthCallback != nil && auth != nil {
+		selectedAuthCallback(auth.ID)
+	}
 	return auth, executor, nil
 }
 

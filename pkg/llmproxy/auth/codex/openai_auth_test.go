@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/base"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
 )
 
@@ -296,7 +297,7 @@ func TestCodexAuth_RefreshTokensWithRetry(t *testing.T) {
 
 func TestCodexAuth_UpdateTokenStorage(t *testing.T) {
 	auth := &CodexAuth{}
-	storage := &CodexTokenStorage{AccessToken: "old"}
+	storage := &CodexTokenStorage{BaseTokenStorage: base.BaseTokenStorage{AccessToken: "old"}}
 	tokenData := &CodexTokenData{
 		AccessToken: "new",
 		Email:       "new@example.com",
