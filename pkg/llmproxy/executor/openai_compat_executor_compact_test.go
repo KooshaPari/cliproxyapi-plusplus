@@ -57,6 +57,44 @@ func TestOpenAICompatExecutorCompactPassthrough(t *testing.T) {
 	}
 }
 
+func TestOpenAICompatExecutorExecuteSetsJSONAcceptHeader(t *testing.T) {
+	var gotPath string
+	var gotAccept string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		gotAccept = r.Header.Get("Accept")
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"id":"chatcmpl_1","object":"chat.completion","choices":[{"index":0,"message":{"role":"assistant","content":"ok"}}]}`))
+	}))
+	defer server.Close()
+
+	executor := NewOpenAICompatExecutor("minimax", &config.Config{})
+	auth := &cliproxyauth.Auth{Attributes: map[string]string{
+		"base_url": server.URL + "/v1",
+		"api_key":  "test",
+	}}
+	payload := []byte(`{"model":"minimax-m2.5","input":[{"role":"user","content":"hi"}]}`)
+	resp, err := executor.Execute(context.Background(), auth, cliproxyexecutor.Request{
+		Model:   "minimax-m2.5",
+		Payload: payload,
+	}, cliproxyexecutor.Options{
+		SourceFormat: sdktranslator.FromString("openai-response"),
+		Stream:       false,
+	})
+	if err != nil {
+		t.Fatalf("Execute error: %v", err)
+	}
+	if gotPath != "/v1/chat/completions" {
+		t.Fatalf("path = %q, want %q", gotPath, "/v1/chat/completions")
+	}
+	if gotAccept != "application/json" {
+		t.Fatalf("accept = %q, want application/json", gotAccept)
+	}
+	if len(resp.Payload) == 0 {
+		t.Fatal("expected non-empty payload")
+	}
+}
+
 func TestOpenAICompatExecutorCompactDisabledByConfig(t *testing.T) {
 	disabled := false
 	executor := NewOpenAICompatExecutor("openai-compatibility", &config.Config{
