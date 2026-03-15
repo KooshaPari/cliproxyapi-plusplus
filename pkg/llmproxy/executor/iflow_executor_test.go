@@ -81,6 +81,28 @@ func TestClassifyIFlowRefreshError(t *testing.T) {
 	})
 }
 
+func TestDetectIFlowProviderError(t *testing.T) {
+	t.Run("ignores normal chat completion payload", func(t *testing.T) {
+		err := detectIFlowProviderError([]byte(`{"id":"chatcmpl_1","object":"chat.completion","choices":[{"index":0,"message":{"role":"assistant","content":"ok"}}]}`))
+		if err != nil {
+			t.Fatalf("expected nil error, got %v", err)
+		}
+	})
+
+	t.Run("captures embedded token expiry envelope", func(t *testing.T) {
+		err := detectIFlowProviderError([]byte(`{"status":"439","msg":"Your API Token has expired.","body":null}`))
+		if err == nil {
+			t.Fatal("expected provider error")
+		}
+		if !err.Refreshable {
+			t.Fatal("expected provider error to be refreshable")
+		}
+		if got := err.StatusCode(); got != http.StatusUnauthorized {
+			t.Fatalf("status code = %d, want %d", got, http.StatusUnauthorized)
+		}
+	})
+}
+
 func TestPreserveReasoningContentInMessages(t *testing.T) {
 	tests := []struct {
 		name  string
@@ -183,6 +205,55 @@ func TestIFlowExecutorExecuteStreamFallsBackFrom406ForResponsesClients(t *testin
 	}
 	if !strings.Contains(got, "hi from iflow fallback") {
 		t.Fatalf("expected assistant text in synthesized payload, got %q", got)
+	}
+}
+
+func TestIFlowExecutorExecuteRefreshesOnProviderExpiryEnvelope(t *testing.T) {
+	requestCount := 0
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestCount++
+		w.Header().Set("Content-Type", "application/json")
+		switch requestCount {
+		case 1:
+			_, _ = w.Write([]byte(`{"status":"439","msg":"Your API Token has expired.","body":null}`))
+		case 2:
+			_, _ = w.Write([]byte(`{"id":"chatcmpl_iflow","object":"chat.completion","created":1735689600,"model":"minimax-m2.5","choices":[{"index":0,"message":{"role":"assistant","content":"hi after refresh"},"finish_reason":"stop"}],"usage":{"prompt_tokens":3,"completion_tokens":4,"total_tokens":7}}`))
+		default:
+			t.Fatalf("unexpected upstream call %d", requestCount)
+		}
+	}))
+	defer upstream.Close()
+
+	auth := &cliproxyauth.Auth{
+		Attributes: map[string]string{
+			"base_url": upstream.URL,
+			"api_key":  "expired-key",
+		},
+		Metadata: map[string]any{
+			"cookie":  "cookie",
+			"email":   "user@example.com",
+			"expired": "2000-01-01T00:00:00Z",
+		},
+	}
+
+	executor := &IFlowExecutor{}
+	originalRequest := []byte(`{"model":"minimax-m2.5","input":[{"role":"user","content":"hi"}]}`)
+	resp, err := executor.execute(context.Background(), auth, cliproxyexecutor.Request{
+		Model:   "minimax-m2.5",
+		Payload: originalRequest,
+	}, cliproxyexecutor.Options{
+		SourceFormat:    sdktranslator.FromString("openai-response"),
+		OriginalRequest: originalRequest,
+	}, true)
+	if err != nil {
+		t.Fatalf("execute returned unexpected error: %v", err)
+	}
+
+	if requestCount != 2 {
+		t.Fatalf("expected 2 upstream calls, got %d", requestCount)
+	}
+	if !strings.Contains(string(resp.Payload), `"hi after refresh"`) {
+		t.Fatalf("expected translated payload to include refreshed content, got %s", resp.Payload)
 	}
 }
 
