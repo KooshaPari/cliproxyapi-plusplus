@@ -13,7 +13,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	. "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/constant"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/constant"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/interfaces"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/registry"
 	responsesconverter "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/translator/openai/openai/responses"
@@ -44,7 +44,7 @@ func NewOpenAIResponsesAPIHandler(apiHandlers *handlers.BaseAPIHandler) *OpenAIR
 
 // HandlerType returns the identifier for this handler implementation.
 func (h *OpenAIResponsesAPIHandler) HandlerType() string {
-	return OpenaiResponse
+	return constant.OpenaiResponse
 }
 
 // Models returns the OpenAIResponses-compatible model metadata supported by this handler.
@@ -88,7 +88,7 @@ func (h *OpenAIResponsesAPIHandler) Responses(c *gin.Context) {
 	stream := streamResult.Type == gjson.True
 
 	modelName := gjson.GetBytes(rawJSON, "model").String()
-	if overrideEndpoint, ok := resolveEndpointOverride(modelName, openAIResponsesEndpoint, OpenaiResponse); ok && overrideEndpoint == openAIChatEndpoint {
+	if overrideEndpoint, ok := resolveEndpointOverride(modelName, openAIResponsesEndpoint, ""); ok && overrideEndpoint == openAIChatEndpoint {
 		chatJSON := responsesconverter.ConvertOpenAIResponsesRequestToOpenAIChatCompletions(modelName, rawJSON, stream)
 		stream = gjson.GetBytes(chatJSON, "stream").Bool()
 		if stream {
@@ -182,7 +182,7 @@ func (h *OpenAIResponsesAPIHandler) handleNonStreamingResponseViaChat(c *gin.Con
 
 	modelName := gjson.GetBytes(chatJSON, "model").String()
 	cliCtx, cliCancel := h.GetContextWithCancel(h, c, context.Background())
-	resp, upstreamHeaders, errMsg := h.ExecuteWithAuthManager(cliCtx, OpenAI, modelName, chatJSON, "")
+	resp, upstreamHeaders, errMsg := h.ExecuteWithAuthManager(cliCtx, constant.OpenAI, modelName, chatJSON, "")
 	if errMsg != nil {
 		h.WriteErrorResponse(c, errMsg)
 		cliCancel(errMsg.Error)
@@ -299,7 +299,7 @@ func (h *OpenAIResponsesAPIHandler) handleStreamingResponseViaChat(c *gin.Contex
 
 	modelName := gjson.GetBytes(chatJSON, "model").String()
 	cliCtx, cliCancel := h.GetContextWithCancel(h, c, context.Background())
-	dataChan, upstreamHeaders, errChan := h.ExecuteStreamWithAuthManager(cliCtx, OpenAI, modelName, chatJSON, "")
+	dataChan, upstreamHeaders, errChan := h.ExecuteStreamWithAuthManager(cliCtx, constant.OpenAI, modelName, chatJSON, "")
 	var param any
 
 	setSSEHeaders := func() {

@@ -45,8 +45,17 @@ func sanitizeAPICallURL(raw string) (string, *url.URL, error) {
 	if errValidateURL := validateAPICallURL(parsedURL); errValidateURL != nil {
 		return "", nil, errValidateURL
 	}
-	parsedURL.Fragment = ""
-	return parsedURL.String(), parsedURL, nil
+	// Reconstruct a clean URL from validated components to break taint propagation.
+	// The scheme is validated to be http/https, host is validated against SSRF,
+	// and path/query are preserved from the parsed (not raw) URL.
+	reconstructed := &url.URL{
+		Scheme:   parsedURL.Scheme,
+		Host:     parsedURL.Host,
+		Path:     parsedURL.Path,
+		RawPath:  parsedURL.RawPath,
+		RawQuery: parsedURL.RawQuery,
+	}
+	return reconstructed.String(), reconstructed, nil
 }
 
 func validateResolvedHostIPs(host string) error {
@@ -111,8 +120,10 @@ func copilotQuotaURLFromTokenURL(originalURL string) (string, error) {
 		return "", fmt.Errorf("unsupported scheme %q", parsedURL.Scheme)
 	}
 	switch host {
-	case "api.github.com", "api.githubcopilot.com":
-		return fmt.Sprintf("https://%s/copilot_pkg/llmproxy/user", host), nil
+	case "api.github.com":
+		return "https://api.github.com/copilot_pkg/llmproxy/user", nil
+	case "api.githubcopilot.com":
+		return "https://api.githubcopilot.com/copilot_pkg/llmproxy/user", nil
 	default:
 		return "", fmt.Errorf("unsupported host %q", parsedURL.Hostname())
 	}

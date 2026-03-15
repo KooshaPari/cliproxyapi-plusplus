@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/base"
 )
 
 func TestCodexTokenStorage_SaveTokenToFile(t *testing.T) {
@@ -19,14 +18,12 @@ func TestCodexTokenStorage_SaveTokenToFile(t *testing.T) {
 	authFilePath := filepath.Join(tempDir, "token.json")
 
 	ts := &CodexTokenStorage{
-		BaseTokenStorage: base.BaseTokenStorage{
-			AccessToken:  "access_token",
-			RefreshToken: "refresh_token",
-			Email:        "test@example.com",
-		},
 		IDToken:   "id_token",
 		AccountID: "acc_123",
 	}
+	ts.AccessToken = "access_token"
+	ts.RefreshToken = "refresh_token"
+	ts.Email = "test@example.com"
 
 	if err := ts.SaveTokenToFile(authFilePath); err != nil {
 		t.Fatalf("SaveTokenToFile failed: %v", err)

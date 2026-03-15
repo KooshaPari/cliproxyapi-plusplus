@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/base"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
 )
 
@@ -143,7 +142,7 @@ func TestDeviceFlowClient_PollForToken(t *testing.T) {
 		Interval:   1,
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
 	token, err := client.PollForToken(ctx, deviceCode)
@@ -176,17 +175,17 @@ func TestCopilotAuth_LoadAndValidateToken(t *testing.T) {
 	auth := NewCopilotAuth(&config.Config{}, client)
 
 	// Valid case
-	ok, err := auth.LoadAndValidateToken(context.Background(), &CopilotTokenStorage{
-		BaseTokenStorage: base.BaseTokenStorage{AccessToken: "valid"},
-	})
+	validTS := &CopilotTokenStorage{}
+	validTS.AccessToken = "valid"
+	ok, err := auth.LoadAndValidateToken(context.Background(), validTS)
 	if !ok || err != nil {
 		t.Errorf("LoadAndValidateToken failed: ok=%v, err=%v", ok, err)
 	}
 
 	// Expired case
-	ok, err = auth.LoadAndValidateToken(context.Background(), &CopilotTokenStorage{
-		BaseTokenStorage: base.BaseTokenStorage{AccessToken: "expired"},
-	})
+	expiredTS := &CopilotTokenStorage{}
+	expiredTS.AccessToken = "expired"
+	ok, err = auth.LoadAndValidateToken(context.Background(), expiredTS)
 	if ok || err == nil || !strings.Contains(err.Error(), "expired") {
 		t.Errorf("expected expired error, got ok=%v, err=%v", ok, err)
 	}

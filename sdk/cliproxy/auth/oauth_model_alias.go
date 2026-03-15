@@ -17,8 +17,6 @@ type oauthModelAliasTable struct {
 	reverse map[string]map[string]string
 }
 
-type apiKeyModelAliasTable map[string]map[string]string
-
 func compileOAuthModelAliasTable(aliases map[string][]internalconfig.OAuthModelAlias) *oauthModelAliasTable {
 	if len(aliases) == 0 {
 		return &oauthModelAliasTable{}
@@ -55,13 +53,6 @@ func compileOAuthModelAliasTable(aliases map[string][]internalconfig.OAuthModelA
 		out.reverse = nil
 	}
 	return out
-}
-
-func (m *Manager) rebuildAPIKeyModelAliasFromRuntimeConfig() {
-	if m == nil {
-		return
-	}
-	m.apiKeyModelAlias.Store(apiKeyModelAliasTable(nil))
 }
 
 // SetOAuthModelAlias updates the OAuth model name alias table used during execution.

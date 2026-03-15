@@ -1,6 +1,6 @@
 # Install
 
-`cliproxyapi++` can run as a container, standalone binary, or embedded SDK.
+`cliproxyapi-plusplus` can run as a container, standalone binary, or embedded SDK.
 
 ## Audience Guidance
 
@@ -11,7 +11,7 @@
 ## Option A: Docker (Recommended)
 
 ```bash
-docker pull KooshaPari/cliproxyapi-plusplus:latest
+docker pull kooshapari/cliproxyapi-plusplus:latest
 ```
 
 Minimal run command:
@@ -22,7 +22,7 @@ docker run -d --name cliproxyapi-plusplus \
   -v "$PWD/config.yaml:/CLIProxyAPI/config.yaml" \
   -v "$PWD/auths:/root/.cli-proxy-api" \
   -v "$PWD/logs:/CLIProxyAPI/logs" \
-  KooshaPari/cliproxyapi-plusplus:latest
+  kooshapari/cliproxyapi-plusplus:latest
 ```
 
 Validate:
@@ -42,7 +42,7 @@ docker run --platform linux/arm64 -d --name cliproxyapi-plusplus \
   -v "$PWD/config.yaml:/CLIProxyAPI/config.yaml" \
   -v "$PWD/auths:/root/.cli-proxy-api" \
   -v "$PWD/logs:/CLIProxyAPI/logs" \
-  KooshaPari/cliproxyapi-plusplus:latest
+  kooshapari/cliproxyapi-plusplus:latest
 ```
 
 - Verify architecture inside the running container:
@@ -57,22 +57,22 @@ Expected output for ARM hosts: `aarch64`.
 
 Releases:
 
-- https://github.com/KooshaPari/cliproxyapi-plusplus/releases
+- https://github.com/kooshapari/cliproxyapi-plusplus/releases
 
 Example download and run (adjust artifact name for your OS/arch):
 
 ```bash
 curl -fL \
-  https://github.com/KooshaPari/cliproxyapi-plusplus/releases/latest/download/cliproxyapi++-darwin-amd64 \
-  -o cliproxyapi++
-chmod +x cliproxyapi++
-./cliproxyapi++ --config ./config.yaml
+  https://github.com/kooshapari/cliproxyapi-plusplus/releases/latest/download/cliproxyapi-plusplus-darwin-amd64 \
+  -o cliproxyapi-plusplus
+chmod +x cliproxyapi-plusplus
+./cliproxyapi-plusplus --config ./config.yaml
 ```
 
 ## Option C: Build From Source
 
 ```bash
-git clone https://github.com/KooshaPari/cliproxyapi-plusplus.git
+git clone https://github.com/kooshapari/cliproxyapi-plusplus.git
 cd cliproxyapi-plusplus
 go build ./cmd/cliproxyapi
 ./cliproxyapi --config ./config.example.yaml
@@ -189,7 +189,7 @@ brew services restart cliproxyapi-plusplus
 Run as Administrator:
 
 ```powershell
-.\examples\windows\cliproxyapi-plusplus-service.ps1 -Action install -BinaryPath "C:\Program Files\cliproxyapi-plusplus\cliproxyapi++.exe" -ConfigPath "C:\ProgramData\cliproxyapi-plusplus\config.yaml"
+.\examples\windows\cliproxyapi-plusplus-service.ps1 -Action install -BinaryPath "C:\Program Files\cliproxyapi-plusplus\cliproxyapi-plusplus.exe" -ConfigPath "C:\ProgramData\cliproxyapi-plusplus\config.yaml"
 .\examples\windows\cliproxyapi-plusplus-service.ps1 -Action start
 .\examples\windows\cliproxyapi-plusplus-service.ps1 -Action status
 ```
@@ -197,7 +197,7 @@ Run as Administrator:
 ## Option E: Go SDK / Embedding
 
 ```bash
-go get github.com/KooshaPari/cliproxyapi-plusplus/sdk/cliproxy
+go get github.com/kooshapari/cliproxyapi-plusplus/sdk/cliproxy
 ```
 
 Related SDK docs:

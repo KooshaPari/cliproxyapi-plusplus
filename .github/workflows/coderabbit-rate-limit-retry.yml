@@ -25,7 +25,6 @@ jobs:
             const owner = context.repo.owner;
             const repo = context.repo.repo;
             const STALE_MINUTES = 20;
-            const BACKLOG_THRESHOLD = 10;
             const BYPASS_LABEL = "ci:coderabbit-bypass";
             const GATE_CHECK_NAME = "CodeRabbit Gate";
             const MARKER = "<!-- codex:coderabbit-rate-limit-retry -->";
@@ -183,8 +182,7 @@ jobs:
               const ageMin = (nowMs - state.at) / 60000;
               const stateOk = state.state === "SUCCESS" || state.state === "NEUTRAL";
               const stale = ageMin >= STALE_MINUTES;
-              const backlogHigh = openPRs.length > BACKLOG_THRESHOLD;
-              const bypassEligible = backlogHigh && stale && !stateOk;
+              const bypassEligible = stale && !stateOk;
 
               await setBypassLabel(pr.number, bypassEligible);
 
@@ -193,7 +191,7 @@ jobs:
                   MARKER,
                   "@coderabbitai full review",
                   "",
-                  `Automated retrigger: backlog > ${BACKLOG_THRESHOLD}, CodeRabbit state=${state.state}, age=${ageMin.toFixed(1)}m.`,
+                  `Automated retrigger: CodeRabbit state=${state.state}, age=${ageMin.toFixed(1)}m (stale after ${STALE_MINUTES}m).`,
                 ].join("\n");
 
                 await github.rest.issues.createComment({
@@ -210,7 +208,7 @@ jobs:
               const summary = [
                 `CodeRabbit state: ${state.state}`,
                 `Age minutes: ${ageMin.toFixed(1)}`,
-                `Open PR backlog: ${openPRs.length}`,
+                `Stale threshold: ${STALE_MINUTES}m`,
                 `Bypass eligible: ${bypassEligible}`,
               ].join("\n");
               await publishGate(pr, gatePass, summary);

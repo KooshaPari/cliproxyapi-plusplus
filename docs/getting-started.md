@@ -1,6 +1,6 @@
 # Getting Started
 
-This guide gets a local `cliproxyapi++` instance running and verifies end-to-end request flow.
+This guide gets a local `cliproxyapi-plusplus` instance running and verifies end-to-end request flow.
 
 ## Audience
 
@@ -18,7 +18,7 @@ This guide gets a local `cliproxyapi++` instance running and verifies end-to-end
 ```bash
 mkdir -p ~/cliproxy && cd ~/cliproxy
 curl -fsSL -o config.yaml \
-  https://raw.githubusercontent.com/KooshaPari/cliproxyapi-plusplus/main/config.example.yaml
+  https://raw.githubusercontent.com/kooshapari/cliproxyapi-plusplus/main/config.example.yaml
 mkdir -p auths logs
 chmod 700 auths
 ```
@@ -59,7 +59,7 @@ You can also configure other provider blocks from `config.example.yaml`.
 cat > docker-compose.yml << 'EOF_COMPOSE'
 services:
   cliproxy:
-    image: KooshaPari/cliproxyapi-plusplus:latest
+    image: kooshapari/cliproxyapi-plusplus:latest
     container_name: cliproxyapi-plusplus
     ports:
       - "8317:8317"
@@ -93,7 +93,7 @@ curl -sS -X POST http://localhost:8317/v1/chat/completions \
   -d '{
     "model": "claude-3-5-sonnet",
     "messages": [
-      {"role": "user", "content": "Say hello from cliproxyapi++"}
+      {"role": "user", "content": "Say hello from cliproxyapi-plusplus"}
     ],
     "stream": false
   }'

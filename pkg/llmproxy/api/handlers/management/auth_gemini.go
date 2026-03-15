@@ -146,6 +146,7 @@ func (h *Handler) RequestGeminiCLIToken(c *gin.Context) {
 			ProjectID: requestedProjectID,
 			Auto:      requestedProjectID == "",
 		}
+		ts.Email = email
 
 		// Initialize authenticated HTTP client via GeminiAuth to honor proxy settings
 		gemAuth := geminiAuth.NewGeminiAuth()

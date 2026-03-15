@@ -1,7 +1,6 @@
 package thinking
 
 import (
-	"fmt"
 	"strings"
 )
 
@@ -24,11 +23,4 @@ func redactLogMode(_ ThinkingMode) string {
 
 func redactLogLevel(_ ThinkingLevel) string {
 	return redactedLogValue
-}
-
-func redactLogError(err error) string {
-	if err == nil {
-		return ""
-	}
-	return fmt.Sprintf("%T", err)
 }

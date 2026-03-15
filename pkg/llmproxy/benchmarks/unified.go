@@ -18,7 +18,7 @@ var (
 		"gpt-5.3-codex":                 0.82,
 		"claude-4.5-opus-high-thinking": 0.94,
 		"claude-4.5-opus-high":          0.92,
-		"claude-4.5-sonnet-thinking":   0.85,
+		"claude-4.5-sonnet-thinking":    0.85,
 		"claude-4-sonnet":               0.80,
 		"gpt-4.5":                       0.85,
 		"gpt-4o":                        0.82,
@@ -29,7 +29,7 @@ var (
 		"llama-4-maverick":              0.80,
 		"llama-4-scout":                 0.75,
 		"deepseek-v3":                   0.82,
-		"deepseek-chat":                  0.75,
+		"deepseek-chat":                 0.75,
 	}
 
 	costPer1kProxy = map[string]float64{
@@ -50,28 +50,28 @@ var (
 		"gemini-2.5-flash":              0.10,
 		"gemini-2.0-flash":              0.05,
 		"llama-4-maverick":              0.40,
-		"llama-4-scout":                  0.20,
+		"llama-4-scout":                 0.20,
 		"deepseek-v3":                   0.60,
-		"deepseek-chat":                  0.30,
+		"deepseek-chat":                 0.30,
 	}
 
 	latencyMsProxy = map[string]int{
-		"claude-opus-4.6":               2500,
-		"claude-sonnet-4.6":             1500,
-		"claude-haiku-4.5":              800,
-		"gpt-5.3-codex-high":            2000,
-		"gpt-4o":                        1800,
-		"gemini-2.5-pro":                1200,
-		"gemini-2.5-flash":              500,
-		"deepseek-v3":                   1500,
+		"claude-opus-4.6":    2500,
+		"claude-sonnet-4.6":  1500,
+		"claude-haiku-4.5":   800,
+		"gpt-5.3-codex-high": 2000,
+		"gpt-4o":             1800,
+		"gemini-2.5-pro":     1200,
+		"gemini-2.5-flash":   500,
+		"deepseek-v3":        1500,
 	}
 )
 
 // UnifiedBenchmarkStore combines dynamic tokenledger data with hardcoded fallbacks
 type UnifiedBenchmarkStore struct {
-	primary   *Client
-	fallback  *FallbackProvider
-	mu        sync.RWMutex
+	primary  *Client
+	fallback *FallbackProvider
+	mu       sync.RWMutex
 }
 
 // FallbackProvider provides hardcoded benchmark values

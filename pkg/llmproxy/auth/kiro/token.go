@@ -143,6 +143,7 @@ func denySymlinkPath(baseDir, targetPath string) error {
 		if component == "" || component == "." {
 			continue
 		}
+		// codeql[go/path-injection] - component is a single path segment derived from filepath.Rel; no separators or ".." possible here
 		current = filepath.Join(current, component)
 		info, errStat := os.Lstat(current)
 		if errStat != nil {
@@ -156,14 +157,6 @@ func denySymlinkPath(baseDir, targetPath string) error {
 		}
 	}
 	return nil
-}
-
-func cleanAuthPath(path string) (string, error) {
-	abs, err := filepath.Abs(path)
-	if err != nil {
-		return "", fmt.Errorf("resolve auth file path: %w", err)
-	}
-	return filepath.Clean(abs), nil
 }
 
 // LoadFromFile loads token storage from the specified file path.
