@@ -208,19 +208,12 @@ func TestIFlowExecutorExecuteStreamFallsBackFrom406ForResponsesClients(t *testin
 	}
 }
 
-func TestIFlowExecutorExecuteRefreshesOnProviderExpiryEnvelope(t *testing.T) {
+func TestIFlowExecutorExecuteReturnsProviderEnvelopeError(t *testing.T) {
 	requestCount := 0
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requestCount++
 		w.Header().Set("Content-Type", "application/json")
-		switch requestCount {
-		case 1:
-			_, _ = w.Write([]byte(`{"status":"439","msg":"Your API Token has expired.","body":null}`))
-		case 2:
-			_, _ = w.Write([]byte(`{"id":"chatcmpl_iflow","object":"chat.completion","created":1735689600,"model":"minimax-m2.5","choices":[{"index":0,"message":{"role":"assistant","content":"hi after refresh"},"finish_reason":"stop"}],"usage":{"prompt_tokens":3,"completion_tokens":4,"total_tokens":7}}`))
-		default:
-			t.Fatalf("unexpected upstream call %d", requestCount)
-		}
+		_, _ = w.Write([]byte(`{"status":"439","msg":"Your API Token has expired.","body":null}`))
 	}))
 	defer upstream.Close()
 
@@ -244,16 +237,25 @@ func TestIFlowExecutorExecuteRefreshesOnProviderExpiryEnvelope(t *testing.T) {
 	}, cliproxyexecutor.Options{
 		SourceFormat:    sdktranslator.FromString("openai-response"),
 		OriginalRequest: originalRequest,
-	}, true)
-	if err != nil {
-		t.Fatalf("execute returned unexpected error: %v", err)
+	}, false)
+	if err == nil {
+		t.Fatal("expected provider envelope error")
 	}
-
-	if requestCount != 2 {
-		t.Fatalf("expected 2 upstream calls, got %d", requestCount)
+	if requestCount != 1 {
+		t.Fatalf("expected 1 upstream call, got %d", requestCount)
 	}
-	if !strings.Contains(string(resp.Payload), `"hi after refresh"`) {
-		t.Fatalf("expected translated payload to include refreshed content, got %s", resp.Payload)
+	if len(resp.Payload) != 0 {
+		t.Fatalf("expected empty payload on provider envelope error, got %s", resp.Payload)
+	}
+	statusErr, ok := err.(interface{ StatusCode() int })
+	if !ok {
+		t.Fatalf("expected status error type, got %T", err)
+	}
+	if got := statusErr.StatusCode(); got != http.StatusUnauthorized {
+		t.Fatalf("status code = %d, want %d", got, http.StatusUnauthorized)
+	}
+	if !strings.Contains(err.Error(), "expired") {
+		t.Fatalf("expected expiry message, got %v", err)
 	}
 }
 
