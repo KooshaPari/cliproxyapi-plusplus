@@ -1,5 +1,7 @@
 # AGENTS.md
 
+## Child-Agent and Delegation Policy
+
 This file provides guidance to AI agents working with code in this repository.
 
 ## Quick Start
