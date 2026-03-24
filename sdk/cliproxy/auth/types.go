@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	baseauth "github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/auth"
+	baseauth "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth"
 )
 
 // PostAuthHook defines a function that is called after an Auth record is created
