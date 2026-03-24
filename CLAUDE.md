@@ -6,6 +6,12 @@ This repository is designed to work seamlessly with Claude (and other advanced A
 - This file is the canonical contract for all agent behavior in this repository.
 - Act autonomously; only pause when blocked by missing secrets, external access, or truly destructive actions.
 
+## Worktree Discipline
+
+- Use `.worktrees/` for active worktree lanes.
+- Treat `PROJECT-wtrees/` as migration-only legacy layout.
+- Keep the primary checkout on `main` and do implementation work in worktrees.
+
 ---
 
 ## Table of Contents
