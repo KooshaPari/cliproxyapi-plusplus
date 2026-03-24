@@ -8,10 +8,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/google/uuid"
+	kiroauth "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/kiro"
 	log "github.com/sirupsen/logrus"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
@@ -20,7 +22,16 @@ import (
 // cachedToolDescription stores the dynamically-fetched web_search tool description.
 // Written by the executor via SetWebSearchDescription, read by the translator
 // when building the remote_web_search tool for Kiro API requests.
-var cachedToolDescription atomic.Value // stores string
+var (
+	cachedToolDescription atomic.Value // stores string
+	toolDescOnce          atomic.Pointer[sync.Once]
+	fallbackFpOnce        sync.Once
+	fallbackFp            *kiroauth.Fingerprint
+)
+
+func init() {
+	toolDescOnce.Store(&sync.Once{})
+}
 
 // GetWebSearchDescription returns the cached web_search tool description,
 // or empty string if not yet fetched. Lock-free via atomic.Value.

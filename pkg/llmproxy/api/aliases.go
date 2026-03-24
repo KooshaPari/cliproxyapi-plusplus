@@ -15,5 +15,6 @@ var (
 	WithLocalManagementPassword   = api.WithLocalManagementPassword
 	WithKeepAliveEndpoint         = api.WithKeepAliveEndpoint
 	WithRequestLoggerFactory      = api.WithRequestLoggerFactory
+	WithPostAuthHook              = api.WithPostAuthHook
 	NewServer                     = api.NewServer
 )

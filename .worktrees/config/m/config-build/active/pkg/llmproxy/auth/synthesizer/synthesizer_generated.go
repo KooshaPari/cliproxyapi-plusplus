@@ -2,7 +2,7 @@
 package synthesizer
 
 import (
-	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
 )
 
 // getDedicatedProviderEntries returns the config entries for a dedicated provider.

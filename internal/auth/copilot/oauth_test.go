@@ -27,7 +27,7 @@ func newTestClient(srv *httptest.Server) *http.Client {
 	}
 }
 
-// TestFetchUserInfo_FullProfile verifies that FetchUserInfo returns login, email, and name.
+// TestFetchUserInfo_FullProfile verifies that FetchUserInfo returns the login.
 func TestFetchUserInfo_FullProfile(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !strings.HasPrefix(r.Header.Get("Authorization"), "Bearer ") {
@@ -44,23 +44,17 @@ func TestFetchUserInfo_FullProfile(t *testing.T) {
 	defer srv.Close()
 
 	client := &DeviceFlowClient{httpClient: newTestClient(srv)}
-	info, err := client.FetchUserInfo(context.Background(), "test-token")
+	login, err := client.FetchUserInfo(context.Background(), "test-token")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if info.Login != "octocat" {
-		t.Errorf("Login: got %q, want %q", info.Login, "octocat")
-	}
-	if info.Email != "octocat@github.com" {
-		t.Errorf("Email: got %q, want %q", info.Email, "octocat@github.com")
-	}
-	if info.Name != "The Octocat" {
-		t.Errorf("Name: got %q, want %q", info.Name, "The Octocat")
+	if login != "octocat" {
+		t.Errorf("Login: got %q, want %q", login, "octocat")
 	}
 }
 
-// TestFetchUserInfo_EmptyEmail verifies graceful handling when email is absent (private account).
-func TestFetchUserInfo_EmptyEmail(t *testing.T) {
+// TestFetchUserInfo_PrivateAccount verifies graceful handling when email is absent (private account).
+func TestFetchUserInfo_PrivateAccount(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		// GitHub returns null for private emails.
@@ -69,18 +63,12 @@ func TestFetchUserInfo_EmptyEmail(t *testing.T) {
 	defer srv.Close()
 
 	client := &DeviceFlowClient{httpClient: newTestClient(srv)}
-	info, err := client.FetchUserInfo(context.Background(), "test-token")
+	login, err := client.FetchUserInfo(context.Background(), "test-token")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if info.Login != "privateuser" {
-		t.Errorf("Login: got %q, want %q", info.Login, "privateuser")
-	}
-	if info.Email != "" {
-		t.Errorf("Email: got %q, want empty string", info.Email)
-	}
-	if info.Name != "Private User" {
-		t.Errorf("Name: got %q, want %q", info.Name, "Private User")
+	if login != "privateuser" {
+		t.Errorf("Login: got %q, want %q", login, "privateuser")
 	}
 }
 
