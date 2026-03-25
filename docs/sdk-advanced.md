@@ -24,8 +24,8 @@ import (
   "context"
   "net/http"
 
-  coreauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
-  clipexec "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/executor"
+  coreauth "github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/auth"
+  clipexec "github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/executor"
 )
 
 type Executor struct{}
@@ -82,7 +82,7 @@ package myprov
 
 import (
   "context"
-  sdktr "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/translator"
+  sdktr "github.com/router-for-me/CLIProxyAPI/v6/sdk/translator"
 )
 
 const (
@@ -135,3 +135,4 @@ The embedded server calls this automatically for built‑in providers; for custo
 - Enable request logging: Management API GET/PUT `/v0/management/request-log`
 - Toggle debug logs: Management API GET/PUT `/v0/management/debug`
 - Hot reload changes in `config.yaml` and `auths/` are picked up automatically by the watcher
+

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
 )
 
 func TestDoCursorLogin_TokenFileMode_WritesTokenAndConfig(t *testing.T) {

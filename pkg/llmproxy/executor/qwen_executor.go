@@ -1,7 +1,6 @@
 package executor
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"fmt"
@@ -11,7 +10,7 @@ import (
 	"time"
 
 	qwenauth "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/qwen"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/thinking"
 	cliproxyauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
 	cliproxyexecutor "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/executor"
@@ -118,10 +117,8 @@ func (e *QwenExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, req
 		AuthValue: authValue,
 	})
 
-	httpClient := newProxyAwareHTTPClient(ctx, e.cfg, auth, 0)
-	httpResp, err := httpClient.Do(httpReq)
+	httpResp, err := ExecuteHTTPRequest(ctx, e.cfg, auth, httpReq, "qwen executor")
 	if err != nil {
-		recordAPIResponseError(ctx, e.cfg, err)
 		return resp, err
 	}
 	defer func() {
@@ -129,14 +126,6 @@ func (e *QwenExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, req
 			log.Errorf("qwen executor: close response body error: %v", errClose)
 		}
 	}()
-	recordAPIResponseMetadata(ctx, e.cfg, httpResp.StatusCode, httpResp.Header.Clone())
-	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
-		b, _ := io.ReadAll(httpResp.Body)
-		appendAPIResponseChunk(ctx, e.cfg, b)
-		logWithRequestID(ctx).Debugf("request error, error status: %d, error message: %s", httpResp.StatusCode, summarizeErrorBody(httpResp.Header.Get("Content-Type"), b))
-		err = statusErr{code: httpResp.StatusCode, msg: string(b)}
-		return resp, err
-	}
 	data, err := io.ReadAll(httpResp.Body)
 	if err != nil {
 		recordAPIResponseError(ctx, e.cfg, err)
@@ -214,56 +203,41 @@ func (e *QwenExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.Aut
 		AuthValue: authValue,
 	})
 
-	httpClient := newProxyAwareHTTPClient(ctx, e.cfg, auth, 0)
-	httpResp, err := httpClient.Do(httpReq)
+	httpResp, err := ExecuteHTTPRequestForStreaming(ctx, e.cfg, auth, httpReq, "qwen executor")
 	if err != nil {
+		return nil, err
+	}
+
+	var param any
+	processor := func(ctx context.Context, line []byte) ([]string, error) {
+		appendAPIResponseChunk(ctx, e.cfg, line)
+		if detail, ok := parseOpenAIStreamUsage(line); ok {
+			reporter.publish(ctx, detail)
+		}
+		chunks := sdktranslator.TranslateStream(ctx, to, from, req.Model, opts.OriginalRequest, body, bytes.Clone(line), &param)
+		return chunks, nil
+	}
+
+	result := ProcessSSEStream(ctx, httpResp, processor, func(ctx context.Context, err error) {
 		recordAPIResponseError(ctx, e.cfg, err)
-		return nil, err
-	}
-	recordAPIResponseMetadata(ctx, e.cfg, httpResp.StatusCode, httpResp.Header.Clone())
-	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
-		b, _ := io.ReadAll(httpResp.Body)
-		appendAPIResponseChunk(ctx, e.cfg, b)
-		logWithRequestID(ctx).Debugf("request error, error status: %d, error message: %s", httpResp.StatusCode, summarizeErrorBody(httpResp.Header.Get("Content-Type"), b))
-		if errClose := httpResp.Body.Close(); errClose != nil {
-			log.Errorf("qwen executor: close response body error: %v", errClose)
-		}
-		err = statusErr{code: httpResp.StatusCode, msg: string(b)}
-		return nil, err
-	}
-	out := make(chan cliproxyexecutor.StreamChunk)
+		reporter.publishFailure(ctx)
+	})
+
+	// Wrap the original channel to append [DONE] sentinel
+	wrappedOut := make(chan cliproxyexecutor.StreamChunk)
 	go func() {
-		defer close(out)
-		defer func() {
-			if errClose := httpResp.Body.Close(); errClose != nil {
-				log.Errorf("qwen executor: close response body error: %v", errClose)
-			}
-		}()
-		scanner := bufio.NewScanner(httpResp.Body)
-		scanner.Buffer(nil, 52_428_800) // 50MB
-		var param any
-		for scanner.Scan() {
-			line := scanner.Bytes()
-			appendAPIResponseChunk(ctx, e.cfg, line)
-			if detail, ok := parseOpenAIStreamUsage(line); ok {
-				reporter.publish(ctx, detail)
-			}
-			chunks := sdktranslator.TranslateStream(ctx, to, from, req.Model, opts.OriginalRequest, body, bytes.Clone(line), &param)
-			for i := range chunks {
-				out <- cliproxyexecutor.StreamChunk{Payload: []byte(chunks[i])}
-			}
+		defer close(wrappedOut)
+		for chunk := range result.Chunks {
+			wrappedOut <- chunk
 		}
+		// Send [DONE] sentinel
 		doneChunks := sdktranslator.TranslateStream(ctx, to, from, req.Model, opts.OriginalRequest, body, []byte("[DONE]"), &param)
-		for i := range doneChunks {
-			out <- cliproxyexecutor.StreamChunk{Payload: []byte(doneChunks[i])}
-		}
-		if errScan := scanner.Err(); errScan != nil {
-			recordAPIResponseError(ctx, e.cfg, errScan)
-			reporter.publishFailure(ctx)
-			out <- cliproxyexecutor.StreamChunk{Err: errScan}
+		for _, chunk := range doneChunks {
+			wrappedOut <- cliproxyexecutor.StreamChunk{Payload: []byte(chunk)}
 		}
 	}()
-	return &cliproxyexecutor.StreamResult{Headers: httpResp.Header.Clone(), Chunks: out}, nil
+
+	return &cliproxyexecutor.StreamResult{Headers: result.Headers, Chunks: wrappedOut}, nil
 }
 
 func (e *QwenExecutor) CountTokens(ctx context.Context, auth *cliproxyauth.Auth, req cliproxyexecutor.Request, opts cliproxyexecutor.Options) (cliproxyexecutor.Response, error) {

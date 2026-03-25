@@ -12,7 +12,7 @@ import (
 	sdkaccess "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/access"
 	sdkAuth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/auth"
 	coreauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
 )
 
 // Builder constructs a Service instance with customizable providers.
