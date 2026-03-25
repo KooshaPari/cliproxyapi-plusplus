@@ -4,10 +4,7 @@
 // debug settings, proxy configuration, and API keys.
 package config
 
-// SDKConfig represents the application's configuration, loaded from a YAML file.
-type SDKConfig struct {
-	// ProxyURL is the URL of an optional proxy server to use for outbound requests.
-	ProxyURL string `yaml:"proxy-url" json:"proxy-url"`
+import internalconfig "github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
 
 	// ForceModelPrefix requires explicit model prefixes (e.g., "teamA/gemini-3-pro-preview")
 	// to target prefixed credentials. When false, unprefixed model requests may use prefixed

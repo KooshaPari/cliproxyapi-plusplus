@@ -14,6 +14,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	kiroclaude "github.com/kooshapari/cliproxyapi-plusplus/v6/internal/translator/kiro/claude"
+	kirocommon "github.com/kooshapari/cliproxyapi-plusplus/v6/internal/translator/kiro/common"
+	kiroopenai "github.com/kooshapari/cliproxyapi-plusplus/v6/internal/translator/kiro/openai"
 	kiroauth "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/kiro"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
 	kiroclaude "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/translator/kiro/claude"

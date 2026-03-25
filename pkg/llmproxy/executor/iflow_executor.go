@@ -15,7 +15,7 @@ import (
 
 	"github.com/google/uuid"
 	iflowauth "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/iflow"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/thinking"
 	cliproxyauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
 	cliproxyexecutor "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/executor"

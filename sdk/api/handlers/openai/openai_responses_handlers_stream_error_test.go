@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/interfaces"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/interfaces"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/api/handlers"
 	sdkconfig "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/config"
 )
