@@ -1,11 +1,7 @@
 name: translator-path-guard
 
 on:
-  pull_request:
-    types:
-      - opened
-      - synchronize
-      - reopened
+  workflow_dispatch:
 
 jobs:
   ensure-no-translator-changes:

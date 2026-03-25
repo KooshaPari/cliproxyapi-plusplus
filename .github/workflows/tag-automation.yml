@@ -1,8 +1,6 @@
 name: Tag Automation
 on:
-  push:
-    tags:
-      - 'v*'
+  workflow_dispatch:
 jobs:
   tag:
     runs-on: ubuntu-latest

@@ -28,16 +28,16 @@ export default defineConfig({
           { text: "DevOps and CI/CD", link: "/operations/devops-cicd" },
           { text: "Provider Operations", link: "/provider-operations" },
           { text: "Troubleshooting", link: "/troubleshooting" },
-          { text: "Planning Boards", link: "/planning/" },
-        ],
+          { text: "Planning Boards", link: "/planning/" }
+        ]
       },
       {
         text: "Reference",
         items: [
           { text: "Routing and Models", link: "/routing-reference" },
           { text: "Feature Guides", link: "/features/" },
-          { text: "Docsets", link: "/docsets/" },
-        ],
+          { text: "Docsets", link: "/docsets/" }
+        ]
       },
       {
         text: "API",
@@ -45,11 +45,11 @@ export default defineConfig({
           { text: "API Index", link: "/api/" },
           { text: "OpenAI-Compatible API", link: "/api/openai-compatible" },
           { text: "Management API", link: "/api/management" },
-          { text: "Operations API", link: "/api/operations" },
-        ],
-      },
+          { text: "Operations API", link: "/api/operations" }
+        ]
+      }
     ],
-    search: { provider: "local" },
-    socialLinks: [{ icon: "github", link: "https://github.com/KooshaPari/cliproxyapi-plusplus" }],
-  },
-});
+    search: { provider: 'local' },
+    socialLinks: [{ icon: 'github', link: 'https://github.com/KooshaPari/cliproxyapi-plusplus' }]
+  }
+})

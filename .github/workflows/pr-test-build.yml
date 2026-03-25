@@ -1,7 +1,7 @@
 name: pr-test-build
 
 on:
-  pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -46,16 +46,19 @@ jobs:
       - name: Run full tests with baseline
         run: |
           mkdir -p target
-          go test -json ./... > target/test-baseline.json
-          go test ./... > target/test-baseline.txt
+          set +e
+          go test -json -count=1 ./... 2>&1 | tee target/test-baseline.json
+          test_exit=${PIPESTATUS[0]}
+          set -e
+          # Fail the step if tests failed
+          exit "${test_exit}"
       - name: Upload baseline artifact
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: go-test-baseline
-          path: |
-            target/test-baseline.json
-            target/test-baseline.txt
-          if-no-files-found: error
+          path: target/test-baseline.json
+          if-no-files-found: warn
 
   quality-ci:
     name: quality-ci

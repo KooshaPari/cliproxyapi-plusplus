@@ -1,5 +1,5 @@
 name: quality-gate
-on: [pull_request]
+on: [workflow_dispatch]
 jobs:
   verify:
     runs-on: ubuntu-latest

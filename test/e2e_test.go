@@ -45,13 +45,13 @@ func TestRepoEntrypointsExist(t *testing.T) {
 		filepath.Join(root, "cmd", "boardsync", "main.go"),
 	}
 
-	repoRoot := "/Users/kooshapari/temp-PRODVERCEL/485/kush/cliproxy++"
-
-	for _, p := range paths {
-		path := filepath.Join(repoRoot, p)
-		if info, err := os.Stat(path); err == nil && !info.IsDir() {
-			t.Logf("Found binary: %s", p)
-			return
+	for _, path := range paths {
+		info, err := os.Stat(path)
+		if err != nil {
+			t.Fatalf("missing entrypoint %s: %v", path, err)
+		}
+		if info.IsDir() {
+			t.Fatalf("expected file, got directory: %s", path)
 		}
 	}
 }
@@ -69,7 +69,6 @@ log_level: debug
 		t.Fatal(err)
 	}
 
-	// Just verify we can write the config
 	if _, err := os.Stat(configPath); err != nil {
 		t.Error(err)
 	}
@@ -85,10 +84,7 @@ func TestOAuthLoginFlow(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	client := srv.Client()
-	client.Timeout = 5 * time.Second
-
-	resp, err := client.Get(srv.URL + "/oauth/token")
+	resp, err := srv.Client().Get(srv.URL + "/oauth/token")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -97,18 +93,44 @@ func TestOAuthLoginFlow(t *testing.T) {
 	}
 }
 
-// TestKiloLoginBinary tests kilo login binary
-func TestKiloLoginBinary(t *testing.T) {
-	binary := "/Users/kooshapari/temp-PRODVERCEL/485/kush/cliproxyapi-plusplus/cli-proxy-api-plus-integration-test"
+// TestServerHelpIncludesKiloLoginFlag verifies the current server flag surface via `go run`.
+func TestServerHelpIncludesKiloLoginFlag(t *testing.T) {
+	root := testRepoRoot()
+	command := exec.Command("go", "run", "./cmd/server", "-help")
+	command.Dir = root
 
-	if _, err := os.Stat(binary); os.IsNotExist(err) {
-		t.Skip("Binary not found")
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	command.Stdout = &stdout
+	command.Stderr = &stderr
+
+	err := command.Run()
+	if err != nil {
+		if _, ok := err.(*exec.ExitError); !ok {
+			t.Fatalf("go run cmd/server -help failed unexpectedly: %v", err)
+		}
 	}
 
-	cmd := exec.Command(binary, "-help")
-	cmd.Dir = "/Users/kooshapari/temp-PRODVERCEL/485/kush/cliproxyapi-plusplus"
+	output := stdout.String() + stderr.String()
+	if !strings.Contains(output, "-kilo-login") {
+		t.Fatalf("expected server help to mention -kilo-login, output=%q", output)
+	}
+}
 
-	if err := cmd.Run(); err != nil {
-		t.Logf("Binary help returned error: %v", err)
+// TestNativeCLISpecsRemainStable verifies current native CLI contract wiring.
+func TestNativeCLISpecsRemainStable(t *testing.T) {
+	if got := cmd.KiloSpec.Name; got != "kilo" {
+		t.Fatalf("KiloSpec.Name = %q, want kilo", got)
+	}
+	if got := cmd.KiloSpec.Args; len(got) != 1 || got[0] != "auth" {
+		t.Fatalf("KiloSpec.Args = %v, want [auth]", got)
+	}
+
+	roo := cmd.RooSpec
+	if roo.Name != "roo" {
+		t.Fatalf("RooSpec.Name = %q, want roo", roo.Name)
+	}
+	if len(roo.Args) != 2 || roo.Args[0] != "auth" || roo.Args[1] != "login" {
+		t.Fatalf("RooSpec.Args = %v, want [auth login]", roo.Args)
 	}
 }

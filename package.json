@@ -5,8 +5,7 @@
   "scripts": {
     "lint": "oxlint --config .oxlintrc.json docs/.vitepress && (test -f tsconfig.json && oxlint-tsgolint --tsconfig tsconfig.json || echo '[SKIP] tsconfig.json not found; skipping oxlint-tsgolint')",
     "format": "oxfmt --config .oxfmtrc.json --write docs/.vitepress",
-    "format:check": "oxfmt --config .oxfmtrc.json --check docs/.vitepress",
-    "test": "echo 'No JS/TS tests configured -- Go tests run via go test.' && exit 0"
+    "format:check": "oxfmt --config .oxfmtrc.json --check docs/.vitepress"
   },
   "devDependencies": {
     "oxfmt": "^0.36.0",
