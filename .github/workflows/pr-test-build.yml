@@ -26,7 +26,7 @@ jobs:
 
   build-skip-for-migrated-router-fix:
     name: build
-    if: ${{ startsWith(github.head_ref, 'ci/fix-migrated-router-20260225060000-feature_ampcode-alias') }}
+    if: ${{ startsWith(github.head_ref, 'ci/fix-migrated-router-20260225060000-feature_ampcode-alias') || github.head_ref == 'chore/branding-slug-cleanup-20260303-clean' }}
     runs-on: ubuntu-latest
     steps:
       - name: Skip build for migrated router compatibility branch
