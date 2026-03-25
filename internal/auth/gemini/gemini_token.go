@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/KooshaPari/phenotype-go-auth"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/auth/base"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/misc"
 )
 
