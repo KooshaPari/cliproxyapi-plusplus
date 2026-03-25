@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Defined `.worktrees/` discipline and legacy wtrees boundary in CLAUDE.md/AGENTS.md.
 
 ### Changed
 - Support multiple aliases for a single upstream model in OAuth model alias configuration, preserving compatibility while allowing same upstream model name with distinct aliases.
