@@ -1,20 +1,20 @@
-import { defineConfig } from 'vitepress'
+import { defineConfig } from "vitepress";
 
 export default defineConfig({
-  title: 'CLIProxyAPI++',
-  description: 'CLIProxyAPI++ documentation',
-  srcDir: '.',
+  title: "CLIProxyAPI++",
+  description: "CLIProxyAPI++ documentation",
+  srcDir: ".",
   lastUpdated: true,
   cleanUrls: true,
   ignoreDeadLinks: true,
   themeConfig: {
     nav: [
-      { text: 'Home', link: '/' },
-      { text: 'Wiki', link: '/wiki/' },
-      { text: 'Development Guide', link: '/development/' },
-      { text: 'Document Index', link: '/index/' },
-      { text: 'API', link: '/api/' },
-      { text: 'Roadmap', link: '/roadmap/' }
+      { text: "Home", link: "/" },
+      { text: "Wiki", link: "/wiki/" },
+      { text: "Development Guide", link: "/development/" },
+      { text: "Document Index", link: "/index/" },
+      { text: "API", link: "/api/" },
+      { text: "Roadmap", link: "/roadmap/" },
     ],
     sidebar: [
       {
