@@ -1,6 +1,6 @@
 # Provider Catalog
 
-This page is the provider-first reference for `cliproxyapi-plusplus`: what each provider block is for, how to configure it, and when to use it.
+This page is the provider-first reference for `cliproxyapi++`: what each provider block is for, how to configure it, and when to use it.
 
 ## Provider Groups
 

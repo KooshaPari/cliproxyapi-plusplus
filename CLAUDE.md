@@ -1,12 +1,16 @@
 # Claude AI Agent Guide
 
-## Child Agent Usage
-
 This repository is designed to work seamlessly with Claude (and other advanced AI agents) as an autonomous software engineer.
 
 **Authority and Scope**
 - This file is the canonical contract for all agent behavior in this repository.
 - Act autonomously; only pause when blocked by missing secrets, external access, or truly destructive actions.
+
+## Worktree Discipline
+
+- Use `.worktrees/` for active worktree lanes.
+- Treat `PROJECT-wtrees/` as migration-only legacy layout.
+- Keep the primary checkout on `main` and do implementation work in worktrees.
 
 ---
 
@@ -3626,7 +3630,7 @@ This guide should be updated as the project evolves and new patterns are establi
 - Treat this repository as part of the broader Phenotype organization project collection, not an isolated codebase.
 - During research and implementation, actively identify code that is sharable, modularizable, splittable, or decomposable for reuse across repositories.
 - When reusable logic is found, prefer extraction into existing shared modules/projects first; if none fit, propose creating a new shared module/project.
-- Include a  section in plans with candidate code, target shared location, impacted repos, and migration order.
+- Include a `Cross-Project Reuse Opportunities` section in plans with candidate code, target shared location, impacted repos, and migration order.
 - For cross-repo moves or ownership-impacting extractions, ask the user for confirmation on destination and rollout, then bake that into the execution plan.
 - Execute forward-only migrations: extract shared code, update all callers, and remove duplicated local implementations.
 

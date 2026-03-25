@@ -1,6 +1,6 @@
 # Routing and Models Reference
 
-This page explains how `cliproxyapi-plusplus` selects credentials/providers and resolves model names.
+This page explains how `cliproxyapi++` selects credentials/providers and resolves model names.
 
 ## Audience Guidance
 

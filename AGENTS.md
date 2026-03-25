@@ -1,7 +1,5 @@
 # AGENTS.md
 
-## Child-Agent and Delegation Policy
-
 This file provides guidance to AI agents working with code in this repository.
 
 ## Quick Start
@@ -41,6 +39,12 @@ export ANTHROPIC_API_KEY="sk-..."
 - Build generic building blocks before application logic.
 - A provider interface + registry is better than N isolated classes.
 - Template strings > hardcoded messages. Config-driven > code-driven.
+
+## Worktree Discipline
+
+- Use `.worktrees/` for active worktree lanes.
+- Treat `PROJECT-wtrees/` as migration-only legacy layout.
+- Keep the primary checkout on `main` and avoid branch development there.
 
 ### Research Before Implementing
 

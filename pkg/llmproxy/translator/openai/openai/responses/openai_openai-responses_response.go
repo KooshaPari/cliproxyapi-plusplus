@@ -48,8 +48,10 @@ type oaiToResponsesState struct {
 	// function item done state
 	FuncArgsDone map[int]bool
 	FuncItemDone map[int]bool
+	// Accumulated annotations per output index
+	Annotations map[int][]interface{}
 	// usage aggregation
-	PromptTokens     int64
+	PromptTokens int64
 	CachedTokens     int64
 	CompletionTokens int64
 	TotalTokens      int64
@@ -114,6 +116,7 @@ func ConvertOpenAIChatCompletionsResponseToOpenAIResponses(ctx context.Context, 
 			FuncArgsDone:    make(map[int]bool),
 			FuncItemDone:    make(map[int]bool),
 			Reasonings:      make([]oaiToResponsesStateReasoning, 0),
+			Annotations:     make(map[int][]interface{}),
 		}
 	}
 	st := (*param).(*oaiToResponsesState)
@@ -196,6 +199,7 @@ func ConvertOpenAIChatCompletionsResponseToOpenAIResponses(ctx context.Context, 
 		st.UsageSeen = false
 		st.CompletionSent = false
 		st.StopSeen = false
+		st.Annotations = make(map[int][]interface{})
 		// response.created
 		created := `{"type":"response.created","sequence_number":0,"response":{"id":"","object":"response","created_at":0,"status":"in_progress","background":false,"error":null,"output":[]}}`
 		created, _ = sjson.Set(created, "sequence_number", nextSeq())
@@ -278,6 +282,21 @@ func ConvertOpenAIChatCompletionsResponseToOpenAIResponses(ctx context.Context, 
 						st.MsgTextBuf[idx] = &strings.Builder{}
 					}
 					st.MsgTextBuf[idx].WriteString(c.String())
+				}
+
+				// Handle annotations (web search citations)
+				if anns := delta.Get("annotations"); anns.Exists() && anns.IsArray() {
+					anns.ForEach(func(_, ann gjson.Result) bool {
+						entry := map[string]interface{}{
+							"type":        ann.Get("type").String(),
+							"url":         ann.Get("url").String(),
+							"title":       ann.Get("title").String(),
+							"start_index": ann.Get("start_index").Int(),
+							"end_index":   ann.Get("end_index").Int(),
+						}
+						st.Annotations[idx] = append(st.Annotations[idx], entry)
+						return true
+					})
 				}
 
 				// reasoning_content (OpenAI reasoning incremental text)
@@ -435,6 +454,9 @@ func ConvertOpenAIChatCompletionsResponseToOpenAIResponses(ctx context.Context, 
 							partDone, _ = sjson.Set(partDone, "output_index", i)
 							partDone, _ = sjson.Set(partDone, "content_index", 0)
 							partDone, _ = sjson.Set(partDone, "part.text", fullText)
+							if anns := st.Annotations[i]; len(anns) > 0 {
+								partDone, _ = sjson.Set(partDone, "part.annotations", anns)
+							}
 							out = append(out, emitRespEvent("response.content_part.done", partDone))
 
 							itemDone := `{"type":"response.output_item.done","sequence_number":0,"output_index":0,"item":{"id":"","type":"message","status":"completed","content":[{"type":"output_text","annotations":[],"logprobs":[],"text":""}],"role":"assistant"}}`
@@ -442,6 +464,9 @@ func ConvertOpenAIChatCompletionsResponseToOpenAIResponses(ctx context.Context, 
 							itemDone, _ = sjson.Set(itemDone, "output_index", i)
 							itemDone, _ = sjson.Set(itemDone, "item.id", fmt.Sprintf("msg_%s_%d", st.ResponseID, i))
 							itemDone, _ = sjson.Set(itemDone, "item.content.0.text", fullText)
+							if anns := st.Annotations[i]; len(anns) > 0 {
+								itemDone, _ = sjson.Set(itemDone, "item.content.0.annotations", anns)
+							}
 							out = append(out, emitRespEvent("response.output_item.done", itemDone))
 							st.MsgItemDone[i] = true
 						}
@@ -779,6 +804,23 @@ func ConvertOpenAIChatCompletionsResponseToOpenAIResponsesNonStream(_ context.Co
 					item := `{"id":"","type":"message","status":"completed","content":[{"type":"output_text","annotations":[],"logprobs":[],"text":""}],"role":"assistant"}`
 					item, _ = sjson.Set(item, "id", fmt.Sprintf("msg_%s_%d", id, int(choice.Get("index").Int())))
 					item, _ = sjson.Set(item, "content.0.text", c.String())
+					// Include annotations from message if present
+					if anns := msg.Get("annotations"); anns.Exists() && anns.IsArray() {
+						var annotations []interface{}
+						anns.ForEach(func(_, ann gjson.Result) bool {
+							annotations = append(annotations, map[string]interface{}{
+								"type":        ann.Get("type").String(),
+								"url":         ann.Get("url").String(),
+								"title":       ann.Get("title").String(),
+								"start_index": ann.Get("start_index").Int(),
+								"end_index":   ann.Get("end_index").Int(),
+							})
+							return true
+						})
+						if len(annotations) > 0 {
+							item, _ = sjson.Set(item, "content.0.annotations", annotations)
+						}
+					}
 					outputsWrapper, _ = sjson.SetRaw(outputsWrapper, "arr.-1", item)
 				}
 
