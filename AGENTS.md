@@ -5,11 +5,18 @@ This file provides guidance to AI agents working with code in this repository.
 ## Quick Start
 
 ```bash
-# Build
-go build -o cliproxy ./cmd/cliproxy
+# Build the API server
+go build -o cliproxy-server ./cmd/server
 
-# Run
-./cliproxy --config config.yaml
+# Build the operational CLI
+go build -o cliproxyctl ./cmd/cliproxyctl
+
+# Run the API server
+./cliproxy-server --config config.yaml
+
+# Run diagnostics / setup
+./cliproxyctl doctor --config config.yaml
+./cliproxyctl setup --config config.yaml
 
 # Docker
 docker compose up -d
@@ -39,6 +46,12 @@ export ANTHROPIC_API_KEY="sk-..."
 - Build generic building blocks before application logic.
 - A provider interface + registry is better than N isolated classes.
 - Template strings > hardcoded messages. Config-driven > code-driven.
+
+## Worktree Discipline
+
+- Use `.worktrees/` for active worktree lanes.
+- Treat `PROJECT-wtrees/` as migration-only legacy layout.
+- Keep the primary checkout on `main` and avoid branch development there.
 
 ### Research Before Implementing
 
@@ -108,3 +121,27 @@ kush/
 ├── parpour/        # Spec-first planning
 └── pheno-sdk/       # Python SDK
 ```
+
+<!-- PHENOTYPE_GOVERNANCE_OVERLAY_V1 -->
+## Phenotype Governance Overlay v1
+
+- Enforce `TDD + BDD + SDD` for all feature and workflow changes.
+- Enforce `Hexagonal + Clean + SOLID` boundaries by default.
+- Favor explicit failures over silent degradation; required dependencies must fail clearly when unavailable.
+- Keep local hot paths deterministic and low-latency; place distributed workflow logic behind durable orchestration boundaries.
+- Require policy gating, auditability, and traceable correlation IDs for agent and workflow actions.
+- Document architectural and protocol decisions before broad rollout changes.
+
+
+## Bot Review Retrigger and Rate-Limit Governance
+
+- Retrigger commands:
+  - CodeRabbit: `@coderabbitai full review`
+  - Gemini Code Assist: `@gemini-code-assist review` (fallback: `/gemini review`)
+- Rate-limit contract:
+  - Maximum one retrigger per bot per PR every 15 minutes.
+  - Before triggering, check latest PR comments for existing trigger markers and bot quota/rate-limit responses.
+  - If rate-limited, queue the retry for the later of 15 minutes or bot-provided retry time.
+  - After two consecutive rate-limit responses for the same bot/PR, stop auto-retries and post queued status with next attempt time.
+- Tracking marker required in PR comments for each trigger:
+  - `bot-review-trigger: <bot> <iso8601-time> <reason>`

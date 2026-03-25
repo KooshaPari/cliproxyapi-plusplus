@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	latestReleaseURL       = "https://api.github.com/repos/KooshaPari/cliproxyapi-plusplus/releases/latest"
+	latestReleaseURL       = "https://api.github.com/repos/kooshapari/cliproxyapi-plusplus/releases/latest"
 	latestReleaseUserAgent = "cliproxyapi++"
 )
 
@@ -46,8 +46,7 @@ func (h *Handler) GetLatestVersion(c *gin.Context) {
 		proxyURL = strings.TrimSpace(h.cfg.ProxyURL)
 	}
 	if proxyURL != "" {
-		sdkCfg := &sdkconfig.SDKConfig{ProxyURL: proxyURL}
-		util.SetProxy(sdkCfg, client)
+		util.SetProxy(&h.cfg.SDKConfig, client)
 	}
 
 	req, err := http.NewRequestWithContext(c.Request.Context(), http.MethodGet, latestReleaseURL, nil)

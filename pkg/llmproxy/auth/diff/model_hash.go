@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
 )
 
 const modelHashSalt = "auth-model-hash:v1"
@@ -129,14 +129,5 @@ func hashJoined(keys []string) string {
 	}
 	hasher := hmac.New(sha512.New, []byte(modelHashSalt))
 	_, _ = hasher.Write([]byte(strings.Join(keys, "\n")))
-	return hex.EncodeToString(hasher.Sum(nil))
-}
-
-func hashString(value string) string {
-	if strings.TrimSpace(value) == "" {
-		return ""
-	}
-	hasher := hmac.New(sha512.New, []byte(modelHashSalt))
-	_, _ = hasher.Write([]byte(value))
 	return hex.EncodeToString(hasher.Sum(nil))
 }

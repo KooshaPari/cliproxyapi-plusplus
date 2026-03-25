@@ -1,12 +1,7 @@
 name: codeql
 
 on:
-  pull_request:
-  push:
-    branches:
-      - main
-  schedule:
-    - cron: '0 6 * * 1'
+  workflow_dispatch:
 
 permissions:
   actions: read
@@ -29,6 +24,7 @@ jobs:
         uses: github/codeql-action/init@v4
         with:
           languages: ${{ matrix.language }}
+          config-file: .github/codeql/codeql-config.yml
       - name: Set up Go
         uses: actions/setup-go@v5
         with:

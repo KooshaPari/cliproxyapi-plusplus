@@ -21,8 +21,8 @@ const (
 )
 
 var repos = []string{
-	"router-for-me/CLIProxyAPIPlus",
-	"router-for-me/CLIProxyAPI",
+	"kooshapari/cliproxyapi-plusplus",
+	"kooshapari/cliproxyapi",
 }
 
 type sourceItem struct {
@@ -256,7 +256,7 @@ func loadSources(tmpDir string) ([]sourceItem, map[string]int, error) {
 				Body:      shrink(strFromAny(it["body"]), 1200),
 			}
 			out = append(out, s)
-			if strings.HasSuffix(repo, "CLIProxyAPIPlus") {
+			if strings.HasSuffix(repo, "cliproxyapi-plusplus") {
 				stats["issues_plus"]++
 			} else {
 				stats["issues_core"]++
@@ -282,7 +282,7 @@ func loadSources(tmpDir string) ([]sourceItem, map[string]int, error) {
 				Body:      shrink(strFromAny(it["body"]), 1200),
 			}
 			out = append(out, s)
-			if strings.HasSuffix(repo, "CLIProxyAPIPlus") {
+			if strings.HasSuffix(repo, "cliproxyapi-plusplus") {
 				stats["prs_plus"]++
 			} else {
 				stats["prs_core"]++
@@ -308,7 +308,7 @@ func loadSources(tmpDir string) ([]sourceItem, map[string]int, error) {
 				Body:      shrink(d.BodyText, 1200),
 			}
 			out = append(out, s)
-			if strings.HasSuffix(repo, "CLIProxyAPIPlus") {
+			if strings.HasSuffix(repo, "cliproxyapi-plusplus") {
 				stats["discussions_plus"]++
 			} else {
 				stats["discussions_core"]++
@@ -516,9 +516,9 @@ func writeProjectImportCSV(path string, board []boardItem) error {
 func writeBoardMarkdown(path string, board []boardItem, bj boardJSON) error {
 	var buf bytes.Buffer
 	now := time.Now().Format("2006-01-02")
-	buf.WriteString("# CLIProxyAPI Ecosystem 2000-Item Execution Board\n\n")
+	buf.WriteString("# cliproxyapi++ Ecosystem 2000-Item Execution Board\n\n")
 	fmt.Fprintf(&buf, "- Generated: %s\n", now)
-	buf.WriteString("- Scope: `router-for-me/CLIProxyAPIPlus` + `router-for-me/CLIProxyAPI` Issues, PRs, Discussions\n")
+	buf.WriteString("- Scope: `kooshapari/cliproxyapi-plusplus` + `kooshapari/cliproxyapi` Issues, PRs, Discussions\n")
 	buf.WriteString("- Objective: Implementation-ready backlog (up to 2000), including CLI extraction, bindings/API integration, docs quickstarts, and dev-runtime refresh\n\n")
 	buf.WriteString("## Coverage\n")
 	keys := []string{"generated_items", "sources_total_unique", "issues_plus", "issues_core", "prs_plus", "prs_core", "discussions_plus", "discussions_core"}

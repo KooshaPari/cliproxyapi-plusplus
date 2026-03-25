@@ -26,7 +26,6 @@ run_matrix_check() {
 create_fake_curl() {
   local output_path="$1"
   local state_file="$2"
-  local status_sequence="${3:-200}"
 
   cat >"${output_path}" <<'EOF'
 #!/usr/bin/env bash
@@ -95,7 +94,7 @@ run_skip_case() {
   local fake_curl="${workdir}/fake-curl.sh"
   local state="${workdir}/state"
 
-  create_fake_curl "${fake_curl}" "${state}" "200,200,200"
+  create_fake_curl "${fake_curl}" "${state}"
 
   run_matrix_check "empty cases are skipped" 0 \
     env \
@@ -113,7 +112,7 @@ run_pass_case() {
   local fake_curl="${workdir}/fake-curl.sh"
   local state="${workdir}/state"
 
-  create_fake_curl "${fake_curl}" "${state}" "200,200"
+  create_fake_curl "${fake_curl}" "${state}"
 
   run_matrix_check "successful responses complete without failure" 0 \
     env \
@@ -135,7 +134,7 @@ run_fail_case() {
   local fake_curl="${workdir}/fake-curl.sh"
   local state="${workdir}/state"
 
-  create_fake_curl "${fake_curl}" "${state}" "500"
+  create_fake_curl "${fake_curl}" "${state}"
 
   run_matrix_check "non-2xx responses fail when EXPECT_SUCCESS=0" 1 \
     env \

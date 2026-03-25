@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 	"syscall"
@@ -573,7 +574,10 @@ func ensureConfigFile(configPath string) error {
 		return fmt.Errorf("config directory not writable: %w", err)
 	}
 
-	templatePath := "config.example.yaml"
+	templatePath, err := resolveConfigTemplatePath()
+	if err != nil {
+		return err
+	}
 	payload, err := os.ReadFile(templatePath)
 	if err != nil {
 		return fmt.Errorf("read %s: %w", templatePath, err)
@@ -585,6 +589,37 @@ func ensureConfigFile(configPath string) error {
 		return fmt.Errorf("write config file: %w", err)
 	}
 	return nil
+}
+
+func resolveConfigTemplatePath() (string, error) {
+	candidates := make([]string, 0, 6)
+	addCandidate := func(path string) {
+		if trimmed := strings.TrimSpace(path); trimmed != "" {
+			candidates = append(candidates, trimmed)
+		}
+	}
+
+	addCandidate(os.Getenv("CLIPROXY_CONFIG_TEMPLATE"))
+	addCandidate("config.example.yaml")
+
+	if executablePath, err := os.Executable(); err == nil {
+		executableDir := filepath.Dir(executablePath)
+		addCandidate(filepath.Join(executableDir, "config.example.yaml"))
+		addCandidate(filepath.Join(executableDir, "..", "config.example.yaml"))
+	}
+
+	_, thisFile, _, ok := runtime.Caller(0)
+	if ok {
+		repoRoot := filepath.Dir(filepath.Dir(filepath.Dir(thisFile)))
+		addCandidate(filepath.Join(repoRoot, "config.example.yaml"))
+	}
+
+	for _, candidate := range candidates {
+		if configFileExists(candidate) {
+			return candidate, nil
+		}
+	}
+	return "", fmt.Errorf("read config.example.yaml: no template file found in known locations")
 }
 
 func persistDefaultKiroAliases(configPath string) error {

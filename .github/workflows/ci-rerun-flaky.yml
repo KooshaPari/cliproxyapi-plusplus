@@ -1,9 +1,7 @@
 name: ci-rerun-flaky
 
 on:
-  pull_request_target:
-    types:
-      - labeled
+  workflow_dispatch:
 
 permissions:
   actions: write

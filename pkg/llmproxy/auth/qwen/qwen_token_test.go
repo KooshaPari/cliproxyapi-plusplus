@@ -12,8 +12,8 @@ func TestQwenTokenStorage_SaveTokenToFile(t *testing.T) {
 	tmpDir := t.TempDir()
 	path := filepath.Join(tmpDir, "qwen-token.json")
 	ts := &QwenTokenStorage{
-		AccessToken: "access",
-		Email:       "test@example.com",
+		BaseTokenStorage: &BaseTokenStorage{AccessToken: "access"},
+		Email:            "test@example.com",
 	}
 
 	if err := ts.SaveTokenToFile(path); err != nil {
@@ -28,7 +28,7 @@ func TestQwenTokenStorage_SaveTokenToFile_RejectsTraversalPath(t *testing.T) {
 	t.Parallel()
 
 	ts := &QwenTokenStorage{
-		AccessToken: "access",
+		BaseTokenStorage: &BaseTokenStorage{AccessToken: "access"},
 	}
 	if err := ts.SaveTokenToFile("../qwen-token.json"); err == nil {
 		t.Fatal("expected traversal path to be rejected")

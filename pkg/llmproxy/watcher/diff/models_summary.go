@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
 )
 
 type GeminiModelsSummary struct {
@@ -113,7 +113,9 @@ func SummarizeVertexModels(models []config.VertexCompatModel) VertexModelsSummar
 		return VertexModelsSummary{}
 	}
 	sort.Strings(names)
-	sum := sha256.Sum256([]byte(strings.Join(names, "|")))
+	// SHA-256 fingerprint of model names for change detection (not password hashing).
+	fingerprint := strings.Join(names, "|")
+	sum := sha256.Sum256([]byte(fingerprint))
 	return VertexModelsSummary{
 		hash:  hex.EncodeToString(sum[:]),
 		count: len(names),

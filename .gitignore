@@ -1,7 +1,7 @@
 # Binaries
 cli-proxy-api
-cliproxy
-cliproxyapi++
+/cliproxy
+/cliproxyapi++
 *.exe
 
 # Hot-reload artifacts
@@ -62,3 +62,21 @@ cli-proxy-api-plus-integration-test
 boardsync
 releasebatch
 .cache
+
+# Added by Spec Kitty CLI (auto-managed)
+.windsurf/
+.qwen/
+.augment/
+.roo/
+.amazonq/
+.github/copilot/
+.kittify/.dashboard
+
+# AI tool artifacts
+.cursor/
+.kittify/
+.kilocode/
+.github/prompts/
+.github/copilot-instructions.md
+.claudeignore
+.llmignore

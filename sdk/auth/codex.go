@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/codex"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/browser"
+	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/auth/codex"
+	"github.com/router-for-me/CLIProxyAPI/v6/internal/browser"
 	// legacy client removed
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/misc"

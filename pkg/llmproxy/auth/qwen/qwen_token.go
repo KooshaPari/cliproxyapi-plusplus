@@ -58,6 +58,42 @@ func (ts *QwenTokenStorage) SaveTokenToFile(authFilePath string) error {
 	return ts.BaseTokenStorage.Save()
 }
 
+// QwenTokenStorage extends BaseTokenStorage with Qwen-specific fields for managing
+// access tokens, refresh tokens, and user account information.
+type QwenTokenStorage struct {
+	*BaseTokenStorage
+
+	// ResourceURL is the base URL for API requests.
+	ResourceURL string `json:"resource_url"`
+
+	// Email is the account email address associated with this token.
+	Email string `json:"email"`
+}
+
+// NewQwenTokenStorage creates a new QwenTokenStorage instance with the given file path.
+func NewQwenTokenStorage(filePath string) *QwenTokenStorage {
+	return &QwenTokenStorage{
+		BaseTokenStorage: NewBaseTokenStorage(filePath),
+	}
+}
+
+// SaveTokenToFile serializes the Qwen token storage to a JSON file.
+func (ts *QwenTokenStorage) SaveTokenToFile(authFilePath string) error {
+	misc.LogSavingCredentials(authFilePath)
+	if ts.BaseTokenStorage == nil {
+		return fmt.Errorf("qwen token: base token storage is nil")
+	}
+
+	cleaned, err := cleanTokenFilePath(authFilePath, "qwen token")
+	if err != nil {
+		return err
+	}
+
+	ts.FilePath = cleaned
+	ts.Type = "qwen"
+	return ts.Save()
+}
+
 func cleanTokenFilePath(path, scope string) (string, error) {
 	trimmed := strings.TrimSpace(path)
 	if trimmed == "" {

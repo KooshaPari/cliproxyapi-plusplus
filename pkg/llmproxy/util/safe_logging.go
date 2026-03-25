@@ -17,7 +17,7 @@ func MaskSensitiveData(data map[string]string) map[string]string {
 	if data == nil {
 		return nil
 	}
-	
+
 	result := make(map[string]string, len(data))
 	for k, v := range data {
 		result[k] = MaskValue(k, v)
@@ -30,7 +30,7 @@ func MaskValue(key, value string) string {
 	if value == "" {
 		return ""
 	}
-	
+
 	// Check if key is sensitive
 	if IsSensitiveKey(key) {
 		return MaskString(value)
@@ -71,7 +71,7 @@ func (s SafeLogField) String() string {
 	if s.Value == nil {
 		return ""
 	}
-	
+
 	// Convert to string
 	var str string
 	switch v := s.Value.(type) {
@@ -80,7 +80,7 @@ func (s SafeLogField) String() string {
 	default:
 		str = "****"
 	}
-	
+
 	if IsSensitiveKey(s.Key) {
 		return s.Key + "=" + MaskString(str)
 	}

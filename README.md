@@ -1,17 +1,10 @@
-# CLIProxyAPI++
+# cliproxyapi-plusplus
 
 Agent-native, multi-provider OpenAI-compatible proxy for production and local model routing.
 
-## Table of Contents
+This is the Plus version of [cliproxyapi-plusplus](https://github.com/kooshapari/cliproxyapi-plusplus), adding support for third-party providers on top of the mainline project.
 
-- [Key Features](#key-features)
-- [Architecture](#architecture)
-- [Getting Started](#getting-started)
-- [Operations and Security](#operations-and-security)
-- [Testing and Quality](#testing-and-quality)
-- [Documentation](#documentation)
-- [Contributing](#contributing)
-- [License](#license)
+All third-party provider support is maintained by community contributors; cliproxyapi-plusplus does not provide technical support. Please contact the corresponding community maintainer if you need assistance.
 
 ## Key Features
 
@@ -39,8 +32,29 @@ Agent-native, multi-provider OpenAI-compatible proxy for production and local mo
 ### Quick Start
 
 ```bash
-go build -o cliproxy ./cmd/server
-./cliproxy --config config.yaml
+# Create deployment directory
+mkdir -p ~/cli-proxy && cd ~/cli-proxy
+
+# Create docker-compose.yml
+cat > docker-compose.yml << 'EOF'
+services:
+  cli-proxy-api:
+    image: eceasy/cli-proxy-api-plus:latest
+    container_name: cli-proxy-api-plus
+    ports:
+      - "8317:8317"
+    volumes:
+      - ./config.yaml:/CLIProxyAPI/config.yaml
+      - ./auths:/root/.cli-proxy-api
+      - ./logs:/CLIProxyAPI/logs
+    restart: unless-stopped
+EOF
+
+# Download example config
+curl -o config.yaml https://raw.githubusercontent.com/kooshapari/cliproxyapi-plusplus/main/config.example.yaml
+
+# Pull and start
+docker compose pull && docker compose up -d
 ```
 
 ### Docker Quick Start
@@ -66,15 +80,13 @@ Quality gates are enforced via repo CI workflows (build/lint/path guards).
 
 ## Documentation
 
-Primary docs root is `docs/` with a unified category IA:
+- `docs/start-here.md` - Getting started guide
+- `docs/provider-usage.md` - Provider configuration
+- `docs/provider-quickstarts.md` - Per-provider guides
+- `docs/api/` - API reference
+- `docs/sdk-usage.md` - SDK guides
 
-- `docs/wiki/`
-- `docs/development/`
-- `docs/index/`
-- `docs/api/`
-- `docs/roadmap/`
-
-VitePress docs commands:
+## Environment
 
 ```bash
 cd docs
@@ -83,11 +95,11 @@ npm run docs:dev
 npm run docs:build
 ```
 
-## Contributing
+---
 
-1. Create a worktree branch.
-2. Implement and validate changes.
-3. Open a PR with clear scope and migration notes.
+This project only accepts pull requests that relate to third-party provider support. Any pull requests unrelated to third-party provider support will be rejected.
+
+If you need to submit any non-third-party provider changes, please open them against the [mainline](https://github.com/kooshapari/cliproxyapi-plusplus) repository.
 
 ## License
 

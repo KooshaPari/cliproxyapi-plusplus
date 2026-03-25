@@ -6,6 +6,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -14,7 +15,7 @@ import (
 
 	"github.com/google/uuid"
 	iflowauth "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/iflow"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/thinking"
 	cliproxyauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
 	cliproxyexecutor "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/executor"
@@ -39,6 +40,71 @@ func NewIFlowExecutor(cfg *config.Config) *IFlowExecutor { return &IFlowExecutor
 
 // Identifier returns the provider key.
 func (e *IFlowExecutor) Identifier() string { return "iflow" }
+
+type iflowProviderError struct {
+	Code       string
+	Message    string
+	Refreshable bool
+}
+
+func (e *iflowProviderError) Error() string {
+	if e == nil {
+		return ""
+	}
+	if e.Code != "" && e.Message != "" {
+		return fmt.Sprintf("iflow executor: upstream error status=%s: %s", e.Code, e.Message)
+	}
+	if e.Message != "" {
+		return fmt.Sprintf("iflow executor: upstream error: %s", e.Message)
+	}
+	return "iflow executor: upstream error"
+}
+
+func (e *iflowProviderError) StatusCode() int {
+	if e == nil {
+		return http.StatusBadGateway
+	}
+	switch e.Code {
+	case "401", "403", "439":
+		return http.StatusUnauthorized
+	case "429":
+		return http.StatusTooManyRequests
+	case "500", "502", "503", "504":
+		return http.StatusBadGateway
+	default:
+		return http.StatusBadGateway
+	}
+}
+
+func detectIFlowProviderError(rawJSON []byte) *iflowProviderError {
+	root := gjson.ParseBytes(rawJSON)
+	status := strings.TrimSpace(root.Get("status").String())
+	if status == "" || status == "0" || status == "200" {
+		return nil
+	}
+
+	if root.Get("choices").Exists() || root.Get("object").String() == "chat.completion" {
+		return nil
+	}
+
+	msg := strings.TrimSpace(root.Get("msg").String())
+	if msg == "" {
+		msg = strings.TrimSpace(root.Get("message").String())
+	}
+	if msg == "" && root.Get("body").Exists() && !root.Get("body").IsObject() && !root.Get("body").IsArray() {
+		msg = strings.TrimSpace(root.Get("body").String())
+	}
+	if msg == "" {
+		msg = "unknown provider error"
+	}
+
+	lowerMsg := strings.ToLower(msg)
+	return &iflowProviderError{
+		Code:        status,
+		Message:     msg,
+		Refreshable: status == "439" || strings.Contains(lowerMsg, "expired"),
+	}
+}
 
 // PrepareRequest injects iFlow credentials into the outgoing HTTP request.
 func (e *IFlowExecutor) PrepareRequest(req *http.Request, auth *cliproxyauth.Auth) error {
@@ -70,6 +136,10 @@ func (e *IFlowExecutor) HttpRequest(ctx context.Context, auth *cliproxyauth.Auth
 
 // Execute performs a non-streaming chat completion request.
 func (e *IFlowExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, req cliproxyexecutor.Request, opts cliproxyexecutor.Options) (resp cliproxyexecutor.Response, err error) {
+	return e.execute(ctx, auth, req, opts, true)
+}
+
+func (e *IFlowExecutor) execute(ctx context.Context, auth *cliproxyauth.Auth, req cliproxyexecutor.Request, opts cliproxyexecutor.Options, allowRefresh bool) (resp cliproxyexecutor.Response, err error) {
 	if opts.Alt == "responses/compact" {
 		return resp, statusErr{code: http.StatusNotImplemented, msg: "/responses/compact not supported"}
 	}
@@ -149,6 +219,20 @@ func (e *IFlowExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, re
 	// Ensure usage is recorded even if upstream omits usage metadata.
 	reporter.ensurePublished(ctx)
 
+	if providerErr := detectIFlowProviderError(data); providerErr != nil {
+		recordAPIResponseError(ctx, e.cfg, providerErr)
+		if allowRefresh && providerErr.Refreshable {
+			refreshedAuth, refreshErr := e.Refresh(ctx, auth)
+			if refreshErr != nil {
+				return resp, refreshErr
+			}
+			if refreshedAuth != nil {
+				return e.execute(ctx, refreshedAuth, req, opts, false)
+			}
+		}
+		return resp, providerErr
+	}
+
 	var param any
 	// Note: TranslateNonStream uses req.Model (original with suffix) to preserve
 	// the original model name in the response for client compatibility.
@@ -226,6 +310,10 @@ func (e *IFlowExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.Au
 
 	httpResp, err := ExecuteHTTPRequestForStreaming(ctx, e.cfg, auth, httpReq, "iflow executor")
 	if err != nil {
+		var status statusErr
+		if from == sdktranslator.FromString("openai-response") && errors.As(err, &status) && status.code == http.StatusNotAcceptable {
+			return e.executeResponsesStreamFallback(ctx, auth, req, opts)
+		}
 		return nil, err
 	}
 
@@ -256,6 +344,46 @@ func (e *IFlowExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.Au
 	}()
 
 	return &cliproxyexecutor.StreamResult{Headers: httpResp.Header.Clone(), Chunks: wrappedOut}, nil
+}
+
+func (e *IFlowExecutor) executeResponsesStreamFallback(
+	ctx context.Context,
+	auth *cliproxyauth.Auth,
+	req cliproxyexecutor.Request,
+	opts cliproxyexecutor.Options,
+) (*cliproxyexecutor.StreamResult, error) {
+	fallbackReq := req
+	if updated, err := sjson.SetBytes(fallbackReq.Payload, "stream", false); err == nil {
+		fallbackReq.Payload = updated
+	}
+
+	fallbackOpts := opts
+	fallbackOpts.Stream = false
+	if updated, err := sjson.SetBytes(fallbackOpts.OriginalRequest, "stream", false); err == nil {
+		fallbackOpts.OriginalRequest = updated
+	}
+
+	resp, err := e.Execute(ctx, auth, fallbackReq, fallbackOpts)
+	if err != nil {
+		return nil, err
+	}
+
+	payload, err := synthesizeOpenAIResponsesCompletionEvent(resp.Payload)
+	if err != nil {
+		return nil, err
+	}
+
+	headers := resp.Headers.Clone()
+	if headers == nil {
+		headers = make(http.Header)
+	}
+	headers.Set("Content-Type", "text/event-stream")
+	headers.Del("Content-Length")
+
+	out := make(chan cliproxyexecutor.StreamChunk, 1)
+	out <- cliproxyexecutor.StreamChunk{Payload: payload}
+	close(out)
+	return &cliproxyexecutor.StreamResult{Headers: headers, Chunks: out}, nil
 }
 
 func (e *IFlowExecutor) CountTokens(ctx context.Context, auth *cliproxyauth.Auth, req cliproxyexecutor.Request, opts cliproxyexecutor.Options) (cliproxyexecutor.Response, error) {

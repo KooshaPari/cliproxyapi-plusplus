@@ -1,24 +1,15 @@
 package executor
 
 import (
-	"bufio"
 	"bytes"
 	"context"
-	"crypto/sha256"
-	"encoding/base64"
-	"encoding/binary"
-	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
-	"os"
-	"path/filepath"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -31,7 +22,6 @@ import (
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/util"
 	cliproxyauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
 	cliproxyexecutor "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/executor"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/usage"
 	sdktranslator "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/translator"
 	log "github.com/sirupsen/logrus"
 )
@@ -337,82 +327,6 @@ func NewKiroExecutor(cfg *config.Config) *KiroExecutor {
 
 // Identifier returns the unique identifier for this executor.
 func (e *KiroExecutor) Identifier() string { return "kiro" }
-
-// applyDynamicFingerprint applies token-specific fingerprint headers to the request
-// For IDC auth, uses dynamic fingerprint-based User-Agent
-// For other auth types, uses static Amazon Q CLI style headers
-func applyDynamicFingerprint(req *http.Request, auth *cliproxyauth.Auth) {
-	if isIDCAuth(auth) {
-		// Get token-specific fingerprint for dynamic UA generation
-		tokenKey := getTokenKey(auth)
-		fp := getGlobalFingerprintManager().GetFingerprint(tokenKey)
-
-		// Use fingerprint-generated dynamic User-Agent
-		req.Header.Set("User-Agent", fp.BuildUserAgent())
-		req.Header.Set("X-Amz-User-Agent", fp.BuildAmzUserAgent())
-		req.Header.Set("x-amzn-kiro-agent-mode", kiroIDEAgentModeVibe)
-
-		log.Debugf("kiro: using dynamic fingerprint for token %s (SDK:%s, OS:%s/%s, Kiro:%s)",
-			tokenKey[:8]+"...", fp.SDKVersion, fp.OSType, fp.OSVersion, fp.KiroVersion)
-	} else {
-		// Use static Amazon Q CLI style headers for non-IDC auth
-		req.Header.Set("User-Agent", kiroUserAgent)
-		req.Header.Set("X-Amz-User-Agent", kiroFullUserAgent)
-	}
-}
-
-// PrepareRequest prepares the HTTP request before execution.
-func (e *KiroExecutor) PrepareRequest(req *http.Request, auth *cliproxyauth.Auth) error {
-	if req == nil {
-		return nil
-	}
-	accessToken, _ := kiroCredentials(auth)
-	if strings.TrimSpace(accessToken) == "" {
-		return statusErr{code: http.StatusUnauthorized, msg: "missing access token"}
-	}
-
-	// Apply dynamic fingerprint-based headers
-	applyDynamicFingerprint(req, auth)
-
-	req.Header.Set("Amz-Sdk-Request", "attempt=1; max=3")
-	req.Header.Set("Amz-Sdk-Invocation-Id", uuid.New().String())
-	req.Header.Set("Authorization", "Bearer "+accessToken)
-	var attrs map[string]string
-	if auth != nil {
-		attrs = auth.Attributes
-	}
-	util.ApplyCustomHeadersFromAttrs(req, attrs)
-	return nil
-}
-
-// HttpRequest injects Kiro credentials into the request and executes it.
-func (e *KiroExecutor) HttpRequest(ctx context.Context, auth *cliproxyauth.Auth, req *http.Request) (*http.Response, error) {
-	if req == nil {
-		return nil, fmt.Errorf("kiro executor: request is nil")
-	}
-	if ctx == nil {
-		ctx = req.Context()
-	}
-	httpReq := req.WithContext(ctx)
-	if errPrepare := e.PrepareRequest(httpReq, auth); errPrepare != nil {
-		return nil, errPrepare
-	}
-	httpClient := newKiroHTTPClientWithPooling(ctx, e.cfg, auth, 0)
-	return httpClient.Do(httpReq)
-}
-
-// getTokenKey returns a unique key for rate limiting based on auth credentials.
-// Uses auth ID if available, otherwise falls back to a hash of the access token.
-func getTokenKey(auth *cliproxyauth.Auth) string {
-	if auth != nil && auth.ID != "" {
-		return auth.ID
-	}
-	accessToken, _ := kiroCredentials(auth)
-	if len(accessToken) > 16 {
-		return accessToken[:16]
-	}
-	return accessToken
-}
 
 // Execute sends the request to Kiro API and returns the response.
 // Supports automatic token refresh on 401/403 errors.

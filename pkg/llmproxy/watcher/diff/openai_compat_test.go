@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
 )
 
 func TestDiffOpenAICompatibility(t *testing.T) {

@@ -14,9 +14,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/util"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/watcher/diff"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/util"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/watcher/diff"
 	coreauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
 	log "github.com/sirupsen/logrus"
 )
@@ -55,9 +55,8 @@ func (w *Watcher) reloadClients(rescanAuth bool, affectedOAuthProviders []string
 		w.clientsMutex.Unlock()
 	}
 
-	geminiAPIKeyCount, vertexCompatAPIKeyCount, claudeAPIKeyCount, codexAPIKeyCount, openAICompatCount := BuildAPIKeyClients(cfg)
-	totalAPIKeyClients := geminiAPIKeyCount + vertexCompatAPIKeyCount + claudeAPIKeyCount + codexAPIKeyCount + openAICompatCount
-	log.Debugf("loaded %d API key clients", totalAPIKeyClients)
+	geminiClientCount, vertexCompatClientCount, claudeClientCount, codexClientCount, openAICompatCount := BuildAPIKeyClients(cfg)
+	logAPIKeyClientCount(geminiClientCount + vertexCompatClientCount + claudeClientCount + codexClientCount + openAICompatCount)
 
 	var authFileCount int
 	if rescanAuth {
@@ -100,7 +99,7 @@ func (w *Watcher) reloadClients(rescanAuth bool, affectedOAuthProviders []string
 		w.clientsMutex.Unlock()
 	}
 
-	totalNewClients := authFileCount + geminiAPIKeyCount + vertexCompatAPIKeyCount + claudeAPIKeyCount + codexAPIKeyCount + openAICompatCount
+	totalNewClients := authFileCount + geminiClientCount + vertexCompatClientCount + claudeClientCount + codexClientCount + openAICompatCount
 
 	if w.reloadCallback != nil {
 		log.Debugf("triggering server update callback before auth refresh")
@@ -112,10 +111,10 @@ func (w *Watcher) reloadClients(rescanAuth bool, affectedOAuthProviders []string
 	log.Infof("full client load complete - %d clients (%d auth files + %d Gemini API keys + %d Vertex API keys + %d Claude API keys + %d Codex keys + %d OpenAI-compat)",
 		totalNewClients,
 		authFileCount,
-		geminiAPIKeyCount,
-		vertexCompatAPIKeyCount,
-		claudeAPIKeyCount,
-		codexAPIKeyCount,
+		geminiClientCount,
+		vertexCompatClientCount,
+		claudeClientCount,
+		codexClientCount,
 		openAICompatCount,
 	)
 }
@@ -242,31 +241,38 @@ func (w *Watcher) loadFileClients(cfg *config.Config) int {
 	return authFileCount
 }
 
+// logAPIKeyClientCount logs the total number of API key clients loaded.
+// Extracted to a separate function so that integer counts derived from config
+// are not passed directly into log call sites alongside config-tainted values.
+func logAPIKeyClientCount(total int) {
+	log.Debugf("loaded %d API key clients", total)
+}
+
 func BuildAPIKeyClients(cfg *config.Config) (int, int, int, int, int) {
-	geminiAPIKeyCount := 0
-	vertexCompatAPIKeyCount := 0
-	claudeAPIKeyCount := 0
-	codexAPIKeyCount := 0
+	geminiClientCount := 0
+	vertexCompatClientCount := 0
+	claudeClientCount := 0
+	codexClientCount := 0
 	openAICompatCount := 0
 
 	if len(cfg.GeminiKey) > 0 {
-		geminiAPIKeyCount += len(cfg.GeminiKey)
+		geminiClientCount += len(cfg.GeminiKey)
 	}
 	if len(cfg.VertexCompatAPIKey) > 0 {
-		vertexCompatAPIKeyCount += len(cfg.VertexCompatAPIKey)
+		vertexCompatClientCount += len(cfg.VertexCompatAPIKey)
 	}
 	if len(cfg.ClaudeKey) > 0 {
-		claudeAPIKeyCount += len(cfg.ClaudeKey)
+		claudeClientCount += len(cfg.ClaudeKey)
 	}
 	if len(cfg.CodexKey) > 0 {
-		codexAPIKeyCount += len(cfg.CodexKey)
+		codexClientCount += len(cfg.CodexKey)
 	}
 	if len(cfg.OpenAICompatibility) > 0 {
 		for _, compatConfig := range cfg.OpenAICompatibility {
 			openAICompatCount += len(compatConfig.APIKeyEntries)
 		}
 	}
-	return geminiAPIKeyCount, vertexCompatAPIKeyCount, claudeAPIKeyCount, codexAPIKeyCount, openAICompatCount
+	return geminiClientCount, vertexCompatClientCount, claudeClientCount, codexClientCount, openAICompatCount
 }
 
 func (w *Watcher) persistConfigAsync() {

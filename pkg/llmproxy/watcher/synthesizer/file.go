@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/runtime/geminicli"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/runtime/geminicli"
 	coreauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
 )
 

@@ -14,6 +14,7 @@ import (
 
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/api"
 	kiroauth "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/kiro"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/executor"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/registry"
 	_ "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/usage"
@@ -23,7 +24,6 @@ import (
 	sdkAuth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/auth"
 	coreauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/usage"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -533,8 +533,8 @@ func (s *Service) Run(ctx context.Context) error {
 	s.ensureWebsocketGateway()
 	if s.server != nil && s.wsGateway != nil {
 		s.server.AttachWebsocketRoute(s.wsGateway.Path(), s.wsGateway.Handler())
-		// Codex expects WebSocket at /v1/responses - already registered in server.go as POST
-		// s.server.AttachWebsocketRoute("/v1/responses", s.wsGateway.Handler())
+		// Codex expects WebSocket at /v1/responses; register same handler for compatibility
+		s.server.AttachWebsocketRoute("/v1/responses", s.wsGateway.Handler())
 		s.server.SetWebsocketAuthChangeHandler(func(oldEnabled, newEnabled bool) {
 			if oldEnabled == newEnabled {
 				return
@@ -609,6 +609,8 @@ func (s *Service) Run(ctx context.Context) error {
 			switch nextStrategy {
 			case "fill-first":
 				selector = &coreauth.FillFirstSelector{}
+			case "sticky-round-robin", "stickyroundrobin", "srr":
+				selector = coreauth.NewStickyRoundRobinSelector(1000)
 			default:
 				selector = &coreauth.RoundRobinSelector{}
 			}

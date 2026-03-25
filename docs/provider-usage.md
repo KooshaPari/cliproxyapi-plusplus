@@ -1,6 +1,6 @@
 # Provider Usage
 
-`cliproxyapi++` routes OpenAI-style requests to many provider backends through a unified auth and translation layer.
+`cliproxyapi-plusplus` routes OpenAI-style requests to many provider backends through a unified auth and translation layer.
 
 This page covers provider strategy and high-signal setup patterns. For full block-by-block coverage, use [Provider Catalog](/provider-catalog).
 
@@ -24,7 +24,7 @@ This page covers provider strategy and high-signal setup patterns. For full bloc
 
 ## Provider-First Architecture
 
-`cliproxyapi++` keeps one client-facing API (`/v1/*`) and pushes provider complexity into configuration:
+`cliproxyapi-plusplus` keeps one client-facing API (`/v1/*`) and pushes provider complexity into configuration:
 
 1. Inbound auth is validated from top-level `api-keys`.
 2. Model names are resolved by prefix + alias.

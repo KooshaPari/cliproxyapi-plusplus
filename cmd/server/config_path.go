@@ -53,3 +53,7 @@ func isReadableConfigFile(path string) bool {
 	}
 	return !info.IsDir()
 }
+
+func configFileExists(path string) bool {
+	return isReadableConfigFile(path)
+}

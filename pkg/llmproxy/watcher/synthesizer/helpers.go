@@ -7,8 +7,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/watcher/diff"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/watcher/diff"
 	coreauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
 )
 
@@ -30,7 +30,9 @@ func (g *StableIDGenerator) Next(kind string, parts ...string) (string, string) 
 	if g == nil {
 		return kind + ":000000000000", "000000000000"
 	}
-	hasher := sha256.New()
+	// SHA256 is used here to generate stable deterministic IDs, not for password hashing.
+	// The hash is truncated to 12 hex chars to create short stable identifiers.
+	hasher := sha256.New() // codeql[go/weak-sensitive-data-hashing]
 	hasher.Write([]byte(kind))
 	for _, part := range parts {
 		trimmed := strings.TrimSpace(part)
