@@ -13,7 +13,6 @@ import (
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/registry"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/util"
-	sdkconfig "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/config"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 )
@@ -46,8 +45,8 @@ func (h *Handler) GetLatestVersion(c *gin.Context) {
 		proxyURL = strings.TrimSpace(h.cfg.ProxyURL)
 	}
 	if proxyURL != "" {
-		sdkCfg := &sdkconfig.SDKConfig{ProxyURL: proxyURL}
-		util.SetProxy(sdkCfg, client)
+		proxyCfg := &config.SDKConfig{ProxyURL: proxyURL}
+		util.SetProxy(proxyCfg, client)
 	}
 
 	req, err := http.NewRequestWithContext(c.Request.Context(), http.MethodGet, latestReleaseURL, nil)
