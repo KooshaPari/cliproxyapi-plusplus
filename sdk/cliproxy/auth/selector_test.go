@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/executor"
+	cliproxyexecutor "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/executor"
 )
 
 func TestFillFirstSelectorPick_Deterministic(t *testing.T) {
@@ -279,6 +279,42 @@ func TestSelectorPick_AllCooldownReturnsModelCooldownError(t *testing.T) {
 			t.Fatalf("Error().error.provider = %q, want %q", got, "gemini")
 		}
 	})
+}
+
+func TestSelectorPick_AllUnavailableReturnsServiceUnavailable(t *testing.T) {
+	t.Parallel()
+
+	model := "test-model"
+	now := time.Now()
+	auths := []*Auth{
+		{
+			ID: "a",
+			ModelStates: map[string]*ModelState{
+				model: {
+					Status:         StatusError,
+					Unavailable:    true,
+					NextRetryAfter: now.Add(30 * time.Second),
+				},
+			},
+		},
+	}
+
+	selector := &FillFirstSelector{}
+	_, err := selector.Pick(context.Background(), "iflow", model, cliproxyexecutor.Options{}, auths)
+	if err == nil {
+		t.Fatalf("Pick() error = nil")
+	}
+
+	var authErr *Error
+	if !errors.As(err, &authErr) {
+		t.Fatalf("Pick() error = %T, want *Error", err)
+	}
+	if authErr.Code != "auth_unavailable" {
+		t.Fatalf("error code = %q, want %q", authErr.Code, "auth_unavailable")
+	}
+	if authErr.StatusCode() != http.StatusServiceUnavailable {
+		t.Fatalf("StatusCode() = %d, want %d", authErr.StatusCode(), http.StatusServiceUnavailable)
+	}
 }
 
 func TestIsAuthBlockedForModel_UnavailableWithoutNextRetryIsNotBlocked(t *testing.T) {

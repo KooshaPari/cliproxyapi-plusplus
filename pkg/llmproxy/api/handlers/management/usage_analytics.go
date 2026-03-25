@@ -28,22 +28,22 @@ type CostAggregationRequest struct {
 
 // CostAggregationResponse contains aggregated cost data
 type CostAggregationResponse struct {
-	StartTime   time.Time      `json:"start_time"`
-	EndTime     time.Time      `json:"end_time"`
-	Granularity string         `json:"granularity"`
-	GroupBy     string         `json:"group_by"`
-	TotalCost   float64        `json:"total_cost"`
-	TotalTokens int64          `json:"total_tokens"`
-	Groups      []CostGroup    `json:"groups"`
+	StartTime   time.Time         `json:"start_time"`
+	EndTime     time.Time         `json:"end_time"`
+	Granularity string            `json:"granularity"`
+	GroupBy     string            `json:"group_by"`
+	TotalCost   float64           `json:"total_cost"`
+	TotalTokens int64             `json:"total_tokens"`
+	Groups      []CostGroup       `json:"groups"`
 	TimeSeries  []TimeSeriesPoint `json:"time_series,omitempty"`
 }
 
 // CostGroup represents a grouped cost entry
 type CostGroup struct {
-	Key         string  `json:"key"` // model/provider/client ID
-	Cost        float64 `json:"cost"`
-	InputTokens int64   `json:"input_tokens"`
-	OutputTokens int64  `json:"output_tokens"`
+	Key          string  `json:"key"` // model/provider/client ID
+	Cost         float64 `json:"cost"`
+	InputTokens  int64   `json:"input_tokens"`
+	OutputTokens int64   `json:"output_tokens"`
 	Requests     int64   `json:"requests"`
 	AvgLatencyMs float64 `json:"avg_latency_ms"`
 }
@@ -51,17 +51,17 @@ type CostGroup struct {
 // TimeSeriesPoint represents a point in time series data
 type TimeSeriesPoint struct {
 	Timestamp    time.Time `json:"timestamp"`
-	Cost        float64   `json:"cost"`
-	InputTokens int64     `json:"input_tokens"`
+	Cost         float64   `json:"cost"`
+	InputTokens  int64     `json:"input_tokens"`
 	OutputTokens int64     `json:"output_tokens"`
-	Requests    int64     `json:"requests"`
+	Requests     int64     `json:"requests"`
 }
 
 // UsageAnalytics provides usage analytics functionality
 type UsageAnalytics struct {
-	mu            sync.RWMutex
-	records       []UsageRecord
-	maxRecords    int
+	mu         sync.RWMutex
+	records    []UsageRecord
+	maxRecords int
 }
 
 // UsageRecord represents a single usage record
@@ -245,10 +245,10 @@ func (u *UsageAnalytics) generateTimeSeries(records []UsageRecord, granularity s
 // GetTopModels returns top models by cost
 func (u *UsageAnalytics) GetTopModels(ctx context.Context, limit int, timeRange time.Duration) ([]CostGroup, error) {
 	req := &CostAggregationRequest{
-		StartTime:  time.Now().Add(-timeRange),
-		EndTime:    time.Now(),
+		StartTime:   time.Now().Add(-timeRange),
+		EndTime:     time.Now(),
 		Granularity: "day",
-		GroupBy:    "model",
+		GroupBy:     "model",
 	}
 
 	resp, err := u.GetCostAggregation(ctx, req)
@@ -276,10 +276,10 @@ func (u *UsageAnalytics) GetTopModels(ctx context.Context, limit int, timeRange 
 // GetProviderBreakdown returns cost breakdown by provider
 func (u *UsageAnalytics) GetProviderBreakdown(ctx context.Context, timeRange time.Duration) (map[string]float64, error) {
 	req := &CostAggregationRequest{
-		StartTime:  time.Now().Add(-timeRange),
-		EndTime:    time.Now(),
+		StartTime:   time.Now().Add(-timeRange),
+		EndTime:     time.Now(),
 		Granularity: "day",
-		GroupBy:    "provider",
+		GroupBy:     "provider",
 	}
 
 	resp, err := u.GetCostAggregation(ctx, req)
@@ -298,10 +298,10 @@ func (u *UsageAnalytics) GetProviderBreakdown(ctx context.Context, timeRange tim
 // GetDailyTrend returns daily cost trend
 func (u *UsageAnalytics) GetDailyTrend(ctx context.Context, days int) ([]TimeSeriesPoint, error) {
 	req := &CostAggregationRequest{
-		StartTime:  time.Now().Add(time.Duration(-days) * 24 * time.Hour),
-		EndTime:    time.Now(),
+		StartTime:   time.Now().Add(time.Duration(-days) * 24 * time.Hour),
+		EndTime:     time.Now(),
 		Granularity: "day",
-		GroupBy:    "model",
+		GroupBy:     "model",
 	}
 
 	resp, err := u.GetCostAggregation(ctx, req)
@@ -315,10 +315,10 @@ func (u *UsageAnalytics) GetDailyTrend(ctx context.Context, days int) ([]TimeSer
 // GetCostSummary returns a summary of costs
 func (u *UsageAnalytics) GetCostSummary(ctx context.Context, timeRange time.Duration) (map[string]interface{}, error) {
 	req := &CostAggregationRequest{
-		StartTime:  time.Now().Add(-timeRange),
-		EndTime:    time.Now(),
+		StartTime:   time.Now().Add(-timeRange),
+		EndTime:     time.Now(),
 		Granularity: "day",
-		GroupBy:    "model",
+		GroupBy:     "model",
 	}
 
 	resp, err := u.GetCostAggregation(ctx, req)
@@ -344,7 +344,7 @@ func (u *UsageAnalytics) GetCostSummary(ctx context.Context, timeRange time.Dura
 		"total_cost":           resp.TotalCost,
 		"total_tokens":         resp.TotalTokens,
 		"total_requests":       totalRequests,
-		"total_input_tokens":    totalInputTokens,
+		"total_input_tokens":   totalInputTokens,
 		"total_output_tokens":  totalOutputTokens,
 		"avg_cost_per_request": avgCostPerRequest,
 		"time_range":           timeRange.String(),
@@ -368,7 +368,7 @@ func NewUsageAnalyticsHandler() *UsageAnalyticsHandler {
 // GETCostSummary handles GET /v1/analytics/costs
 func (h *UsageAnalyticsHandler) GETCostSummary(c *gin.Context) {
 	timeRange := c.DefaultQuery("timeRange", "24h")
-	
+
 	duration, err := time.ParseDuration(timeRange)
 	if err != nil {
 		duration = 24 * time.Hour
@@ -404,7 +404,7 @@ func (h *UsageAnalyticsHandler) GETCostAggregation(c *gin.Context) {
 func (h *UsageAnalyticsHandler) GETTopModels(c *gin.Context) {
 	limit := 10
 	timeRange := c.DefaultQuery("timeRange", "24h")
-	
+
 	duration, err := time.ParseDuration(timeRange)
 	if err != nil {
 		duration = 24 * time.Hour
@@ -426,7 +426,7 @@ func (h *UsageAnalyticsHandler) GETTopModels(c *gin.Context) {
 // GETProviderBreakdown handles GET /v1/analytics/provider-breakdown
 func (h *UsageAnalyticsHandler) GETProviderBreakdown(c *gin.Context) {
 	timeRange := c.DefaultQuery("timeRange", "24h")
-	
+
 	duration, err := time.ParseDuration(timeRange)
 	if err != nil {
 		duration = 24 * time.Hour
