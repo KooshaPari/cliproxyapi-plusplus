@@ -1956,10 +1956,12 @@ func (h *Handler) RequestGitHubToken(c *gin.Context) {
 			return
 		}
 
-		username, errUser := deviceClient.FetchUserInfo(ctx, tokenData.AccessToken)
+		userInfo, errUser := deviceClient.FetchUserInfo(ctx, tokenData.AccessToken)
+		username := "github-user"
 		if errUser != nil {
 			log.Warnf("Failed to fetch user info: %v", errUser)
-			username = "github-user"
+		} else {
+			username = userInfo.Login
 		}
 
 		tokenStorage := &copilot.CopilotTokenStorage{

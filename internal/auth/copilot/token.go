@@ -26,6 +26,10 @@ type CopilotTokenStorage struct {
 	ExpiresAt string `json:"expires_at,omitempty"`
 	// Username is the GitHub username associated with this token.
 	Username string `json:"username"`
+	// Email is the GitHub email address associated with this account.
+	Email string `json:"email,omitempty"`
+	// Name is the display name of the GitHub account owner.
+	Name string `json:"name,omitempty"`
 	// Type indicates the authentication provider type, always "github-copilot" for this storage.
 	Type string `json:"type"`
 }
@@ -46,6 +50,10 @@ type CopilotAuthBundle struct {
 	TokenData *CopilotTokenData
 	// Username is the GitHub username.
 	Username string
+	// Email is the GitHub email address for the authenticated user.
+	Email string
+	// Name is the display name of the authenticated user.
+	Name string
 }
 
 // DeviceCodeResponse represents GitHub's device code response.

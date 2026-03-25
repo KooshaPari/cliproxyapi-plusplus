@@ -11,3 +11,12 @@ type SDKConfig = internalconfig.SDKConfig
 
 // StreamingConfig is an alias to internal/config.StreamingConfig.
 type StreamingConfig = internalconfig.StreamingConfig
+
+// Config is an alias to internal/config.Config.
+type Config = internalconfig.Config
+
+// LoadConfig is an alias to internal/config.LoadConfig.
+var LoadConfig = internalconfig.LoadConfig
+
+// SaveConfigPreserveComments is an alias to internal/config.SaveConfigPreserveComments.
+var SaveConfigPreserveComments = internalconfig.SaveConfigPreserveComments

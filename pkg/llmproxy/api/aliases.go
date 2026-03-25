@@ -16,4 +16,5 @@ var (
 	WithKeepAliveEndpoint         = api.WithKeepAliveEndpoint
 	WithRequestLoggerFactory      = api.WithRequestLoggerFactory
 	NewServer                     = api.NewServer
+	WithPostAuthHook              = api.WithPostAuthHook
 )
