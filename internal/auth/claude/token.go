@@ -4,7 +4,7 @@
 package claude
 
 import (
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/auth/base"
+	"github.com/KooshaPari/phenotype-go-auth"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/misc"
 )
 
