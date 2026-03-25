@@ -12,8 +12,13 @@ import (
 	"unicode/utf8"
 
 	"github.com/google/uuid"
+<<<<<<< HEAD
 	kiroclaude "github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/translator/kiro/claude"
 	kirocommon "github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/translator/kiro/common"
+=======
+	kiroclaude "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/translator/kiro/claude"
+	kirocommon "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/translator/kiro/common"
+>>>>>>> origin/main
 	log "github.com/sirupsen/logrus"
 	"github.com/tidwall/gjson"
 )

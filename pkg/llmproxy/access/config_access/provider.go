@@ -5,8 +5,13 @@ import (
 	"net/http"
 	"strings"
 
+<<<<<<< HEAD
 	sdkaccess "github.com/router-for-me/CLIProxyAPI/v6/sdk/access"
 	sdkconfig "github.com/router-for-me/CLIProxyAPI/v6/sdk/config"
+=======
+	sdkaccess "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/access"
+	sdkconfig "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/config"
+>>>>>>> origin/main
 )
 
 // Register ensures the config-access provider is available to the access manager.

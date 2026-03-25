@@ -173,12 +173,32 @@ func ConvertCodexResponseToClaude(_ context.Context, _ string, originalRequestRa
 			output += fmt.Sprintf("data: %s\n\n", template)
 		}
 	case "response.function_call_arguments.delta":
+<<<<<<< HEAD
+=======
+		(*param).(*ConvertCodexResponseToClaudeParams).HasReceivedArgumentsDelta = true
+>>>>>>> origin/main
 		template = `{"type":"content_block_delta","index":0,"delta":{"type":"input_json_delta","partial_json":""}}`
 		template, _ = sjson.Set(template, "index", (*param).(*ConvertCodexResponseToClaudeParams).BlockIndex)
 		template, _ = sjson.Set(template, "delta.partial_json", rootResult.Get("delta").String())
 
 		output += "event: content_block_delta\n"
 		output += fmt.Sprintf("data: %s\n\n", template)
+<<<<<<< HEAD
+=======
+	case "response.function_call_arguments.done":
+		// If we already received delta events, skip the done event to avoid duplication.
+		if (*param).(*ConvertCodexResponseToClaudeParams).HasReceivedArgumentsDelta {
+			return nil
+		} else {
+			// No deltas were received; emit the full arguments as a single delta.
+			template = `{"type":"content_block_delta","index":0,"delta":{"type":"input_json_delta","partial_json":""}}`
+			template, _ = sjson.Set(template, "index", (*param).(*ConvertCodexResponseToClaudeParams).BlockIndex)
+			template, _ = sjson.Set(template, "delta.partial_json", rootResult.Get("arguments").String())
+
+			output += "event: content_block_delta\n"
+			output += fmt.Sprintf("data: %s\n\n", template)
+		}
+>>>>>>> origin/main
 	}
 
 	return []string{output}

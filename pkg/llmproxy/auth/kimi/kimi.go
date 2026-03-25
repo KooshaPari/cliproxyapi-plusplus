@@ -15,8 +15,14 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+<<<<<<< HEAD
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/config"
 	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/util"
+=======
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/base"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/util"
+>>>>>>> origin/main
 	log "github.com/sirupsen/logrus"
 )
 
@@ -78,6 +84,7 @@ func (k *KimiAuth) CreateTokenStorage(bundle *KimiAuthBundle) *KimiTokenStorage 
 		expired = time.Unix(bundle.TokenData.ExpiresAt, 0).UTC().Format(time.RFC3339)
 	}
 	return &KimiTokenStorage{
+<<<<<<< HEAD
 		AccessToken:  bundle.TokenData.AccessToken,
 		RefreshToken: bundle.TokenData.RefreshToken,
 		TokenType:    bundle.TokenData.TokenType,
@@ -85,6 +92,17 @@ func (k *KimiAuth) CreateTokenStorage(bundle *KimiAuthBundle) *KimiTokenStorage 
 		DeviceID:     strings.TrimSpace(bundle.DeviceID),
 		Expired:      expired,
 		Type:         "kimi",
+=======
+		BaseTokenStorage: base.BaseTokenStorage{
+			AccessToken:  bundle.TokenData.AccessToken,
+			RefreshToken: bundle.TokenData.RefreshToken,
+			Type:         "kimi",
+		},
+		TokenType: bundle.TokenData.TokenType,
+		Scope:     bundle.TokenData.Scope,
+		DeviceID:  strings.TrimSpace(bundle.DeviceID),
+		Expired:   expired,
+>>>>>>> origin/main
 	}
 }
 

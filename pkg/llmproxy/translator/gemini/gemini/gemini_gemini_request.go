@@ -6,8 +6,13 @@ package gemini
 import (
 	"fmt"
 
+<<<<<<< HEAD
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/translator/gemini/common"
 	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/util"
+=======
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/translator/gemini/common"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/util"
+>>>>>>> origin/main
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
 )

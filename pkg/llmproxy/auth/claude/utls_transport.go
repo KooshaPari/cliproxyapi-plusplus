@@ -8,8 +8,13 @@ import (
 	"strings"
 	"sync"
 
+<<<<<<< HEAD
 	tls "github.com/refraction-networking/utls"
 	pkgconfig "github.com/router-for-me/CLIProxyAPI/v6/internal/config"
+=======
+	pkgconfig "github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
+	tls "github.com/refraction-networking/utls"
+>>>>>>> origin/main
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/proxy"

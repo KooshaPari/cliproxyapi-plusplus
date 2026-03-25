@@ -4,6 +4,7 @@
 package codex
 
 import (
+<<<<<<< HEAD
 	"encoding/json"
 	"fmt"
 	"os"
@@ -34,24 +35,41 @@ func sanitizeTokenFilePath(authFilePath string) (string, error) {
 	return absPath, nil
 }
 
+=======
+	"fmt"
+
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/base"
+)
+
+>>>>>>> origin/main
 // CodexTokenStorage stores OAuth2 token information for OpenAI Codex API authentication.
 // It maintains compatibility with the existing auth system while adding Codex-specific fields
 // for managing access tokens, refresh tokens, and user account information.
 type CodexTokenStorage struct {
+<<<<<<< HEAD
 	// IDToken is the JWT ID token containing user claims and identity information.
 	IDToken string `json:"id_token"`
 	// AccessToken is the OAuth2 access token used for authenticating API requests.
 	AccessToken string `json:"access_token"`
 	// RefreshToken is used to obtain new access tokens when the current one expires.
 	RefreshToken string `json:"refresh_token"`
+=======
+	base.BaseTokenStorage
+
+	// IDToken is the JWT ID token containing user claims and identity information.
+	IDToken string `json:"id_token"`
+>>>>>>> origin/main
 	// AccountID is the OpenAI account identifier associated with this token.
 	AccountID string `json:"account_id"`
 	// LastRefresh is the timestamp of the last token refresh operation.
 	LastRefresh string `json:"last_refresh"`
+<<<<<<< HEAD
 	// Email is the OpenAI account email address associated with this token.
 	Email string `json:"email"`
 	// Type indicates the authentication provider type, always "codex" for this storage.
 	Type string `json:"type"`
+=======
+>>>>>>> origin/main
 	// Expire is the timestamp when the current access token expires.
 	Expire string `json:"expired"`
 }
@@ -66,6 +84,7 @@ type CodexTokenStorage struct {
 // Returns:
 //   - error: An error if the operation fails, nil otherwise
 func (ts *CodexTokenStorage) SaveTokenToFile(authFilePath string) error {
+<<<<<<< HEAD
 	safePath, err := misc.ResolveSafeFilePath(authFilePath)
 	if err != nil {
 		return fmt.Errorf("invalid token file path: %w", err)
@@ -89,4 +108,11 @@ func (ts *CodexTokenStorage) SaveTokenToFile(authFilePath string) error {
 	}
 	return nil
 
+=======
+	ts.Type = "codex"
+	if err := ts.Save(authFilePath, ts); err != nil {
+		return fmt.Errorf("codex token: %w", err)
+	}
+	return nil
+>>>>>>> origin/main
 }

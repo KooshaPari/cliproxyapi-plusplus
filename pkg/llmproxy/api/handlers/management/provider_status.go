@@ -14,17 +14,30 @@ type ProviderStatusRequest struct {
 
 // ProviderStatusResponse is the JSON response for provider status
 type ProviderStatusResponse struct {
+<<<<<<< HEAD
 	Provider      string           `json:"provider"`
 	UpdatedAt     time.Time        `json:"updated_at"`
 	Status        string           `json:"status"` // operational, degraded, outage
+=======
+	Provider      string          `json:"provider"`
+	UpdatedAt     time.Time       `json:"updated_at"`
+	Status        string          `json:"status"` // operational, degraded, outage
+>>>>>>> origin/main
 	Uptime24h     float64         `json:"uptime_24h"`
 	Uptime7d      float64         `json:"uptime_7d"`
 	AvgLatencyMs  float64         `json:"avg_latency_ms"`
 	TotalRequests int64           `json:"total_requests"`
+<<<<<<< HEAD
 	ErrorRate     float64          `json:"error_rate"`
 	Regions       []RegionStatus   `json:"regions"`
 	Models        []ProviderModel  `json:"models"`
 	Incidents     []Incident       `json:"incidents,omitempty"`
+=======
+	ErrorRate     float64         `json:"error_rate"`
+	Regions       []RegionStatus  `json:"regions"`
+	Models        []ProviderModel `json:"models"`
+	Incidents     []Incident      `json:"incidents,omitempty"`
+>>>>>>> origin/main
 }
 
 // RegionStatus contains status for a specific region
@@ -38,17 +51,26 @@ type RegionStatus struct {
 
 // ProviderModel contains model availability for a provider
 type ProviderModel struct {
+<<<<<<< HEAD
 	ModelID         string  `json:"model_id"`
 	Available       bool    `json:"available"`
 	LatencyMs       int     `json:"latency_ms"`
 	ThroughputTPS   float64 `json:"throughput_tps"`
 	QueueDepth      int     `json:"queue_depth,omitempty"`
+=======
+	ModelID        string  `json:"model_id"`
+	Available      bool    `json:"available"`
+	LatencyMs      int     `json:"latency_ms"`
+	ThroughputTPS  float64 `json:"throughput_tps"`
+	QueueDepth     int     `json:"queue_depth,omitempty"`
+>>>>>>> origin/main
 	MaxConcurrency int     `json:"max_concurrency,omitempty"`
 }
 
 // Incident represents an ongoing or past incident
 type Incident struct {
 	ID          string     `json:"id"`
+<<<<<<< HEAD
 	Type        string     `json:"type"` // outage, degradation, maintenance
 	Severity    string     `json:"severity"` // critical, major, minor
 	Status      string     `json:"status"` // ongoing, resolved
@@ -57,6 +79,16 @@ type Incident struct {
 	StartedAt   time.Time `json:"started_at"`
 	ResolvedAt  *time.Time `json:"resolved_at,omitempty"`
 	Affected    []string  `json:"affected,omitempty"`
+=======
+	Type        string     `json:"type"`     // outage, degradation, maintenance
+	Severity    string     `json:"severity"` // critical, major, minor
+	Status      string     `json:"status"`   // ongoing, resolved
+	Title       string     `json:"title"`
+	Description string     `json:"description"`
+	StartedAt   time.Time  `json:"started_at"`
+	ResolvedAt  *time.Time `json:"resolved_at,omitempty"`
+	Affected    []string   `json:"affected,omitempty"`
+>>>>>>> origin/main
 }
 
 // ProviderStatusHandler handles provider status endpoints
@@ -94,8 +126,13 @@ func (h *ProviderStatusHandler) getMockProviderStatus(provider string) *Provider
 			Uptime24h:     99.2,
 			Uptime7d:      98.9,
 			AvgLatencyMs:  1250,
+<<<<<<< HEAD
 			TotalRequests:  50000000,
 			ErrorRate:      0.8,
+=======
+			TotalRequests: 50000000,
+			ErrorRate:     0.8,
+>>>>>>> origin/main
 			Regions: []RegionStatus{
 				{Region: "US", Status: "operational", LatencyMs: 800, ThroughputTPS: 150, UptimePercent: 99.5},
 				{Region: "EU", Status: "operational", LatencyMs: 1500, ThroughputTPS: 100, UptimePercent: 99.1},
@@ -115,7 +152,11 @@ func (h *ProviderStatusHandler) getMockProviderStatus(provider string) *Provider
 			Uptime7d:      99.3,
 			AvgLatencyMs:  1800,
 			TotalRequests: 35000000,
+<<<<<<< HEAD
 			ErrorRate:      0.5,
+=======
+			ErrorRate:     0.5,
+>>>>>>> origin/main
 			Regions: []RegionStatus{
 				{Region: "US", Status: "operational", LatencyMs: 1500, ThroughputTPS: 80, UptimePercent: 99.5},
 				{Region: "EU", Status: "operational", LatencyMs: 2200, ThroughputTPS: 50, UptimePercent: 99.2},
@@ -133,8 +174,13 @@ func (h *ProviderStatusHandler) getMockProviderStatus(provider string) *Provider
 			Uptime24h:     98.8,
 			Uptime7d:      98.5,
 			AvgLatencyMs:  2000,
+<<<<<<< HEAD
 			TotalRequests:  42000000,
 			ErrorRate:      1.2,
+=======
+			TotalRequests: 42000000,
+			ErrorRate:     1.2,
+>>>>>>> origin/main
 			Regions: []RegionStatus{
 				{Region: "US", Status: "operational", LatencyMs: 1800, ThroughputTPS: 100, UptimePercent: 99.0},
 				{Region: "EU", Status: "degraded", LatencyMs: 2800, ThroughputTPS: 60, UptimePercent: 97.0},
@@ -156,7 +202,11 @@ func (h *ProviderStatusHandler) getMockProviderStatus(provider string) *Provider
 // GETAllProviderStatuses handles GET /v1/providers/status
 func (h *ProviderStatusHandler) GETAllProviderStatuses(c *gin.Context) {
 	providers := []string{"google", "anthropic", "openai", "deepseek", "minimax", "moonshotai", "x-ai", "z-ai"}
+<<<<<<< HEAD
 	
+=======
+
+>>>>>>> origin/main
 	var statuses []ProviderStatusResponse
 	for _, p := range providers {
 		if status := h.getMockProviderStatus(p); status != nil {

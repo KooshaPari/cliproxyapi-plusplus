@@ -6,8 +6,13 @@ import (
 	"net/http/httptest"
 	"testing"
 
+<<<<<<< HEAD
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/config"
 	cliproxyauth "github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/auth"
+=======
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+	cliproxyauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
+>>>>>>> origin/main
 )
 
 func TestResolveOpenAIModelsURL(t *testing.T) {

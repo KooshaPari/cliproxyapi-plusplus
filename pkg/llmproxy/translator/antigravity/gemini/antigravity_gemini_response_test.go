@@ -4,7 +4,11 @@ import (
 	"context"
 	"testing"
 
+<<<<<<< HEAD
 	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/interfaces"
+=======
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/interfaces"
+>>>>>>> origin/main
 	"github.com/tidwall/gjson"
 )
 

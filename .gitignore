@@ -1,8 +1,16 @@
 # Binaries
 cli-proxy-api
 cliproxy
+<<<<<<< HEAD
 *.exe
 
+=======
+cliproxyapi++
+*.exe
+
+# Hot-reload artifacts
+.air/
+>>>>>>> origin/main
 
 # Configuration
 config.yaml
@@ -42,7 +50,10 @@ GEMINI.md
 .serena/*
 .agent/*
 .agents/*
+<<<<<<< HEAD
 .agents/*
+=======
+>>>>>>> origin/main
 .opencode/*
 .bmad/*
 _bmad/*
@@ -53,3 +64,31 @@ _bmad-output/*
 .DS_Store
 ._*
 *.bak
+<<<<<<< HEAD
+=======
+# Local worktree shelves (canonical checkout must stay clean)
+PROJECT-wtrees/
+
+# Added by Spec Kitty CLI (auto-managed)
+.opencode/
+.windsurf/
+.qwen/
+.augment/
+.roo/
+.amazonq/
+.github/copilot/
+.kittify/.dashboard
+
+
+# AI tool artifacts
+.claude/
+.codex/
+.cursor/
+.gemini/
+.kittify/
+.kilocode/
+.github/prompts/
+.github/copilot-instructions.md
+.claudeignore
+.llmignore
+>>>>>>> origin/main

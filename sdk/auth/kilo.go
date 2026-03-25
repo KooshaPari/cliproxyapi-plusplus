@@ -5,9 +5,15 @@ import (
 	"fmt"
 	"time"
 
+<<<<<<< HEAD
 	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/auth/kilo"
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/config"
 	coreauth "github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/auth"
+=======
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/kilo"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+	coreauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
+>>>>>>> origin/main
 )
 
 // KiloAuthenticator implements the login flow for Kilo AI accounts.

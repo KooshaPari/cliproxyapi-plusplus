@@ -4,6 +4,7 @@
 package gemini
 
 import (
+<<<<<<< HEAD
 	"encoding/json"
 	"fmt"
 	"os"
@@ -18,20 +19,39 @@ import (
 // It maintains compatibility with the existing auth system while adding Gemini-specific fields
 // for managing access tokens, refresh tokens, and user account information.
 type GeminiTokenStorage struct {
+=======
+	"fmt"
+	"strings"
+
+	"github.com/KooshaPari/phenotype-go-auth"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/misc"
+)
+
+// GeminiTokenStorage stores OAuth2 token information for Google Gemini API authentication.
+// It extends the shared BaseTokenStorage with Gemini-specific fields for managing
+// Google Cloud Project information.
+type GeminiTokenStorage struct {
+	*base.BaseTokenStorage
+
+>>>>>>> origin/main
 	// Token holds the raw OAuth2 token data, including access and refresh tokens.
 	Token any `json:"token"`
 
 	// ProjectID is the Google Cloud Project ID associated with this token.
 	ProjectID string `json:"project_id"`
 
+<<<<<<< HEAD
 	// Email is the email address of the authenticated user.
 	Email string `json:"email"`
 
+=======
+>>>>>>> origin/main
 	// Auto indicates if the project ID was automatically selected.
 	Auto bool `json:"auto"`
 
 	// Checked indicates if the associated Cloud AI API has been verified as enabled.
 	Checked bool `json:"checked"`
+<<<<<<< HEAD
 
 	// Type indicates the authentication provider type, always "gemini" for this storage.
 	Type string `json:"type"`
@@ -50,6 +70,26 @@ func (ts *GeminiTokenStorage) SetMetadata(meta map[string]any) {
 // This method creates the necessary directory structure and writes the token
 // data in JSON format to the specified file path for persistent storage.
 // It merges any injected metadata into the top-level JSON object.
+=======
+}
+
+// NewGeminiTokenStorage creates a new Gemini token storage with the given file path.
+//
+// Parameters:
+//   - filePath: The full path where the token file should be saved/loaded
+//
+// Returns:
+//   - *GeminiTokenStorage: A new Gemini token storage instance
+func NewGeminiTokenStorage(filePath string) *GeminiTokenStorage {
+	return &GeminiTokenStorage{
+		BaseTokenStorage: base.NewBaseTokenStorage(filePath),
+	}
+}
+
+// SaveTokenToFile serializes the Gemini token storage to a JSON file.
+// This method wraps the base implementation to provide logging compatibility
+// with the existing system.
+>>>>>>> origin/main
 //
 // Parameters:
 //   - authFilePath: The full path where the token file should be saved
@@ -59,6 +99,7 @@ func (ts *GeminiTokenStorage) SetMetadata(meta map[string]any) {
 func (ts *GeminiTokenStorage) SaveTokenToFile(authFilePath string) error {
 	misc.LogSavingCredentials(authFilePath)
 	ts.Type = "gemini"
+<<<<<<< HEAD
 	// Merge metadata using helper
 	data, errMerge := misc.MergeMetadata(ts, ts.Metadata)
 	if errMerge != nil {
@@ -84,6 +125,21 @@ func (ts *GeminiTokenStorage) SaveTokenToFile(authFilePath string) error {
 		return fmt.Errorf("failed to write token to file: %w", err)
 	}
 	return nil
+=======
+
+	// Create a new token storage with the file path and copy the fields
+	base := base.NewBaseTokenStorage(authFilePath)
+	base.IDToken = ts.IDToken
+	base.AccessToken = ts.AccessToken
+	base.RefreshToken = ts.RefreshToken
+	base.LastRefresh = ts.LastRefresh
+	base.Email = ts.Email
+	base.Type = ts.Type
+	base.Expire = ts.Expire
+	base.SetMetadata(ts.Metadata)
+
+	return base.Save()
+>>>>>>> origin/main
 }
 
 // CredentialFileName returns the filename used to persist Gemini CLI credentials.

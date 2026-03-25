@@ -10,9 +10,15 @@ import (
 	"syscall"
 	"time"
 
+<<<<<<< HEAD
 	internalapi "github.com/router-for-me/CLIProxyAPI/v6/internal/api"
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/config"
 	"github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy"
+=======
+	internalapi "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/api"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy"
+>>>>>>> origin/main
 	log "github.com/sirupsen/logrus"
 )
 

@@ -3,7 +3,11 @@ package auth
 import (
 	"fmt"
 
+<<<<<<< HEAD
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/interfaces"
+=======
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/interfaces"
+>>>>>>> origin/main
 )
 
 // ProjectSelectionError indicates that the user must choose a specific project ID.

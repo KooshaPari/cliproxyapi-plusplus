@@ -1,7 +1,10 @@
 package executor
 
 import (
+<<<<<<< HEAD
 	"bufio"
+=======
+>>>>>>> origin/main
 	"bytes"
 	"context"
 	"fmt"
@@ -10,12 +13,21 @@ import (
 	"strings"
 	"time"
 
+<<<<<<< HEAD
 	qwenauth "github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/auth/qwen"
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/config"
 	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/thinking"
 	cliproxyauth "github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/auth"
 	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/executor"
 	sdktranslator "github.com/router-for-me/CLIProxyAPI/v6/sdk/translator"
+=======
+	qwenauth "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/qwen"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/thinking"
+	cliproxyauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
+	cliproxyexecutor "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/executor"
+	sdktranslator "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/translator"
+>>>>>>> origin/main
 	log "github.com/sirupsen/logrus"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
@@ -118,10 +130,15 @@ func (e *QwenExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, req
 		AuthValue: authValue,
 	})
 
+<<<<<<< HEAD
 	httpClient := newProxyAwareHTTPClient(ctx, e.cfg, auth, 0)
 	httpResp, err := httpClient.Do(httpReq)
 	if err != nil {
 		recordAPIResponseError(ctx, e.cfg, err)
+=======
+	httpResp, err := ExecuteHTTPRequest(ctx, e.cfg, auth, httpReq, "qwen executor")
+	if err != nil {
+>>>>>>> origin/main
 		return resp, err
 	}
 	defer func() {
@@ -129,6 +146,7 @@ func (e *QwenExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, req
 			log.Errorf("qwen executor: close response body error: %v", errClose)
 		}
 	}()
+<<<<<<< HEAD
 	recordAPIResponseMetadata(ctx, e.cfg, httpResp.StatusCode, httpResp.Header.Clone())
 	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
 		b, _ := io.ReadAll(httpResp.Body)
@@ -137,6 +155,8 @@ func (e *QwenExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, req
 		err = statusErr{code: httpResp.StatusCode, msg: string(b)}
 		return resp, err
 	}
+=======
+>>>>>>> origin/main
 	data, err := io.ReadAll(httpResp.Body)
 	if err != nil {
 		recordAPIResponseError(ctx, e.cfg, err)
@@ -214,6 +234,7 @@ func (e *QwenExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.Aut
 		AuthValue: authValue,
 	})
 
+<<<<<<< HEAD
 	httpClient := newProxyAwareHTTPClient(ctx, e.cfg, auth, 0)
 	httpResp, err := httpClient.Do(httpReq)
 	if err != nil {
@@ -264,6 +285,43 @@ func (e *QwenExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.Aut
 		}
 	}()
 	return &cliproxyexecutor.StreamResult{Headers: httpResp.Header.Clone(), Chunks: out}, nil
+=======
+	httpResp, err := ExecuteHTTPRequestForStreaming(ctx, e.cfg, auth, httpReq, "qwen executor")
+	if err != nil {
+		return nil, err
+	}
+
+	var param any
+	processor := func(ctx context.Context, line []byte) ([]string, error) {
+		appendAPIResponseChunk(ctx, e.cfg, line)
+		if detail, ok := parseOpenAIStreamUsage(line); ok {
+			reporter.publish(ctx, detail)
+		}
+		chunks := sdktranslator.TranslateStream(ctx, to, from, req.Model, opts.OriginalRequest, body, bytes.Clone(line), &param)
+		return chunks, nil
+	}
+
+	result := ProcessSSEStream(ctx, httpResp, processor, func(ctx context.Context, err error) {
+		recordAPIResponseError(ctx, e.cfg, err)
+		reporter.publishFailure(ctx)
+	})
+
+	// Wrap the original channel to append [DONE] sentinel
+	wrappedOut := make(chan cliproxyexecutor.StreamChunk)
+	go func() {
+		defer close(wrappedOut)
+		for chunk := range result.Chunks {
+			wrappedOut <- chunk
+		}
+		// Send [DONE] sentinel
+		doneChunks := sdktranslator.TranslateStream(ctx, to, from, req.Model, opts.OriginalRequest, body, []byte("[DONE]"), &param)
+		for _, chunk := range doneChunks {
+			wrappedOut <- cliproxyexecutor.StreamChunk{Payload: []byte(chunk)}
+		}
+	}()
+
+	return &cliproxyexecutor.StreamResult{Headers: result.Headers, Chunks: wrappedOut}, nil
+>>>>>>> origin/main
 }
 
 func (e *QwenExecutor) CountTokens(ctx context.Context, auth *cliproxyauth.Auth, req cliproxyexecutor.Request, opts cliproxyexecutor.Options) (cliproxyexecutor.Response, error) {

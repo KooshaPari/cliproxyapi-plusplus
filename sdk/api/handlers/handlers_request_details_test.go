@@ -5,9 +5,15 @@ import (
 	"testing"
 	"time"
 
+<<<<<<< HEAD
 	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/registry"
 	coreauth "github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/auth"
 	sdkconfig "github.com/router-for-me/CLIProxyAPI/v6/sdk/config"
+=======
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/registry"
+	coreauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
+	sdkconfig "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/config"
+>>>>>>> origin/main
 )
 
 func TestGetRequestDetails_PreservesSuffix(t *testing.T) {

@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+<<<<<<< HEAD
 	"github.com/router-for-me/CLIProxyAPI/v6/sdk/api"
 	sdkAuth "github.com/router-for-me/CLIProxyAPI/v6/sdk/auth"
 	"github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy"
@@ -32,6 +33,16 @@ import (
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/config"
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/logging"
 	sdktr "github.com/router-for-me/CLIProxyAPI/v6/sdk/translator"
+=======
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/api"
+	sdkAuth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/auth"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy"
+	coreauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
+	clipexec "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/executor"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/logging"
+	sdktr "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/translator"
+>>>>>>> origin/main
 )
 
 const (
@@ -205,7 +216,11 @@ func main() {
 			// Optional: add a simple middleware + custom request logger
 			api.WithMiddleware(func(c *gin.Context) { c.Header("X-Example", "custom-provider"); c.Next() }),
 			api.WithRequestLoggerFactory(func(cfg *config.Config, cfgPath string) logging.RequestLogger {
+<<<<<<< HEAD
 				return logging.NewFileRequestLoggerWithOptions(true, "logs", filepath.Dir(cfgPath), cfg.ErrorLogsMaxFiles)
+=======
+				return logging.NewFileRequestLogger(true, "logs", filepath.Dir(cfgPath), cfg.ErrorLogsMaxFiles)
+>>>>>>> origin/main
 			}),
 		).
 		WithHooks(hooks).

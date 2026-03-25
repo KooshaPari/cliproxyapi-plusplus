@@ -1,6 +1,7 @@
 package auth
 
 import (
+<<<<<<< HEAD
 	"bytes"
 	"context"
 	"encoding/json"
@@ -10,10 +11,15 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+=======
+	"context"
+	"net/http"
+>>>>>>> origin/main
 	"sync"
 	"sync/atomic"
 	"time"
 
+<<<<<<< HEAD
 	"github.com/google/uuid"
 	internalconfig "github.com/router-for-me/CLIProxyAPI/v6/internal/config"
 	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/logging"
@@ -22,6 +28,10 @@ import (
 	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/util"
 	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/executor"
 	log "github.com/sirupsen/logrus"
+=======
+	internalconfig "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+	cliproxyexecutor "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/executor"
+>>>>>>> origin/main
 )
 
 // ProviderExecutor defines the contract required by Manager to execute provider calls.
@@ -47,6 +57,22 @@ type ExecutionSessionCloser interface {
 	CloseExecutionSession(sessionID string)
 }
 
+<<<<<<< HEAD
+=======
+// RequestPreparer allows executors to prepare HTTP requests with provider credentials.
+type RequestPreparer interface {
+	PrepareRequest(req *http.Request, auth *Auth) error
+}
+
+// RoundTripperProvider provides per-auth HTTP RoundTripper implementations.
+type RoundTripperProvider interface {
+	RoundTripperFor(auth *Auth) http.RoundTripper
+}
+
+// roundTripperContextKey is used to store per-request RoundTripper in context.
+type roundTripperContextKey struct{}
+
+>>>>>>> origin/main
 const (
 	// CloseAllExecutionSessionsID asks an executor to release all active execution sessions.
 	// Executors that do not support this marker may ignore it.
@@ -68,6 +94,7 @@ const (
 
 var quotaCooldownDisabled atomic.Bool
 
+<<<<<<< HEAD
 // SetQuotaCooldownDisabled toggles quota cooldown scheduling globally.
 func SetQuotaCooldownDisabled(disable bool) {
 	quotaCooldownDisabled.Store(disable)
@@ -82,6 +109,8 @@ func quotaCooldownDisabledForAuth(auth *Auth) bool {
 	return quotaCooldownDisabled.Load()
 }
 
+=======
+>>>>>>> origin/main
 // Result captures execution outcome used to adjust auth state.
 type Result struct {
 	// AuthID references the auth that produced this result.
@@ -180,6 +209,10 @@ func NewManager(store Store, selector Selector, hook Hook) *Manager {
 	return manager
 }
 
+<<<<<<< HEAD
+=======
+// SetSelector sets the auth selector strategy.
+>>>>>>> origin/main
 func (m *Manager) SetSelector(selector Selector) {
 	if m == nil {
 		return
@@ -199,7 +232,11 @@ func (m *Manager) SetStore(store Store) {
 	m.store = store
 }
 
+<<<<<<< HEAD
 // SetRoundTripperProvider register a provider that returns a per-auth RoundTripper.
+=======
+// SetRoundTripperProvider registers a provider that returns a per-auth RoundTripper.
+>>>>>>> origin/main
 func (m *Manager) SetRoundTripperProvider(p RoundTripperProvider) {
 	m.mu.Lock()
 	m.rtProvider = p
@@ -218,6 +255,7 @@ func (m *Manager) SetConfig(cfg *internalconfig.Config) {
 	m.runtimeConfig.Store(cfg)
 	m.rebuildAPIKeyModelAliasFromRuntimeConfig()
 }
+<<<<<<< HEAD
 
 func (m *Manager) lookupAPIKeyUpstreamModel(authID, requestedModel string) string {
 	if m == nil {
@@ -2376,3 +2414,5 @@ func (m *Manager) HttpRequest(ctx context.Context, auth *Auth, req *http.Request
 	}
 	return exec.HttpRequest(ctx, auth, req)
 }
+=======
+>>>>>>> origin/main

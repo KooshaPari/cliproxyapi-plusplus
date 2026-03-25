@@ -8,8 +8,13 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+<<<<<<< HEAD
 	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/interfaces"
 	sdkconfig "github.com/router-for-me/CLIProxyAPI/v6/sdk/config"
+=======
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/interfaces"
+	sdkconfig "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/config"
+>>>>>>> origin/main
 )
 
 func TestWriteErrorResponse_AddonHeadersDisabledByDefault(t *testing.T) {

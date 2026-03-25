@@ -4,7 +4,11 @@ package thinking
 import (
 	"strings"
 
+<<<<<<< HEAD
 	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/registry"
+=======
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/registry"
+>>>>>>> origin/main
 	log "github.com/sirupsen/logrus"
 	"github.com/tidwall/gjson"
 )

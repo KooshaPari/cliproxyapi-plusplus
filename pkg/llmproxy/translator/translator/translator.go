@@ -7,8 +7,13 @@ package translator
 import (
 	"context"
 
+<<<<<<< HEAD
 	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/interfaces"
 	sdktranslator "github.com/router-for-me/CLIProxyAPI/v6/sdk/translator"
+=======
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/interfaces"
+	sdktranslator "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/translator"
+>>>>>>> origin/main
 )
 
 // registry holds the default translator registry instance.

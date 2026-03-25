@@ -8,8 +8,13 @@ package openai
 import (
 	"strings"
 
+<<<<<<< HEAD
 	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/registry"
 	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/thinking"
+=======
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/registry"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/thinking"
+>>>>>>> origin/main
 	log "github.com/sirupsen/logrus"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
@@ -42,8 +47,35 @@ func clampReasoningEffort(level string, support *registry.ThinkingSupport) strin
 	if raw == "" {
 		return raw
 	}
+<<<<<<< HEAD
 	if hasLevel(support.Levels, raw) {
 		return raw
+=======
+	if support != nil && hasLevel(support.Levels, raw) {
+		// Only return early if the level is also a valid OpenAI API value.
+		// "minimal" is a CPA-internal level and not accepted by the OpenAI API.
+		if _, validForAPI := validReasoningEffortLevels[raw]; validForAPI {
+			return raw
+		}
+	}
+
+	// Normalize CPA-internal levels that are not valid OpenAI API values.
+	// These must be handled before the generic "unknown level → medium" fallback.
+	switch raw {
+	case string(thinking.LevelXHigh):
+		// xhigh is valid only when the model explicitly supports it.
+		if support != nil && hasLevel(support.Levels, string(thinking.LevelXHigh)) {
+			return raw
+		}
+		// Clamp to nearest lower standard level.
+		return string(thinking.LevelHigh)
+	case string(thinking.LevelMinimal):
+		// minimal is not a valid OpenAI API value; map to nearest higher standard level.
+		return string(thinking.LevelLow)
+	case string(thinking.LevelAuto):
+		// auto is not a valid OpenAI API value; map to a reasonable default.
+		return string(thinking.LevelMedium)
+>>>>>>> origin/main
 	}
 
 	if _, ok := validReasoningEffortLevels[raw]; !ok {
@@ -54,6 +86,7 @@ func clampReasoningEffort(level string, support *registry.ThinkingSupport) strin
 		return string(thinking.LevelMedium)
 	}
 
+<<<<<<< HEAD
 	// Normalize non-standard inputs when not explicitly supported by model.
 	if support == nil || len(support.Levels) == 0 {
 		switch raw {
@@ -98,6 +131,10 @@ func clampReasoningEffort(level string, support *registry.ThinkingSupport) strin
 		return raw
 	}
 	return string(thinking.LevelMedium)
+=======
+	// All remaining values are standard OpenAI API levels (none/low/medium/high).
+	return raw
+>>>>>>> origin/main
 }
 
 // Applier implements thinking.ProviderApplier for OpenAI models.
@@ -200,7 +237,13 @@ func applyCompatibleOpenAI(body []byte, config thinking.ThinkingConfig) ([]byte,
 		return body, nil
 	}
 
+<<<<<<< HEAD
 	result, _ := sjson.SetBytes(body, "reasoning_effort", effort)
+=======
+	// Normalize effort through standard OpenAI clamping even for user-defined
+	// models: xhigh → high, minimal → low, auto → medium.
+	result, _ := sjson.SetBytes(body, "reasoning_effort", clampReasoningEffort(effort, nil))
+>>>>>>> origin/main
 	return result, nil
 }
 

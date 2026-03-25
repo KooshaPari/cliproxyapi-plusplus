@@ -3,8 +3,13 @@ package executor
 import (
 	"strings"
 
+<<<<<<< HEAD
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/config"
 	cliproxyauth "github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/auth"
+=======
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+	cliproxyauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
+>>>>>>> origin/main
 )
 
 func resolveOAuthBaseURL(cfg *config.Config, channel, defaultBaseURL string, auth *cliproxyauth.Auth) string {

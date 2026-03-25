@@ -13,12 +13,21 @@ import (
 	"strings"
 	"time"
 
+<<<<<<< HEAD
 	kimiauth "github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/auth/kimi"
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/config"
 	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/thinking"
 	cliproxyauth "github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/auth"
 	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/executor"
 	sdktranslator "github.com/router-for-me/CLIProxyAPI/v6/sdk/translator"
+=======
+	kimiauth "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/kimi"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/thinking"
+	cliproxyauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
+	cliproxyexecutor "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/executor"
+	sdktranslator "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/translator"
+>>>>>>> origin/main
 	log "github.com/sirupsen/logrus"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
@@ -131,10 +140,15 @@ func (e *KimiExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, req
 		AuthValue: authValue,
 	})
 
+<<<<<<< HEAD
 	httpClient := newProxyAwareHTTPClient(ctx, e.cfg, auth, 0)
 	httpResp, err := httpClient.Do(httpReq)
 	if err != nil {
 		recordAPIResponseError(ctx, e.cfg, err)
+=======
+	httpResp, err := ExecuteHTTPRequest(ctx, e.cfg, auth, httpReq, "kimi executor")
+	if err != nil {
+>>>>>>> origin/main
 		return resp, err
 	}
 	defer func() {
@@ -142,6 +156,7 @@ func (e *KimiExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, req
 			log.Errorf("kimi executor: close response body error: %v", errClose)
 		}
 	}()
+<<<<<<< HEAD
 	recordAPIResponseMetadata(ctx, e.cfg, httpResp.StatusCode, httpResp.Header.Clone())
 	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
 		b, _ := io.ReadAll(httpResp.Body)
@@ -150,6 +165,8 @@ func (e *KimiExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, req
 		err = statusErr{code: httpResp.StatusCode, msg: string(b)}
 		return resp, err
 	}
+=======
+>>>>>>> origin/main
 	data, err := io.ReadAll(httpResp.Body)
 	if err != nil {
 		recordAPIResponseError(ctx, e.cfg, err)
@@ -235,6 +252,7 @@ func (e *KimiExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.Aut
 		AuthValue: authValue,
 	})
 
+<<<<<<< HEAD
 	httpClient := newProxyAwareHTTPClient(ctx, e.cfg, auth, 0)
 	httpResp, err := httpClient.Do(httpReq)
 	if err != nil {
@@ -250,6 +268,10 @@ func (e *KimiExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.Aut
 			log.Errorf("kimi executor: close response body error: %v", errClose)
 		}
 		err = statusErr{code: httpResp.StatusCode, msg: string(b)}
+=======
+	httpResp, err := ExecuteHTTPRequestForStreaming(ctx, e.cfg, auth, httpReq, "kimi executor")
+	if err != nil {
+>>>>>>> origin/main
 		return nil, err
 	}
 	out := make(chan cliproxyexecutor.StreamChunk)

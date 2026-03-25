@@ -3,8 +3,13 @@ package auth
 import (
 	"strings"
 
+<<<<<<< HEAD
 	internalconfig "github.com/router-for-me/CLIProxyAPI/v6/internal/config"
 	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/thinking"
+=======
+	internalconfig "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/thinking"
+>>>>>>> origin/main
 )
 
 type modelAliasEntry interface {

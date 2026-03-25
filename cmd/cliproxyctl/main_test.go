@@ -11,8 +11,14 @@ import (
 	"testing"
 	"time"
 
+<<<<<<< HEAD
 	cliproxycmd "github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/cmd"
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/config"
+=======
+	cliproxycmd "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/cmd"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/util"
+>>>>>>> origin/main
 )
 
 func TestRunSetupJSONResponseShape(t *testing.T) {
@@ -309,7 +315,11 @@ func TestCPB0011To0020LaneJRegressionEvidence(t *testing.T) {
 		t.Run(tc.id, func(t *testing.T) {
 			switch tc.id {
 			case "CPB-0011":
+<<<<<<< HEAD
 				if normalizeProvider("github-copilot") != "copilot" {
+=======
+				if util.NormalizeProviderAlias("github-copilot") != "copilot" {
+>>>>>>> origin/main
 					t.Fatalf("%s", tc.description)
 				}
 			case "CPB-0016":
@@ -610,7 +620,11 @@ func TestCPB0011To0020LaneMRegressionEvidence(t *testing.T) {
 		{
 			id: "CPB-0014",
 			fn: func(t *testing.T) {
+<<<<<<< HEAD
 				if normalizeProvider("kilocode") != "kilo" {
+=======
+				if util.NormalizeProviderAlias("kilocode") != "kilo" {
+>>>>>>> origin/main
 					t.Fatalf("expected kilocode alias to map to kilo")
 				}
 			},
@@ -644,7 +658,11 @@ func TestCPB0011To0020LaneMRegressionEvidence(t *testing.T) {
 		{
 			id: "CPB-0018",
 			fn: func(t *testing.T) {
+<<<<<<< HEAD
 				if normalizeProvider("githubcopilot") != "copilot" {
+=======
+				if util.NormalizeProviderAlias("githubcopilot") != "copilot" {
+>>>>>>> origin/main
 					t.Fatalf("githubcopilot alias should normalize to copilot")
 				}
 			},

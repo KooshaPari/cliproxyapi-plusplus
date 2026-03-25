@@ -5,7 +5,11 @@ import (
 	"net/http"
 	"testing"
 
+<<<<<<< HEAD
 	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/thinking"
+=======
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/thinking"
+>>>>>>> origin/main
 )
 
 func TestIFlowExecutorParseSuffix(t *testing.T) {

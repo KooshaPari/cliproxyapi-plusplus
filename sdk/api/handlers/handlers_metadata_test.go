@@ -7,7 +7,11 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+<<<<<<< HEAD
 	coreexecutor "github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/executor"
+=======
+	coreexecutor "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/executor"
+>>>>>>> origin/main
 )
 
 func requestContextWithHeader(t *testing.T, idempotencyKey string) context.Context {

@@ -4,7 +4,11 @@
 // pkg/llmproxy/watcher.AuthUpdate types without import conflicts.
 package watcher
 
+<<<<<<< HEAD
 import llmproxywatcher "github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/watcher"
+=======
+import llmproxywatcher "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/watcher"
+>>>>>>> origin/main
 
 // AuthUpdate is a type alias for pkg/llmproxy/watcher.AuthUpdate
 type AuthUpdate = llmproxywatcher.AuthUpdate

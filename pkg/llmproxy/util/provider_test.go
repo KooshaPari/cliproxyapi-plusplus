@@ -4,8 +4,13 @@ import (
 	"reflect"
 	"testing"
 
+<<<<<<< HEAD
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/config"
 	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/registry"
+=======
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/registry"
+>>>>>>> origin/main
 )
 
 func TestResolveProviderPinnedModel(t *testing.T) {
@@ -94,3 +99,35 @@ func TestGetOpenAICompatibilityConfig_MatchesAliasAndName(t *testing.T) {
 		t.Fatalf("resolved model alias = %q, want gpt-5.2-codex", modelByName.Alias)
 	}
 }
+<<<<<<< HEAD
+=======
+
+func TestNormalizeProviderAlias(t *testing.T) {
+	cases := []struct {
+		in   string
+		want string
+	}{
+		{"github-copilot", "copilot"},
+		{"githubcopilot", "copilot"},
+		{"ampcode", "amp"},
+		{"amp-code", "amp"},
+		{"kilo-code", "kilo"},
+		{"kilocode", "kilo"},
+		{"roo-code", "roo"},
+		{"roocode", "roo"},
+		{"droid", "gemini"},
+		{"droid-cli", "gemini"},
+		{"droidcli", "gemini"},
+		{"factoryapi", "factory-api"},
+		{"openai-compatible", "factory-api"},
+		{"unknown", "unknown"},
+	}
+
+	for _, tc := range cases {
+		got := NormalizeProviderAlias(tc.in)
+		if got != tc.want {
+			t.Fatalf("NormalizeProviderAlias(%q) = %q, want %q", tc.in, got, tc.want)
+		}
+	}
+}
+>>>>>>> origin/main

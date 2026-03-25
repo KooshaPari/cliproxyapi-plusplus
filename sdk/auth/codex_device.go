@@ -13,11 +13,19 @@ import (
 	"strings"
 	"time"
 
+<<<<<<< HEAD
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/auth/codex"
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/browser"
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/config"
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/util"
 	coreauth "github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/auth"
+=======
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/codex"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/browser"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/util"
+	coreauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
+>>>>>>> origin/main
 	log "github.com/sirupsen/logrus"
 )
 
@@ -109,10 +117,16 @@ func (a *CodexAuthenticator) loginWithDeviceFlow(ctx context.Context, cfg *confi
 	}
 
 	authSvc := codex.NewCodexAuth(cfg)
+<<<<<<< HEAD
 	authBundle, err := authSvc.ExchangeCodeForTokensWithRedirect(
 		ctx,
 		authCode,
 		codexDeviceTokenExchangeRedirectURI,
+=======
+	authBundle, err := authSvc.ExchangeCodeForTokens(
+		ctx,
+		authCode,
+>>>>>>> origin/main
 		&codex.PKCECodes{
 			CodeVerifier:  codeVerifier,
 			CodeChallenge: codeChallenge,

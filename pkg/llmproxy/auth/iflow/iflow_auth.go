@@ -13,8 +13,14 @@ import (
 	"strings"
 	"time"
 
+<<<<<<< HEAD
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/config"
 	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/util"
+=======
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/base"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/util"
+>>>>>>> origin/main
 	log "github.com/sirupsen/logrus"
 )
 
@@ -243,6 +249,7 @@ func (ia *IFlowAuth) CreateTokenStorage(data *IFlowTokenData) *IFlowTokenStorage
 		return nil
 	}
 	return &IFlowTokenStorage{
+<<<<<<< HEAD
 		AccessToken:  data.AccessToken,
 		RefreshToken: data.RefreshToken,
 		LastRefresh:  time.Now().Format(time.RFC3339),
@@ -251,6 +258,18 @@ func (ia *IFlowAuth) CreateTokenStorage(data *IFlowTokenData) *IFlowTokenStorage
 		Email:        data.Email,
 		TokenType:    data.TokenType,
 		Scope:        data.Scope,
+=======
+		BaseTokenStorage: base.BaseTokenStorage{
+			AccessToken:  data.AccessToken,
+			RefreshToken: data.RefreshToken,
+			Email:        data.Email,
+		},
+		LastRefresh: time.Now().Format(time.RFC3339),
+		Expire:      data.Expire,
+		APIKey:      data.APIKey,
+		TokenType:   data.TokenType,
+		Scope:       data.Scope,
+>>>>>>> origin/main
 	}
 }
 
@@ -528,12 +547,23 @@ func (ia *IFlowAuth) CreateCookieTokenStorage(data *IFlowTokenData) *IFlowTokenS
 	}
 
 	return &IFlowTokenStorage{
+<<<<<<< HEAD
 		APIKey:      data.APIKey,
 		Email:       data.Email,
 		Expire:      data.Expire,
 		Cookie:      cookieToSave,
 		LastRefresh: time.Now().Format(time.RFC3339),
 		Type:        "iflow",
+=======
+		BaseTokenStorage: base.BaseTokenStorage{
+			Email: data.Email,
+			Type:  "iflow",
+		},
+		APIKey:      data.APIKey,
+		Expire:      data.Expire,
+		Cookie:      cookieToSave,
+		LastRefresh: time.Now().Format(time.RFC3339),
+>>>>>>> origin/main
 	}
 }
 

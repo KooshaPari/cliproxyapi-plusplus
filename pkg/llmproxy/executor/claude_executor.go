@@ -1,7 +1,10 @@
 package executor
 
 import (
+<<<<<<< HEAD
 	"bufio"
+=======
+>>>>>>> origin/main
 	"bytes"
 	"compress/flate"
 	"compress/gzip"
@@ -15,6 +18,7 @@ import (
 
 	"github.com/andybalholm/brotli"
 	"github.com/klauspost/compress/zstd"
+<<<<<<< HEAD
 	claudeauth "github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/auth/claude"
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/config"
 	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/misc"
@@ -23,6 +27,16 @@ import (
 	cliproxyauth "github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/auth"
 	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/executor"
 	sdktranslator "github.com/router-for-me/CLIProxyAPI/v6/sdk/translator"
+=======
+	claudeauth "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/claude"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/misc"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/thinking"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/util"
+	cliproxyauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
+	cliproxyexecutor "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/executor"
+	sdktranslator "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/translator"
+>>>>>>> origin/main
 	log "github.com/sirupsen/logrus"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
@@ -161,6 +175,7 @@ func (e *ClaudeExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, r
 		AuthValue: authValue,
 	})
 
+<<<<<<< HEAD
 	httpClient := newProxyAwareHTTPClient(ctx, e.cfg, auth, 0)
 	httpResp, err := httpClient.Do(httpReq)
 	if err != nil {
@@ -176,6 +191,10 @@ func (e *ClaudeExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, r
 		if errClose := httpResp.Body.Close(); errClose != nil {
 			log.Errorf("response body close error: %v", errClose)
 		}
+=======
+	httpResp, err := ExecuteHTTPRequest(ctx, e.cfg, auth, httpReq, "claude executor")
+	if err != nil {
+>>>>>>> origin/main
 		return resp, err
 	}
 	decodedBody, err := decodeResponseBody(httpResp.Body, httpResp.Header.Get("Content-Encoding"))
@@ -300,6 +319,7 @@ func (e *ClaudeExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.A
 		AuthValue: authValue,
 	})
 
+<<<<<<< HEAD
 	httpClient := newProxyAwareHTTPClient(ctx, e.cfg, auth, 0)
 	httpResp, err := httpClient.Do(httpReq)
 	if err != nil {
@@ -315,6 +335,10 @@ func (e *ClaudeExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.A
 			log.Errorf("response body close error: %v", errClose)
 		}
 		err = statusErr{code: httpResp.StatusCode, msg: string(b)}
+=======
+	httpResp, err := ExecuteHTTPRequestForStreaming(ctx, e.cfg, auth, httpReq, "claude executor")
+	if err != nil {
+>>>>>>> origin/main
 		return nil, err
 	}
 	decodedBody, err := decodeResponseBody(httpResp.Body, httpResp.Header.Get("Content-Encoding"))
@@ -325,6 +349,7 @@ func (e *ClaudeExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.A
 		}
 		return nil, err
 	}
+<<<<<<< HEAD
 	out := make(chan cliproxyexecutor.StreamChunk)
 	go func() {
 		defer close(out)
@@ -367,6 +392,13 @@ func (e *ClaudeExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.A
 		var param any
 		for scanner.Scan() {
 			line := scanner.Bytes()
+=======
+
+	var result *cliproxyexecutor.StreamResult
+	if from == to {
+		// Claude → Claude: direct passthrough without translation
+		processor := func(ctx context.Context, line []byte) ([]string, error) {
+>>>>>>> origin/main
 			appendAPIResponseChunk(ctx, e.cfg, line)
 			if detail, ok := parseClaudeStreamUsage(line); ok {
 				reporter.publish(ctx, detail)
@@ -374,7 +406,36 @@ func (e *ClaudeExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.A
 			if isClaudeOAuthToken(apiKey) && !auth.ToolPrefixDisabled() {
 				line = stripClaudeToolPrefixFromStreamLine(line, claudeToolPrefix)
 			}
+<<<<<<< HEAD
 			chunks := sdktranslator.TranslateStream(
+=======
+			// Forward the line as-is to preserve SSE format
+			cloned := make([]byte, len(line)+1)
+			copy(cloned, line)
+			cloned[len(line)] = '\n'
+			return []string{string(cloned)}, nil
+		}
+
+		result = ProcessSSEStream(ctx, &http.Response{
+			Body:   decodedBody,
+			Header: httpResp.Header,
+		}, processor, func(ctx context.Context, err error) {
+			recordAPIResponseError(ctx, e.cfg, err)
+			reporter.publishFailure(ctx)
+		})
+	} else {
+		// Claude → Other format: use translation
+		var param any
+		processor := func(ctx context.Context, line []byte) ([]string, error) {
+			appendAPIResponseChunk(ctx, e.cfg, line)
+			if detail, ok := parseClaudeStreamUsage(line); ok {
+				reporter.publish(ctx, detail)
+			}
+			if isClaudeOAuthToken(apiKey) && !auth.ToolPrefixDisabled() {
+				line = stripClaudeToolPrefixFromStreamLine(line, claudeToolPrefix)
+			}
+			return sdktranslator.TranslateStream(
+>>>>>>> origin/main
 				ctx,
 				to,
 				from,
@@ -383,6 +444,7 @@ func (e *ClaudeExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.A
 				bodyForTranslation,
 				bytes.Clone(line),
 				&param,
+<<<<<<< HEAD
 			)
 			for i := range chunks {
 				out <- cliproxyexecutor.StreamChunk{Payload: []byte(chunks[i])}
@@ -395,6 +457,21 @@ func (e *ClaudeExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.A
 		}
 	}()
 	return &cliproxyexecutor.StreamResult{Headers: httpResp.Header.Clone(), Chunks: out}, nil
+=======
+			), nil
+		}
+
+		result = ProcessSSEStream(ctx, &http.Response{
+			Body:   decodedBody,
+			Header: httpResp.Header,
+		}, processor, func(ctx context.Context, err error) {
+			recordAPIResponseError(ctx, e.cfg, err)
+			reporter.publishFailure(ctx)
+		})
+	}
+
+	return result, nil
+>>>>>>> origin/main
 }
 
 func (e *ClaudeExecutor) CountTokens(ctx context.Context, auth *cliproxyauth.Auth, req cliproxyexecutor.Request, opts cliproxyexecutor.Options) (cliproxyexecutor.Response, error) {
@@ -445,6 +522,7 @@ func (e *ClaudeExecutor) CountTokens(ctx context.Context, auth *cliproxyauth.Aut
 		AuthValue: authValue,
 	})
 
+<<<<<<< HEAD
 	httpClient := newProxyAwareHTTPClient(ctx, e.cfg, auth, 0)
 	resp, err := httpClient.Do(httpReq)
 	if err != nil {
@@ -460,6 +538,12 @@ func (e *ClaudeExecutor) CountTokens(ctx context.Context, auth *cliproxyauth.Aut
 		}
 		return cliproxyexecutor.Response{}, statusErr{code: resp.StatusCode, msg: string(b)}
 	}
+=======
+	resp, err := ExecuteHTTPRequest(ctx, e.cfg, auth, httpReq, "claude executor")
+	if err != nil {
+		return cliproxyexecutor.Response{}, err
+	}
+>>>>>>> origin/main
 	decodedBody, err := decodeResponseBody(resp.Body, resp.Header.Get("Content-Encoding"))
 	if err != nil {
 		recordAPIResponseError(ctx, e.cfg, err)

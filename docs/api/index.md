@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # API Index
 
 `cliproxyapi++` exposes three practical API surfaces: client-compatible runtime APIs, management APIs, and operational APIs.
@@ -48,3 +49,12 @@ curl -sS -X POST http://localhost:8317/v1/chat/completions \
 - [OpenAI-Compatible API](./openai-compatible.md)
 - [Management API](./management.md)
 - [Operations API](./operations.md)
+=======
+# API
+
+API references and SDK documentation index.
+
+- OpenAPI/Swagger artifacts
+- SDK references
+- Endpoint guides
+>>>>>>> origin/main

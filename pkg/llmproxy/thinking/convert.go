@@ -3,7 +3,11 @@ package thinking
 import (
 	"strings"
 
+<<<<<<< HEAD
 	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/registry"
+=======
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/registry"
+>>>>>>> origin/main
 )
 
 // levelToBudgetMap defines the standard Level → Budget mapping.

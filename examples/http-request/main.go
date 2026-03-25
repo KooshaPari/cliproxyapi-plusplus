@@ -16,8 +16,13 @@ import (
 	"strings"
 	"time"
 
+<<<<<<< HEAD
 	coreauth "github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/auth"
 	clipexec "github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/executor"
+=======
+	coreauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
+	clipexec "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/executor"
+>>>>>>> origin/main
 	log "github.com/sirupsen/logrus"
 )
 

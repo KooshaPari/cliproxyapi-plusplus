@@ -4,6 +4,7 @@
 package claude
 
 import (
+<<<<<<< HEAD
 	"encoding/json"
 	"fmt"
 	"os"
@@ -34,10 +35,18 @@ func sanitizeTokenFilePath(authFilePath string) (string, error) {
 	return absPath, nil
 }
 
+=======
+	"fmt"
+
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/base"
+)
+
+>>>>>>> origin/main
 // ClaudeTokenStorage stores OAuth2 token information for Anthropic Claude API authentication.
 // It maintains compatibility with the existing auth system while adding Claude-specific fields
 // for managing access tokens, refresh tokens, and user account information.
 type ClaudeTokenStorage struct {
+<<<<<<< HEAD
 	// IDToken is the JWT ID token containing user claims and identity information.
 	IDToken string `json:"id_token"`
 
@@ -56,6 +65,16 @@ type ClaudeTokenStorage struct {
 	// Type indicates the authentication provider type, always "claude" for this storage.
 	Type string `json:"type"`
 
+=======
+	base.BaseTokenStorage
+
+	// IDToken is the JWT ID token containing user claims and identity information.
+	IDToken string `json:"id_token"`
+
+	// LastRefresh is the timestamp of the last token refresh operation.
+	LastRefresh string `json:"last_refresh"`
+
+>>>>>>> origin/main
 	// Expire is the timestamp when the current access token expires.
 	Expire string `json:"expired"`
 }
@@ -70,6 +89,7 @@ type ClaudeTokenStorage struct {
 // Returns:
 //   - error: An error if the operation fails, nil otherwise
 func (ts *ClaudeTokenStorage) SaveTokenToFile(authFilePath string) error {
+<<<<<<< HEAD
 	safePath, err := misc.ResolveSafeFilePath(authFilePath)
 	if err != nil {
 		return fmt.Errorf("invalid token file path: %w", err)
@@ -98,6 +118,11 @@ func (ts *ClaudeTokenStorage) SaveTokenToFile(authFilePath string) error {
 	// Encode and write the token data as JSON
 	if err = json.NewEncoder(f).Encode(ts); err != nil {
 		return fmt.Errorf("failed to write token to file: %w", err)
+=======
+	ts.Type = "claude"
+	if err := ts.Save(authFilePath, ts); err != nil {
+		return fmt.Errorf("claude token: %w", err)
+>>>>>>> origin/main
 	}
 	return nil
 }

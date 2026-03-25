@@ -26,7 +26,11 @@ jobs:
         run: |
           disallowed_files="$(printf '%s\n' \
             $(printf '%s' '${{ steps.changed-files.outputs.all_changed_files }}' | tr ',' '\n') \
+<<<<<<< HEAD
             | sed '/^internal\/translator\/kiro\/claude\/kiro_websearch_handler.go$/d' \
+=======
+            | sed '/^pkg\/llmproxy\/translator\/kiro\/claude\/kiro_websearch_handler.go$/d' \
+>>>>>>> origin/main
             | tr '\n' ' ' | xargs)"
           if [ -n "$disallowed_files" ]; then
             echo "Changes under pkg/llmproxy/translator are not allowed in pull requests."

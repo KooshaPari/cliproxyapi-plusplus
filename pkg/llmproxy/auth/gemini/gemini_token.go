@@ -4,6 +4,7 @@
 package gemini
 
 import (
+<<<<<<< HEAD
 	"encoding/json"
 	"fmt"
 	"os"
@@ -12,29 +13,51 @@ import (
 
 	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/misc"
 	log "github.com/sirupsen/logrus"
+=======
+	"fmt"
+	"strings"
+
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/base"
+>>>>>>> origin/main
 )
 
 // GeminiTokenStorage stores OAuth2 token information for Google Gemini API authentication.
 // It maintains compatibility with the existing auth system while adding Gemini-specific fields
 // for managing access tokens, refresh tokens, and user account information.
+<<<<<<< HEAD
 type GeminiTokenStorage struct {
+=======
+//
+// Note: Gemini wraps its raw OAuth2 token inside the Token field (type any) rather than
+// storing access/refresh tokens as top-level strings, so BaseTokenStorage.AccessToken and
+// BaseTokenStorage.RefreshToken remain empty for this provider.
+type GeminiTokenStorage struct {
+	base.BaseTokenStorage
+
+>>>>>>> origin/main
 	// Token holds the raw OAuth2 token data, including access and refresh tokens.
 	Token any `json:"token"`
 
 	// ProjectID is the Google Cloud Project ID associated with this token.
 	ProjectID string `json:"project_id"`
 
+<<<<<<< HEAD
 	// Email is the email address of the authenticated user.
 	Email string `json:"email"`
 
+=======
+>>>>>>> origin/main
 	// Auto indicates if the project ID was automatically selected.
 	Auto bool `json:"auto"`
 
 	// Checked indicates if the associated Cloud AI API has been verified as enabled.
 	Checked bool `json:"checked"`
+<<<<<<< HEAD
 
 	// Type indicates the authentication provider type, always "gemini" for this storage.
 	Type string `json:"type"`
+=======
+>>>>>>> origin/main
 }
 
 // SaveTokenToFile serializes the Gemini token storage to a JSON file.
@@ -47,6 +70,7 @@ type GeminiTokenStorage struct {
 // Returns:
 //   - error: An error if the operation fails, nil otherwise
 func (ts *GeminiTokenStorage) SaveTokenToFile(authFilePath string) error {
+<<<<<<< HEAD
 	safePath, err := misc.ResolveSafeFilePath(authFilePath)
 	if err != nil {
 		return fmt.Errorf("invalid token file path: %w", err)
@@ -69,6 +93,11 @@ func (ts *GeminiTokenStorage) SaveTokenToFile(authFilePath string) error {
 
 	if err = json.NewEncoder(f).Encode(ts); err != nil {
 		return fmt.Errorf("failed to write token to file: %w", err)
+=======
+	ts.Type = "gemini"
+	if err := ts.Save(authFilePath, ts); err != nil {
+		return fmt.Errorf("gemini token: %w", err)
+>>>>>>> origin/main
 	}
 	return nil
 }

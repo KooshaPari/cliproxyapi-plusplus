@@ -7,8 +7,13 @@ import (
 	"testing"
 	"time"
 
+<<<<<<< HEAD
 	cliproxycmd "github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/cmd"
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/config"
+=======
+	cliproxycmd "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/cmd"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+>>>>>>> origin/main
 )
 
 func TestRunSetupJSONResponseShape(t *testing.T) {

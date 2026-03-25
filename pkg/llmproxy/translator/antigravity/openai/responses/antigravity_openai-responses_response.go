@@ -3,7 +3,11 @@ package responses
 import (
 	"context"
 
+<<<<<<< HEAD
 	geminiopenai "github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/translator/gemini/openai/responses"
+=======
+	geminiopenai "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/translator/gemini/openai/responses"
+>>>>>>> origin/main
 	"github.com/tidwall/gjson"
 )
 

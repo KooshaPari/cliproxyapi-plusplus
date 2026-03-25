@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 ---
 layout: home
 
@@ -82,3 +83,18 @@ curl -sS http://localhost:8317/v1/metrics/providers | jq
 
 - [Main Repository README](https://github.com/KooshaPari/cliproxyapi-plusplus/blob/main/README.md)
 - [Feature Changes in ++](./FEATURE_CHANGES_PLUSPLUS.md)
+=======
+# CLIProxyAPI++
+
+<CategorySwitcher />
+
+Welcome to the unified docs surface.
+
+## Super Categories
+
+- [Wiki (User Guides)](/wiki/)
+- [Development Guide](/development/)
+- [Document Index](/index/)
+- [API](/api/)
+- [Roadmap](/roadmap/)
+>>>>>>> origin/main

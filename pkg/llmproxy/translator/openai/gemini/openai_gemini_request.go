@@ -11,7 +11,11 @@ import (
 	"math/big"
 	"strings"
 
+<<<<<<< HEAD
 	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/thinking"
+=======
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/thinking"
+>>>>>>> origin/main
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
 )

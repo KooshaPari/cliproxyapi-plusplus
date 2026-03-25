@@ -3,9 +3,15 @@ package test
 import (
 	"testing"
 
+<<<<<<< HEAD
 	_ "github.com/router-for-me/CLIProxyAPI/v6/internal/translator"
 
 	sdktranslator "github.com/router-for-me/CLIProxyAPI/v6/sdk/translator"
+=======
+	_ "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/translator"
+
+	sdktranslator "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/translator"
+>>>>>>> origin/main
 	"github.com/tidwall/gjson"
 )
 
@@ -33,7 +39,11 @@ func TestOpenAIToCodex_PreservesBuiltinTools(t *testing.T) {
 	}
 }
 
+<<<<<<< HEAD
 func TestOpenAIResponsesToOpenAI_IgnoresBuiltinTools(t *testing.T) {
+=======
+func TestOpenAIResponsesToOpenAI_PassesThroughBuiltinTools(t *testing.T) {
+>>>>>>> origin/main
 	in := []byte(`{
 		"model":"gpt-5",
 		"input":[{"role":"user","content":[{"type":"input_text","text":"hi"}]}],
@@ -42,7 +52,15 @@ func TestOpenAIResponsesToOpenAI_IgnoresBuiltinTools(t *testing.T) {
 
 	out := sdktranslator.TranslateRequest(sdktranslator.FormatOpenAIResponse, sdktranslator.FormatOpenAI, "gpt-5", in, false)
 
+<<<<<<< HEAD
 	if got := gjson.GetBytes(out, "tools.#").Int(); got != 0 {
 		t.Fatalf("expected 0 tools (builtin tools not supported in Chat Completions), got %d: %s", got, string(out))
+=======
+	if got := gjson.GetBytes(out, "tools.#").Int(); got != 1 {
+		t.Fatalf("expected 1 tool (builtin tools passed through), got %d: %s", got, string(out))
+	}
+	if got := gjson.GetBytes(out, "tools.0.type").String(); got != "web_search" {
+		t.Fatalf("expected tools[0].type=web_search, got %q: %s", got, string(out))
+>>>>>>> origin/main
 	}
 }

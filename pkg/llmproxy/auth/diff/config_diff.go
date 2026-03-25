@@ -6,7 +6,11 @@ import (
 	"reflect"
 	"strings"
 
+<<<<<<< HEAD
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/config"
+=======
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+>>>>>>> origin/main
 )
 
 // BuildConfigChangeDetails computes a redacted, human-readable list of config changes.

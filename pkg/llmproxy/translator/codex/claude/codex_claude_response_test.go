@@ -89,7 +89,12 @@ func TestConvertCodexResponseToClaude_DeduplicatesFunctionCallArgumentsDoneWhenD
 	}
 
 	gotDone := ConvertCodexResponseToClaude(ctx, "gpt-5.3-codex", nil, nil, doneRaw, &param)
+<<<<<<< HEAD
 	if len(gotDone) != 1 || gotDone[0] != "" {
 		t.Fatalf("expected empty chunk for done event when delta already received, got len=%d, chunk=%q", len(gotDone), gotDone)
+=======
+	if len(gotDone) != 0 {
+		t.Fatalf("expected nil/empty slice for done event when delta already received, got len=%d, chunk=%q", len(gotDone), gotDone)
+>>>>>>> origin/main
 	}
 }

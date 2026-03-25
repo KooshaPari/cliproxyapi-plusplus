@@ -11,7 +11,11 @@ import (
 	"regexp"
 	"strings"
 
+<<<<<<< HEAD
 	"github.com/router-for-me/CLIProxyAPI/v6/internal/config"
+=======
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+>>>>>>> origin/main
 	log "github.com/sirupsen/logrus"
 )
 
@@ -137,3 +141,13 @@ func WritablePath() string {
 	}
 	return ""
 }
+<<<<<<< HEAD
+=======
+
+// IsClaudeThinkingModel checks if the model is a Claude thinking model
+// that requires the interleaved-thinking beta header.
+func IsClaudeThinkingModel(model string) bool {
+	lower := strings.ToLower(model)
+	return strings.Contains(lower, "claude") && strings.Contains(lower, "thinking")
+}
+>>>>>>> origin/main

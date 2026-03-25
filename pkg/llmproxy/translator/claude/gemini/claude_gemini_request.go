@@ -14,8 +14,13 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+<<<<<<< HEAD
 	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/thinking"
 	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/util"
+=======
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/thinking"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/util"
+>>>>>>> origin/main
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
 )

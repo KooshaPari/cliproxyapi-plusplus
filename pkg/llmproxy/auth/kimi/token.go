@@ -4,6 +4,7 @@
 package kimi
 
 import (
+<<<<<<< HEAD
 	"encoding/json"
 	"fmt"
 	"os"
@@ -11,14 +12,25 @@ import (
 	"time"
 
 	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/misc"
+=======
+	"fmt"
+	"time"
+
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/base"
+>>>>>>> origin/main
 )
 
 // KimiTokenStorage stores OAuth2 token information for Kimi API authentication.
 type KimiTokenStorage struct {
+<<<<<<< HEAD
 	// AccessToken is the OAuth2 access token used for authenticating API requests.
 	AccessToken string `json:"access_token"`
 	// RefreshToken is the OAuth2 refresh token used to obtain new access tokens.
 	RefreshToken string `json:"refresh_token"`
+=======
+	base.BaseTokenStorage
+
+>>>>>>> origin/main
 	// TokenType is the type of token, typically "Bearer".
 	TokenType string `json:"token_type"`
 	// Scope is the OAuth2 scope granted to the token.
@@ -27,8 +39,11 @@ type KimiTokenStorage struct {
 	DeviceID string `json:"device_id,omitempty"`
 	// Expired is the RFC3339 timestamp when the access token expires.
 	Expired string `json:"expired,omitempty"`
+<<<<<<< HEAD
 	// Type indicates the authentication provider type, always "kimi" for this storage.
 	Type string `json:"type"`
+=======
+>>>>>>> origin/main
 }
 
 // KimiTokenData holds the raw OAuth token response from Kimi.
@@ -71,6 +86,7 @@ type DeviceCodeResponse struct {
 
 // SaveTokenToFile serializes the Kimi token storage to a JSON file.
 func (ts *KimiTokenStorage) SaveTokenToFile(authFilePath string) error {
+<<<<<<< HEAD
 	safePath, err := misc.ResolveSafeFilePath(authFilePath)
 	if err != nil {
 		return fmt.Errorf("invalid token file path: %w", err)
@@ -94,6 +110,11 @@ func (ts *KimiTokenStorage) SaveTokenToFile(authFilePath string) error {
 	encoder.SetIndent("", "  ")
 	if err = encoder.Encode(ts); err != nil {
 		return fmt.Errorf("failed to write token to file: %w", err)
+=======
+	ts.Type = "kimi"
+	if err := ts.Save(authFilePath, ts); err != nil {
+		return fmt.Errorf("kimi token: %w", err)
+>>>>>>> origin/main
 	}
 	return nil
 }

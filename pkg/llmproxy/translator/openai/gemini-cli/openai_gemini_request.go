@@ -6,7 +6,11 @@
 package geminiCLI
 
 import (
+<<<<<<< HEAD
 	openaigemini "github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/translator/openai/gemini"
+=======
+	openaigemini "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/translator/openai/gemini"
+>>>>>>> origin/main
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
 )
