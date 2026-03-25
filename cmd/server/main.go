@@ -426,12 +426,18 @@ func main() {
 			log.Errorf("failed to get working directory: %v", err)
 			return
 		}
-		configFilePath = filepath.Join(wd, "config.yaml")
+		configFilePath = resolveDefaultConfigPath(wd, isCloudDeploy)
 		cfg, err = config.LoadConfigOptional(configFilePath, isCloudDeploy)
 	}
 	if err != nil {
 		log.Errorf("failed to load config: %v", err)
 		return
+	}
+	if configFileExists(configFilePath) {
+		if err := validateConfigFileStrict(configFilePath); err != nil {
+			log.Errorf("failed strict config validation: %v", err)
+			return
+		}
 	}
 	if cfg == nil {
 		cfg = &config.Config{}
