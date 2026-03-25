@@ -80,15 +80,13 @@ Quality gates are enforced via repo CI workflows (build/lint/path guards).
 
 ## Documentation
 
-Primary docs root is `docs/` with a unified category IA:
+- `docs/start-here.md` - Getting started guide
+- `docs/provider-usage.md` - Provider configuration
+- `docs/provider-quickstarts.md` - Per-provider guides
+- `docs/api/` - API reference
+- `docs/sdk-usage.md` - SDK guides
 
-- `docs/wiki/`
-- `docs/development/`
-- `docs/index/`
-- `docs/api/`
-- `docs/roadmap/`
-
-VitePress docs commands:
+## Environment
 
 ```bash
 cd docs
@@ -97,7 +95,7 @@ npm run docs:dev
 npm run docs:build
 ```
 
-## Contributing
+---
 
 This project only accepts pull requests that relate to third-party provider support. Any pull requests unrelated to third-party provider support will be rejected.
 
