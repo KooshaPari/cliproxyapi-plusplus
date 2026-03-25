@@ -47,6 +47,12 @@ export ANTHROPIC_API_KEY="sk-..."
 - A provider interface + registry is better than N isolated classes.
 - Template strings > hardcoded messages. Config-driven > code-driven.
 
+## Worktree Discipline
+
+- Use `.worktrees/` for active worktree lanes.
+- Treat `PROJECT-wtrees/` as migration-only legacy layout.
+- Keep the primary checkout on `main` and avoid branch development there.
+
 ### Research Before Implementing
 
 - Check pkg.go.dev for existing libraries.
