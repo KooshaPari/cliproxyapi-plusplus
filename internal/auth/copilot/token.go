@@ -16,7 +16,7 @@ import (
 // It extends the shared BaseTokenStorage with Copilot-specific fields for managing
 // GitHub user profile information.
 type CopilotTokenStorage struct {
-	*base.BaseTokenStorage
+	*auth.BaseTokenStorage
 
 	// TokenType is the type of token, typically "bearer".
 	TokenType string `json:"token_type"`
@@ -39,7 +39,7 @@ type CopilotTokenStorage struct {
 //   - *CopilotTokenStorage: A new Copilot token storage instance
 func NewCopilotTokenStorage(filePath string) *CopilotTokenStorage {
 	return &CopilotTokenStorage{
-		BaseTokenStorage: base.NewBaseTokenStorage(filePath),
+		BaseTokenStorage: auth.NewBaseTokenStorage(filePath),
 	}
 }
 
@@ -93,7 +93,7 @@ func (ts *CopilotTokenStorage) SaveTokenToFile(authFilePath string) error {
 	ts.Type = "github-copilot"
 
 	// Create a new token storage with the file path and copy the fields
-	base := base.NewBaseTokenStorage(authFilePath)
+	base := auth.NewBaseTokenStorage(authFilePath)
 	base.IDToken = ts.IDToken
 	base.AccessToken = ts.AccessToken
 	base.RefreshToken = ts.RefreshToken

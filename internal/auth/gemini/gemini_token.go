@@ -15,7 +15,7 @@ import (
 // It extends the shared BaseTokenStorage with Gemini-specific fields for managing
 // Google Cloud Project information.
 type GeminiTokenStorage struct {
-	*base.BaseTokenStorage
+	*auth.BaseTokenStorage
 
 	// Token holds the raw OAuth2 token data, including access and refresh tokens.
 	Token any `json:"token"`
@@ -39,7 +39,7 @@ type GeminiTokenStorage struct {
 //   - *GeminiTokenStorage: A new Gemini token storage instance
 func NewGeminiTokenStorage(filePath string) *GeminiTokenStorage {
 	return &GeminiTokenStorage{
-		BaseTokenStorage: base.NewBaseTokenStorage(filePath),
+		BaseTokenStorage: auth.NewBaseTokenStorage(filePath),
 	}
 }
 
@@ -57,7 +57,7 @@ func (ts *GeminiTokenStorage) SaveTokenToFile(authFilePath string) error {
 	ts.Type = "gemini"
 
 	// Create a new token storage with the file path and copy the fields
-	base := base.NewBaseTokenStorage(authFilePath)
+	base := auth.NewBaseTokenStorage(authFilePath)
 	base.IDToken = ts.IDToken
 	base.AccessToken = ts.AccessToken
 	base.RefreshToken = ts.RefreshToken

@@ -349,11 +349,12 @@ func (o *QwenAuth) RefreshTokensWithRetry(ctx context.Context, refreshToken stri
 // CreateTokenStorage creates a QwenTokenStorage object from a QwenTokenData object.
 func (o *QwenAuth) CreateTokenStorage(tokenData *QwenTokenData) *QwenTokenStorage {
 	storage := &QwenTokenStorage{
-		AccessToken:  tokenData.AccessToken,
-		RefreshToken: tokenData.RefreshToken,
-		LastRefresh:  time.Now().Format(time.RFC3339),
-		ResourceURL:  tokenData.ResourceURL,
-		Expire:       tokenData.Expire,
+		BaseTokenStorage: &base.BaseTokenStorage{
+			AccessToken:  tokenData.AccessToken,
+			RefreshToken: tokenData.RefreshToken,
+			Type:         "qwen",
+		},
+		ResourceURL: tokenData.ResourceURL,
 	}
 
 	return storage
@@ -361,9 +362,7 @@ func (o *QwenAuth) CreateTokenStorage(tokenData *QwenTokenData) *QwenTokenStorag
 
 // UpdateTokenStorage updates an existing token storage with new token data
 func (o *QwenAuth) UpdateTokenStorage(storage *QwenTokenStorage, tokenData *QwenTokenData) {
-	storage.AccessToken = tokenData.AccessToken
-	storage.RefreshToken = tokenData.RefreshToken
-	storage.LastRefresh = time.Now().Format(time.RFC3339)
+	storage.BaseTokenStorage.AccessToken = tokenData.AccessToken
+	storage.BaseTokenStorage.RefreshToken = tokenData.RefreshToken
 	storage.ResourceURL = tokenData.ResourceURL
-	storage.Expire = tokenData.Expire
 }

@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/misc"
+	"github.com/router-for-me/CLIProxyAPI/v6/internal/misc"
 )
 
 func sanitizeTokenFilePath(path string) (string, error) {
@@ -25,7 +25,7 @@ func sanitizeTokenFilePath(path string) (string, error) {
 // It extends the shared BaseTokenStorage with Claude-specific functionality,
 // maintaining compatibility with the existing auth system.
 type ClaudeTokenStorage struct {
-	*base.BaseTokenStorage
+	*auth.BaseTokenStorage
 }
 
 // NewClaudeTokenStorage creates a new Claude token storage with the given file path.
@@ -37,7 +37,7 @@ type ClaudeTokenStorage struct {
 //   - *ClaudeTokenStorage: A new Claude token storage instance
 func NewClaudeTokenStorage(filePath string) *ClaudeTokenStorage {
 	return &ClaudeTokenStorage{
-		BaseTokenStorage: base.NewBaseTokenStorage(filePath),
+		BaseTokenStorage: auth.NewBaseTokenStorage(filePath),
 	}
 }
 
@@ -51,7 +51,6 @@ func NewClaudeTokenStorage(filePath string) *ClaudeTokenStorage {
 // Returns:
 //   - error: An error if the operation fails, nil otherwise
 func (ts *ClaudeTokenStorage) SaveTokenToFile(authFilePath string) error {
-	misc.LogSavingCredentials(authFilePath)
 	ts.Type = "claude"
 
 	safePath, err := sanitizeTokenFilePath(authFilePath)

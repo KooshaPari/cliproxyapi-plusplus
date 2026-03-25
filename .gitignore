@@ -58,15 +58,10 @@ _bmad-output/*
 # Local worktree shelves (canonical checkout must stay clean)
 PROJECT-wtrees/
 
-# Added by Spec Kitty CLI (auto-managed)
-.opencode/
-.windsurf/
-.qwen/
-.augment/
-.roo/
-.amazonq/
-.github/copilot/
-.kittify/.dashboard
+boardsync
+releasebatch
+.cache
+>>>>>>> a4e4c2b8 (chore: add build artifacts to .gitignore)
 
 
 # AI tool artifacts

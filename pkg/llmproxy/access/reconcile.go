@@ -85,7 +85,9 @@ func ApplyAccessProviders(manager *sdkaccess.Manager, oldCfg, newCfg *config.Con
 	}
 
 	existing := manager.Providers()
-	configaccess.Register((*config.SDKConfig)(&newCfg.SDKConfig))
+	configaccess.Register(&sdkconfig.SDKConfig{
+		APIKeys: append([]string(nil), newCfg.APIKeys...),
+	})
 	providers, added, updated, removed, err := ReconcileProviders(oldCfg, newCfg, existing)
 	if err != nil {
 		log.Errorf("failed to reconcile request auth providers: %v", err)

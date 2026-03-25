@@ -9,13 +9,13 @@ By participating in this project, you agree to abide by our [Code of Conduct](CO
 ## How Can I Contribute?
 
 ### Reporting Bugs
-- Use the [Bug Report](https://github.com/KooshaPari/cliproxyapi-plusplus/issues/new?template=bug_report.md) template.
+- Use the [Bug Report](https://github.com/kooshapari/cliproxyapi-plusplus/issues/new?template=bug_report.md) template.
 - Provide a clear and descriptive title.
 - Describe the exact steps to reproduce the problem.
 
 ### Suggesting Enhancements
-- Check the [Issues](https://github.com/KooshaPari/cliproxyapi-plusplus/issues) to see if the enhancement has already been suggested.
-- Use the [Feature Request](https://github.com/KooshaPari/cliproxyapi-plusplus/issues/new?template=feature_request.md) template.
+- Check the [Issues](https://github.com/kooshapari/cliproxyapi-plusplus/issues) to see if the enhancement has already been suggested.
+- Use the [Feature Request](https://github.com/kooshapari/cliproxyapi-plusplus/issues/new?template=feature_request.md) template.
 
 ### Pull Requests
 1. Fork the repo and create your branch from `main`.
@@ -25,8 +25,8 @@ By participating in this project, you agree to abide by our [Code of Conduct](CO
 5. Make sure your code lints (`golangci-lint run`).
 
 #### Which repository to use?
-- **Third-party provider support**: Submit your PR directly to [KooshaPari/cliproxyapi-plusplus](https://github.com/KooshaPari/cliproxyapi-plusplus).
-- **Core logic improvements**: If the change is not specific to a third-party provider, please propose it to the [mainline project](https://github.com/router-for-me/CLIProxyAPI) first.
+- **Third-party provider support**: Submit your PR directly to [kooshapari/cliproxyapi-plusplus](https://github.com/kooshapari/cliproxyapi-plusplus).
+- **Core logic improvements**: If the change is not specific to a third-party provider, please propose it to the [mainline project](https://github.com/kooshapari/cliproxyapi) first.
 
 ## Governance
 

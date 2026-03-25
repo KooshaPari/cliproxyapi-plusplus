@@ -17,6 +17,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	"unsafe"
 
 	"github.com/gin-gonic/gin"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/access"
@@ -64,6 +65,10 @@ func defaultRequestLoggerFactory(cfg *config.Config, configPath string) logging.
 		return logging.NewFileRequestLogger(cfg.RequestLog, filepath.Join(base, "logs"), configDir, cfg.ErrorLogsMaxFiles)
 	}
 	return logging.NewFileRequestLogger(cfg.RequestLog, "logs", configDir, cfg.ErrorLogsMaxFiles)
+}
+
+func castToSDKConfig(cfg *config.SDKConfig) *sdkconfig.SDKConfig {
+	return (*sdkconfig.SDKConfig)(unsafe.Pointer(cfg))
 }
 
 // WithMiddleware appends additional Gin middleware during server construction.
@@ -245,7 +250,7 @@ func NewServer(cfg *config.Config, authManager *auth.Manager, accessManager *sdk
 	// Create server instance
 	s := &Server{
 		engine:              engine,
-		handlers:            handlers.NewBaseAPIHandlers(&cfg.SDKConfig, authManager),
+		handlers:            handlers.NewBaseAPIHandlers(castToSDKConfig(&cfg.SDKConfig), authManager),
 		cfg:                 cfg,
 		accessManager:       accessManager,
 		requestLogger:       requestLogger,
@@ -1000,7 +1005,7 @@ func (s *Server) UpdateClients(cfg *config.Config) {
 	// Save YAML snapshot for next comparison
 	s.oldConfigYaml, _ = yaml.Marshal(cfg)
 
-	s.handlers.UpdateClients(&cfg.SDKConfig)
+	s.handlers.UpdateClients(castToSDKConfig(&cfg.SDKConfig))
 
 	if s.mgmt != nil {
 		s.mgmt.SetConfig(cfg)
