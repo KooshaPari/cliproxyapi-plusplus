@@ -12,7 +12,7 @@ import (
 // It extends the shared BaseTokenStorage with Claude-specific functionality,
 // maintaining compatibility with the existing auth system.
 type ClaudeTokenStorage struct {
-	*auth.BaseTokenStorage
+	*base.BaseTokenStorage
 }
 
 // NewClaudeTokenStorage creates a new Claude token storage with the given file path.
@@ -24,7 +24,7 @@ type ClaudeTokenStorage struct {
 //   - *ClaudeTokenStorage: A new Claude token storage instance
 func NewClaudeTokenStorage(filePath string) *ClaudeTokenStorage {
 	return &ClaudeTokenStorage{
-		BaseTokenStorage: auth.NewBaseTokenStorage(filePath),
+		BaseTokenStorage: base.NewBaseTokenStorage(filePath),
 	}
 }
 
@@ -42,7 +42,7 @@ func (ts *ClaudeTokenStorage) SaveTokenToFile(authFilePath string) error {
 	ts.Type = "claude"
 
 	// Create a new token storage with the file path and copy the fields
-	base := auth.NewBaseTokenStorage(authFilePath)
+	base := base.NewBaseTokenStorage(authFilePath)
 	base.IDToken = ts.IDToken
 	base.AccessToken = ts.AccessToken
 	base.RefreshToken = ts.RefreshToken
