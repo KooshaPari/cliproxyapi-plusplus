@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
-	kiroauth "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/kiro"
+	kiroauth "github.com/kooshapari/cliproxyapi-plusplus/v6/internal/auth/kiro"
 	log "github.com/sirupsen/logrus"
 )
 

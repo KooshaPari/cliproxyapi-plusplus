@@ -4,7 +4,11 @@
 package copilot
 
 import (
-	"github.com/KooshaPari/phenotype-go-auth"
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
+
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/misc"
 )
 

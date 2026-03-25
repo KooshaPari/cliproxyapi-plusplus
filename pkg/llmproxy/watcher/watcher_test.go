@@ -14,9 +14,9 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/watcher/diff"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/watcher/synthesizer"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/watcher/diff"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/watcher/synthesizer"
 	sdkAuth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/auth"
 	coreauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
 	"gopkg.in/yaml.v3"

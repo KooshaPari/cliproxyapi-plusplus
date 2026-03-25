@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
 	cliproxyauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/proxy"

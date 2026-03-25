@@ -29,8 +29,8 @@ import (
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy"
 	coreauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
 	clipexec "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/executor"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/logging"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/logging"
 	sdktr "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/translator"
 )
 

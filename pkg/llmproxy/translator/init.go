@@ -1,9 +1,6 @@
 package translator
 
 import (
-	// Import translator/translator to trigger centralized registration init.
-	_ "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/translator/translator"
-
 	_ "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/translator/claude/gemini"
 	_ "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/translator/claude/gemini-cli"
 	_ "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/translator/claude/openai/chat-completions"

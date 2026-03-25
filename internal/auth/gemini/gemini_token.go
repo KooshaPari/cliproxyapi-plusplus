@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/KooshaPari/phenotype-go-auth"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/misc"
+	log "github.com/sirupsen/logrus"
 )
 
 // GeminiTokenStorage stores OAuth2 token information for Google Gemini API authentication.

@@ -16,7 +16,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/base"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/util"
 	log "github.com/sirupsen/logrus"
 )
