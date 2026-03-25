@@ -1,7 +1,8 @@
 name: Lint & Test
 
 on:
-  workflow_dispatch:
+  pull_request:
+    types: [opened, synchronize, reopened]
 
 permissions:
   contents: read
@@ -9,8 +10,9 @@ permissions:
 jobs:
   lint-test:
     name: lint-test
-    if: ${{ github.head_ref != 'chore/branding-slug-cleanup-20260303-clean' }}
     runs-on: ubuntu-latest
     steps:
-      - name: Skip JS/TS lint-test for Go project
-        run: echo "This is a Go project — JS/TS lint-test is not applicable. Go linting runs via golangci-lint workflow."
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - uses: KooshaPari/phenotypeActions/actions/lint-test@main
