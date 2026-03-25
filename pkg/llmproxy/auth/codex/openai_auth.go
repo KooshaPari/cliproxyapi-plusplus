@@ -14,8 +14,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/router-for-me/CLIProxyAPI/v6/internal/config"
-	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/util"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/base"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/util"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -257,13 +258,15 @@ func (o *CodexAuth) RefreshTokens(ctx context.Context, refreshToken string) (*Co
 // It populates the storage struct with token data, user information, and timestamps.
 func (o *CodexAuth) CreateTokenStorage(bundle *CodexAuthBundle) *CodexTokenStorage {
 	storage := &CodexTokenStorage{
-		IDToken:      bundle.TokenData.IDToken,
-		AccessToken:  bundle.TokenData.AccessToken,
-		RefreshToken: bundle.TokenData.RefreshToken,
-		AccountID:    bundle.TokenData.AccountID,
-		LastRefresh:  bundle.LastRefresh,
-		Email:        bundle.TokenData.Email,
-		Expire:       bundle.TokenData.Expire,
+		BaseTokenStorage: base.BaseTokenStorage{
+			AccessToken:  bundle.TokenData.AccessToken,
+			RefreshToken: bundle.TokenData.RefreshToken,
+			Email:        bundle.TokenData.Email,
+		},
+		IDToken:     bundle.TokenData.IDToken,
+		AccountID:   bundle.TokenData.AccountID,
+		LastRefresh: bundle.LastRefresh,
+		Expire:      bundle.TokenData.Expire,
 	}
 
 	return storage

@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/json"
@@ -9,9 +8,6 @@ import (
 	"errors"
 	"io"
 	"net/http"
-	"path/filepath"
-	"strconv"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -49,6 +45,19 @@ type ExecutionSessionCloser interface {
 	CloseExecutionSession(sessionID string)
 }
 
+// RequestPreparer allows executors to prepare HTTP requests with provider credentials.
+type RequestPreparer interface {
+	PrepareRequest(req *http.Request, auth *Auth) error
+}
+
+// RoundTripperProvider provides per-auth HTTP RoundTripper implementations.
+type RoundTripperProvider interface {
+	RoundTripperFor(auth *Auth) http.RoundTripper
+}
+
+// roundTripperContextKey is used to store per-request RoundTripper in context.
+type roundTripperContextKey struct{}
+
 const (
 	// CloseAllExecutionSessionsID asks an executor to release all active execution sessions.
 	// Executors that do not support this marker may ignore it.
@@ -69,20 +78,6 @@ const (
 )
 
 var quotaCooldownDisabled atomic.Bool
-
-// SetQuotaCooldownDisabled toggles quota cooldown scheduling globally.
-func SetQuotaCooldownDisabled(disable bool) {
-	quotaCooldownDisabled.Store(disable)
-}
-
-func quotaCooldownDisabledForAuth(auth *Auth) bool {
-	if auth != nil {
-		if override, ok := auth.DisableCoolingOverride(); ok {
-			return override
-		}
-	}
-	return quotaCooldownDisabled.Load()
-}
 
 // Result captures execution outcome used to adjust auth state.
 type Result struct {
@@ -182,6 +177,7 @@ func NewManager(store Store, selector Selector, hook Hook) *Manager {
 	return manager
 }
 
+// SetSelector sets the auth selector strategy.
 func (m *Manager) SetSelector(selector Selector) {
 	if m == nil {
 		return
@@ -201,7 +197,7 @@ func (m *Manager) SetStore(store Store) {
 	m.store = store
 }
 
-// SetRoundTripperProvider register a provider that returns a per-auth RoundTripper.
+// SetRoundTripperProvider registers a provider that returns a per-auth RoundTripper.
 func (m *Manager) SetRoundTripperProvider(p RoundTripperProvider) {
 	m.mu.Lock()
 	m.rtProvider = p

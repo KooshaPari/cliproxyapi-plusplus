@@ -4,21 +4,16 @@
 package kimi
 
 import (
-	"encoding/json"
 	"fmt"
-	"os"
-	"path/filepath"
 	"time"
 
-	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/misc"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/base"
 )
 
 // KimiTokenStorage stores OAuth2 token information for Kimi API authentication.
 type KimiTokenStorage struct {
-	// AccessToken is the OAuth2 access token used for authenticating API requests.
-	AccessToken string `json:"access_token"`
-	// RefreshToken is the OAuth2 refresh token used to obtain new access tokens.
-	RefreshToken string `json:"refresh_token"`
+	base.BaseTokenStorage
+
 	// TokenType is the type of token, typically "Bearer".
 	TokenType string `json:"token_type"`
 	// Scope is the OAuth2 scope granted to the token.
@@ -27,8 +22,6 @@ type KimiTokenStorage struct {
 	DeviceID string `json:"device_id,omitempty"`
 	// Expired is the RFC3339 timestamp when the access token expires.
 	Expired string `json:"expired,omitempty"`
-	// Type indicates the authentication provider type, always "kimi" for this storage.
-	Type string `json:"type"`
 }
 
 // KimiTokenData holds the raw OAuth token response from Kimi.
@@ -71,29 +64,9 @@ type DeviceCodeResponse struct {
 
 // SaveTokenToFile serializes the Kimi token storage to a JSON file.
 func (ts *KimiTokenStorage) SaveTokenToFile(authFilePath string) error {
-	safePath, err := misc.ResolveSafeFilePath(authFilePath)
-	if err != nil {
-		return fmt.Errorf("invalid token file path: %w", err)
-	}
-	misc.LogSavingCredentials(safePath)
 	ts.Type = "kimi"
-
-	if err = os.MkdirAll(filepath.Dir(safePath), 0700); err != nil {
-		return fmt.Errorf("failed to create directory: %v", err)
-	}
-
-	f, err := os.Create(safePath)
-	if err != nil {
-		return fmt.Errorf("failed to create token file: %w", err)
-	}
-	defer func() {
-		_ = f.Close()
-	}()
-
-	encoder := json.NewEncoder(f)
-	encoder.SetIndent("", "  ")
-	if err = encoder.Encode(ts); err != nil {
-		return fmt.Errorf("failed to write token to file: %w", err)
+	if err := ts.Save(authFilePath, ts); err != nil {
+		return fmt.Errorf("kimi token: %w", err)
 	}
 	return nil
 }

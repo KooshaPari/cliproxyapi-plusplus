@@ -15,11 +15,11 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/router-for-me/CLIProxyAPI/v6/internal/auth/codex"
-	"github.com/router-for-me/CLIProxyAPI/v6/internal/browser"
-	"github.com/router-for-me/CLIProxyAPI/v6/internal/config"
-	"github.com/router-for-me/CLIProxyAPI/v6/internal/misc"
-	"github.com/router-for-me/CLIProxyAPI/v6/internal/util"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/auth/codex"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/browser"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/misc"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/util"
 	log "github.com/sirupsen/logrus"
 	"github.com/tidwall/gjson"
 	"golang.org/x/net/proxy"
@@ -203,13 +203,12 @@ func (g *GeminiAuth) createTokenStorage(ctx context.Context, config *oauth2.Conf
 	ifToken["scopes"] = Scopes
 	ifToken["universe_domain"] = "googleapis.com"
 
-	ts := GeminiTokenStorage{
-		Token:     ifToken,
-		ProjectID: projectID,
-		Email:     emailResult.String(),
-	}
+	ts := NewGeminiTokenStorage("")
+	ts.Token = ifToken
+	ts.ProjectID = projectID
+	ts.Email = emailResult.String()
 
-	return &ts, nil
+	return ts, nil
 }
 
 // getTokenFromWeb initiates the web-based OAuth2 authorization flow.

@@ -10,8 +10,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/router-for-me/CLIProxyAPI/v6/internal/config"
-	"github.com/router-for-me/CLIProxyAPI/v6/internal/util"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/util"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -82,15 +82,21 @@ func (c *CopilotAuth) WaitForAuthorization(ctx context.Context, deviceCode *Devi
 	}
 
 	// Fetch the GitHub username
-	username, err := c.deviceClient.FetchUserInfo(ctx, tokenData.AccessToken)
+	userInfo, err := c.deviceClient.FetchUserInfo(ctx, tokenData.AccessToken)
 	if err != nil {
 		log.Warnf("copilot: failed to fetch user info: %v", err)
-		username = "unknown"
+	}
+
+	username := userInfo.Login
+	if username == "" {
+		username = "github-user"
 	}
 
 	return &CopilotAuthBundle{
 		TokenData: tokenData,
 		Username:  username,
+		Email:     userInfo.Email,
+		Name:      userInfo.Name,
 	}, nil
 }
 
@@ -150,23 +156,25 @@ func (c *CopilotAuth) ValidateToken(ctx context.Context, accessToken string) (bo
 		return false, "", nil
 	}
 
-	username, err := c.deviceClient.FetchUserInfo(ctx, accessToken)
+	userInfo, err := c.deviceClient.FetchUserInfo(ctx, accessToken)
 	if err != nil {
 		return false, "", err
 	}
 
-	return true, username, nil
+	return true, userInfo.Login, nil
 }
 
 // CreateTokenStorage creates a new CopilotTokenStorage from auth bundle.
 func (c *CopilotAuth) CreateTokenStorage(bundle *CopilotAuthBundle) *CopilotTokenStorage {
-	return &CopilotTokenStorage{
-		AccessToken: bundle.TokenData.AccessToken,
-		TokenType:   bundle.TokenData.TokenType,
-		Scope:       bundle.TokenData.Scope,
-		Username:    bundle.Username,
-		Type:        "github-copilot",
-	}
+	storage := NewCopilotTokenStorage("")
+	storage.AccessToken = bundle.TokenData.AccessToken
+	storage.TokenType = bundle.TokenData.TokenType
+	storage.Scope = bundle.TokenData.Scope
+	storage.Username = bundle.Username
+	storage.Email = bundle.Email
+	storage.Name = bundle.Name
+	storage.Type = "github-copilot"
+	return storage
 }
 
 // LoadAndValidateToken loads a token from storage and validates it.

@@ -10,8 +10,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/router-for-me/CLIProxyAPI/v6/internal/config"
-	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/util"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/base"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/util"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -164,11 +165,13 @@ func (c *CopilotAuth) ValidateToken(ctx context.Context, accessToken string) (bo
 // CreateTokenStorage creates a new CopilotTokenStorage from auth bundle.
 func (c *CopilotAuth) CreateTokenStorage(bundle *CopilotAuthBundle) *CopilotTokenStorage {
 	return &CopilotTokenStorage{
-		AccessToken: bundle.TokenData.AccessToken,
-		TokenType:   bundle.TokenData.TokenType,
-		Scope:       bundle.TokenData.Scope,
-		Username:    bundle.Username,
-		Type:        "github-copilot",
+		BaseTokenStorage: base.BaseTokenStorage{
+			AccessToken: bundle.TokenData.AccessToken,
+			Type:        "github-copilot",
+		},
+		TokenType: bundle.TokenData.TokenType,
+		Scope:     bundle.TokenData.Scope,
+		Username:  bundle.Username,
 	}
 }
 

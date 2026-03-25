@@ -3,18 +3,20 @@
 package kilo
 
 import (
-	"encoding/json"
 	"fmt"
-	"os"
-	"path/filepath"
 
-	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/misc"
-	log "github.com/sirupsen/logrus"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/base"
 )
 
 // KiloTokenStorage stores token information for Kilo AI authentication.
+//
+// Note: Kilo uses a proprietary token format stored under the "kilocodeToken" JSON key
+// rather than the standard "access_token" key, so BaseTokenStorage.AccessToken is not
+// populated for this provider.  The Email and Type fields from BaseTokenStorage are used.
 type KiloTokenStorage struct {
-	// Token is the Kilo access token.
+	base.BaseTokenStorage
+
+	// Token is the Kilo access token (serialised as "kilocodeToken" for Kilo compatibility).
 	Token string `json:"kilocodeToken"`
 
 	// OrganizationID is the Kilo organization ID.
@@ -22,38 +24,13 @@ type KiloTokenStorage struct {
 
 	// Model is the default model to use.
 	Model string `json:"kilocodeModel"`
-
-	// Email is the email address of the authenticated user.
-	Email string `json:"email"`
-
-	// Type indicates the authentication provider type, always "kilo" for this storage.
-	Type string `json:"type"`
 }
 
 // SaveTokenToFile serializes the Kilo token storage to a JSON file.
 func (ts *KiloTokenStorage) SaveTokenToFile(authFilePath string) error {
-	safePath, err := misc.ResolveSafeFilePath(authFilePath)
-	if err != nil {
-		return fmt.Errorf("invalid token file path: %w", err)
-	}
-	misc.LogSavingCredentials(safePath)
 	ts.Type = "kilo"
-	if err = os.MkdirAll(filepath.Dir(safePath), 0700); err != nil {
-		return fmt.Errorf("failed to create directory: %v", err)
-	}
-
-	f, err := os.Create(safePath)
-	if err != nil {
-		return fmt.Errorf("failed to create token file: %w", err)
-	}
-	defer func() {
-		if errClose := f.Close(); errClose != nil {
-			log.Errorf("failed to close file: %v", errClose)
-		}
-	}()
-
-	if err = json.NewEncoder(f).Encode(ts); err != nil {
-		return fmt.Errorf("failed to write token to file: %w", err)
+	if err := ts.Save(authFilePath, ts); err != nil {
+		return fmt.Errorf("kilo token: %w", err)
 	}
 	return nil
 }

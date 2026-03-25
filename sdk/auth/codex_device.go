@@ -109,10 +109,9 @@ func (a *CodexAuthenticator) loginWithDeviceFlow(ctx context.Context, cfg *confi
 	}
 
 	authSvc := codex.NewCodexAuth(cfg)
-	authBundle, err := authSvc.ExchangeCodeForTokensWithRedirect(
+	authBundle, err := authSvc.ExchangeCodeForTokens(
 		ctx,
 		authCode,
-		codexDeviceTokenExchangeRedirectURI,
 		&codex.PKCECodes{
 			CodeVerifier:  codeVerifier,
 			CodeChallenge: codeChallenge,
