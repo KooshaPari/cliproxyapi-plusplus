@@ -10,9 +10,8 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/registry"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/util"
+	"github.com/router-for-me/CLIProxyAPI/v6/internal/config"
+	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/util"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 )
@@ -45,8 +44,7 @@ func (h *Handler) GetLatestVersion(c *gin.Context) {
 		proxyURL = strings.TrimSpace(h.cfg.ProxyURL)
 	}
 	if proxyURL != "" {
-		proxyCfg := &config.SDKConfig{ProxyURL: proxyURL}
-		util.SetProxy(proxyCfg, client)
+		util.SetProxy(&h.cfg.SDKConfig, client)
 	}
 
 	req, err := http.NewRequestWithContext(c.Request.Context(), http.MethodGet, latestReleaseURL, nil)

@@ -3,8 +3,8 @@ package cliproxy
 import (
 	"context"
 
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/watcher"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/watcher"
+	"github.com/router-for-me/CLIProxyAPI/v6/sdk/config"
 )
 
 // NewFileTokenClientProvider returns the default token-backed client loader.

@@ -4,9 +4,22 @@
 package claude
 
 import (
-	"github.com/KooshaPari/phenotype-go-auth"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/misc"
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+
+	"github.com/router-for-me/CLIProxyAPI/v6/internal/misc"
 )
+
+func sanitizeTokenFilePath(path string) (string, error) {
+	trimmed := strings.TrimSpace(path)
+	if trimmed == "" {
+		return "", fmt.Errorf("token file path is empty")
+	}
+	return filepath.Clean(trimmed), nil
+}
 
 // ClaudeTokenStorage stores OAuth2 token information for Anthropic Claude API authentication.
 // It extends the shared BaseTokenStorage with Claude-specific functionality,
@@ -38,19 +51,38 @@ func NewClaudeTokenStorage(filePath string) *ClaudeTokenStorage {
 // Returns:
 //   - error: An error if the operation fails, nil otherwise
 func (ts *ClaudeTokenStorage) SaveTokenToFile(authFilePath string) error {
-	misc.LogSavingCredentials(authFilePath)
 	ts.Type = "claude"
 
-	// Create a new token storage with the file path and copy the fields
-	base := auth.NewBaseTokenStorage(authFilePath)
-	base.IDToken = ts.IDToken
-	base.AccessToken = ts.AccessToken
-	base.RefreshToken = ts.RefreshToken
-	base.LastRefresh = ts.LastRefresh
-	base.Email = ts.Email
-	base.Type = ts.Type
-	base.Expire = ts.Expire
-	base.SetMetadata(ts.Metadata)
+	safePath, err := sanitizeTokenFilePath(authFilePath)
+	if err != nil {
+		return fmt.Errorf("invalid token file path: %w", err)
+	}
 
-	return base.Save()
+	misc.LogSavingCredentials(safePath)
+
+	// Create directory structure if it doesn't exist
+	if err := os.MkdirAll(filepath.Dir(safePath), 0700); err != nil {
+		return fmt.Errorf("failed to create directory: %v", err)
+	}
+
+	// Create the token file
+	f, err := os.Create(safePath)
+	if err != nil {
+		return fmt.Errorf("failed to create token file: %w", err)
+	}
+	defer func() {
+		_ = f.Close()
+	}()
+
+	// Merge metadata using helper
+	data, errMerge := misc.MergeMetadata(ts, ts.Metadata)
+	if errMerge != nil {
+		return fmt.Errorf("failed to merge metadata: %w", errMerge)
+	}
+
+	// Encode and write the token data as JSON
+	if err = json.NewEncoder(f).Encode(data); err != nil {
+		return fmt.Errorf("failed to write token to file: %w", err)
+	}
+	return nil
 }

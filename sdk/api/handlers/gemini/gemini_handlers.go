@@ -70,7 +70,7 @@ func (h *GeminiAPIHandler) GeminiModels(c *gin.Context) {
 		if _, ok := normalizedModel["supportedGenerationMethods"]; !ok {
 			normalizedModel["supportedGenerationMethods"] = defaultMethods
 		}
-		normalizedModels = append(normalizedModels, normalizedModel)
+		normalizedModels = append(normalizedModels, filterGeminiModelFields(normalizedModel))
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"models": normalizedModels,
@@ -112,7 +112,7 @@ func (h *GeminiAPIHandler) GeminiGetHandler(c *gin.Context) {
 		if name, ok := targetModel["name"].(string); ok && name != "" && !strings.HasPrefix(name, "models/") {
 			targetModel["name"] = "models/" + name
 		}
-		c.JSON(http.StatusOK, targetModel)
+		c.JSON(http.StatusOK, filterGeminiModelFields(targetModel))
 		return
 	}
 
@@ -122,6 +122,22 @@ func (h *GeminiAPIHandler) GeminiGetHandler(c *gin.Context) {
 			Type:    "not_found",
 		},
 	})
+}
+
+func filterGeminiModelFields(input map[string]any) map[string]any {
+	if len(input) == 0 {
+		return map[string]any{}
+	}
+	filtered := make(map[string]any, len(input))
+	for k, v := range input {
+		switch k {
+		case "id", "object", "created", "owned_by", "type", "context_length", "max_completion_tokens", "thinking":
+			continue
+		default:
+			filtered[k] = v
+		}
+	}
+	return filtered
 }
 
 // GeminiHandler handles POST requests for Gemini API operations.

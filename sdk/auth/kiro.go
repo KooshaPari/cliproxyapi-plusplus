@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	kiroauth "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/kiro"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
-	coreauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
+	kiroauth "github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/auth/kiro"
+	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/config"
+	coreauth "github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/auth"
 )
 
 // extractKiroIdentifier extracts a meaningful identifier for file naming.
@@ -353,6 +353,9 @@ func (a *KiroAuthenticator) Refresh(ctx context.Context, cfg *config.Config, aut
 			clientID = loadedClientID
 			clientSecret = loadedClientSecret
 		}
+	}
+	if authMethod == "idc" && (clientID == "" || clientSecret == "") {
+		return nil, fmt.Errorf("missing idc client credentials for %s; re-authenticate with --kiro-aws-login", auth.ID)
 	}
 
 	var tokenData *kiroauth.KiroTokenData

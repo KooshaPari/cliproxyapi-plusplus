@@ -17,26 +17,28 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	"unsafe"
 
 	"github.com/gin-gonic/gin"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/access"
-	managementHandlers "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/api/handlers/management"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/api/middleware"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/api/modules"
-	ampmodule "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/api/modules/amp"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/kiro"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/logging"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/managementasset"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/usage"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/util"
-	sdkaccess "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/access"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/api/handlers"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/api/handlers/claude"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/api/handlers/gemini"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/api/handlers/openai"
-	sdkAuth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/auth"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
+	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/access"
+	managementHandlers "github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/api/handlers/management"
+	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/api/middleware"
+	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/api/modules"
+	ampmodule "github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/api/modules/amp"
+	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/auth/kiro"
+	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/config"
+	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/logging"
+	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/managementasset"
+	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/usage"
+	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/util"
+	sdkaccess "github.com/router-for-me/CLIProxyAPI/v6/sdk/access"
+	"github.com/router-for-me/CLIProxyAPI/v6/sdk/api/handlers"
+	"github.com/router-for-me/CLIProxyAPI/v6/sdk/api/handlers/claude"
+	"github.com/router-for-me/CLIProxyAPI/v6/sdk/api/handlers/gemini"
+	"github.com/router-for-me/CLIProxyAPI/v6/sdk/api/handlers/openai"
+	sdkAuth "github.com/router-for-me/CLIProxyAPI/v6/sdk/auth"
+	"github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/auth"
+	sdkconfig "github.com/router-for-me/CLIProxyAPI/v6/sdk/config"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 )
@@ -64,6 +66,10 @@ func defaultRequestLoggerFactory(cfg *config.Config, configPath string) logging.
 		return logging.NewFileRequestLogger(cfg.RequestLog, filepath.Join(base, "logs"), configDir, cfg.ErrorLogsMaxFiles)
 	}
 	return logging.NewFileRequestLogger(cfg.RequestLog, "logs", configDir, cfg.ErrorLogsMaxFiles)
+}
+
+func castToSDKConfig(cfg *config.SDKConfig) *sdkconfig.SDKConfig {
+	return (*sdkconfig.SDKConfig)(unsafe.Pointer(cfg))
 }
 
 // WithMiddleware appends additional Gin middleware during server construction.
@@ -245,7 +251,7 @@ func NewServer(cfg *config.Config, authManager *auth.Manager, accessManager *sdk
 	// Create server instance
 	s := &Server{
 		engine:              engine,
-		handlers:            handlers.NewBaseAPIHandlers(&cfg.SDKConfig, authManager),
+		handlers:            handlers.NewBaseAPIHandlers(castToSDKConfig(&cfg.SDKConfig), authManager),
 		cfg:                 cfg,
 		accessManager:       accessManager,
 		requestLogger:       requestLogger,
@@ -1000,7 +1006,7 @@ func (s *Server) UpdateClients(cfg *config.Config) {
 	// Save YAML snapshot for next comparison
 	s.oldConfigYaml, _ = yaml.Marshal(cfg)
 
-	s.handlers.UpdateClients(&cfg.SDKConfig)
+	s.handlers.UpdateClients(castToSDKConfig(&cfg.SDKConfig))
 
 	if s.mgmt != nil {
 		s.mgmt.SetConfig(cfg)
