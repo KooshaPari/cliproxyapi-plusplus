@@ -22,6 +22,19 @@ func pickRequestJSON(originalRequestRawJSON, requestRawJSON []byte) []byte {
 	return nil
 }
 
+func unwrapOpenAIChatCompletionResult(root gjson.Result) gjson.Result {
+	if root.Get("choices").Exists() {
+		return root
+	}
+	for _, path := range []string{"data", "result", "response", "data.response"} {
+		candidate := root.Get(path)
+		if candidate.Exists() && candidate.Get("choices").Exists() {
+			return candidate
+		}
+	}
+	return root
+}
+
 type oaiToResponsesStateReasoning struct {
 	ReasoningID   string
 	ReasoningData string
@@ -680,7 +693,7 @@ func ConvertOpenAIChatCompletionsResponseToOpenAIResponses(ctx context.Context, 
 // ConvertOpenAIChatCompletionsResponseToOpenAIResponsesNonStream builds a single Responses JSON
 // from a non-streaming OpenAI Chat Completions response.
 func ConvertOpenAIChatCompletionsResponseToOpenAIResponsesNonStream(_ context.Context, _ string, originalRequestRawJSON, requestRawJSON, rawJSON []byte, _ *any) string {
-	root := gjson.ParseBytes(rawJSON)
+	root := unwrapOpenAIChatCompletionResult(gjson.ParseBytes(rawJSON))
 
 	// Basic response scaffold
 	resp := `{"id":"","object":"response","created_at":0,"status":"completed","background":false,"error":null,"incomplete_details":null}`

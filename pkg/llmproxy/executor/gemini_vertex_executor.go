@@ -1018,7 +1018,8 @@ func vertexAccessToken(ctx context.Context, cfg *config.Config, auth *cliproxyau
 		ctx = context.WithValue(ctx, oauth2.HTTPClient, httpClient)
 	}
 	// Use cloud-platform scope for Vertex AI.
-	creds, errCreds := google.CredentialsFromJSON(ctx, saJSON, "https://www.googleapis.com/auth/cloud-platform")
+	//lint:ignore SA1019 migration to cloud.google.com/go/auth tracked separately
+	creds, errCreds := google.CredentialsFromJSON(ctx, saJSON, "https://www.googleapis.com/auth/cloud-platform") //nolint:staticcheck // SA1019
 	if errCreds != nil {
 		return "", fmt.Errorf("vertex executor: parse service account json failed: %w", errCreds)
 	}

@@ -125,6 +125,45 @@ func TestConvertOpenAIChatCompletionsResponseToOpenAIResponsesNonStream_Usage(t 
 	}
 }
 
+func TestConvertOpenAIChatCompletionsResponseToOpenAIResponsesNonStream_UnwrapsDataEnvelope(t *testing.T) {
+	ctx := context.Background()
+	rawJSON := []byte(`{
+		"success": true,
+		"message": "ok",
+		"data": {
+			"id": "chatcmpl-iflow",
+			"created": 1677652288,
+			"model": "minimax-m2.5",
+			"choices": [{
+				"index": 0,
+				"message": {
+					"role": "assistant",
+					"content": "Hello from envelope"
+				},
+				"finish_reason": "stop"
+			}],
+			"usage": {
+				"prompt_tokens": 10,
+				"completion_tokens": 20,
+				"total_tokens": 30
+			}
+		}
+	}`)
+
+	got := ConvertOpenAIChatCompletionsResponseToOpenAIResponsesNonStream(ctx, "m1", nil, nil, rawJSON, nil)
+	res := gjson.Parse(got)
+
+	if res.Get("id").String() != "chatcmpl-iflow" {
+		t.Fatalf("expected unwrapped id, got %s", res.Get("id").String())
+	}
+	if res.Get("output.0.content.0.text").String() != "Hello from envelope" {
+		t.Fatalf("expected unwrapped output text, got %s", res.Get("output.0").Raw)
+	}
+	if res.Get("usage.total_tokens").Int() != 30 {
+		t.Fatalf("expected unwrapped usage, got %s", res.Get("usage").Raw)
+	}
+}
+
 func TestConvertOpenAIChatCompletionsResponseToOpenAIResponses_DoneMarkerEmitsCompletion(t *testing.T) {
 	ctx := context.Background()
 	var param any

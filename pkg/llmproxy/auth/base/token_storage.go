@@ -57,10 +57,12 @@ func (b *BaseTokenStorage) GetType() string { return b.Type }
 // BaseTokenStorage itself ensures that all provider-specific fields are
 // persisted alongside the base fields.
 func (b *BaseTokenStorage) Save(authFilePath string, v any) error {
-	safePath, err := misc.ResolveSafeFilePath(authFilePath)
+	validatedPath, err := misc.ResolveSafeFilePath(authFilePath)
 	if err != nil {
 		return fmt.Errorf("base token storage: invalid file path: %w", err)
 	}
+	// Apply filepath.Clean at call site so static analysis can verify the path is sanitized.
+	safePath := filepath.Clean(validatedPath)
 	misc.LogSavingCredentials(safePath)
 
 	if err = os.MkdirAll(filepath.Dir(safePath), 0o700); err != nil {
@@ -98,10 +100,11 @@ func (b *BaseTokenStorage) Save(authFilePath string, v any) error {
 // v should be a pointer to the outer provider struct so that all fields
 // are populated.
 func (b *BaseTokenStorage) Load(authFilePath string, v any) error {
-	safePath, err := misc.ResolveSafeFilePath(authFilePath)
+	validatedPath, err := misc.ResolveSafeFilePath(authFilePath)
 	if err != nil {
 		return fmt.Errorf("base token storage: invalid file path: %w", err)
 	}
+	safePath := filepath.Clean(validatedPath)
 
 	data, err := os.ReadFile(safePath)
 	if err != nil {
@@ -117,10 +120,11 @@ func (b *BaseTokenStorage) Load(authFilePath string, v any) error {
 // Clear removes the token file at authFilePath.  It returns nil if the file
 // does not exist (idempotent delete).
 func (b *BaseTokenStorage) Clear(authFilePath string) error {
-	safePath, err := misc.ResolveSafeFilePath(authFilePath)
+	validatedPath, err := misc.ResolveSafeFilePath(authFilePath)
 	if err != nil {
 		return fmt.Errorf("base token storage: invalid file path: %w", err)
 	}
+	safePath := filepath.Clean(validatedPath)
 
 	if err = os.Remove(safePath); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("base token storage: remove token file: %w", err)

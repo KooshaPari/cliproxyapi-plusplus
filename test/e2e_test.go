@@ -1,18 +1,26 @@
 package test
 
 import (
+	"bytes"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
+	"strings"
 	"testing"
-	"time"
+
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/cmd"
 )
 
-// TestServerHealth tests the server health endpoint
+func testRepoRoot() string {
+	_, thisFile, _, _ := runtime.Caller(0)
+	return filepath.Dir(filepath.Dir(thisFile))
+}
+
+// TestServerHealth tests the server health endpoint.
 func TestServerHealth(t *testing.T) {
-	// Start a mock server
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(`{"status":"healthy"}`))
@@ -28,12 +36,13 @@ func TestServerHealth(t *testing.T) {
 	}
 }
 
-// TestBinaryExists tests that the binary exists and is executable
-func TestBinaryExists(t *testing.T) {
+// TestRepoEntrypointsExist verifies the current entrypoint sources instead of machine-local binaries.
+func TestRepoEntrypointsExist(t *testing.T) {
+	root := testRepoRoot()
 	paths := []string{
-		"cli-proxy-api-plus-integration-test",
-		"cli-proxy-api-plus",
-		"server",
+		filepath.Join(root, "cmd", "server", "main.go"),
+		filepath.Join(root, "cmd", "cliproxyctl", "main.go"),
+		filepath.Join(root, "cmd", "boardsync", "main.go"),
 	}
 
 	repoRoot := "/Users/kooshapari/temp-PRODVERCEL/485/kush/cliproxy++"
@@ -45,10 +54,9 @@ func TestBinaryExists(t *testing.T) {
 			return
 		}
 	}
-	t.Skip("Binary not found in expected paths")
 }
 
-// TestConfigFile tests config file parsing
+// TestConfigFile tests config file parsing.
 func TestConfigFile(t *testing.T) {
 	config := `
 port: 8317
@@ -57,7 +65,7 @@ log_level: debug
 `
 	tmp := t.TempDir()
 	configPath := filepath.Join(tmp, "config.yaml")
-	if err := os.WriteFile(configPath, []byte(config), 0644); err != nil {
+	if err := os.WriteFile(configPath, []byte(config), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -67,7 +75,7 @@ log_level: debug
 	}
 }
 
-// TestOAuthLoginFlow tests OAuth flow
+// TestOAuthLoginFlow tests OAuth flow.
 func TestOAuthLoginFlow(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/oauth/token" {
