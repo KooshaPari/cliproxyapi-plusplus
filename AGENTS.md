@@ -40,6 +40,12 @@ export ANTHROPIC_API_KEY="sk-..."
 - A provider interface + registry is better than N isolated classes.
 - Template strings > hardcoded messages. Config-driven > code-driven.
 
+## Worktree Discipline
+
+- Use `.worktrees/` for active worktree lanes.
+- Treat `PROJECT-wtrees/` as migration-only legacy layout.
+- Keep the primary checkout on `main` and avoid branch development there.
+
 ### Research Before Implementing
 
 - Check pkg.go.dev for existing libraries.
@@ -108,8 +114,3 @@ kush/
 ├── parpour/        # Spec-first planning
 └── pheno-sdk/       # Python SDK
 ```
-
-## Child-Agent and Delegation Policy
-- Use child agents liberally for scoped discovery, audits, multi-repo scans, and implementation planning before direct parent-agent edits.
-- Prefer delegating high-context or high-churn tasks to subagents, and keep parent-agent changes focused on integration and finalization.
-- Reserve parent-agent direct writes for the narrowest, final decision layer.

@@ -4,7 +4,7 @@
 package copilot
 
 import (
-	"github.com/KooshaPari/phenotype-go-kit/pkg/auth"
+	"github.com/KooshaPari/phenotype-go-auth"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/misc"
 )
 
@@ -12,7 +12,7 @@ import (
 // It extends the shared BaseTokenStorage with Copilot-specific fields for managing
 // GitHub user profile information.
 type CopilotTokenStorage struct {
-	*auth.BaseTokenStorage
+	*base.BaseTokenStorage
 
 	// TokenType is the type of token, typically "bearer".
 	TokenType string `json:"token_type"`
@@ -35,7 +35,7 @@ type CopilotTokenStorage struct {
 //   - *CopilotTokenStorage: A new Copilot token storage instance
 func NewCopilotTokenStorage(filePath string) *CopilotTokenStorage {
 	return &CopilotTokenStorage{
-		BaseTokenStorage: auth.NewBaseTokenStorage(filePath),
+		BaseTokenStorage: base.NewBaseTokenStorage(filePath),
 	}
 }
 
@@ -89,7 +89,7 @@ func (ts *CopilotTokenStorage) SaveTokenToFile(authFilePath string) error {
 	ts.Type = "github-copilot"
 
 	// Create a new token storage with the file path and copy the fields
-	base := auth.NewBaseTokenStorage(authFilePath)
+	base := base.NewBaseTokenStorage(authFilePath)
 	base.IDToken = ts.IDToken
 	base.AccessToken = ts.AccessToken
 	base.RefreshToken = ts.RefreshToken

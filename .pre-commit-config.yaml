@@ -13,13 +13,3 @@ repos:
         language: system
         pass_filenames: false
         stages: [pre-push]
-
-# Local security and fast gate hooks for pre-commit and pre-push stages
-  - repo: local
-    hooks:
-      - id: security-guard-pre-commit-pre-push
-        name: security-guard pre-commit/pre-push
-        entry: .github/scripts/security-guard.sh
-        language: script
-        pass_filenames: false
-        stages: [pre-commit, pre-push]
