@@ -309,7 +309,7 @@ func TestCPB0011To0020LaneJRegressionEvidence(t *testing.T) {
 		t.Run(tc.id, func(t *testing.T) {
 			switch tc.id {
 			case "CPB-0011":
-				if normalizeProvider("github-copilot") != "copilot" {
+				if util.NormalizeProviderAlias("github-copilot") != "copilot" {
 					t.Fatalf("%s", tc.description)
 				}
 			case "CPB-0016":
@@ -610,7 +610,7 @@ func TestCPB0011To0020LaneMRegressionEvidence(t *testing.T) {
 		{
 			id: "CPB-0014",
 			fn: func(t *testing.T) {
-				if normalizeProvider("kilocode") != "kilo" {
+				if util.NormalizeProviderAlias("kilocode") != "kilo" {
 					t.Fatalf("expected kilocode alias to map to kilo")
 				}
 			},
@@ -644,7 +644,7 @@ func TestCPB0011To0020LaneMRegressionEvidence(t *testing.T) {
 		{
 			id: "CPB-0018",
 			fn: func(t *testing.T) {
-				if normalizeProvider("githubcopilot") != "copilot" {
+				if util.NormalizeProviderAlias("githubcopilot") != "copilot" {
 					t.Fatalf("githubcopilot alias should normalize to copilot")
 				}
 			},

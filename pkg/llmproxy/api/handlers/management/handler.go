@@ -49,6 +49,8 @@ type Handler struct {
 	allowRemoteOverride bool
 	envSecret           string
 	logDir              string
+	postAuthHook        coreauth.PostAuthHook
+	routingSelect       *RoutingSelectHandler
 }
 
 // NewHandler creates a new management handler instance.
@@ -128,6 +130,17 @@ func (h *Handler) SetLogDirectory(dir string) {
 		}
 	}
 	h.logDir = dir
+}
+
+// SetPostAuthHook registers a hook called after auth record creation.
+func (h *Handler) SetPostAuthHook(hook coreauth.PostAuthHook) { h.postAuthHook = hook }
+
+// POSTRoutingSelect delegates to the RoutingSelectHandler.
+func (h *Handler) POSTRoutingSelect(c *gin.Context) {
+	if h.routingSelect == nil {
+		h.routingSelect = NewRoutingSelectHandler()
+	}
+	h.routingSelect.POSTRoutingSelect(c)
 }
 
 // Middleware enforces access control for management endpoints.

@@ -78,13 +78,15 @@ func (k *KimiAuth) CreateTokenStorage(bundle *KimiAuthBundle) *KimiTokenStorage 
 		expired = time.Unix(bundle.TokenData.ExpiresAt, 0).UTC().Format(time.RFC3339)
 	}
 	return &KimiTokenStorage{
-		AccessToken:  bundle.TokenData.AccessToken,
-		RefreshToken: bundle.TokenData.RefreshToken,
-		TokenType:    bundle.TokenData.TokenType,
-		Scope:        bundle.TokenData.Scope,
-		DeviceID:     strings.TrimSpace(bundle.DeviceID),
-		Expired:      expired,
-		Type:         "kimi",
+		BaseTokenStorage: base.BaseTokenStorage{
+			AccessToken:  bundle.TokenData.AccessToken,
+			RefreshToken: bundle.TokenData.RefreshToken,
+			Type:         "kimi",
+		},
+		TokenType: bundle.TokenData.TokenType,
+		Scope:     bundle.TokenData.Scope,
+		DeviceID:  strings.TrimSpace(bundle.DeviceID),
+		Expired:   expired,
 	}
 }
 

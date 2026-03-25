@@ -182,10 +182,8 @@ func (e *GitHubCopilotExecutor) Execute(ctx context.Context, auth *cliproxyauth.
 		AuthValue: authValue,
 	})
 
-	httpClient := newProxyAwareHTTPClient(ctx, e.cfg, auth, 0)
-	httpResp, err := httpClient.Do(httpReq)
+	httpResp, err := ExecuteHTTPRequest(ctx, e.cfg, auth, httpReq, "github-copilot executor")
 	if err != nil {
-		recordAPIResponseError(ctx, e.cfg, err)
 		return resp, err
 	}
 	defer func() {
@@ -193,16 +191,6 @@ func (e *GitHubCopilotExecutor) Execute(ctx context.Context, auth *cliproxyauth.
 			log.Errorf("github-copilot executor: close response body error: %v", errClose)
 		}
 	}()
-
-	recordAPIResponseMetadata(ctx, e.cfg, httpResp.StatusCode, httpResp.Header.Clone())
-
-	if !isHTTPSuccess(httpResp.StatusCode) {
-		data, _ := io.ReadAll(httpResp.Body)
-		appendAPIResponseChunk(ctx, e.cfg, data)
-		log.Debugf("github-copilot executor: upstream error status: %d, body: %s", httpResp.StatusCode, summarizeErrorBody(httpResp.Header.Get("Content-Type"), data))
-		err = statusErr{code: httpResp.StatusCode, msg: string(data)}
-		return resp, err
-	}
 
 	data, err := io.ReadAll(httpResp.Body)
 	if err != nil {
@@ -316,27 +304,8 @@ func (e *GitHubCopilotExecutor) ExecuteStream(ctx context.Context, auth *cliprox
 		AuthValue: authValue,
 	})
 
-	httpClient := newProxyAwareHTTPClient(ctx, e.cfg, auth, 0)
-	httpResp, err := httpClient.Do(httpReq)
+	httpResp, err := ExecuteHTTPRequestForStreaming(ctx, e.cfg, auth, httpReq, "github-copilot executor")
 	if err != nil {
-		recordAPIResponseError(ctx, e.cfg, err)
-		return nil, err
-	}
-
-	recordAPIResponseMetadata(ctx, e.cfg, httpResp.StatusCode, httpResp.Header.Clone())
-
-	if !isHTTPSuccess(httpResp.StatusCode) {
-		data, readErr := io.ReadAll(httpResp.Body)
-		if errClose := httpResp.Body.Close(); errClose != nil {
-			log.Errorf("github-copilot executor: close response body error: %v", errClose)
-		}
-		if readErr != nil {
-			recordAPIResponseError(ctx, e.cfg, readErr)
-			return nil, readErr
-		}
-		appendAPIResponseChunk(ctx, e.cfg, data)
-		log.Debugf("github-copilot executor: upstream error status: %d, body: %s", httpResp.StatusCode, summarizeErrorBody(httpResp.Header.Get("Content-Type"), data))
-		err = statusErr{code: httpResp.StatusCode, msg: string(data)}
 		return nil, err
 	}
 

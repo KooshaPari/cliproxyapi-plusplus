@@ -1,7 +1,6 @@
 package executor
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"errors"
@@ -136,21 +135,11 @@ func (e *KiloExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, req
 		AuthValue: authValue,
 	})
 
-	httpClient := newProxyAwareHTTPClient(ctx, e.cfg, auth, 0)
-	httpResp, err := httpClient.Do(httpReq)
+	httpResp, err := ExecuteHTTPRequest(ctx, e.cfg, auth, httpReq, "kilo executor")
 	if err != nil {
-		recordAPIResponseError(ctx, e.cfg, err)
 		return resp, err
 	}
 	defer func() { _ = httpResp.Body.Close() }()
-
-	recordAPIResponseMetadata(ctx, e.cfg, httpResp.StatusCode, httpResp.Header.Clone())
-	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
-		b, _ := io.ReadAll(httpResp.Body)
-		appendAPIResponseChunk(ctx, e.cfg, b)
-		err = statusErr{code: httpResp.StatusCode, msg: string(b)}
-		return resp, err
-	}
 
 	body, err := io.ReadAll(httpResp.Body)
 	if err != nil {
@@ -236,58 +225,39 @@ func (e *KiloExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.Aut
 		AuthValue: authValue,
 	})
 
-	httpClient := newProxyAwareHTTPClient(ctx, e.cfg, auth, 0)
-	httpResp, err := httpClient.Do(httpReq)
+	httpResp, err := ExecuteHTTPRequestForStreaming(ctx, e.cfg, auth, httpReq, "kilo executor")
 	if err != nil {
-		recordAPIResponseError(ctx, e.cfg, err)
 		return nil, err
 	}
 
-	recordAPIResponseMetadata(ctx, e.cfg, httpResp.StatusCode, httpResp.Header.Clone())
-	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
-		b, _ := io.ReadAll(httpResp.Body)
-		appendAPIResponseChunk(ctx, e.cfg, b)
-		_ = httpResp.Body.Close()
-		err = statusErr{code: httpResp.StatusCode, msg: string(b)}
-		return nil, err
-	}
-
-	out := make(chan cliproxyexecutor.StreamChunk)
-	go func() {
-		defer close(out)
-		defer func() { _ = httpResp.Body.Close() }()
-
-		scanner := bufio.NewScanner(httpResp.Body)
-		scanner.Buffer(nil, 52_428_800)
-		var param any
-		for scanner.Scan() {
-			line := scanner.Bytes()
-			appendAPIResponseChunk(ctx, e.cfg, line)
-			if detail, ok := parseOpenAIStreamUsage(line); ok {
-				reporter.publish(ctx, detail)
-			}
-			if len(line) == 0 {
-				continue
-			}
-			if !bytes.HasPrefix(line, []byte("data:")) {
-				continue
-			}
-			chunks := sdktranslator.TranslateStream(ctx, to, from, req.Model, opts.OriginalRequest, translated, bytes.Clone(line), &param)
-			for i := range chunks {
-				out <- cliproxyexecutor.StreamChunk{Payload: []byte(chunks[i])}
-			}
+	var param any
+	processor := func(ctx context.Context, line []byte) ([]string, error) {
+		appendAPIResponseChunk(ctx, e.cfg, line)
+		if detail, ok := parseOpenAIStreamUsage(line); ok {
+			reporter.publish(ctx, detail)
 		}
-		if errScan := scanner.Err(); errScan != nil {
-			recordAPIResponseError(ctx, e.cfg, errScan)
-			reporter.publishFailure(ctx)
-			out <- cliproxyexecutor.StreamChunk{Err: errScan}
+		chunks := sdktranslator.TranslateStream(ctx, to, from, req.Model, opts.OriginalRequest, translated, bytes.Clone(line), &param)
+		return chunks, nil
+	}
+
+	result := ProcessSSEStreamWithFilter(ctx, httpResp, processor, func(ctx context.Context, err error) {
+		recordAPIResponseError(ctx, e.cfg, err)
+		reporter.publishFailure(ctx)
+	}, true) // requireDataPrefix=true
+
+	// Wrap the original channel to ensure usage is published after stream completes
+	wrappedOut := make(chan cliproxyexecutor.StreamChunk)
+	go func() {
+		defer close(wrappedOut)
+		for chunk := range result.Chunks {
+			wrappedOut <- chunk
 		}
 		reporter.ensurePublished(ctx)
 	}()
 
 	return &cliproxyexecutor.StreamResult{
-		Headers: httpResp.Header.Clone(),
-		Chunks:  out,
+		Headers: result.Headers,
+		Chunks:  wrappedOut,
 	}, nil
 }
 

@@ -243,14 +243,16 @@ func (ia *IFlowAuth) CreateTokenStorage(data *IFlowTokenData) *IFlowTokenStorage
 		return nil
 	}
 	return &IFlowTokenStorage{
-		AccessToken:  data.AccessToken,
-		RefreshToken: data.RefreshToken,
-		LastRefresh:  time.Now().Format(time.RFC3339),
-		Expire:       data.Expire,
-		APIKey:       data.APIKey,
-		Email:        data.Email,
-		TokenType:    data.TokenType,
-		Scope:        data.Scope,
+		BaseTokenStorage: base.BaseTokenStorage{
+			AccessToken:  data.AccessToken,
+			RefreshToken: data.RefreshToken,
+			Email:        data.Email,
+		},
+		LastRefresh: time.Now().Format(time.RFC3339),
+		Expire:      data.Expire,
+		APIKey:      data.APIKey,
+		TokenType:   data.TokenType,
+		Scope:       data.Scope,
 	}
 }
 
@@ -528,12 +530,14 @@ func (ia *IFlowAuth) CreateCookieTokenStorage(data *IFlowTokenData) *IFlowTokenS
 	}
 
 	return &IFlowTokenStorage{
+		BaseTokenStorage: base.BaseTokenStorage{
+			Email: data.Email,
+			Type:  "iflow",
+		},
 		APIKey:      data.APIKey,
-		Email:       data.Email,
 		Expire:      data.Expire,
 		Cookie:      cookieToSave,
 		LastRefresh: time.Now().Format(time.RFC3339),
-		Type:        "iflow",
 	}
 }
 

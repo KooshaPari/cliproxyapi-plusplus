@@ -164,11 +164,13 @@ func (c *CopilotAuth) ValidateToken(ctx context.Context, accessToken string) (bo
 // CreateTokenStorage creates a new CopilotTokenStorage from auth bundle.
 func (c *CopilotAuth) CreateTokenStorage(bundle *CopilotAuthBundle) *CopilotTokenStorage {
 	return &CopilotTokenStorage{
-		AccessToken: bundle.TokenData.AccessToken,
-		TokenType:   bundle.TokenData.TokenType,
-		Scope:       bundle.TokenData.Scope,
-		Username:    bundle.Username,
-		Type:        "github-copilot",
+		BaseTokenStorage: base.BaseTokenStorage{
+			AccessToken: bundle.TokenData.AccessToken,
+			Type:        "github-copilot",
+		},
+		TokenType: bundle.TokenData.TokenType,
+		Scope:     bundle.TokenData.Scope,
+		Username:  bundle.Username,
 	}
 }
 

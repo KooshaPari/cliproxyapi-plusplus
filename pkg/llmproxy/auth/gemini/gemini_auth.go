@@ -204,9 +204,11 @@ func (g *GeminiAuth) createTokenStorage(ctx context.Context, config *oauth2.Conf
 	ifToken["universe_domain"] = "googleapis.com"
 
 	ts := GeminiTokenStorage{
+		BaseTokenStorage: base.BaseTokenStorage{
+			Email: emailResult.String(),
+		},
 		Token:     ifToken,
 		ProjectID: projectID,
-		Email:     emailResult.String(),
 	}
 
 	return &ts, nil
