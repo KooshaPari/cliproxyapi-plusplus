@@ -9,15 +9,15 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/base"
+	"github.com/KooshaPari/phenotype-go-kit/pkg/auth"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/misc"
 )
 
 // QwenTokenStorage extends BaseTokenStorage with Qwen-specific fields for managing
 // access tokens, refresh tokens, and user account information.
-// It embeds base.BaseTokenStorage to inherit shared token management functionality.
+// It embeds auth.BaseTokenStorage to inherit shared token management functionality.
 type QwenTokenStorage struct {
-	*base.BaseTokenStorage
+	*auth.BaseTokenStorage
 
 	// ResourceURL is the base URL for API requests.
 	ResourceURL string `json:"resource_url"`
@@ -31,9 +31,7 @@ type QwenTokenStorage struct {
 //   - *QwenTokenStorage: A new QwenTokenStorage instance
 func NewQwenTokenStorage(filePath string) *QwenTokenStorage {
 	return &QwenTokenStorage{
-		BaseTokenStorage: &base.BaseTokenStorage{
-			FilePath: filePath,
-		},
+		BaseTokenStorage: auth.NewBaseTokenStorage(filePath),
 	}
 }
 
@@ -57,7 +55,7 @@ func (ts *QwenTokenStorage) SaveTokenToFile(authFilePath string) error {
 	}
 
 	ts.BaseTokenStorage.Type = "qwen"
-	return ts.BaseTokenStorage.Save(authFilePath, ts)
+	return ts.BaseTokenStorage.Save()
 }
 
 func cleanTokenFilePath(path, scope string) (string, error) {

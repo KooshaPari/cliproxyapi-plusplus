@@ -1,4 +1,4 @@
-# CLIProxyAPI++
+# cliproxyapi++
 
 Agent-native, multi-provider OpenAI-compatible proxy for production and local model routing.
 
