@@ -17,7 +17,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/misc"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/thinking"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/util"
@@ -1298,7 +1298,7 @@ func logCodexWebsocketConnected(sessionID string, authID string, wsURL string) {
 	log.Infof("codex websockets: upstream connected session=%s auth=%s url=%s", strings.TrimSpace(sessionID), sanitizeCodexWebsocketLogField(authID), sanitizeCodexWebsocketLogURL(wsURL))
 }
 
-func logCodexWebsocketDisconnected(sessionID string, authID string, wsURL string, reason string, err error) {
+func logCodexWebsocketDisconnected(sessionID, authID, wsURL, reason string, err error) {
 	if err != nil {
 		log.Infof("codex websockets: upstream disconnected session=%s auth=%s url=%s reason=%s err=%v", strings.TrimSpace(sessionID), sanitizeCodexWebsocketLogField(authID), sanitizeCodexWebsocketLogURL(wsURL), strings.TrimSpace(reason), err)
 		return
@@ -1307,7 +1307,7 @@ func logCodexWebsocketDisconnected(sessionID string, authID string, wsURL string
 }
 
 func sanitizeCodexWebsocketLogField(raw string) string {
-	return util.HideAPIKey(strings.TrimSpace(raw))
+	return util.RedactAPIKey(strings.TrimSpace(raw))
 }
 
 func sanitizeCodexWebsocketLogURL(raw string) string {
