@@ -1,22 +1,6 @@
 name: VitePress Pages
 
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - "docs/**"
-      - "package.json"
-      - "bun.lock"
-      - ".oxlintrc.json"
-      - ".oxfmtrc.json"
-  push:
-    branches: [main]
-    paths:
-      - "docs/**"
-      - "package.json"
-      - "bun.lock"
-      - ".oxlintrc.json"
-      - ".oxfmtrc.json"
   workflow_dispatch:
 
 concurrency:

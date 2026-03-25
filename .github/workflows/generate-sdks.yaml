@@ -1,11 +1,6 @@
 name: Generate SDKs
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'api/openapi.yaml'
-      - 'internal/api/**/*.go'
   workflow_dispatch:
 
 jobs:

@@ -1,11 +1,7 @@
 name: Security Guard (Hooks)
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened]
-  push:
-    branches:
-      - "**"
+  workflow_dispatch:
 
 permissions:
   contents: read

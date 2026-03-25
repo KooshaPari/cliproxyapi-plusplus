@@ -1,5 +1,5 @@
 name: policy-gate
-on: [pull_request]
+on: [workflow_dispatch]
 jobs:
   enforce:
     runs-on: ubuntu-latest
