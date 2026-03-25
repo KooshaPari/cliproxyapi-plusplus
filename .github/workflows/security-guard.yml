@@ -1,0 +1,9 @@
+name: security-guard
+on: [push, pull_request]
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run security audit
+        run: echo "Security audit placeholder - no script available yet"
