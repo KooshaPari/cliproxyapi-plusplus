@@ -3,7 +3,7 @@ package auth
 import (
 	"fmt"
 
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/interfaces"
+	"github.com/kooshapari/CLIProxyAPI/v7/internal/interfaces"
 )
 
 // ProjectSelectionError indicates that the user must choose a specific project ID.

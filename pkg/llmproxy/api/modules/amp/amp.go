@@ -9,9 +9,9 @@ import (
 	"sync"
 
 	"github.com/gin-gonic/gin"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/api/modules"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
-	sdkaccess "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/access"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/api/modules"
+	"github.com/kooshapari/CLIProxyAPI/v7/internal/config"
+	sdkaccess "github.com/kooshapari/CLIProxyAPI/v7/sdk/access"
 	log "github.com/sirupsen/logrus"
 )
 

@@ -13,12 +13,12 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/thinking"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/wsrelay"
-	cliproxyauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
-	cliproxyexecutor "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/executor"
-	sdktranslator "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/translator"
+	"github.com/kooshapari/CLIProxyAPI/v7/internal/config"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/thinking"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/wsrelay"
+	cliproxyauth "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth"
+	cliproxyexecutor "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/executor"
+	sdktranslator "github.com/kooshapari/CLIProxyAPI/v7/sdk/translator"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
 )

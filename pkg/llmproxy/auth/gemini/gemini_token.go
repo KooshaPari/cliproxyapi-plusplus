@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/misc"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/misc"
 	log "github.com/sirupsen/logrus"
 )
 

@@ -1,51 +1,51 @@
 package translator
 
 import (
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/constant"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/interfaces"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/constant"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/interfaces"
 
 	// Antigravity translator providers
-	antigravityclaude "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/translator/antigravity/claude"
-	antigravitygemini "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/translator/antigravity/gemini"
-	antigravityopenai "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/translator/antigravity/openai/chat-completions"
-	antigravityopenairesponses "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/translator/antigravity/openai/responses"
+	antigravityclaude "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/antigravity/claude"
+	antigravitygemini "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/antigravity/gemini"
+	antigravityopenai "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/antigravity/openai/chat-completions"
+	antigravityopenairesponses "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/antigravity/openai/responses"
 
 	// Claude translator providers
-	claudegemini "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/translator/claude/gemini"
-	claudegeminicli "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/translator/claude/gemini-cli"
-	claudeopenai "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/translator/claude/openai/chat-completions"
-	claudeopenairesponses "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/translator/claude/openai/responses"
+	claudegemini "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/claude/gemini"
+	claudegeminicli "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/claude/gemini-cli"
+	claudeopenai "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/claude/openai/chat-completions"
+	claudeopenairesponses "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/claude/openai/responses"
 
 	// Codex translator providers
-	codexclaude "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/translator/codex/claude"
-	codexgemini "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/translator/codex/gemini"
-	codexgeminicli "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/translator/codex/gemini-cli"
-	codexopenai "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/translator/codex/openai/chat-completions"
-	codexopenairesponses "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/translator/codex/openai/responses"
+	codexclaude "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/codex/claude"
+	codexgemini "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/codex/gemini"
+	codexgeminicli "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/codex/gemini-cli"
+	codexopenai "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/codex/openai/chat-completions"
+	codexopenairesponses "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/codex/openai/responses"
 
 	// Gemini translator providers
-	geminiclaude "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/translator/gemini/claude"
-	geminigemini "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/translator/gemini/gemini"
-	geminigeminicli "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/translator/gemini/gemini-cli"
-	geminiopenai "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/translator/gemini/openai/chat-completions"
-	geminiopenairesponses "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/translator/gemini/openai/responses"
+	geminiclaude "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/gemini/claude"
+	geminigemini "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/gemini/gemini"
+	geminigeminicli "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/gemini/gemini-cli"
+	geminiopenai "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/gemini/openai/chat-completions"
+	geminiopenairesponses "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/gemini/openai/responses"
 
 	// Gemini CLI translator providers
-	geminicliiclaude "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/translator/gemini-cli/claude"
-	geminiigemini "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/translator/gemini-cli/gemini"
-	geminicliiopenai "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/translator/gemini-cli/openai/chat-completions"
-	geminicliiopenairesponses "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/translator/gemini-cli/openai/responses"
+	geminicliiclaude "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/gemini-cli/claude"
+	geminiigemini "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/gemini-cli/gemini"
+	geminicliiopenai "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/gemini-cli/openai/chat-completions"
+	geminicliiopenairesponses "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/gemini-cli/openai/responses"
 
 	// Kiro translator providers
-	kiroclaude "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/translator/kiro/claude"
-	kiroopenai "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/translator/kiro/openai"
+	kiroclaude "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/kiro/claude"
+	kiroopenai "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/kiro/openai"
 
 	// OpenAI translator providers
-	openai_claude "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/translator/openai/claude"
-	openaigemini "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/translator/openai/gemini"
-	openaigeminicli "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/translator/openai/gemini-cli"
-	openaiopenai "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/translator/openai/openai/chat-completions"
-	openairesponses "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/translator/openai/openai/responses"
+	openai_claude "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/openai/claude"
+	openaigemini "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/openai/gemini"
+	openaigeminicli "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/openai/gemini-cli"
+	openaiopenai "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/openai/openai/chat-completions"
+	openairesponses "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/openai/openai/responses"
 )
 
 // init registers all translator conversion functions with the translator registry.

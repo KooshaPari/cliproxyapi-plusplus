@@ -10,10 +10,10 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	constant "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/constant"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/interfaces"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/registry"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/api/handlers"
+	constant "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/constant"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/interfaces"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/registry"
+	"github.com/kooshapari/CLIProxyAPI/v7/sdk/api/handlers"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
 )

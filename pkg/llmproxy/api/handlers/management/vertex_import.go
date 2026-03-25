@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/vertex"
-	coreauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/auth/vertex"
+	coreauth "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth"
 )
 
 // ImportVertexCredential handles uploading a Vertex service account JSON and saving it as an auth record.

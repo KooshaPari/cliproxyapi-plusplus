@@ -11,7 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 
-	coreauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
+	coreauth "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth"
 )
 
 // QuotaDetail represents quota information for a specific resource type

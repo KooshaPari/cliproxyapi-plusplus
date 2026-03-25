@@ -7,9 +7,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/watcher/diff"
-	coreauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
+	"github.com/kooshapari/CLIProxyAPI/v7/internal/config"
+	"github.com/kooshapari/CLIProxyAPI/v7/internal/watcher/diff"
+	coreauth "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth"
 )
 
 // StableIDGenerator generates stable, deterministic IDs for auth entries.

@@ -3,7 +3,7 @@ package executor
 import (
 	"testing"
 
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/thinking"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/thinking"
 )
 
 func TestQwenExecutorParseSuffix(t *testing.T) {

@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"io"
 
-	clipproxyexecutor "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/executor"
-	sdktranslator "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/translator"
+	clipproxyexecutor "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/executor"
+	sdktranslator "github.com/kooshapari/CLIProxyAPI/v7/sdk/translator"
 	log "github.com/sirupsen/logrus"
 )
 

@@ -10,9 +10,9 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/codex"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/misc"
-	coreauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/auth/codex"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/misc"
+	coreauth "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth"
 	log "github.com/sirupsen/logrus"
 )
 

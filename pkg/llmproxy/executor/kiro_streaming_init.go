@@ -10,12 +10,12 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	kiroauth "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/kiro"
-	kiroclaude "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/translator/kiro/claude"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/util"
-	clipproxyauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
-	clipproxyexecutor "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/executor"
-	sdktranslator "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/translator"
+	kiroauth "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/auth/kiro"
+	kiroclaude "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/kiro/claude"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/util"
+	clipproxyauth "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth"
+	clipproxyexecutor "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/executor"
+	sdktranslator "github.com/kooshapari/CLIProxyAPI/v7/sdk/translator"
 	log "github.com/sirupsen/logrus"
 )
 

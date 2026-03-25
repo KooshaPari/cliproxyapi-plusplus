@@ -8,9 +8,9 @@ import (
 	"io"
 	"strings"
 
-	kiroclaude "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/translator/kiro/claude"
-	kirocommon "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/translator/kiro/common"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/usage"
+	kiroclaude "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/kiro/claude"
+	kirocommon "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/kiro/common"
+	"github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/usage"
 	log "github.com/sirupsen/logrus"
 )
 

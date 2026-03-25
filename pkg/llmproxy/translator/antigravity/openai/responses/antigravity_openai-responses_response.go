@@ -3,7 +3,7 @@ package responses
 import (
 	"context"
 
-	geminiopenai "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/translator/gemini/openai/responses"
+	geminiopenai "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/gemini/openai/responses"
 	"github.com/tidwall/gjson"
 )
 

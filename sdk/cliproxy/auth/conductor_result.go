@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/registry"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/registry"
 )
 
 // MarkResult records an execution result and notifies hooks.

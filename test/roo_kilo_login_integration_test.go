@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	cliproxycmd "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/cmd"
+	cliproxycmd "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/cmd"
 )
 
 func TestRooLoginRunner_WithFakeRoo(t *testing.T) {

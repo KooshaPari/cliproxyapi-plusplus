@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	cliproxyexecutor "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/executor"
+	cliproxyexecutor "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/executor"
 )
 
 // RegisterExecutor registers a provider executor with the manager.

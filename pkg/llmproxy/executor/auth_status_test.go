@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/wsrelay"
-	cliproxyexecutor "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/executor"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/wsrelay"
+	cliproxyexecutor "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/executor"
 )
 
 func TestAIStudioHttpRequestMissingAuthStatus(t *testing.T) {

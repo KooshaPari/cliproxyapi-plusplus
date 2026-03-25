@@ -7,8 +7,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	internalconfig "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
-	cliproxyexecutor "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/executor"
+	internalconfig "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/config"
+	cliproxyexecutor "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/executor"
 )
 
 // ProviderExecutor defines the contract required by Manager to execute provider calls.

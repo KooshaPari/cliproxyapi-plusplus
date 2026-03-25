@@ -4,9 +4,9 @@ import (
 	"context"
 	"strings"
 
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/registry"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/thinking"
-	cliproxyexecutor "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/executor"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/registry"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/thinking"
+	cliproxyexecutor "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/executor"
 )
 
 // pickNextMixed selects an auth from multiple providers.

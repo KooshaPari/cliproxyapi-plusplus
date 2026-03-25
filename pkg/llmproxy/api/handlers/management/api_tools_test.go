@@ -14,9 +14,9 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	kiroauth "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/kiro"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
-	coreauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
+	kiroauth "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/auth/kiro"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/config"
+	coreauth "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth"
 )
 
 func TestAPICall_RejectsUnsafeHost(t *testing.T) {

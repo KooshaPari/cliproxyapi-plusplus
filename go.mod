@@ -1,4 +1,4 @@
-module github.com/kooshapari/cliproxyapi-plusplus/v6
+module github.com/kooshapari/CLIProxyAPI/v7
 
 go 1.26.0
 

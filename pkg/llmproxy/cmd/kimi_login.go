@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
-	sdkAuth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/auth"
+	"github.com/kooshapari/CLIProxyAPI/v7/internal/config"
+	sdkAuth "github.com/kooshapari/CLIProxyAPI/v7/sdk/auth"
 	log "github.com/sirupsen/logrus"
 )
 

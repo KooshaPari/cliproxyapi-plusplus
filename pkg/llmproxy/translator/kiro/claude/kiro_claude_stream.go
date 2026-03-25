@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 
 	"github.com/google/uuid"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/usage"
+	"github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/usage"
 )
 
 // BuildClaudeMessageStartEvent creates the message_start SSE event

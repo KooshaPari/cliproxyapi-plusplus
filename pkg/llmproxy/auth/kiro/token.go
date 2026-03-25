@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/misc"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/misc"
 )
 
 // KiroTokenStorage holds the persistent token data for Kiro authentication.

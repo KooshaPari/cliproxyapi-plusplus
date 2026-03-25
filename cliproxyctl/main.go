@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	cliproxycmd "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/cmd"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
+	cliproxycmd "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/cmd"
+	"github.com/kooshapari/CLIProxyAPI/v7/internal/config"
 )
 
 const responseSchemaVersion = "cliproxyctl.response.v1"

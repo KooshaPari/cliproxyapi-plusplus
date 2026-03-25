@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
+	"github.com/kooshapari/CLIProxyAPI/v7/internal/config"
 	log "github.com/sirupsen/logrus"
 )
 
