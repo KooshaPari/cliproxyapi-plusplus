@@ -296,7 +296,8 @@ func TestCodexAuth_RefreshTokensWithRetry(t *testing.T) {
 
 func TestCodexAuth_UpdateTokenStorage(t *testing.T) {
 	auth := &CodexAuth{}
-	storage := &CodexTokenStorage{AccessToken: "old"}
+	storage := &CodexTokenStorage{}
+	storage.AccessToken = "old"
 	tokenData := &CodexTokenData{
 		AccessToken: "new",
 		Email:       "new@example.com",

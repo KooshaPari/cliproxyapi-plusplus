@@ -1,6 +1,6 @@
 // Package usage provides message transformation capabilities for handling
 // long conversations that exceed model context limits.
-// 
+//
 // Supported transforms:
 // - middle-out: Compress conversation by keeping start/end messages and trimming middle
 package usage
@@ -28,16 +28,16 @@ const (
 
 // Message represents a chat message
 type Message struct {
-	Role    string          `json:"role"`
-	Content interface{}    `json:"content"`
-	Name    string          `json:"name,omitempty"`
-	ToolCalls []ToolCall   `json:"tool_calls,omitempty"`
+	Role      string      `json:"role"`
+	Content   interface{} `json:"content"`
+	Name      string      `json:"name,omitempty"`
+	ToolCalls []ToolCall  `json:"tool_calls,omitempty"`
 }
 
 // ToolCall represents a tool call in a message
 type ToolCall struct {
-	ID       string      `json:"id"`
-	Type     string      `json:"type"`
+	ID       string       `json:"id"`
+	Type     string       `json:"type"`
 	Function FunctionCall `json:"function"`
 }
 
@@ -67,23 +67,23 @@ type TransformRequest struct {
 
 // TransformResponse contains the result of message transformation
 type TransformResponse struct {
-	Messages   []Message `json:"messages"`
-	OriginalCount int    `json:"original_count"`
-	FinalCount   int    `json:"final_count"`
-	TokensRemoved int   `json:"tokens_removed"`
-	Transform    string `json:"transform"`
-	Reason      string `json:"reason,omitempty"`
+	Messages      []Message `json:"messages"`
+	OriginalCount int       `json:"original_count"`
+	FinalCount    int       `json:"final_count"`
+	TokensRemoved int       `json:"tokens_removed"`
+	Transform     string    `json:"transform"`
+	Reason        string    `json:"reason,omitempty"`
 }
 
 // TransformMessages applies the specified transformation to messages
 func TransformMessages(ctx context.Context, messages []Message, req *TransformRequest) (*TransformResponse, error) {
 	if len(messages) == 0 {
 		return &TransformResponse{
-			Messages:       messages,
+			Messages:      messages,
 			OriginalCount: 0,
 			FinalCount:    0,
 			TokensRemoved: 0,
-			Transform:    string(req.Transform),
+			Transform:     string(req.Transform),
 		}, nil
 	}
 
@@ -115,12 +115,12 @@ func TransformMessages(ctx context.Context, messages []Message, req *TransformRe
 	}
 
 	return &TransformResponse{
-		Messages:       result,
+		Messages:      result,
 		OriginalCount: len(messages),
 		FinalCount:    len(result),
 		TokensRemoved: len(messages) - len(result),
-		Transform:    string(req.Transform),
-		Reason:       reason,
+		Transform:     string(req.Transform),
+		Reason:        reason,
 	}, nil
 }
 
@@ -148,7 +148,7 @@ func transformMiddleOut(messages []Message, req *TransformRequest) ([]Message, s
 			startKeep = 2
 		}
 	}
-	
+
 	endKeep := req.PreserveLatestN
 	if endKeep == 0 {
 		endKeep = available / 4
@@ -182,7 +182,7 @@ func transformMiddleOut(messages []Message, req *TransformRequest) ([]Message, s
 	compressedCount := available - startKeep - endKeep
 	if compressedCount > 0 {
 		result = append(result, Message{
-			Role: "system",
+			Role:    "system",
 			Content: fmt.Sprintf("[%d messages compressed due to context length limits]", compressedCount),
 		})
 	}
@@ -191,7 +191,7 @@ func transformMiddleOut(messages []Message, req *TransformRequest) ([]Message, s
 	endStart := len(messages) - endKeep
 	result = append(result, messages[endStart:]...)
 
-	return result, fmt.Sprintf("compressed %d messages, kept %d from start and %d from end", 
+	return result, fmt.Sprintf("compressed %d messages, kept %d from start and %d from end",
 		compressedCount, startKeep, endKeep)
 }
 
@@ -204,7 +204,7 @@ func transformTruncateStart(messages []Message, req *TransformRequest) ([]Messag
 	// Find system message
 	var systemMsg *Message
 	var nonSystem []Message
-	
+
 	for _, m := range messages {
 		if m.Role == "system" && req.KeepSystem {
 			systemMsg = &m
@@ -218,11 +218,11 @@ func transformTruncateStart(messages []Message, req *TransformRequest) ([]Messag
 	if systemMsg != nil {
 		keep--
 	}
-	
+
 	if keep <= 0 {
 		keep = 1
 	}
-	
+
 	if keep >= len(nonSystem) {
 		return messages, "within message limit"
 	}

@@ -1031,9 +1031,9 @@ func (s *Server) UpdateClients(cfg *config.Config) {
 		dirSetter.SetBaseDir(cfg.AuthDir)
 	}
 	authEntries := util.CountAuthFiles(context.Background(), tokenStore)
-	geminiAPIKeyCount := len(cfg.GeminiKey)
-	claudeAPIKeyCount := len(cfg.ClaudeKey)
-	codexAPIKeyCount := len(cfg.CodexKey)
+	geminiClientCount := len(cfg.GeminiKey)
+	claudeClientCount := len(cfg.ClaudeKey)
+	codexClientCount := len(cfg.CodexKey)
 	vertexAICompatCount := len(cfg.VertexCompatAPIKey)
 	openAICompatCount := 0
 	for i := range cfg.OpenAICompatibility {
@@ -1041,13 +1041,13 @@ func (s *Server) UpdateClients(cfg *config.Config) {
 		openAICompatCount += len(entry.APIKeyEntries)
 	}
 
-	total := authEntries + geminiAPIKeyCount + claudeAPIKeyCount + codexAPIKeyCount + vertexAICompatCount + openAICompatCount
+	total := authEntries + geminiClientCount + claudeClientCount + codexClientCount + vertexAICompatCount + openAICompatCount
 	fmt.Printf("server clients and configuration updated: %d clients (%d auth entries + %d Gemini API keys + %d Claude API keys + %d Codex keys + %d Vertex-compat + %d OpenAI-compat)\n",
 		total,
 		authEntries,
-		geminiAPIKeyCount,
-		claudeAPIKeyCount,
-		codexAPIKeyCount,
+		geminiClientCount,
+		claudeClientCount,
+		codexClientCount,
 		vertexAICompatCount,
 		openAICompatCount,
 	)

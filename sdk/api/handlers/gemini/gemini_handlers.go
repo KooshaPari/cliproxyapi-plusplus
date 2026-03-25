@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	. "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/constant"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/constant"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/interfaces"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/registry"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/api/handlers"
@@ -35,7 +35,7 @@ func NewGeminiAPIHandler(apiHandlers *handlers.BaseAPIHandler) *GeminiAPIHandler
 
 // HandlerType returns the identifier for this handler implementation.
 func (h *GeminiAPIHandler) HandlerType() string {
-	return Gemini
+	return constant.Gemini
 }
 
 // Models returns the Gemini-compatible model metadata supported by this handler.

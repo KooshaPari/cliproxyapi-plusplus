@@ -12,18 +12,18 @@ import (
 	"sync"
 	"time"
 
-	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/api"
-	kiroauth "github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/auth/kiro"
-	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/executor"
-	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/registry"
-	_ "github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/usage"
-	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/watcher"
-	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/wsrelay"
-	sdkaccess "github.com/router-for-me/CLIProxyAPI/v6/sdk/access"
-	sdkAuth "github.com/router-for-me/CLIProxyAPI/v6/sdk/auth"
-	coreauth "github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/auth"
-	"github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/usage"
-	"github.com/router-for-me/CLIProxyAPI/v6/sdk/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/api"
+	kiroauth "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/kiro"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/executor"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/registry"
+	_ "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/usage"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/watcher"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/wsrelay"
+	sdkaccess "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/access"
+	sdkAuth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/auth"
+	coreauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/usage"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -609,6 +609,8 @@ func (s *Service) Run(ctx context.Context) error {
 			switch nextStrategy {
 			case "fill-first":
 				selector = &coreauth.FillFirstSelector{}
+			case "sticky-round-robin", "stickyroundrobin", "srr":
+				selector = coreauth.NewStickyRoundRobinSelector(1000)
 			default:
 				selector = &coreauth.RoundRobinSelector{}
 			}

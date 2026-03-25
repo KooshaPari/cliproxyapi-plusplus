@@ -233,11 +233,21 @@ func (m *AlertManager) GetAlertHistory(limit int) []Alert {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	if limit <= 0 || limit > len(m.alertHistory) {
+	if limit <= 0 {
+		limit = 0
+	}
+	if limit > len(m.alertHistory) {
 		limit = len(m.alertHistory)
 	}
+	// Cap allocation to prevent uncontrolled allocation from caller-supplied values.
+	const maxAlertHistoryAlloc = 1000
+	if limit > maxAlertHistoryAlloc {
+		limit = maxAlertHistoryAlloc
+	}
 
-	result := make([]Alert, limit)
+	// Assign capped value to a new variable so static analysis can verify the bound.
+	cappedLimit := limit
+	result := make([]Alert, cappedLimit)
 	copy(result, m.alertHistory[len(m.alertHistory)-limit:])
 	return result
 }
@@ -354,7 +364,13 @@ func (h *AlertHandler) GETAlerts(c *gin.Context) {
 // GETAlertHistory handles GET /v1/alerts/history
 func (h *AlertHandler) GETAlertHistory(c *gin.Context) {
 	limit := 50
-	fmt.Sscanf(c.DefaultQuery("limit", "50"), "%d", &limit)
+	_, _ = fmt.Sscanf(c.DefaultQuery("limit", "50"), "%d", &limit)
+	if limit < 1 {
+		limit = 1
+	}
+	if limit > 1000 {
+		limit = 1000
+	}
 
 	history := h.manager.GetAlertHistory(limit)
 

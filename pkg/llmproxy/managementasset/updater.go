@@ -17,9 +17,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/util"
-	sdkconfig "github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/singleflight"
 )
@@ -109,7 +108,7 @@ func runAutoUpdater(ctx context.Context) {
 func newHTTPClient(proxyURL string) *http.Client {
 	client := &http.Client{Timeout: 15 * time.Second}
 
-	sdkCfg := &sdkconfig.SDKConfig{ProxyURL: strings.TrimSpace(proxyURL)}
+	sdkCfg := &config.SDKConfig{ProxyURL: strings.TrimSpace(proxyURL)}
 	util.SetProxy(sdkCfg, client)
 
 	return client

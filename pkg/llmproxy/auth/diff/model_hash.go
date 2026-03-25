@@ -131,12 +131,3 @@ func hashJoined(keys []string) string {
 	_, _ = hasher.Write([]byte(strings.Join(keys, "\n")))
 	return hex.EncodeToString(hasher.Sum(nil))
 }
-
-func hashString(value string) string {
-	if strings.TrimSpace(value) == "" {
-		return ""
-	}
-	hasher := hmac.New(sha512.New, []byte(modelHashSalt))
-	_, _ = hasher.Write([]byte(value))
-	return hex.EncodeToString(hasher.Sum(nil))
-}

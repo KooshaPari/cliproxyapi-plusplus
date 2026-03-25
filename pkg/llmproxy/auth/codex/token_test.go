@@ -17,12 +17,12 @@ func TestCodexTokenStorage_SaveTokenToFile(t *testing.T) {
 	authFilePath := filepath.Join(tempDir, "token.json")
 
 	ts := &CodexTokenStorage{
-		IDToken:      "id_token",
-		AccessToken:  "access_token",
-		RefreshToken: "refresh_token",
-		AccountID:    "acc_123",
-		Email:        "test@example.com",
+		IDToken:   "id_token",
+		AccountID: "acc_123",
 	}
+	ts.AccessToken = "access_token"
+	ts.RefreshToken = "refresh_token"
+	ts.Email = "test@example.com"
 
 	if err := ts.SaveTokenToFile(authFilePath); err != nil {
 		t.Fatalf("SaveTokenToFile failed: %v", err)

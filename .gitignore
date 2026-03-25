@@ -1,7 +1,7 @@
 # Binaries
 cli-proxy-api
-cliproxy
-cliproxyapi++
+/cliproxy
+/cliproxyapi++
 *.exe
 
 # Hot-reload artifacts
@@ -57,18 +57,23 @@ _bmad-output/*
 *.bak
 # Local worktree shelves (canonical checkout must stay clean)
 PROJECT-wtrees/
-
+.worktrees/
+cli-proxy-api-plus-integration-test
 boardsync
 releasebatch
 .cache
->>>>>>> a4e4c2b8 (chore: add build artifacts to .gitignore)
 
+# Added by Spec Kitty CLI (auto-managed)
+.windsurf/
+.qwen/
+.augment/
+.roo/
+.amazonq/
+.github/copilot/
+.kittify/.dashboard
 
 # AI tool artifacts
-.claude/
-.codex/
 .cursor/
-.gemini/
 .kittify/
 .kilocode/
 .github/prompts/

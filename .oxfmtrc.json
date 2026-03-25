@@ -1,0 +1,6 @@
+{
+  "$schema": "https://oxc.rs/schemas/oxfmt.json",
+  "printWidth": 100,
+  "useTabs": false,
+  "indentWidth": 2
+}

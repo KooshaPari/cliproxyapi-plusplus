@@ -9,22 +9,22 @@ import (
 
 // JSONSchema represents a JSON Schema for structured output validation
 type JSONSchema struct {
-	Type       string              `json:"type,omitempty"`
+	Type       string             `json:"type,omitempty"`
 	Properties map[string]*Schema `json:"properties,omitempty"`
 	Required   []string           `json:"required,omitempty"`
 	Items      *JSONSchema        `json:"items,omitempty"`
 	Enum       []interface{}      `json:"enum,omitempty"`
-	Minimum    *float64          `json:"minimum,omitempty"`
-	Maximum    *float64          `json:"maximum,omitempty"`
-	MinLength  *int              `json:"minLength,omitempty"`
-	MaxLength  *int              `json:"maxLength,omitempty"`
+	Minimum    *float64           `json:"minimum,omitempty"`
+	Maximum    *float64           `json:"maximum,omitempty"`
+	MinLength  *int               `json:"minLength,omitempty"`
+	MaxLength  *int               `json:"maxLength,omitempty"`
 	Pattern    string             `json:"pattern,omitempty"`
 	Format     string             `json:"format,omitempty"`
 	// For nested objects
 	AllOf []*JSONSchema `json:"allOf,omitempty"`
 	OneOf []*JSONSchema `json:"oneOf,omitempty"`
 	AnyOf []*JSONSchema `json:"anyOf,omitempty"`
-	Not   *JSONSchema  `json:"not,omitempty"`
+	Not   *JSONSchema   `json:"not,omitempty"`
 }
 
 // Schema is an alias for JSONSchema
@@ -46,8 +46,8 @@ type ResponseFormat struct {
 
 // ValidationResult represents the result of validating a response against a schema
 type ValidationResult struct {
-	Valid   bool     `json:"valid"`
-	Errors  []string `json:"errors,omitempty"`
+	Valid    bool     `json:"valid"`
+	Errors   []string `json:"errors,omitempty"`
 	Warnings []string `json:"warnings,omitempty"`
 }
 
@@ -61,8 +61,8 @@ type ResponseHealer struct {
 // NewResponseHealer creates a new ResponseHealer
 func NewResponseHealer(schema *JSONSchema) *ResponseHealer {
 	return &ResponseHealer{
-		schema:       schema,
-		maxAttempts:  3,
+		schema:        schema,
+		maxAttempts:   3,
 		removeUnknown: true,
 	}
 }
@@ -170,9 +170,7 @@ func (h *ResponseHealer) validateData(data interface{}, path string) ValidationR
 			}
 		}
 	case bool:
-		if h.schema.Type == "boolean" {
-			// OK
-		}
+		// boolean values are always valid when the schema type is "boolean"
 	case nil:
 		// Null values
 	}
@@ -215,7 +213,7 @@ func (h *ResponseHealer) extractJSON(s string) string {
 	// Try to find JSON object/array
 	start := -1
 	end := -1
-	
+
 	for i, c := range s {
 		if c == '{' && start == -1 {
 			start = i
@@ -232,11 +230,11 @@ func (h *ResponseHealer) extractJSON(s string) string {
 			break
 		}
 	}
-	
+
 	if start != -1 && end != -1 {
 		return s[start:end]
 	}
-	
+
 	return ""
 }
 
@@ -306,9 +304,9 @@ var CommonSchemas = struct {
 	Summarization: &JSONSchema{
 		Type: "object",
 		Properties: map[string]*Schema{
-			"summary":   {Type: "string", MinLength: intPtr(10)},
+			"summary":    {Type: "string", MinLength: intPtr(10)},
 			"highlights": {Type: "array", Items: &JSONSchema{Type: "string"}},
-			"sentiment": {Type: "string", Enum: []interface{}{"positive", "neutral", "negative"}},
+			"sentiment":  {Type: "string", Enum: []interface{}{"positive", "neutral", "negative"}},
 		},
 		Required: []string{"summary"},
 	},

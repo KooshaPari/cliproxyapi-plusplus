@@ -13,10 +13,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/auth/codex"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/browser"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/util"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/codex"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/browser"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/util"
 	coreauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
 	log "github.com/sirupsen/logrus"
 )

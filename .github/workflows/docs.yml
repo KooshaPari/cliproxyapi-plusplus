@@ -1,9 +1,22 @@
 name: VitePress Pages
 
 on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - "package.json"
+      - "bun.lock"
+      - ".oxlintrc.json"
+      - ".oxfmtrc.json"
   push:
-    branches-ignore:
-      - "gh-pages"
+    branches: [main]
+    paths:
+      - "docs/**"
+      - "package.json"
+      - "bun.lock"
+      - ".oxlintrc.json"
+      - ".oxfmtrc.json"
   workflow_dispatch:
 
 concurrency:
@@ -30,6 +43,20 @@ jobs:
           node-version: "20"
           cache: "npm"
           cache-dependency-path: docs/package.json
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install OXC dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Lint docs TS/JS with OXC
+        run: bun run lint
+
+      - name: Check docs TS/JS formatting with OXC
+        run: bun run format:check
 
       - name: Install dependencies
         working-directory: docs
@@ -58,6 +85,7 @@ jobs:
   deploy:
     name: Deploy Pages
     needs: build
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment:
       name: github-pages

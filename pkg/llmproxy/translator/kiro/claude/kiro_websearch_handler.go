@@ -321,23 +321,3 @@ func (h *WebSearchHandler) CallMcpAPI(request *McpRequest) (*McpResponse, error)
 
 	return nil, lastErr
 }
-
-// ParseSearchResults extracts WebSearchResults from MCP response
-func ParseSearchResults(response *McpResponse) *WebSearchResults {
-	if response == nil || response.Result == nil || len(response.Result.Content) == 0 {
-		return nil
-	}
-
-	content := response.Result.Content[0]
-	if content.ContentType != "text" {
-		return nil
-	}
-
-	var results WebSearchResults
-	if err := json.Unmarshal([]byte(content.Text), &results); err != nil {
-		log.Warnf("kiro/websearch: failed to parse search results: %v", err)
-		return nil
-	}
-
-	return &results
-}

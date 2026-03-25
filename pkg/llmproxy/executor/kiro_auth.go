@@ -15,7 +15,6 @@ import (
 
 	"github.com/google/uuid"
 	kiroauth "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/kiro"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/util"
 	cliproxyauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
 	log "github.com/sirupsen/logrus"

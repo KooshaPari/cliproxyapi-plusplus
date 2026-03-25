@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/kilo"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
 	coreauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
 )
 
@@ -100,9 +100,9 @@ func (a *KiloAuthenticator) Login(ctx context.Context, cfg *config.Config, opts 
 		Token:          status.Token,
 		OrganizationID: orgID,
 		Model:          defaults.Model,
-		Email:          status.UserEmail,
-		Type:           "kilo",
 	}
+	ts.Email = status.UserEmail
+	ts.Type = "kilo"
 
 	fileName := kilo.CredentialFileName(status.UserEmail)
 	metadata := map[string]any{

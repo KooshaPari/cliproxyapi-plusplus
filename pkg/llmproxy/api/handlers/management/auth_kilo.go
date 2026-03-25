@@ -59,9 +59,9 @@ func (h *Handler) RequestKiloToken(c *gin.Context) {
 			Token:          status.Token,
 			OrganizationID: orgID,
 			Model:          defaults.Model,
-			Email:          status.UserEmail,
-			Type:           "kilo",
 		}
+		ts.Email = status.UserEmail
+		ts.Type = "kilo"
 
 		fileName := kilo.CredentialFileName(status.UserEmail)
 		record := &coreauth.Auth{
