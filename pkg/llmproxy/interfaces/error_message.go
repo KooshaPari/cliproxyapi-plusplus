@@ -1,6 +1,8 @@
 package interfaces
 
-import "net/http"
+import (
+	internalinterfaces "github.com/kooshapari/cliproxyapi-plusplus/v6/internal/interfaces"
+)
 
 // ErrorMessage encapsulates an error with an associated HTTP status code.
 type ErrorMessage struct {

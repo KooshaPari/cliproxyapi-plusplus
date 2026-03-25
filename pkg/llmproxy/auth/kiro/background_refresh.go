@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
 	"golang.org/x/sync/semaphore"
 )
 

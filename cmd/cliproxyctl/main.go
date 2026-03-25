@@ -17,7 +17,6 @@ import (
 
 	cliproxycmd "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/cmd"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/util"
 )
 
 const responseSchemaVersion = "cliproxyctl.response.v1"

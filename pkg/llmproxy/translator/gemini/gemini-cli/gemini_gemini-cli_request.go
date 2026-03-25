@@ -8,7 +8,7 @@ package geminiCLI
 import (
 	"fmt"
 
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/translator/gemini/common"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/translator/gemini/common"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/util"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
