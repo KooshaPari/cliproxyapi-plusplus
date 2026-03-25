@@ -363,9 +363,7 @@ func (o *QwenAuth) CreateTokenStorage(tokenData *QwenTokenData) *QwenTokenStorag
 
 // UpdateTokenStorage updates an existing token storage with new token data
 func (o *QwenAuth) UpdateTokenStorage(storage *QwenTokenStorage, tokenData *QwenTokenData) {
-	storage.AccessToken = tokenData.AccessToken
-	storage.RefreshToken = tokenData.RefreshToken
-	storage.LastRefresh = time.Now().Format(time.RFC3339)
+	storage.BaseTokenStorage.AccessToken = tokenData.AccessToken
+	storage.BaseTokenStorage.RefreshToken = tokenData.RefreshToken
 	storage.ResourceURL = tokenData.ResourceURL
-	storage.Expire = tokenData.Expire
 }
