@@ -5,8 +5,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	sdkaccess "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/access"
-	sdkconfig "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/config"
+	sdkaccess "github.com/kooshapari/CLIProxyAPI/v7/sdk/access"
+	sdkconfig "github.com/kooshapari/CLIProxyAPI/v7/sdk/config"
 )
 
 func findProvider() sdkaccess.Provider {

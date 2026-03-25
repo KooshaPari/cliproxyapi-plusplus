@@ -8,9 +8,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/diff"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
-	coreauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/auth/diff"
+	"github.com/kooshapari/CLIProxyAPI/v7/internal/config"
+	coreauth "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth"
 )
 
 const stableIDGeneratorHashKey = "auth-stable-id-generator:v1"

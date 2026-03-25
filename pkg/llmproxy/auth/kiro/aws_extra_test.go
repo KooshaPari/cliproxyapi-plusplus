@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
+	"github.com/kooshapari/CLIProxyAPI/v7/internal/config"
 )
 
 func TestNewKiroAuth(t *testing.T) {

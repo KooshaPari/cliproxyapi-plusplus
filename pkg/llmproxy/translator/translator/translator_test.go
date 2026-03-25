@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/interfaces"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/interfaces"
 )
 
 func TestRequest(t *testing.T) {

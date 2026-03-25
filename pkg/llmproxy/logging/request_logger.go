@@ -21,9 +21,9 @@ import (
 	"github.com/klauspost/compress/zstd"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/buildinfo"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/interfaces"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/util"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/buildinfo"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/interfaces"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/util"
 )
 
 var requestLogID atomic.Uint64

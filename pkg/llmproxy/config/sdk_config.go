@@ -4,7 +4,7 @@
 // debug settings, proxy configuration, and API keys.
 package config
 
-import internalconfig "github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
+import internalconfig "github.com/kooshapari/CLIProxyAPI/v7/internal/config"
 
 	// ForceModelPrefix requires explicit model prefixes (e.g., "teamA/gemini-3-pro-preview")
 	// to target prefixed credentials. When false, unprefixed model requests may use prefixed

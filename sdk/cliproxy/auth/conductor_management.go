@@ -7,7 +7,7 @@ import (
 
 	"github.com/google/uuid"
 
-	internalconfig "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+	internalconfig "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/config"
 )
 
 // RegisterExecutor registers a provider executor with the manager.

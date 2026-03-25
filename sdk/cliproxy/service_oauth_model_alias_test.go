@@ -3,7 +3,7 @@ package cliproxy
 import (
 	"testing"
 
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/config"
+	"github.com/kooshapari/CLIProxyAPI/v7/sdk/config"
 )
 
 func TestApplyOAuthModelAlias_Rename(t *testing.T) {

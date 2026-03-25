@@ -3,8 +3,8 @@ package executor
 import (
 	"strings"
 
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
-	cliproxyauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
+	"github.com/kooshapari/CLIProxyAPI/v7/internal/config"
+	cliproxyauth "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth"
 )
 
 func resolveOAuthBaseURL(cfg *config.Config, channel, defaultBaseURL string, auth *cliproxyauth.Auth) string {

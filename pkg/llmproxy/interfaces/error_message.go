@@ -1,7 +1,7 @@
 package interfaces
 
 import (
-	internalinterfaces "github.com/kooshapari/cliproxyapi-plusplus/v6/internal/interfaces"
+	internalinterfaces "github.com/kooshapari/CLIProxyAPI/v7/internal/interfaces"
 )
 
 // ErrorMessage encapsulates an error with an associated HTTP status code.

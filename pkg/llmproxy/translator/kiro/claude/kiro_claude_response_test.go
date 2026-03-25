@@ -3,7 +3,7 @@ package claude
 import (
 	"testing"
 
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/usage"
+	"github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/usage"
 	"github.com/tidwall/gjson"
 )
 

@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/util"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/util"
 )
 
 func resolveAuthDir(cfgAuthDir string) (string, error) {

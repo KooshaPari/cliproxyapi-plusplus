@@ -8,9 +8,9 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/interfaces"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/api/handlers"
-	sdkconfig "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/config"
+	"github.com/kooshapari/CLIProxyAPI/v7/internal/interfaces"
+	"github.com/kooshapari/CLIProxyAPI/v7/sdk/api/handlers"
+	sdkconfig "github.com/kooshapari/CLIProxyAPI/v7/sdk/config"
 )
 
 func TestForwardResponsesStreamTerminalErrorUsesResponsesErrorChunk(t *testing.T) {

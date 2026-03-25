@@ -4,7 +4,7 @@ package usage
 import (
 	"strings"
 
-	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/util"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/util"
 )
 
 func normalizeProvider(apiKey string) string {

@@ -4,7 +4,7 @@
 // embed CLIProxyAPI without importing internal packages.
 package config
 
-import llmproxyconfig "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+import llmproxyconfig "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/config"
 
 type SDKConfig = pkgconfig.SDKConfig
 

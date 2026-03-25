@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	sdkAuth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/auth"
+	sdkAuth "github.com/kooshapari/CLIProxyAPI/v7/sdk/auth"
 )
 
 // newAuthManager creates a new authentication manager instance with all supported

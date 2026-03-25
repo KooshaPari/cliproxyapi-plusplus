@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	cliproxyauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
+	cliproxyauth "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth"
 )
 
 func TestObjectTokenStoreSaveRejectsPathOutsideAuthDir(t *testing.T) {

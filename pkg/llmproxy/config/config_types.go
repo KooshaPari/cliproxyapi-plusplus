@@ -5,7 +5,7 @@
 package config
 
 import (
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/ratelimit"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/ratelimit"
 )
 
 // Config represents the application's configuration, loaded from a YAML file.

@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/client"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/client"
 )
 
 // ---------------------------------------------------------------------------

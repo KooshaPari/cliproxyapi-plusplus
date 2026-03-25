@@ -8,10 +8,10 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	internalapi "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/api"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/logging"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/api/handlers"
+	internalapi "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/api"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/config"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/logging"
+	"github.com/kooshapari/CLIProxyAPI/v7/sdk/api/handlers"
 )
 
 // ServerOption customises HTTP server construction.

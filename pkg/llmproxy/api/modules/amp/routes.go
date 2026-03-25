@@ -9,12 +9,12 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/logging"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/registry"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/api/handlers"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/api/handlers/claude"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/api/handlers/gemini"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/api/handlers/openai"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/logging"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/registry"
+	"github.com/kooshapari/CLIProxyAPI/v7/sdk/api/handlers"
+	"github.com/kooshapari/CLIProxyAPI/v7/sdk/api/handlers/claude"
+	"github.com/kooshapari/CLIProxyAPI/v7/sdk/api/handlers/gemini"
+	"github.com/kooshapari/CLIProxyAPI/v7/sdk/api/handlers/openai"
 	log "github.com/sirupsen/logrus"
 )
 

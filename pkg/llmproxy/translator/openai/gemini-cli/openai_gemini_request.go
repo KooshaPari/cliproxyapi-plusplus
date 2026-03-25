@@ -6,7 +6,7 @@
 package geminiCLI
 
 import (
-	openaigemini "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/translator/openai/gemini"
+	openaigemini "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/openai/gemini"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
 )

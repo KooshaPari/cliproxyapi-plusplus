@@ -6,8 +6,8 @@ import (
 	"fmt"
 
 	"github.com/gin-gonic/gin"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/api/handlers"
+	"github.com/kooshapari/CLIProxyAPI/v7/internal/config"
+	"github.com/kooshapari/CLIProxyAPI/v7/sdk/api/handlers"
 )
 
 // Context encapsulates the dependencies exposed to routing modules during

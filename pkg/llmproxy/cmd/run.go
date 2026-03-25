@@ -10,9 +10,9 @@ import (
 	"syscall"
 	"time"
 
-	internalapi "github.com/kooshapari/cliproxyapi-plusplus/v6/internal/api"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy"
+	internalapi "github.com/kooshapari/CLIProxyAPI/v7/internal/api"
+	"github.com/kooshapari/CLIProxyAPI/v7/internal/config"
+	"github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy"
 	log "github.com/sirupsen/logrus"
 )
 

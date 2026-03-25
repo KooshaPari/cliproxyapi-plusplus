@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	internalconfig "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+	internalconfig "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/config"
 )
 
 func TestLookupAPIKeyUpstreamModel(t *testing.T) {

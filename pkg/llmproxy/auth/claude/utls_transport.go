@@ -8,9 +8,9 @@ import (
 	"strings"
 	"sync"
 
-	pkgconfig "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+	pkgconfig "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/config"
 	tls "github.com/refraction-networking/utls"
-	pkgconfig "github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
+	pkgconfig "github.com/kooshapari/CLIProxyAPI/v7/internal/config"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/proxy"

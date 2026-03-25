@@ -3,8 +3,8 @@ package cmd
 import (
 	"unsafe"
 
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
-	sdkconfig "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/config"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/config"
+	sdkconfig "github.com/kooshapari/CLIProxyAPI/v7/sdk/config"
 )
 
 // castToInternalConfig returns the config pointer as-is.

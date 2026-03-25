@@ -4,8 +4,8 @@ import (
 	"sort"
 	"testing"
 
-	. "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/constant"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/registry"
+	. "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/constant"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/registry"
 )
 
 func TestResolveEndpointOverride_IflowSupportsChatOnlyForResponses(t *testing.T) {

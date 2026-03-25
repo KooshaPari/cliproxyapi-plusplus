@@ -1,7 +1,7 @@
 package synthesizer
 
 import (
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
+	"github.com/kooshapari/CLIProxyAPI/v7/internal/config"
 	"os"
 	"path/filepath"
 	"testing"

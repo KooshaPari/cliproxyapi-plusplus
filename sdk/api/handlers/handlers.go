@@ -15,14 +15,14 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/interfaces"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/logging"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/thinking"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/util"
-	coreauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
-	coreexecutor "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/executor"
-	sdktranslator "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/translator"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/config"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/interfaces"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/logging"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/thinking"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/util"
+	coreauth "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth"
+	coreexecutor "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/executor"
+	sdktranslator "github.com/kooshapari/CLIProxyAPI/v7/sdk/translator"
 )
 
 // CtxKey is a typed key for context values in the handlers package, preventing collisions.

@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	coreusage "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/usage"
+	coreusage "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/usage"
 )
 
 func TestGetProviderMetrics_Empty(t *testing.T) {

@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/KooshaPari/phenotype-go-kit/pkg/auth"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/misc"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/misc"
 )
 
 // QwenTokenStorage extends BaseTokenStorage with Qwen-specific fields for managing

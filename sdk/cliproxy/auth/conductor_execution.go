@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/interfaces"
-	cliproxyexecutor "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/executor"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/interfaces"
+	cliproxyexecutor "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/executor"
 )
 
 // Execute performs a non-streaming execution using the configured selector and executor.
