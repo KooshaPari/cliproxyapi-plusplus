@@ -4,57 +4,22 @@
 package claude
 
 import (
-	"encoding/json"
 	"fmt"
-	"os"
-	"path/filepath"
-	"strings"
 
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/misc"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/base"
 )
-
-func sanitizeTokenFilePath(authFilePath string) (string, error) {
-	trimmed := strings.TrimSpace(authFilePath)
-	if trimmed == "" {
-		return "", fmt.Errorf("token file path is empty")
-	}
-	cleaned := filepath.Clean(trimmed)
-	parts := strings.FieldsFunc(cleaned, func(r rune) bool {
-		return r == '/' || r == '\\'
-	})
-	for _, part := range parts {
-		if part == ".." {
-			return "", fmt.Errorf("invalid token file path")
-		}
-	}
-	absPath, err := filepath.Abs(cleaned)
-	if err != nil {
-		return "", fmt.Errorf("failed to resolve token file path: %w", err)
-	}
-	return absPath, nil
-}
 
 // ClaudeTokenStorage stores OAuth2 token information for Anthropic Claude API authentication.
 // It maintains compatibility with the existing auth system while adding Claude-specific fields
 // for managing access tokens, refresh tokens, and user account information.
 type ClaudeTokenStorage struct {
+	base.BaseTokenStorage
+
 	// IDToken is the JWT ID token containing user claims and identity information.
 	IDToken string `json:"id_token"`
 
-	// AccessToken is the OAuth2 access token used for authenticating API requests.
-	AccessToken string `json:"access_token"`
-
-	// RefreshToken is used to obtain new access tokens when the current one expires.
-	RefreshToken string `json:"refresh_token"`
-
 	// LastRefresh is the timestamp of the last token refresh operation.
 	LastRefresh string `json:"last_refresh"`
-
-	// Email is the Anthropic account email address associated with this token.
-	Email string `json:"email"`
-
-	// Type indicates the authentication provider type, always "claude" for this storage.
-	Type string `json:"type"`
 
 	// Expire is the timestamp when the current access token expires.
 	Expire string `json:"expired"`
@@ -70,34 +35,9 @@ type ClaudeTokenStorage struct {
 // Returns:
 //   - error: An error if the operation fails, nil otherwise
 func (ts *ClaudeTokenStorage) SaveTokenToFile(authFilePath string) error {
-	safePath, err := misc.ResolveSafeFilePath(authFilePath)
-	if err != nil {
-		return fmt.Errorf("invalid token file path: %w", err)
-	}
-	misc.LogSavingCredentials(safePath)
 	ts.Type = "claude"
-	safePath, err = sanitizeTokenFilePath(authFilePath)
-	if err != nil {
-		return err
-	}
-
-	// Create directory structure if it doesn't exist
-	if err = os.MkdirAll(filepath.Dir(safePath), 0700); err != nil {
-		return fmt.Errorf("failed to create directory: %v", err)
-	}
-
-	// Create the token file
-	f, err := os.Create(safePath)
-	if err != nil {
-		return fmt.Errorf("failed to create token file: %w", err)
-	}
-	defer func() {
-		_ = f.Close()
-	}()
-
-	// Encode and write the token data as JSON
-	if err = json.NewEncoder(f).Encode(ts); err != nil {
-		return fmt.Errorf("failed to write token to file: %w", err)
+	if err := ts.Save(authFilePath, ts); err != nil {
+		return fmt.Errorf("claude token: %w", err)
 	}
 	return nil
 }

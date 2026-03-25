@@ -1,4 +1,4 @@
-# cliproxyapi-plusplus Optimization Plan — 2026-02-23
+# cliproxyapi++ Optimization Plan — 2026-02-23
 
 ## Current State (after Phase 1 fixes)
 - Go: ~183K LOC (after removing 21K dead runtime/executor copy)

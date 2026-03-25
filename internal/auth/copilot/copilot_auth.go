@@ -83,16 +83,20 @@ func (c *CopilotAuth) WaitForAuthorization(ctx context.Context, deviceCode *Devi
 
 	// Fetch the GitHub username
 	userInfo, err := c.deviceClient.FetchUserInfo(ctx, tokenData.AccessToken)
-	username := "unknown"
 	if err != nil {
 		log.Warnf("copilot: failed to fetch user info: %v", err)
-	} else {
-		username = userInfo.Login
+	}
+
+	username := userInfo.Login
+	if username == "" {
+		username = "github-user"
 	}
 
 	return &CopilotAuthBundle{
 		TokenData: tokenData,
 		Username:  username,
+		Email:     userInfo.Email,
+		Name:      userInfo.Name,
 	}, nil
 }
 
@@ -162,13 +166,15 @@ func (c *CopilotAuth) ValidateToken(ctx context.Context, accessToken string) (bo
 
 // CreateTokenStorage creates a new CopilotTokenStorage from auth bundle.
 func (c *CopilotAuth) CreateTokenStorage(bundle *CopilotAuthBundle) *CopilotTokenStorage {
-	return &CopilotTokenStorage{
-		AccessToken: bundle.TokenData.AccessToken,
-		TokenType:   bundle.TokenData.TokenType,
-		Scope:       bundle.TokenData.Scope,
-		Username:    bundle.Username,
-		Type:        "github-copilot",
-	}
+	storage := NewCopilotTokenStorage("")
+	storage.AccessToken = bundle.TokenData.AccessToken
+	storage.TokenType = bundle.TokenData.TokenType
+	storage.Scope = bundle.TokenData.Scope
+	storage.Username = bundle.Username
+	storage.Email = bundle.Email
+	storage.Name = bundle.Name
+	storage.Type = "github-copilot"
+	return storage
 }
 
 // LoadAndValidateToken loads a token from storage and validates it.
