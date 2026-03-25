@@ -9,44 +9,53 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/KooshaPari/phenotype-go-kit/pkg/auth"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/misc"
 )
 
-// BaseTokenStorage provides common token storage functionality shared across providers.
-type BaseTokenStorage struct {
-	FilePath     string `json:"-"`
-	Type         string `json:"type"`
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
-	IDToken      string `json:"id_token,omitempty"`
-	LastRefresh  string `json:"last_refresh,omitempty"`
-	Expire       string `json:"expired,omitempty"`
+// QwenTokenStorage extends BaseTokenStorage with Qwen-specific fields for managing
+// access tokens, refresh tokens, and user account information.
+// It embeds auth.BaseTokenStorage to inherit shared token management functionality.
+type QwenTokenStorage struct {
+	*auth.BaseTokenStorage
+
+	// ResourceURL is the base URL for API requests.
+	ResourceURL string `json:"resource_url"`
 }
 
-// NewBaseTokenStorage creates a new BaseTokenStorage with the given file path.
-func NewBaseTokenStorage(filePath string) *BaseTokenStorage {
-	return &BaseTokenStorage{FilePath: filePath}
+// NewQwenTokenStorage creates a new QwenTokenStorage instance with the given file path.
+// Parameters:
+//   - filePath: The full path where the token file should be saved/loaded
+//
+// Returns:
+//   - *QwenTokenStorage: A new QwenTokenStorage instance
+func NewQwenTokenStorage(filePath string) *QwenTokenStorage {
+	return &QwenTokenStorage{
+		BaseTokenStorage: auth.NewBaseTokenStorage(filePath),
+	}
 }
 
-// Save writes the token storage to its file path as JSON.
-func (b *BaseTokenStorage) Save() error {
-	if b.FilePath == "" {
-		return fmt.Errorf("base token storage: file path is empty")
+// SaveTokenToFile serializes the Qwen token storage to a JSON file.
+// This method creates the necessary directory structure and writes the token
+// data in JSON format to the specified file path for persistent storage.
+//
+// Parameters:
+//   - authFilePath: The full path where the token file should be saved
+//
+// Returns:
+//   - error: An error if the operation fails, nil otherwise
+func (ts *QwenTokenStorage) SaveTokenToFile(authFilePath string) error {
+	misc.LogSavingCredentials(authFilePath)
+	if ts.BaseTokenStorage == nil {
+		return fmt.Errorf("qwen token: base token storage is nil")
 	}
-	cleanPath := filepath.Clean(b.FilePath)
-	dir := filepath.Dir(cleanPath)
-	if err := os.MkdirAll(dir, 0700); err != nil {
-		return fmt.Errorf("failed to create directory: %w", err)
+
+	if _, err := cleanTokenFilePath(authFilePath, "qwen token"); err != nil {
+		return err
 	}
-	f, err := os.Create(cleanPath)
-	if err != nil {
-		return fmt.Errorf("failed to create token file: %w", err)
-	}
-	defer func() { _ = f.Close() }()
-	if err := json.NewEncoder(f).Encode(b); err != nil {
-		return fmt.Errorf("failed to write token to file: %w", err)
-	}
-	return nil
+
+	ts.BaseTokenStorage.Type = "qwen"
+	return ts.BaseTokenStorage.Save()
 }
 
 // QwenTokenStorage extends BaseTokenStorage with Qwen-specific fields for managing
