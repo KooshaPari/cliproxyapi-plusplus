@@ -6,7 +6,11 @@ import (
 	"io"
 	"os"
 
+<<<<<<< HEAD
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
+=======
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+>>>>>>> origin/main
 	"gopkg.in/yaml.v3"
 )
 

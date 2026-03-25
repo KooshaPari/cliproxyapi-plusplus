@@ -11,7 +11,11 @@ import (
 	"strings"
 	"time"
 
+<<<<<<< HEAD
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
+=======
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+>>>>>>> origin/main
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/thinking"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/util"
 	cliproxyauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
@@ -146,10 +150,15 @@ func (e *OpenAICompatExecutor) Execute(ctx context.Context, auth *cliproxyauth.A
 		AuthValue: authValue,
 	})
 
+<<<<<<< HEAD
 	httpClient := newProxyAwareHTTPClient(ctx, e.cfg, auth, 0)
 	httpResp, err := httpClient.Do(httpReq)
 	if err != nil {
 		recordAPIResponseError(ctx, e.cfg, err)
+=======
+	httpResp, err := ExecuteHTTPRequest(ctx, e.cfg, auth, httpReq, "openai compat executor")
+	if err != nil {
+>>>>>>> origin/main
 		return resp, err
 	}
 	defer func() {
@@ -157,6 +166,7 @@ func (e *OpenAICompatExecutor) Execute(ctx context.Context, auth *cliproxyauth.A
 			log.Errorf("openai compat executor: close response body error: %v", errClose)
 		}
 	}()
+<<<<<<< HEAD
 	recordAPIResponseMetadata(ctx, e.cfg, httpResp.StatusCode, httpResp.Header.Clone())
 	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
 		b, _ := io.ReadAll(httpResp.Body)
@@ -165,6 +175,8 @@ func (e *OpenAICompatExecutor) Execute(ctx context.Context, auth *cliproxyauth.A
 		err = statusErr{code: httpResp.StatusCode, msg: string(b)}
 		return resp, err
 	}
+=======
+>>>>>>> origin/main
 	body, err := io.ReadAll(httpResp.Body)
 	if err != nil {
 		recordAPIResponseError(ctx, e.cfg, err)
@@ -249,6 +261,7 @@ func (e *OpenAICompatExecutor) ExecuteStream(ctx context.Context, auth *cliproxy
 		AuthValue: authValue,
 	})
 
+<<<<<<< HEAD
 	httpClient := newProxyAwareHTTPClient(ctx, e.cfg, auth, 0)
 	httpResp, err := httpClient.Do(httpReq)
 	if err != nil {
@@ -264,6 +277,10 @@ func (e *OpenAICompatExecutor) ExecuteStream(ctx context.Context, auth *cliproxy
 			log.Errorf("openai compat executor: close response body error: %v", errClose)
 		}
 		err = statusErr{code: httpResp.StatusCode, msg: string(b)}
+=======
+	httpResp, err := ExecuteHTTPRequestForStreaming(ctx, e.cfg, auth, httpReq, "openai compat executor")
+	if err != nil {
+>>>>>>> origin/main
 		return nil, err
 	}
 	out := make(chan cliproxyexecutor.StreamChunk)

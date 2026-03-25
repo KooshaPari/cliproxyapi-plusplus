@@ -18,6 +18,12 @@ func extractAndRemoveBetas(body []byte) ([]string, []byte) {
 
 	if betasResult.IsArray() {
 		for _, v := range betasResult.Array() {
+<<<<<<< HEAD
+=======
+			if v.Type != gjson.String {
+				continue
+			}
+>>>>>>> origin/main
 			if s := strings.TrimSpace(v.String()); s != "" {
 				betas = append(betas, s)
 			}

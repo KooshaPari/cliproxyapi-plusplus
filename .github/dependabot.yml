@@ -5,7 +5,12 @@
 
 version: 2
 updates:
+<<<<<<< HEAD
   - package-ecosystem: "" # See documentation for possible values haha
     directory: "/" # Location of package manifests
+=======
+  - package-ecosystem: "gomod"
+    directory: "/"
+>>>>>>> origin/main
     schedule:
       interval: "weekly"

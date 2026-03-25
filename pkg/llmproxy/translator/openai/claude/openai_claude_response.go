@@ -44,6 +44,11 @@ type ConvertOpenAIResponseToAnthropicParams struct {
 	MessageStarted bool
 	// Track if message_stop has been sent
 	MessageStopSent bool
+<<<<<<< HEAD
+=======
+	// Accumulated annotations from OpenAI response
+	Annotations []map[string]interface{}
+>>>>>>> origin/main
 	// Tool call content block index mapping
 	ToolCallBlockIndexes map[int]int
 	// Index assigned to text content block
@@ -222,6 +227,24 @@ func convertOpenAIStreamingChunkToAnthropic(rawJSON []byte, param *ConvertOpenAI
 			param.ContentAccumulator.WriteString(content.String())
 		}
 
+<<<<<<< HEAD
+=======
+		// Handle annotations (web search citations)
+		if annotations := delta.Get("annotations"); annotations.Exists() && annotations.IsArray() {
+			annotations.ForEach(func(_, ann gjson.Result) bool {
+				entry := map[string]interface{}{
+					"type":        ann.Get("type").String(),
+					"url":         ann.Get("url").String(),
+					"title":       ann.Get("title").String(),
+					"start_index": ann.Get("start_index").Int(),
+					"end_index":   ann.Get("end_index").Int(),
+				}
+				param.Annotations = append(param.Annotations, entry)
+				return true
+			})
+		}
+
+>>>>>>> origin/main
 		// Handle tool calls
 		if toolCalls := delta.Get("tool_calls"); toolCalls.Exists() && toolCalls.IsArray() {
 			if param.ToolCallsAccumulator == nil {
@@ -334,6 +357,16 @@ func convertOpenAIStreamingChunkToAnthropic(rawJSON []byte, param *ConvertOpenAI
 			if cachedTokens > 0 {
 				messageDeltaJSON, _ = sjson.Set(messageDeltaJSON, "usage.cache_read_input_tokens", cachedTokens)
 			}
+<<<<<<< HEAD
+=======
+			if len(param.Annotations) > 0 {
+				citations := make([]interface{}, len(param.Annotations))
+				for i, a := range param.Annotations {
+					citations[i] = a
+				}
+				messageDeltaJSON, _ = sjson.Set(messageDeltaJSON, "citations", citations)
+			}
+>>>>>>> origin/main
 			results = append(results, "event: message_delta\ndata: "+messageDeltaJSON+"\n\n")
 			param.MessageDeltaSent = true
 
@@ -644,6 +677,29 @@ func ConvertOpenAIResponseToClaudeNonStream(_ context.Context, _ string, origina
 		}
 	}
 
+<<<<<<< HEAD
+=======
+	// Extract annotations from message and add as citations
+	if choices := root.Get("choices"); choices.Exists() && choices.IsArray() && len(choices.Array()) > 0 {
+		if annotations := choices.Array()[0].Get("message.annotations"); annotations.Exists() && annotations.IsArray() {
+			var citations []interface{}
+			annotations.ForEach(func(_, ann gjson.Result) bool {
+				citations = append(citations, map[string]interface{}{
+					"type":        ann.Get("type").String(),
+					"url":         ann.Get("url").String(),
+					"title":       ann.Get("title").String(),
+					"start_index": ann.Get("start_index").Int(),
+					"end_index":   ann.Get("end_index").Int(),
+				})
+				return true
+			})
+			if len(citations) > 0 {
+				out, _ = sjson.Set(out, "citations", citations)
+			}
+		}
+	}
+
+>>>>>>> origin/main
 	if respUsage := root.Get("usage"); respUsage.Exists() {
 		inputTokens, outputTokens, cachedTokens := extractOpenAIUsage(respUsage)
 		out, _ = sjson.Set(out, "usage.input_tokens", inputTokens)

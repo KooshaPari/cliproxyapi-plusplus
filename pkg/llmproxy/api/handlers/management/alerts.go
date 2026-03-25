@@ -12,6 +12,7 @@ import (
 
 // Alert represents a system alert
 type Alert struct {
+<<<<<<< HEAD
 	ID          string     `json:"id"`
 	Type        AlertType  `json:"type"` // error_rate, latency, cost, uptime, provider
 	Severity    Severity   `json:"severity"` // critical, warning, info
@@ -26,19 +27,43 @@ type Alert struct {
 	StartedAt   time.Time  `json:"started_at"`
 	ResolvedAt  *time.Time `json:"resolved_at,omitempty"`
 	CreatedAt   time.Time  `json:"created_at"`
+=======
+	ID           string      `json:"id"`
+	Type         AlertType   `json:"type"`     // error_rate, latency, cost, uptime, provider
+	Severity     Severity    `json:"severity"` // critical, warning, info
+	Status       AlertStatus `json:"status"`   // firing, resolved
+	Title        string      `json:"title"`
+	Description  string      `json:"description"`
+	MetricName   string      `json:"metric_name,omitempty"`
+	Threshold    float64     `json:"threshold,omitempty"`
+	CurrentValue float64     `json:"current_value,omitempty"`
+	Provider     string      `json:"provider,omitempty"`
+	ModelID      string      `json:"model_id,omitempty"`
+	StartedAt    time.Time   `json:"started_at"`
+	ResolvedAt   *time.Time  `json:"resolved_at,omitempty"`
+	CreatedAt    time.Time   `json:"created_at"`
+>>>>>>> origin/main
 }
 
 // AlertType represents the type of alert
 type AlertType string
 
 const (
+<<<<<<< HEAD
 	AlertTypeErrorRate  AlertType = "error_rate"
+=======
+	AlertTypeErrorRate AlertType = "error_rate"
+>>>>>>> origin/main
 	AlertTypeLatency   AlertType = "latency"
 	AlertTypeCost      AlertType = "cost"
 	AlertTypeUptime    AlertType = "uptime"
 	AlertTypeProvider  AlertType = "provider"
 	AlertTypeQuota     AlertType = "quota"
+<<<<<<< HEAD
 	AlertTypeInfo     AlertType = "info"
+=======
+	AlertTypeInfo      AlertType = "info"
+>>>>>>> origin/main
 )
 
 // Severity represents alert severity
@@ -54,12 +79,17 @@ const (
 type AlertStatus string
 
 const (
+<<<<<<< HEAD
 	AlertStatusFiring  AlertStatus = "firing"
+=======
+	AlertStatusFiring   AlertStatus = "firing"
+>>>>>>> origin/main
 	AlertStatusResolved AlertStatus = "resolved"
 )
 
 // AlertRule defines conditions for triggering alerts
 type AlertRule struct {
+<<<<<<< HEAD
 	Name        string      `json:"name"`
 	Type        AlertType   `json:"type"`
 	Severity    Severity    `json:"severity"`
@@ -68,6 +98,16 @@ type AlertRule struct {
 	Cooldown    time.Duration `json:"cooldown"` // Time before next alert
 	Enabled     bool        `json:"enabled"`
 	Notify      []string    `json:"notify"` // notification channels
+=======
+	Name      string        `json:"name"`
+	Type      AlertType     `json:"type"`
+	Severity  Severity      `json:"severity"`
+	Threshold float64       `json:"threshold"`
+	Duration  time.Duration `json:"duration"` // How long condition must be true
+	Cooldown  time.Duration `json:"cooldown"` // Time before next alert
+	Enabled   bool          `json:"enabled"`
+	Notify    []string      `json:"notify"` // notification channels
+>>>>>>> origin/main
 }
 
 // AlertManager manages alerts and rules
@@ -75,8 +115,13 @@ type AlertManager struct {
 	mu           sync.RWMutex
 	rules        map[string]*AlertRule
 	activeAlerts map[string]*Alert
+<<<<<<< HEAD
 	alertHistory  []Alert
 	maxHistory    int
+=======
+	alertHistory []Alert
+	maxHistory   int
+>>>>>>> origin/main
 	notifiers    []AlertNotifier
 }
 
@@ -90,8 +135,13 @@ func NewAlertManager() *AlertManager {
 	return &AlertManager{
 		rules:        make(map[string]*AlertRule),
 		activeAlerts: make(map[string]*Alert),
+<<<<<<< HEAD
 		alertHistory:  make([]Alert, 0),
 		maxHistory:    1000,
+=======
+		alertHistory: make([]Alert, 0),
+		maxHistory:   1000,
+>>>>>>> origin/main
 		notifiers:    make([]AlertNotifier, 0),
 	}
 }
@@ -145,7 +195,11 @@ func (m *AlertManager) EvaluateMetrics(ctx context.Context, metrics map[string]f
 		}
 
 		alertKey := fmt.Sprintf("%s:%s", rule.Name, rule.Type)
+<<<<<<< HEAD
 		
+=======
+
+>>>>>>> origin/main
 		switch rule.Type {
 		case AlertTypeErrorRate, AlertTypeLatency:
 			if value > rule.Threshold {
@@ -236,7 +290,11 @@ func (m *AlertManager) GetAlertHistory(limit int) []Alert {
 	if limit <= 0 || limit > len(m.alertHistory) {
 		limit = len(m.alertHistory)
 	}
+<<<<<<< HEAD
 	
+=======
+
+>>>>>>> origin/main
 	result := make([]Alert, limit)
 	copy(result, m.alertHistory[len(m.alertHistory)-limit:])
 	return result
@@ -260,6 +318,7 @@ func getSeverityText(s Severity) string {
 func CommonAlertRules() []*AlertRule {
 	return []*AlertRule{
 		{
+<<<<<<< HEAD
 			Name:     "high-error-rate",
 			Type:     AlertTypeErrorRate,
 			Severity: SeverityCritical,
@@ -298,6 +357,46 @@ func CommonAlertRules() []*AlertRule {
 			Cooldown: 10 * time.Minute,
 			Enabled:  true,
 			Notify:   []string{"slack", "email", "pagerduty"},
+=======
+			Name:      "high-error-rate",
+			Type:      AlertTypeErrorRate,
+			Severity:  SeverityCritical,
+			Threshold: 5.0, // 5% error rate
+			Duration:  5 * time.Minute,
+			Cooldown:  15 * time.Minute,
+			Enabled:   true,
+			Notify:    []string{"slack", "email"},
+		},
+		{
+			Name:      "high-latency",
+			Type:      AlertTypeLatency,
+			Severity:  SeverityWarning,
+			Threshold: 10000, // 10 seconds
+			Duration:  10 * time.Minute,
+			Cooldown:  30 * time.Minute,
+			Enabled:   true,
+			Notify:    []string{"slack"},
+		},
+		{
+			Name:      "high-cost",
+			Type:      AlertTypeCost,
+			Severity:  SeverityWarning,
+			Threshold: 1000.0, // $1000
+			Duration:  1 * time.Hour,
+			Cooldown:  1 * time.Hour,
+			Enabled:   true,
+			Notify:    []string{"email"},
+		},
+		{
+			Name:      "provider-outage",
+			Type:      AlertTypeProvider,
+			Severity:  SeverityCritical,
+			Threshold: 90.0, // 90% uptime threshold
+			Duration:  5 * time.Minute,
+			Cooldown:  10 * time.Minute,
+			Enabled:   true,
+			Notify:    []string{"slack", "email", "pagerduty"},
+>>>>>>> origin/main
 		},
 	}
 }

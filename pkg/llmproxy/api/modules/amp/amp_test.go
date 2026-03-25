@@ -10,7 +10,11 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/api/modules"
+<<<<<<< HEAD
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
+=======
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+>>>>>>> origin/main
 	sdkaccess "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/access"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/api/handlers"
 )

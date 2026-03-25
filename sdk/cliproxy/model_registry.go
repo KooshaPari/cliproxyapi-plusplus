@@ -1,6 +1,10 @@
 package cliproxy
 
+<<<<<<< HEAD
 import "github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/registry"
+=======
+import "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/registry"
+>>>>>>> origin/main
 
 // ModelInfo re-exports the registry model info structure.
 type ModelInfo = registry.ModelInfo
@@ -17,6 +21,10 @@ type ModelRegistry interface {
 	ClientSupportsModel(clientID, modelID string) bool
 	GetAvailableModels(handlerType string) []map[string]any
 	GetAvailableModelsByProvider(provider string) []*ModelInfo
+<<<<<<< HEAD
+=======
+	GetModelsForClient(clientID string) []*ModelInfo
+>>>>>>> origin/main
 }
 
 // GlobalModelRegistry returns the shared registry instance.

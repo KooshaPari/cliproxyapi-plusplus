@@ -14,9 +14,16 @@ import (
 	"net/url"
 	"time"
 
+<<<<<<< HEAD
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/codex"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/browser"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
+=======
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/base"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/codex"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/browser"
+>>>>>>> origin/main
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/misc"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/util"
 	log "github.com/sirupsen/logrus"
@@ -204,9 +211,17 @@ func (g *GeminiAuth) createTokenStorage(ctx context.Context, config *oauth2.Conf
 	ifToken["universe_domain"] = "googleapis.com"
 
 	ts := GeminiTokenStorage{
+<<<<<<< HEAD
 		Token:     ifToken,
 		ProjectID: projectID,
 		Email:     emailResult.String(),
+=======
+		BaseTokenStorage: base.BaseTokenStorage{
+			Email: emailResult.String(),
+		},
+		Token:     ifToken,
+		ProjectID: projectID,
+>>>>>>> origin/main
 	}
 
 	return &ts, nil

@@ -4,20 +4,31 @@
 package copilot
 
 import (
+<<<<<<< HEAD
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/misc"
+=======
+	"fmt"
+
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/base"
+>>>>>>> origin/main
 )
 
 // CopilotTokenStorage stores OAuth2 token information for GitHub Copilot API authentication.
 // It maintains compatibility with the existing auth system while adding Copilot-specific fields
 // for managing access tokens and user account information.
 type CopilotTokenStorage struct {
+<<<<<<< HEAD
 	// AccessToken is the OAuth2 access token used for authenticating API requests.
 	AccessToken string `json:"access_token"`
+=======
+	base.BaseTokenStorage
+
+>>>>>>> origin/main
 	// TokenType is the type of token, typically "bearer".
 	TokenType string `json:"token_type"`
 	// Scope is the OAuth2 scope granted to the token.
@@ -26,8 +37,11 @@ type CopilotTokenStorage struct {
 	ExpiresAt string `json:"expires_at,omitempty"`
 	// Username is the GitHub username associated with this token.
 	Username string `json:"username"`
+<<<<<<< HEAD
 	// Type indicates the authentication provider type, always "github-copilot" for this storage.
 	Type string `json:"type"`
+=======
+>>>>>>> origin/main
 }
 
 // CopilotTokenData holds the raw OAuth token response from GitHub.
@@ -72,6 +86,7 @@ type DeviceCodeResponse struct {
 // Returns:
 //   - error: An error if the operation fails, nil otherwise
 func (ts *CopilotTokenStorage) SaveTokenToFile(authFilePath string) error {
+<<<<<<< HEAD
 	safePath, err := misc.ResolveSafeFilePath(authFilePath)
 	if err != nil {
 		return fmt.Errorf("invalid token file path: %w", err)
@@ -92,6 +107,11 @@ func (ts *CopilotTokenStorage) SaveTokenToFile(authFilePath string) error {
 
 	if err = json.NewEncoder(f).Encode(ts); err != nil {
 		return fmt.Errorf("failed to write token to file: %w", err)
+=======
+	ts.Type = "github-copilot"
+	if err := ts.Save(authFilePath, ts); err != nil {
+		return fmt.Errorf("copilot token: %w", err)
+>>>>>>> origin/main
 	}
 	return nil
 }

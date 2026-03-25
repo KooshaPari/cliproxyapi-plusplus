@@ -9,7 +9,11 @@ import (
 	"net/http"
 	"net/url"
 
+<<<<<<< HEAD
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
+=======
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+>>>>>>> origin/main
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/proxy"
 )

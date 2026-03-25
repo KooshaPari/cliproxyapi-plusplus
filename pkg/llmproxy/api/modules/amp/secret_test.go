@@ -9,7 +9,11 @@ import (
 	"testing"
 	"time"
 
+<<<<<<< HEAD
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
+=======
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+>>>>>>> origin/main
 	log "github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"
 )
@@ -202,8 +206,15 @@ func TestMultiSourceSecret_Concurrency(t *testing.T) {
 		}()
 	}
 
+<<<<<<< HEAD
 	wg.Wait()
 	close(errors)
+=======
+	go func() {
+		wg.Wait()
+		close(errors)
+	}()
+>>>>>>> origin/main
 
 	for err := range errors {
 		t.Errorf("concurrency error: %v", err)

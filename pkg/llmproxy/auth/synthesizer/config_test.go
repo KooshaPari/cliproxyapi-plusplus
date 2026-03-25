@@ -1,7 +1,11 @@
 package synthesizer
 
 import (
+<<<<<<< HEAD
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
+=======
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+>>>>>>> origin/main
 	"os"
 	"path/filepath"
 	"testing"
@@ -90,6 +94,11 @@ func TestConfigSynthesizer_SynthesizeMore(t *testing.T) {
 				FireworksKey:   []config.FireworksKey{{APIKey: "fw1"}},
 				NovitaKey:      []config.NovitaKey{{APIKey: "no1"}},
 				MiniMaxKey:     []config.MiniMaxKey{{APIKey: "mm1"}},
+<<<<<<< HEAD
+=======
+				RooKey:         []config.RooKey{{APIKey: "ro1"}},
+				KiloKey:        []config.KiloKey{{APIKey: "ki1"}},
+>>>>>>> origin/main
 			},
 			VertexCompatAPIKey: []config.VertexCompatKey{{APIKey: "vx1", BaseURL: "http://vx"}},
 		},

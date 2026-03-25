@@ -16,7 +16,11 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/buildinfo"
+<<<<<<< HEAD
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
+=======
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+>>>>>>> origin/main
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/usage"
 	sdkAuth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/auth"
 	coreauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
@@ -49,6 +53,11 @@ type Handler struct {
 	allowRemoteOverride bool
 	envSecret           string
 	logDir              string
+<<<<<<< HEAD
+=======
+	postAuthHook        coreauth.PostAuthHook
+	routingSelect       *RoutingSelectHandler
+>>>>>>> origin/main
 }
 
 // NewHandler creates a new management handler instance.
@@ -130,6 +139,20 @@ func (h *Handler) SetLogDirectory(dir string) {
 	h.logDir = dir
 }
 
+<<<<<<< HEAD
+=======
+// SetPostAuthHook registers a hook called after auth record creation.
+func (h *Handler) SetPostAuthHook(hook coreauth.PostAuthHook) { h.postAuthHook = hook }
+
+// POSTRoutingSelect delegates to the RoutingSelectHandler.
+func (h *Handler) POSTRoutingSelect(c *gin.Context) {
+	if h.routingSelect == nil {
+		h.routingSelect = NewRoutingSelectHandler()
+	}
+	h.routingSelect.POSTRoutingSelect(c)
+}
+
+>>>>>>> origin/main
 // Middleware enforces access control for management endpoints.
 // All requests (local and remote) require a valid management key.
 // Additionally, remote access requires allow-remote-management=true.

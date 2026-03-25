@@ -23,11 +23,19 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+<<<<<<< HEAD
 	kiroclaude "github.com/kooshapari/cliproxyapi-plusplus/v6/internal/translator/kiro/claude"
 	kirocommon "github.com/kooshapari/cliproxyapi-plusplus/v6/internal/translator/kiro/common"
 	kiroopenai "github.com/kooshapari/cliproxyapi-plusplus/v6/internal/translator/kiro/openai"
 	kiroauth "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/kiro"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
+=======
+	kiroauth "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/kiro"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+	kiroclaude "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/translator/kiro/claude"
+	kirocommon "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/translator/kiro/common"
+	kiroopenai "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/translator/kiro/openai"
+>>>>>>> origin/main
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/util"
 	cliproxyauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
 	cliproxyexecutor "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/executor"
@@ -324,6 +332,7 @@ func newKiroHTTPClientWithPooling(ctx context.Context, cfg *config.Config, auth 
 	return pooledClient
 }
 
+<<<<<<< HEAD
 // kiroEndpointConfig bundles endpoint URL with its compatible Origin and AmzTarget values.
 // This solves the "triple mismatch" problem where different endpoints require matching
 // Origin and X-Amz-Target header values.
@@ -503,12 +512,15 @@ func getKiroEndpointConfigs(auth *cliproxyauth.Auth) []kiroEndpointConfig {
 	return append(sorted, remaining...)
 }
 
+=======
+>>>>>>> origin/main
 // KiroExecutor handles requests to AWS CodeWhisperer (Kiro) API.
 type KiroExecutor struct {
 	cfg       *config.Config
 	refreshMu sync.Mutex // Serializes token refresh operations to prevent race conditions
 }
 
+<<<<<<< HEAD
 // isIDCAuth checks if the auth uses IDC (Identity Center) authentication method.
 func isIDCAuth(auth *cliproxyauth.Auth) bool {
 	if auth == nil || auth.Metadata == nil {
@@ -556,6 +568,8 @@ func sanitizeKiroPayload(body []byte) []byte {
 	return sanitized
 }
 
+=======
+>>>>>>> origin/main
 // NewKiroExecutor creates a new Kiro executor instance.
 func NewKiroExecutor(cfg *config.Config) *KiroExecutor {
 	return &KiroExecutor{cfg: cfg}
@@ -1073,6 +1087,7 @@ func (e *KiroExecutor) executeWithRetry(ctx context.Context, auth *cliproxyauth.
 	return resp, fmt.Errorf("kiro: all endpoints exhausted")
 }
 
+<<<<<<< HEAD
 // ExecuteStream handles streaming requests to Kiro API.
 // Supports automatic token refresh on 401/403 errors and quota fallback on 429.
 func (e *KiroExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.Auth, req cliproxyexecutor.Request, opts cliproxyexecutor.Options) (_ *cliproxyexecutor.StreamResult, err error) {
@@ -3607,6 +3622,9 @@ func (e *KiroExecutor) streamToChannel(ctx context.Context, body io.Reader, out 
 	}
 	// reporter.publish is called via defer
 }
+=======
+// kiroCredentials extracts access token and profile ARN from auth.
+>>>>>>> origin/main
 
 // NOTE: Claude SSE event builders moved to pkg/llmproxy/translator/kiro/claude/kiro_claude_stream.go
 // The executor now uses kiroclaude.BuildClaude*Event() functions instead
@@ -4030,6 +4048,7 @@ func (e *KiroExecutor) isTokenExpired(accessToken string) bool {
 
 	return isExpired
 }
+<<<<<<< HEAD
 
 // ══════════════════════════════════════════════════════════════════════════════
 // Web Search Handler (MCP API)
@@ -4689,3 +4708,5 @@ func (e *KiroExecutor) executeNonStreamFallback(
 }
 
 func (e *KiroExecutor) CloseExecutionSession(sessionID string) {}
+=======
+>>>>>>> origin/main

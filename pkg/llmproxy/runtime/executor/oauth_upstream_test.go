@@ -3,7 +3,11 @@ package executor
 import (
 	"testing"
 
+<<<<<<< HEAD
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
+=======
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+>>>>>>> origin/main
 )
 
 func resolveOAuthBaseURLWithOverride(cfg *config.Config, provider, defaultURL, authURL string) string {
@@ -36,7 +40,11 @@ func TestResolveOAuthBaseURLWithOverride_PreferenceOrder(t *testing.T) {
 	}
 
 	got = resolveOAuthBaseURLWithOverride(cfg, "codex", "https://default.example.com/", "")
+<<<<<<< HEAD
 	if got != "https://default.example.com" {
+=======
+	if got != "https://default.example.com/" {
+>>>>>>> origin/main
 		t.Fatalf("expected default URL fallback when no overrides exist, got %q", got)
 	}
 }

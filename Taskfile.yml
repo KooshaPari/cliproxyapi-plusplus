@@ -357,9 +357,13 @@ tasks:
       - task: preflight
       - task: quality:docs-open-items-parity
 <<<<<<< HEAD
+<<<<<<< HEAD
       - task: quality:docs-phase-placeholders
 =======
 >>>>>>> archive/pr-234-head-20260223
+=======
+      - task: quality:docs-phase-placeholders
+>>>>>>> origin/main
       - ./.github/scripts/release-lint.sh
 
   quality:docs-open-items-parity:
@@ -368,13 +372,19 @@ tasks:
       - ./.github/scripts/check-open-items-fragmented-parity.sh
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> origin/main
   quality:docs-phase-placeholders:
     desc: "Reject unresolved placeholder-like tokens in planning reports"
     cmds:
       - ./.github/scripts/check-phase-doc-placeholder-tokens.sh
 
+<<<<<<< HEAD
 =======
 >>>>>>> archive/pr-234-head-20260223
+=======
+>>>>>>> origin/main
   test:smoke:
     desc: "Run smoke tests for startup and control-plane surfaces"
     deps: [preflight, cache:unlock]

@@ -17,6 +17,10 @@ import (
 
 	cliproxycmd "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/cmd"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+<<<<<<< HEAD
+=======
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/util"
+>>>>>>> origin/main
 )
 
 const responseSchemaVersion = "cliproxyctl.response.v1"
@@ -78,7 +82,11 @@ func defaultCommandExecutor() commandExecutor {
 }
 
 func runProviderLogin(cfg *config.Config, provider string, projectID string, options *cliproxycmd.LoginOptions) error {
+<<<<<<< HEAD
 	switch normalizeProvider(provider) {
+=======
+	switch util.NormalizeProviderAlias(provider) {
+>>>>>>> origin/main
 	case "gemini":
 		cliproxycmd.DoLogin(cfg, strings.TrimSpace(projectID), options)
 	case "claude":
@@ -133,6 +141,7 @@ func runProviderLogin(cfg *config.Config, provider string, projectID string, opt
 	return nil
 }
 
+<<<<<<< HEAD
 func normalizeProvider(provider string) string {
 	normalized := strings.ToLower(strings.TrimSpace(provider))
 	switch normalized {
@@ -167,6 +176,8 @@ func normalizeProvider(provider string) string {
 	}
 }
 
+=======
+>>>>>>> origin/main
 func main() {
 	os.Exit(run(os.Args[1:], os.Stdout, os.Stderr, time.Now, defaultCommandExecutor()))
 }
@@ -712,7 +723,11 @@ func normalizeProviders(raw string) []string {
 	out := make([]string, 0, len(parts))
 	seen := map[string]bool{}
 	for _, part := range parts {
+<<<<<<< HEAD
 		provider := normalizeProvider(strings.TrimSpace(part))
+=======
+		provider := util.NormalizeProviderAlias(strings.TrimSpace(part))
+>>>>>>> origin/main
 		if provider == "" || seen[provider] {
 			continue
 		}
@@ -731,7 +746,11 @@ func resolveLoginProvider(raw string) (string, map[string]any, error) {
 			"error":           "missing provider",
 		}, errors.New("missing provider")
 	}
+<<<<<<< HEAD
 	normalized := normalizeProvider(rawProvider)
+=======
+	normalized := util.NormalizeProviderAlias(rawProvider)
+>>>>>>> origin/main
 	supported := supportedProviders()
 	if !isSupportedProvider(normalized) {
 		return "", map[string]any{

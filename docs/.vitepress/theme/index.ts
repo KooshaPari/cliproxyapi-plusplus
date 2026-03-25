@@ -1,4 +1,5 @@
 import DefaultTheme from 'vitepress/theme'
+<<<<<<< HEAD
 import { tabsClientScript } from '../plugins/content-tabs'
 
 export default {
@@ -38,3 +39,18 @@ export default {
     },
   ],
 }
+=======
+import type { Theme } from 'vitepress'
+import CategorySwitcher from './components/CategorySwitcher.vue'
+import './custom.css'
+
+const theme: Theme = {
+  ...DefaultTheme,
+  enhanceApp({ app }) {
+    app.component('CategorySwitcher', CategorySwitcher)
+  },
+  Layout: DefaultTheme.Layout
+}
+
+export default theme
+>>>>>>> origin/main

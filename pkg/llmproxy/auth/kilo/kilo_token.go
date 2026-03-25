@@ -3,6 +3,7 @@
 package kilo
 
 import (
+<<<<<<< HEAD
 	"encoding/json"
 	"fmt"
 	"os"
@@ -15,6 +16,22 @@ import (
 // KiloTokenStorage stores token information for Kilo AI authentication.
 type KiloTokenStorage struct {
 	// Token is the Kilo access token.
+=======
+	"fmt"
+
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/base"
+)
+
+// KiloTokenStorage stores token information for Kilo AI authentication.
+//
+// Note: Kilo uses a proprietary token format stored under the "kilocodeToken" JSON key
+// rather than the standard "access_token" key, so BaseTokenStorage.AccessToken is not
+// populated for this provider.  The Email and Type fields from BaseTokenStorage are used.
+type KiloTokenStorage struct {
+	base.BaseTokenStorage
+
+	// Token is the Kilo access token (serialised as "kilocodeToken" for Kilo compatibility).
+>>>>>>> origin/main
 	Token string `json:"kilocodeToken"`
 
 	// OrganizationID is the Kilo organization ID.
@@ -22,16 +39,20 @@ type KiloTokenStorage struct {
 
 	// Model is the default model to use.
 	Model string `json:"kilocodeModel"`
+<<<<<<< HEAD
 
 	// Email is the email address of the authenticated user.
 	Email string `json:"email"`
 
 	// Type indicates the authentication provider type, always "kilo" for this storage.
 	Type string `json:"type"`
+=======
+>>>>>>> origin/main
 }
 
 // SaveTokenToFile serializes the Kilo token storage to a JSON file.
 func (ts *KiloTokenStorage) SaveTokenToFile(authFilePath string) error {
+<<<<<<< HEAD
 	safePath, err := misc.ResolveSafeFilePath(authFilePath)
 	if err != nil {
 		return fmt.Errorf("invalid token file path: %w", err)
@@ -54,6 +75,11 @@ func (ts *KiloTokenStorage) SaveTokenToFile(authFilePath string) error {
 
 	if err = json.NewEncoder(f).Encode(ts); err != nil {
 		return fmt.Errorf("failed to write token to file: %w", err)
+=======
+	ts.Type = "kilo"
+	if err := ts.Save(authFilePath, ts); err != nil {
+		return fmt.Errorf("kilo token: %w", err)
+>>>>>>> origin/main
 	}
 	return nil
 }

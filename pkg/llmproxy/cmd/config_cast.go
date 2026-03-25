@@ -3,9 +3,15 @@ package cmd
 import (
 	"unsafe"
 
+<<<<<<< HEAD
 	internalconfig "github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
 	sdkconfig "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/config"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
+=======
+	internalconfig "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+	sdkconfig "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+>>>>>>> origin/main
 )
 
 // castToInternalConfig converts a pkg/llmproxy/config.Config pointer to an internal/config.Config pointer.

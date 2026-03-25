@@ -82,15 +82,31 @@ func (c *CopilotAuth) WaitForAuthorization(ctx context.Context, deviceCode *Devi
 	}
 
 	// Fetch the GitHub username
+<<<<<<< HEAD
 	username, err := c.deviceClient.FetchUserInfo(ctx, tokenData.AccessToken)
 	if err != nil {
 		log.Warnf("copilot: failed to fetch user info: %v", err)
 		username = "unknown"
+=======
+	userInfo, err := c.deviceClient.FetchUserInfo(ctx, tokenData.AccessToken)
+	if err != nil {
+		log.Warnf("copilot: failed to fetch user info: %v", err)
+	}
+
+	username := userInfo.Login
+	if username == "" {
+		username = "github-user"
+>>>>>>> origin/main
 	}
 
 	return &CopilotAuthBundle{
 		TokenData: tokenData,
 		Username:  username,
+<<<<<<< HEAD
+=======
+		Email:     userInfo.Email,
+		Name:      userInfo.Name,
+>>>>>>> origin/main
 	}, nil
 }
 
@@ -150,16 +166,25 @@ func (c *CopilotAuth) ValidateToken(ctx context.Context, accessToken string) (bo
 		return false, "", nil
 	}
 
+<<<<<<< HEAD
 	username, err := c.deviceClient.FetchUserInfo(ctx, accessToken)
+=======
+	userInfo, err := c.deviceClient.FetchUserInfo(ctx, accessToken)
+>>>>>>> origin/main
 	if err != nil {
 		return false, "", err
 	}
 
+<<<<<<< HEAD
 	return true, username, nil
+=======
+	return true, userInfo.Login, nil
+>>>>>>> origin/main
 }
 
 // CreateTokenStorage creates a new CopilotTokenStorage from auth bundle.
 func (c *CopilotAuth) CreateTokenStorage(bundle *CopilotAuthBundle) *CopilotTokenStorage {
+<<<<<<< HEAD
 	return &CopilotTokenStorage{
 		AccessToken: bundle.TokenData.AccessToken,
 		TokenType:   bundle.TokenData.TokenType,
@@ -167,6 +192,17 @@ func (c *CopilotAuth) CreateTokenStorage(bundle *CopilotAuthBundle) *CopilotToke
 		Username:    bundle.Username,
 		Type:        "github-copilot",
 	}
+=======
+	storage := NewCopilotTokenStorage("")
+	storage.AccessToken = bundle.TokenData.AccessToken
+	storage.TokenType = bundle.TokenData.TokenType
+	storage.Scope = bundle.TokenData.Scope
+	storage.Username = bundle.Username
+	storage.Email = bundle.Email
+	storage.Name = bundle.Name
+	storage.Type = "github-copilot"
+	return storage
+>>>>>>> origin/main
 }
 
 // LoadAndValidateToken loads a token from storage and validates it.

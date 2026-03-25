@@ -8,7 +8,11 @@ import (
 	"strings"
 	"sync"
 
+<<<<<<< HEAD
 	coreauth "github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/auth"
+=======
+	coreauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
+>>>>>>> origin/main
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/proxy"
 )

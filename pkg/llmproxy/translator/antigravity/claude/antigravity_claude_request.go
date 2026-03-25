@@ -8,7 +8,11 @@ package claude
 import (
 	"strings"
 
+<<<<<<< HEAD
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/translator/gemini/common"
+=======
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/translator/gemini/common"
+>>>>>>> origin/main
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/registry"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/cache"
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/thinking"

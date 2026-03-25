@@ -63,6 +63,7 @@ func createReverseProxy(upstreamURL string, secretSource SecretSource) (*httputi
 	}
 
 	proxy := httputil.NewSingleHostReverseProxy(parsed)
+<<<<<<< HEAD
 	// Modify outgoing requests to inject API key and fix routing
 	proxy.Rewrite = func(r *httputil.ProxyRequest) {
 		r.Out.Host = parsed.Host
@@ -72,13 +73,31 @@ func createReverseProxy(upstreamURL string, secretSource SecretSource) (*httputi
 		r.Out.Header.Del("Authorization")
 		r.Out.Header.Del("X-Api-Key")
 		r.Out.Header.Del("X-Goog-Api-Key")
+=======
+	// Wrap the default Director to also inject API key and fix routing
+	defaultDirector := proxy.Director
+	proxy.Director = func(req *http.Request) {
+		defaultDirector(req)
+
+		// Remove client's Authorization header - it was only used for CLI Proxy API authentication
+		// We will set our own Authorization using the configured upstream-api-key
+		req.Header.Del("Authorization")
+		req.Header.Del("X-Api-Key")
+		req.Header.Del("X-Goog-Api-Key")
+>>>>>>> origin/main
 
 		// Remove query-based credentials if they match the authenticated client API key.
 		// This prevents leaking client auth material to the Amp upstream while avoiding
 		// breaking unrelated upstream query parameters.
+<<<<<<< HEAD
 		clientKey := getClientAPIKeyFromContext(r.Out.Context())
 		removeQueryValuesMatching(r.Out, "key", clientKey)
 		removeQueryValuesMatching(r.Out, "auth_token", clientKey)
+=======
+		clientKey := getClientAPIKeyFromContext(req.Context())
+		removeQueryValuesMatching(req, "key", clientKey)
+		removeQueryValuesMatching(req, "auth_token", clientKey)
+>>>>>>> origin/main
 
 		// Preserve correlation headers for debugging
 
@@ -87,9 +106,15 @@ func createReverseProxy(upstreamURL string, secretSource SecretSource) (*httputi
 		// including 1M context window (context-1m-2025-08-07)
 
 		// Inject API key from secret source (only uses upstream-api-key from config)
+<<<<<<< HEAD
 		if key, err := secretSource.Get(r.Out.Context()); err == nil && key != "" {
 			r.Out.Header.Set("X-Api-Key", key)
 			r.Out.Header.Set("Authorization", fmt.Sprintf("Bearer %s", key))
+=======
+		if key, err := secretSource.Get(req.Context()); err == nil && key != "" {
+			req.Header.Set("X-Api-Key", key)
+			req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", key))
+>>>>>>> origin/main
 		} else if err != nil {
 			log.Warnf("amp secret source error (continuing without auth): %v", err)
 		}

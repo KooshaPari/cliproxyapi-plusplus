@@ -17,8 +17,19 @@ func TestRequest(t *testing.T) {
 }
 
 func TestNeedConvert(t *testing.T) {
+<<<<<<< HEAD
 	if NeedConvert("openai", "openai") {
 		t.Errorf("openai to openai should not need conversion by default")
+=======
+	// openai→openai has a registered passthrough response translator (registered in
+	// registration.go's init), so NeedConvert should return true.
+	if !NeedConvert("openai", "openai") {
+		t.Errorf("openai to openai should have a registered response translator")
+	}
+	// A completely unknown pair should return false.
+	if NeedConvert("unknown_from", "unknown_to") {
+		t.Errorf("unknown pair should not need conversion")
+>>>>>>> origin/main
 	}
 }
 

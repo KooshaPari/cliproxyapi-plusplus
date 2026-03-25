@@ -5,7 +5,11 @@ import (
 	"errors"
 	"fmt"
 
+<<<<<<< HEAD
 	"github.com/kooshapari/cliproxyapi-plusplus/v6/internal/config"
+=======
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+>>>>>>> origin/main
 	sdkAuth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/auth"
 	log "github.com/sirupsen/logrus"
 )
