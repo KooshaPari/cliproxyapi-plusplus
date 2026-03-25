@@ -23,8 +23,8 @@ const (
 	copilotDeviceCodeURL = "https://github.com/login/device/code"
 	// copilotTokenURL is the endpoint for exchanging device codes for tokens.
 	copilotTokenURL = "https://github.com/login/oauth/access_token"
-	// copilotGitHubUserInfoURL is the endpoint for fetching GitHub user information.
-	copilotGitHubUserInfoURL = "https://api.github.com/user"
+	// copilotUserInfoURL is the endpoint for fetching GitHub user information.
+	copilotUserInfoURL = "https://api.github.com/user"
 	// defaultPollInterval is the default interval for polling token endpoint.
 	defaultPollInterval = 5 * time.Second
 	// maxPollDuration is the maximum time to wait for user authorization.
@@ -211,22 +211,15 @@ func (c *DeviceFlowClient) exchangeDeviceCode(ctx context.Context, deviceCode st
 	}, nil
 }
 
-// GitHubUserInfo holds the GitHub user profile returned by FetchUserInfo.
-type GitHubUserInfo struct {
-	Login string `json:"login"`
-	Email string `json:"email"`
-	Name  string `json:"name"`
-}
-
-// FetchUserInfo retrieves the GitHub user profile for the authenticated user.
-func (c *DeviceFlowClient) FetchUserInfo(ctx context.Context, accessToken string) (*GitHubUserInfo, error) {
+// FetchUserInfo retrieves the GitHub username for the authenticated user.
+func (c *DeviceFlowClient) FetchUserInfo(ctx context.Context, accessToken string) (string, error) {
 	if accessToken == "" {
-		return nil, NewAuthenticationError(ErrUserInfoFailed, fmt.Errorf("access token is empty"))
+		return "", NewAuthenticationError(ErrUserInfoFailed, fmt.Errorf("access token is empty"))
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, copilotGitHubUserInfoURL, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, copilotUserInfoURL, nil)
 	if err != nil {
-		return nil, NewAuthenticationError(ErrUserInfoFailed, err)
+		return "", NewAuthenticationError(ErrUserInfoFailed, err)
 	}
 	req.Header.Set("Authorization", "Bearer "+accessToken)
 	req.Header.Set("Accept", "application/json")
@@ -234,7 +227,7 @@ func (c *DeviceFlowClient) FetchUserInfo(ctx context.Context, accessToken string
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, NewAuthenticationError(ErrUserInfoFailed, err)
+		return "", NewAuthenticationError(ErrUserInfoFailed, err)
 	}
 	defer func() {
 		if errClose := resp.Body.Close(); errClose != nil {
@@ -244,17 +237,19 @@ func (c *DeviceFlowClient) FetchUserInfo(ctx context.Context, accessToken string
 
 	if !isHTTPSuccess(resp.StatusCode) {
 		bodyBytes, _ := io.ReadAll(resp.Body)
-		return nil, NewAuthenticationError(ErrUserInfoFailed, fmt.Errorf("status %d: %s", resp.StatusCode, string(bodyBytes)))
+		return "", NewAuthenticationError(ErrUserInfoFailed, fmt.Errorf("status %d: %s", resp.StatusCode, string(bodyBytes)))
 	}
 
-	var userInfo GitHubUserInfo
+	var userInfo struct {
+		Login string `json:"login"`
+	}
 	if err = json.NewDecoder(resp.Body).Decode(&userInfo); err != nil {
-		return nil, NewAuthenticationError(ErrUserInfoFailed, err)
+		return "", NewAuthenticationError(ErrUserInfoFailed, err)
 	}
 
 	if userInfo.Login == "" {
-		return nil, NewAuthenticationError(ErrUserInfoFailed, fmt.Errorf("empty username"))
+		return "", NewAuthenticationError(ErrUserInfoFailed, fmt.Errorf("empty username"))
 	}
 
-	return &userInfo, nil
+	return userInfo.Login, nil
 }

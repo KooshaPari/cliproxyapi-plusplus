@@ -10,9 +10,9 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/diff"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/util"
+	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/auth/diff"
+	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/config"
+	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/util"
 	"gopkg.in/yaml.v3"
 
 	log "github.com/sirupsen/logrus"

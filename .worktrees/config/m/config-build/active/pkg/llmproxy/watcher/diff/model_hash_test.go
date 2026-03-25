@@ -3,7 +3,7 @@ package diff
 import (
 	"testing"
 
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/config"
 )
 
 func TestComputeOpenAICompatModelsHash_Deterministic(t *testing.T) {

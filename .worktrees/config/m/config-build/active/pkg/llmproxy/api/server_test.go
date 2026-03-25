@@ -11,11 +11,11 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
-	coreusage "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/usage"
-	sdkaccess "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/access"
-	"github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
-	sdkusage "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/usage"
+	"github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/config"
+	coreusage "github.com/router-for-me/CLIProxyAPI/v6/pkg/llmproxy/usage"
+	sdkaccess "github.com/router-for-me/CLIProxyAPI/v6/sdk/access"
+	"github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/auth"
+	sdkusage "github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/usage"
 	"github.com/stretchr/testify/require"
 )
 
