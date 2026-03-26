@@ -2,7 +2,7 @@ import { defineConfig } from "vitepress";
 
 export default defineConfig({
   title: "CLIProxyAPI++",
-  description: "CLIProxyAPI++ documentation",
+  description: "Multi-provider LLM proxy with OAuth auth",
   srcDir: ".",
   lastUpdated: true,
   cleanUrls: true,
