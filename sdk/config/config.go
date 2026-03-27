@@ -6,49 +6,49 @@ package config
 
 import llmproxyconfig "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/config"
 
-type SDKConfig = pkgconfig.SDKConfig
+type SDKConfig = llmproxyconfig.SDKConfig
 
-type Config = pkgconfig.Config
+type Config = llmproxyconfig.Config
 
-type StreamingConfig = pkgconfig.StreamingConfig
-type TLSConfig = pkgconfig.TLSConfig
-type RemoteManagement = pkgconfig.RemoteManagement
-type AmpCode = pkgconfig.AmpCode
-type OAuthModelAlias = pkgconfig.OAuthModelAlias
-type PayloadConfig = pkgconfig.PayloadConfig
-type PayloadRule = pkgconfig.PayloadRule
-type PayloadFilterRule = pkgconfig.PayloadFilterRule
-type PayloadModelRule = pkgconfig.PayloadModelRule
+type StreamingConfig = llmproxyconfig.StreamingConfig
+type TLSConfig = llmproxyconfig.TLSConfig
+type RemoteManagement = llmproxyconfig.RemoteManagement
+type AmpCode = llmproxyconfig.AmpCode
+type OAuthModelAlias = llmproxyconfig.OAuthModelAlias
+type PayloadConfig = llmproxyconfig.PayloadConfig
+type PayloadRule = llmproxyconfig.PayloadRule
+type PayloadFilterRule = llmproxyconfig.PayloadFilterRule
+type PayloadModelRule = llmproxyconfig.PayloadModelRule
 
-type GeminiKey = pkgconfig.GeminiKey
-type CodexKey = pkgconfig.CodexKey
-type ClaudeKey = pkgconfig.ClaudeKey
-type VertexCompatKey = pkgconfig.VertexCompatKey
-type VertexCompatModel = pkgconfig.VertexCompatModel
-type OpenAICompatibility = pkgconfig.OpenAICompatibility
-type OpenAICompatibilityAPIKey = pkgconfig.OpenAICompatibilityAPIKey
-type OpenAICompatibilityModel = pkgconfig.OpenAICompatibilityModel
+type GeminiKey = llmproxyconfig.GeminiKey
+type CodexKey = llmproxyconfig.CodexKey
+type ClaudeKey = llmproxyconfig.ClaudeKey
+type VertexCompatKey = llmproxyconfig.VertexCompatKey
+type VertexCompatModel = llmproxyconfig.VertexCompatModel
+type OpenAICompatibility = llmproxyconfig.OpenAICompatibility
+type OpenAICompatibilityAPIKey = llmproxyconfig.OpenAICompatibilityAPIKey
+type OpenAICompatibilityModel = llmproxyconfig.OpenAICompatibilityModel
 
-type TLS = pkgconfig.TLSConfig
+type TLS = llmproxyconfig.TLSConfig
 
 const (
-	DefaultPanelGitHubRepository = pkgconfig.DefaultPanelGitHubRepository
+	DefaultPanelGitHubRepository = llmproxyconfig.DefaultPanelGitHubRepository
 )
 
-func LoadConfig(configFile string) (*Config, error) { return pkgconfig.LoadConfig(configFile) }
+func LoadConfig(configFile string) (*Config, error) { return llmproxyconfig.LoadConfig(configFile) }
 
 func LoadConfigOptional(configFile string, optional bool) (*Config, error) {
-	return pkgconfig.LoadConfigOptional(configFile, optional)
+	return llmproxyconfig.LoadConfigOptional(configFile, optional)
 }
 
 func SaveConfigPreserveComments(configFile string, cfg *Config) error {
-	return pkgconfig.SaveConfigPreserveComments(configFile, cfg)
+	return llmproxyconfig.SaveConfigPreserveComments(configFile, cfg)
 }
 
 func SaveConfigPreserveCommentsUpdateNestedScalar(configFile string, path []string, value string) error {
-	return pkgconfig.SaveConfigPreserveCommentsUpdateNestedScalar(configFile, path, value)
+	return llmproxyconfig.SaveConfigPreserveCommentsUpdateNestedScalar(configFile, path, value)
 }
 
 func NormalizeCommentIndentation(data []byte) []byte {
-	return pkgconfig.NormalizeCommentIndentation(data)
+	return llmproxyconfig.NormalizeCommentIndentation(data)
 }

@@ -3,7 +3,7 @@ package diff
 
 import (
 	"fmt"
-	"github.com/kooshapari/CLIProxyAPI/v7/internal/config"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/config"
 )
 
 // BuildConfigChangeDetailsGeneratedProviders computes changes for generated dedicated providers.

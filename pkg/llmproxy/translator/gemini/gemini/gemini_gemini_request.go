@@ -6,7 +6,7 @@ package gemini
 import (
 	"fmt"
 
-	"github.com/kooshapari/CLIProxyAPI/v7/internal/translator/gemini/common"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/gemini/common"
 	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/util"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"

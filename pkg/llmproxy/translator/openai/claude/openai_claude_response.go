@@ -76,6 +76,10 @@ type ToolCallAccumulator struct {
 // Returns:
 //   - []string: A slice of strings, each containing an Anthropic-compatible JSON response.
 func ConvertOpenAIResponseToClaude(_ context.Context, _ string, originalRequestRawJSON, requestRawJSON, rawJSON []byte, param *any) []string {
+	var localParam any
+	if param == nil {
+		param = &localParam
+	}
 	if *param == nil {
 		*param = &ConvertOpenAIResponseToAnthropicParams{
 			MessageID:                   "",
@@ -100,6 +104,11 @@ func ConvertOpenAIResponseToClaude(_ context.Context, _ string, originalRequestR
 		return convertOpenAIDoneToAnthropic((*param).(*ConvertOpenAIResponseToAnthropicParams))
 	}
 
+	streamResult := gjson.GetBytes(originalRequestRawJSON, "stream")
+	if !streamResult.Exists() || (streamResult.Exists() && streamResult.Type == gjson.False) {
+		return convertOpenAINonStreamingToAnthropic(rawJSON)
+	}
+
 	if !bytes.HasPrefix(rawJSON, dataTag) {
 		return []string{}
 	}
@@ -111,12 +120,7 @@ func ConvertOpenAIResponseToClaude(_ context.Context, _ string, originalRequestR
 		return convertOpenAIDoneToAnthropic((*param).(*ConvertOpenAIResponseToAnthropicParams))
 	}
 
-	streamResult := gjson.GetBytes(originalRequestRawJSON, "stream")
-	if !streamResult.Exists() || (streamResult.Exists() && streamResult.Type == gjson.False) {
-		return convertOpenAINonStreamingToAnthropic(rawJSON)
-	} else {
-		return convertOpenAIStreamingChunkToAnthropic(rawJSON, (*param).(*ConvertOpenAIResponseToAnthropicParams))
-	}
+	return convertOpenAIStreamingChunkToAnthropic(rawJSON, (*param).(*ConvertOpenAIResponseToAnthropicParams))
 }
 
 // convertOpenAIStreamingChunkToAnthropic converts OpenAI streaming chunk to Anthropic streaming events

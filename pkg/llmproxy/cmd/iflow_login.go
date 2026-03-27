@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/kooshapari/CLIProxyAPI/v7/internal/config"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/config"
 	sdkAuth "github.com/kooshapari/CLIProxyAPI/v7/sdk/auth"
 	log "github.com/sirupsen/logrus"
 )

@@ -4,7 +4,9 @@
 // debug settings, proxy configuration, and API keys.
 package config
 
-import internalconfig "github.com/kooshapari/CLIProxyAPI/v7/internal/config"
+type SDKConfig struct {
+	// ProxyURL overrides the global proxy setting for SDK-level HTTP clients.
+	ProxyURL string `yaml:"proxy-url,omitempty" json:"proxy-url,omitempty"`
 
 	// ForceModelPrefix requires explicit model prefixes (e.g., "teamA/gemini-3-pro-preview")
 	// to target prefixed credentials. When false, unprefixed model requests may use prefixed

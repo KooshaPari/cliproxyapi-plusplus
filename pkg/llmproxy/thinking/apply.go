@@ -531,6 +531,68 @@ func extractIFlowConfig(body []byte) ThinkingConfig {
 		return ThinkingConfig{Mode: ModeNone, Budget: 0}
 	}
 
+	// iFlow compatibility format: nested reasoning object
+	if reasoning := gjson.GetBytes(body, "reasoning"); reasoning.Exists() {
+		if effort := reasoning.Get("effort"); effort.Exists() {
+			value := strings.ToLower(strings.TrimSpace(effort.String()))
+			switch value {
+			case "":
+				return ThinkingConfig{}
+			case "none":
+				return ThinkingConfig{Mode: ModeNone, Budget: 0}
+			case "auto":
+				return ThinkingConfig{Mode: ModeAuto, Budget: -1}
+			default:
+				return ThinkingConfig{Mode: ModeLevel, Level: ThinkingLevel(value)}
+			}
+		}
+	}
+
+	// iFlow compatibility format: literal key 'reasoning.effort'
+	if effort := gjson.GetBytes(body, `reasoning\.effort`); effort.Exists() {
+		value := strings.ToLower(strings.TrimSpace(effort.String()))
+		switch value {
+		case "":
+			return ThinkingConfig{}
+		case "none":
+			return ThinkingConfig{Mode: ModeNone, Budget: 0}
+		case "auto":
+			return ThinkingConfig{Mode: ModeAuto, Budget: -1}
+		default:
+			return ThinkingConfig{Mode: ModeLevel, Level: ThinkingLevel(value)}
+		}
+	}
+
+	// iFlow compatibility format: dotted path reasoning.effort
+	if effort := gjson.GetBytes(body, "reasoning.effort"); effort.Exists() {
+		value := strings.ToLower(strings.TrimSpace(effort.String()))
+		switch value {
+		case "":
+			return ThinkingConfig{}
+		case "none":
+			return ThinkingConfig{Mode: ModeNone, Budget: 0}
+		case "auto":
+			return ThinkingConfig{Mode: ModeAuto, Budget: -1}
+		default:
+			return ThinkingConfig{Mode: ModeLevel, Level: ThinkingLevel(value)}
+		}
+	}
+
+	// iFlow compatibility format: openai-style reasoning_effort
+	if effort := gjson.GetBytes(body, "reasoning_effort"); effort.Exists() {
+		value := strings.ToLower(strings.TrimSpace(effort.String()))
+		switch value {
+		case "":
+			return ThinkingConfig{}
+		case "none":
+			return ThinkingConfig{Mode: ModeNone, Budget: 0}
+		case "auto":
+			return ThinkingConfig{Mode: ModeAuto, Budget: -1}
+		default:
+			return ThinkingConfig{Mode: ModeLevel, Level: ThinkingLevel(value)}
+		}
+	}
+
 	return ThinkingConfig{}
 }
 

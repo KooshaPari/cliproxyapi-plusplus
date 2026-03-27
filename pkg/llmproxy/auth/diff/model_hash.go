@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/kooshapari/CLIProxyAPI/v7/internal/config"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/config"
 )
 
 const modelHashSalt = "auth-model-hash:v1"
