@@ -10,8 +10,8 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	"github.com/kooshapari/CLIProxyAPI/v7/internal/api/handlers/management"
-	"github.com/kooshapari/CLIProxyAPI/v7/internal/config"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/api/handlers/management"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/config"
 )
 
 func init() {

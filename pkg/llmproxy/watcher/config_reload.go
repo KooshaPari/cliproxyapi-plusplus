@@ -9,9 +9,9 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/kooshapari/CLIProxyAPI/v7/internal/config"
-	"github.com/kooshapari/CLIProxyAPI/v7/internal/util"
-	"github.com/kooshapari/CLIProxyAPI/v7/internal/watcher/diff"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/config"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/util"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/watcher/diff"
 	"gopkg.in/yaml.v3"
 
 	log "github.com/sirupsen/logrus"

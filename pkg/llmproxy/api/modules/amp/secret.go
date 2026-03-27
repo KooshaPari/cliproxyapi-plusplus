@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kooshapari/CLIProxyAPI/v7/internal/config"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/config"
 	log "github.com/sirupsen/logrus"
 )
 

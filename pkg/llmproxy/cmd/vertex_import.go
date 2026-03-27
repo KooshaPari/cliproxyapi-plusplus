@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/auth/vertex"
-	"github.com/kooshapari/CLIProxyAPI/v7/internal/config"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/config"
 	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/util"
 	sdkAuth "github.com/kooshapari/CLIProxyAPI/v7/sdk/auth"
 	coreauth "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth"

@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	misc "github.com/kooshapari/CLIProxyAPI/v7/internal/misc"
+	misc "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/misc"
 	log "github.com/sirupsen/logrus"
 )
 

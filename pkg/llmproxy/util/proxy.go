@@ -8,8 +8,9 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"strings"
 
-	"github.com/kooshapari/CLIProxyAPI/v7/internal/config"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/config"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/proxy"
 )
@@ -18,39 +19,49 @@ import (
 // It supports SOCKS5, HTTP, and HTTPS proxies. The function modifies the client's transport
 // to route requests through the configured proxy server.
 func SetProxy(cfg *config.SDKConfig, httpClient *http.Client) *http.Client {
+	if httpClient == nil {
+		httpClient = &http.Client{}
+	}
+	if cfg == nil {
+		return httpClient
+	}
+
+	proxyStr := strings.TrimSpace(cfg.ProxyURL)
+	if proxyStr == "" {
+		return httpClient
+	}
+
+	proxyURL, errParse := url.Parse(proxyStr)
+	if errParse != nil {
+		log.Errorf("parse proxy URL failed: %v", errParse)
+		return httpClient
+	}
+
 	var transport *http.Transport
-	// Attempt to parse the proxy URL from the configuration.
-	proxyURL, errParse := url.Parse(cfg.ProxyURL)
-	if errParse == nil {
-		// Handle different proxy schemes.
-		switch proxyURL.Scheme {
-		case "socks5":
-			// Configure SOCKS5 proxy with optional authentication.
-			var proxyAuth *proxy.Auth
-			if proxyURL.User != nil {
-				username := proxyURL.User.Username()
-				password, _ := proxyURL.User.Password()
-				proxyAuth = &proxy.Auth{User: username, Password: password}
-			}
-			dialer, errSOCKS5 := proxy.SOCKS5("tcp", proxyURL.Host, proxyAuth, proxy.Direct)
-			if errSOCKS5 != nil {
-				log.Errorf("create SOCKS5 dialer failed: %v", errSOCKS5)
-				return httpClient
-			}
-			// Set up a custom transport using the SOCKS5 dialer.
-			transport = &http.Transport{
-				DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
-					return dialer.Dial(network, addr)
-				},
-			}
-		case "http", "https":
-			// Configure HTTP or HTTPS proxy.
-			transport = &http.Transport{Proxy: http.ProxyURL(proxyURL)}
+	switch proxyURL.Scheme {
+	case "socks5":
+		var proxyAuth *proxy.Auth
+		if proxyURL.User != nil {
+			username := proxyURL.User.Username()
+			password, _ := proxyURL.User.Password()
+			proxyAuth = &proxy.Auth{User: username, Password: password}
 		}
+		dialer, errSOCKS5 := proxy.SOCKS5("tcp", proxyURL.Host, proxyAuth, proxy.Direct)
+		if errSOCKS5 != nil {
+			log.Errorf("create SOCKS5 dialer failed: %v", errSOCKS5)
+			return httpClient
+		}
+		transport = &http.Transport{
+			DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+				return dialer.Dial(network, addr)
+			},
+		}
+	case "http", "https":
+		transport = &http.Transport{Proxy: http.ProxyURL(proxyURL)}
+	default:
+		return httpClient
 	}
-	// If a new transport was created, apply it to the HTTP client.
-	if transport != nil {
-		httpClient.Transport = transport
-	}
+
+	httpClient.Transport = transport
 	return httpClient
 }

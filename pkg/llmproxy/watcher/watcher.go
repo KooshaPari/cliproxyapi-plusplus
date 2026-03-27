@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
-	"github.com/kooshapari/CLIProxyAPI/v7/internal/config"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/config"
 	"gopkg.in/yaml.v3"
 
 	sdkAuth "github.com/kooshapari/CLIProxyAPI/v7/sdk/auth"

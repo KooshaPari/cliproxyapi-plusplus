@@ -8,5 +8,6 @@ import (
 	_ "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/thinking/provider/geminicli"
 	_ "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/thinking/provider/iflow"
 	_ "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/thinking/provider/kimi"
+	_ "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/thinking/provider/minimax"
 	_ "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/thinking/provider/openai"
 )

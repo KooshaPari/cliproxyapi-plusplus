@@ -143,6 +143,10 @@ func applyMiniMax(body []byte, config thinking.ThinkingConfig) []byte {
 	}
 
 	result, _ := sjson.SetBytes(body, "reasoning_split", reasoningSplit)
+	result, _ = sjson.DeleteBytes(result, "reasoning")
+	result, _ = sjson.DeleteBytes(result, "reasoning_effort")
+	result, _ = sjson.DeleteBytes(result, "reasoning.effort")
+	result, _ = sjson.DeleteBytes(result, "variant")
 
 	return result
 }

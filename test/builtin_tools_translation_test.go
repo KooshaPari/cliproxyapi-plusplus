@@ -3,7 +3,7 @@ package test
 import (
 	"testing"
 
-	_ "github.com/kooshapari/CLIProxyAPI/v7/internal/translator"
+	_ "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator"
 
 	sdktranslator "github.com/kooshapari/CLIProxyAPI/v7/sdk/translator"
 	"github.com/tidwall/gjson"

@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kooshapari/CLIProxyAPI/v7/internal/config"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/config"
 	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/registry"
 	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/thinking"
 	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/util"

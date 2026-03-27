@@ -10,7 +10,7 @@ import (
 
 	pkgconfig "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/config"
 	tls "github.com/refraction-networking/utls"
-	pkgconfig "github.com/kooshapari/CLIProxyAPI/v7/internal/config"
+	pkgconfig "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/config"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/proxy"

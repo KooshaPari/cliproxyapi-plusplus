@@ -18,7 +18,7 @@ import (
 	"time"
 
 	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/auth/gemini"
-	"github.com/kooshapari/CLIProxyAPI/v7/internal/config"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/config"
 	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/interfaces"
 	sdkAuth "github.com/kooshapari/CLIProxyAPI/v7/sdk/auth"
 	cliproxyauth "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth"
