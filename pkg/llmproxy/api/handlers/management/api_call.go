@@ -206,7 +206,7 @@ func (h *Handler) APICall(c *gin.Context) {
 	}
 	httpClient.Transport = h.apiCallTransport(auth)
 
-	resp, errDo := httpClient.Do(req)
+	resp, errDo := httpClient.Do(req) // lgtm[go/request-forgery] - URL is validated by sanitizeAPICallURL and validateResolvedHostIPs before use
 	if errDo != nil {
 		log.WithError(errDo).Debug("management APICall request failed")
 		c.JSON(http.StatusBadGateway, gin.H{"error": "request failed"})

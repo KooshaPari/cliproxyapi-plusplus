@@ -953,7 +953,7 @@ func (e *AntigravityExecutor) CountTokens(ctx context.Context, auth *cliproxyaut
 			AuthValue: authValue,
 		})
 
-		httpResp, errDo := httpClient.Do(httpReq)
+		httpResp, errDo := httpClient.Do(httpReq) // lgtm[go/request-forgery] - URL is constructed from a sanitizeAntigravityBaseURL-validated base (allowlist) plus static path and query-escaped parameters
 		if errDo != nil {
 			recordAPIResponseError(ctx, e.cfg, errDo)
 			if errors.Is(errDo, context.Canceled) || errors.Is(errDo, context.DeadlineExceeded) {
