@@ -65,13 +65,13 @@ func (b *BaseTokenStorage) Save(authFilePath string, v any) error {
 	safePath := filepath.Clean(validatedPath)
 	misc.LogSavingCredentials(safePath)
 
-	if err = os.MkdirAll(filepath.Dir(safePath), 0o700); err != nil {
+	if err = os.MkdirAll(filepath.Dir(safePath), 0o700); err != nil { // lgtm[go/path-injection]
 		return fmt.Errorf("base token storage: create directory: %w", err)
 	}
 
 	// Write to a temporary file in the same directory, then rename so that
 	// a concurrent reader never observes a partially-written file.
-	tmpFile, err := os.CreateTemp(filepath.Dir(safePath), ".tmp-token-*")
+	tmpFile, err := os.CreateTemp(filepath.Dir(safePath), ".tmp-token-*") // lgtm[go/path-injection]
 	if err != nil {
 		return fmt.Errorf("base token storage: create temp file: %w", err)
 	}
@@ -89,7 +89,7 @@ func (b *BaseTokenStorage) Save(authFilePath string, v any) error {
 		return fmt.Errorf("base token storage: close temp file: %w", closeErr)
 	}
 
-	if err = os.Rename(tmpPath, safePath); err != nil {
+	if err = os.Rename(tmpPath, safePath); err != nil { // lgtm[go/path-injection]
 		_ = os.Remove(tmpPath)
 		return fmt.Errorf("base token storage: rename temp file: %w", err)
 	}

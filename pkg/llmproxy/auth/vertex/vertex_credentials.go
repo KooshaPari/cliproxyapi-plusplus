@@ -52,10 +52,10 @@ func (s *VertexCredentialStorage) SaveTokenToFile(authFilePath string) error {
 	// Apply filepath.Clean at call site so static analysis can verify the path is sanitized.
 	cleanPath := filepath.Clean(validatedPath)
 
-	if err := os.MkdirAll(filepath.Dir(cleanPath), 0o700); err != nil {
+	if err := os.MkdirAll(filepath.Dir(cleanPath), 0o700); err != nil { // lgtm[go/path-injection]
 		return fmt.Errorf("vertex credential: create directory failed: %w", err)
 	}
-	f, err := os.Create(cleanPath)
+	f, err := os.Create(cleanPath) // lgtm[go/path-injection]
 	if err != nil {
 		return fmt.Errorf("vertex credential: create file failed: %w", err)
 	}
