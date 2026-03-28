@@ -357,10 +357,16 @@ func (s *PostgresStore) PersistAuthFiles(ctx context.Context, _ string, paths ..
 		}
 		relID, err := s.relativeAuthID(trimmed)
 		if err != nil {
-			// Attempt to resolve absolute path under authDir.
+			// Attempt to resolve absolute path under authDir with path-validation.
 			abs := trimmed
 			if !filepath.IsAbs(abs) {
-				abs = filepath.Join(s.authDir, trimmed)
+				resolved := filepath.Join(s.authDir, trimmed)
+				// Ensure resolved path stays within authDir to prevent path-injection.
+				if !strings.HasPrefix(resolved, s.authDir+string(filepath.Separator)) && resolved != s.authDir {
+					log.Warnf("postgres store: path escape detected for %s, ignoring", trimmed)
+					continue
+				}
+				abs = resolved
 			}
 			relID, err = s.relativeAuthID(abs)
 			if err != nil {
