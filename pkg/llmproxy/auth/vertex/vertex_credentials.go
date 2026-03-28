@@ -7,11 +7,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/misc"
 	log "github.com/sirupsen/logrus"
 )
+
+// authBaseDir is the root directory for all Vertex credential files.
+const authBaseDir = "vertex"
 
 // VertexCredentialStorage stores the service account JSON for Vertex AI access.
 // The content is persisted verbatim under the "service_account" key, together with
