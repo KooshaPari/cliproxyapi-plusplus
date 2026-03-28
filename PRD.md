@@ -251,9 +251,63 @@ The "plusplus" fork extends the mainline project with support for third-party pr
 
 ---
 
+## E8: AmpCode Management Sub-System
+
+### E8.1: AmpCode Upstream Configuration
+**As** an operator deploying the proxy for an AmpCode-compatible upstream, **I want** a dedicated REST API group for managing upstream connection parameters **so that** I can update the target URL and credentials without restarting the server.
+
+**Acceptance Criteria:**
+- `GET /v0/management/ampcode/upstream-url` returns the currently configured upstream base URL.
+- `PUT /v0/management/ampcode/upstream-url` replaces the upstream URL; the change takes effect immediately for subsequent requests.
+- `DELETE /v0/management/ampcode/upstream-url` clears the upstream URL, disabling AmpCode routing.
+- `GET /v0/management/ampcode/upstream-api-key` returns the active single API key (masked or as configured).
+- `PUT /v0/management/ampcode/upstream-api-key` replaces the single API key.
+- `DELETE /v0/management/ampcode/upstream-api-key` removes the single API key.
+- `GET /v0/management/ampcode/restrict-management-to-localhost` returns the current localhost-restriction flag.
+- `PUT /v0/management/ampcode/restrict-management-to-localhost` sets or clears the flag; when set, management endpoints reject non-loopback callers.
+
+### E8.2: AmpCode Upstream API Key Pool
+**As** an operator with multiple upstream API keys, **I want** a pooled key list **so that** the proxy can load-balance or round-robin across keys.
+
+**Acceptance Criteria:**
+- `GET /v0/management/ampcode/upstream-api-keys` returns the list of all pooled keys.
+- `PUT /v0/management/ampcode/upstream-api-keys` replaces the entire pool.
+- `DELETE /v0/management/ampcode/upstream-api-keys` clears the pool.
+- When the pool is non-empty, keys are selected per-request (round-robin or random).
+
+### E8.3: AmpCode Model Mappings
+**As** an operator, **I want** to define model name translation rules for the AmpCode upstream **so that** callers using standard model IDs are transparently mapped to upstream model identifiers.
+
+**Acceptance Criteria:**
+- `GET /v0/management/ampcode/model-mappings` returns the full mapping table.
+- `PUT /v0/management/ampcode/model-mappings` replaces the entire mapping table atomically.
+- `DELETE /v0/management/ampcode/model-mappings` clears all mappings.
+- `GET /v0/management/ampcode/force-model-mappings` returns the force-map flag; when true, all requests use the mapping table even if an exact upstream model is specified.
+- `PUT /v0/management/ampcode/force-model-mappings` sets or clears the force-map flag.
+- `DELETE /v0/management/ampcode/force-model-mappings` resets the flag to its default (false).
+- All mapping changes persist across server restarts via the active token/config storage backend.
+
+---
+
+## E9: BoardSync Release Tooling
+
+### E9.1: GitHub Issue and PR Aggregation
+**As** a maintainer of both `cliproxyapi-plusplus` and the upstream `cliproxyapi` repository, **I want** a dedicated binary that aggregates issues and pull requests from both repositories **so that** I can generate unified release changelogs without manual cross-repo correlation.
+
+**Acceptance Criteria:**
+- `boardsync` binary is built from `cmd/boardsync` and is included in the release artifact set.
+- The binary fetches open and closed issues and PRs from `kooshapari/cliproxyapi-plusplus` and `kooshapari/cliproxyapi` via the `gh` CLI.
+- Duplicate items (same title and number existing in both repos) are deduplicated before output.
+- Output is written as JSON (default) or CSV (via flag) to stdout or a specified file.
+- The binary targets up to 2000 aggregate items per run; limit is configurable via flag.
+- `gh` CLI must be authenticated and available in `PATH`; the binary fails with a clear error if it is not.
+
+---
+
 ## Non-Goals
 
 - cliproxyapi-plusplus does not train or fine-tune models.
 - It does not provide model hosting; it only proxies to existing provider endpoints.
 - It does not provide a web dashboard UI (the TUI is terminal-only).
 - Third-party provider support is community-maintained; upstream provides no support for those providers.
+- The AmpCode management API does not validate upstream model availability; it only stores and applies configuration.
