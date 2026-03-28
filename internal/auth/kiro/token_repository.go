@@ -31,7 +31,7 @@ func NewFileTokenRepository(baseDir string) *FileTokenRepository {
 // SetBaseDir 设置基础目录
 func (r *FileTokenRepository) SetBaseDir(dir string) {
 	r.mu.Lock()
-	r.baseDir = strings.TrimSpace(dir)
+	r.baseDir = filepath.Clean(strings.TrimSpace(dir))
 	r.mu.Unlock()
 }
 
