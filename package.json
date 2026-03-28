@@ -1,15 +1,17 @@
 {
-  "name": "cliproxyapi-plusplus-oxc-tools",
+  "name": "cliproxyapi-plusplus-docs",
   "private": true,
   "type": "module",
   "scripts": {
-    "lint": "oxlint --config .oxlintrc.json docs/.vitepress && (test -f tsconfig.json && oxlint-tsgolint --tsconfig tsconfig.json || echo '[SKIP] tsconfig.json not found; skipping oxlint-tsgolint')",
-    "format": "oxfmt --config .oxfmtrc.json --write docs/.vitepress",
-    "format:check": "oxfmt --config .oxfmtrc.json --check docs/.vitepress"
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs"
   },
   "devDependencies": {
-    "oxfmt": "^0.36.0",
-    "oxlint": "^1.51.0",
-    "oxlint-tsgolint": "^0.16.0"
+    "vitepress": "^1.6.3",
+    "vue": "^3.5.13",
+    "vitepress-plugin-mermaid": "^2.0.17",
+    "mermaid": "^11.4.1",
+    "markdownlint-cli2": "^0.17.2"
   }
 }
