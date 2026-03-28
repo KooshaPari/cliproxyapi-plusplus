@@ -27,6 +27,7 @@ require (
 replace github.com/KooshaPari/phenotype-go-auth => ./third_party/phenotype-go-auth
 
 require (
+	cloud.google.com/go/compute/metadata v0.9.0 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/bytedance/gopkg v0.1.3 // indirect
 	github.com/bytedance/sonic v1.15.0 // indirect
