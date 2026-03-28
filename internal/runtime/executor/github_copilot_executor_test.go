@@ -237,7 +237,7 @@ func TestNormalizeGitHubCopilotResponsesTools_InvalidToolChoiceDowngradeToAuto(t
 func TestTranslateGitHubCopilotResponsesNonStreamToClaude_TextMapping(t *testing.T) {
 	t.Parallel()
 	resp := []byte(`{"id":"resp_1","model":"gpt-5-codex","output":[{"type":"message","content":[{"type":"output_text","text":"hello"}]}],"usage":{"input_tokens":3,"output_tokens":5}}`)
-	out := translateGitHubCopilotResponsesNonStreamToClaude(resp)
+	out := string(translateGitHubCopilotResponsesNonStreamToClaude(resp))
 	if gjson.Get(out, "type").String() != "message" {
 		t.Fatalf("type = %q, want message", gjson.Get(out, "type").String())
 	}
@@ -252,7 +252,7 @@ func TestTranslateGitHubCopilotResponsesNonStreamToClaude_TextMapping(t *testing
 func TestTranslateGitHubCopilotResponsesNonStreamToClaude_ToolUseMapping(t *testing.T) {
 	t.Parallel()
 	resp := []byte(`{"id":"resp_2","model":"gpt-5-codex","output":[{"type":"function_call","id":"fc_1","call_id":"call_1","name":"sum","arguments":"{\"a\":1}"}],"usage":{"input_tokens":1,"output_tokens":2}}`)
-	out := translateGitHubCopilotResponsesNonStreamToClaude(resp)
+	out := string(translateGitHubCopilotResponsesNonStreamToClaude(resp))
 	if gjson.Get(out, "content.0.type").String() != "tool_use" {
 		t.Fatalf("content.0.type = %q, want tool_use", gjson.Get(out, "content.0.type").String())
 	}
@@ -269,18 +269,26 @@ func TestTranslateGitHubCopilotResponsesStreamToClaude_TextLifecycle(t *testing.
 	var param any
 
 	created := translateGitHubCopilotResponsesStreamToClaude([]byte(`data: {"type":"response.created","response":{"id":"resp_1","model":"gpt-5-codex"}}`), &param)
-	if len(created) == 0 || !strings.Contains(created[0], "message_start") {
+	if len(created) == 0 || !strings.Contains(string(created[0]), "message_start") {
 		t.Fatalf("created events = %#v, want message_start", created)
 	}
 
 	delta := translateGitHubCopilotResponsesStreamToClaude([]byte(`data: {"type":"response.output_text.delta","delta":"he"}`), &param)
-	joinedDelta := strings.Join(delta, "")
+	deltaStrs := make([]string, len(delta))
+	for i, d := range delta {
+		deltaStrs[i] = string(d)
+	}
+	joinedDelta := strings.Join(deltaStrs, "")
 	if !strings.Contains(joinedDelta, "content_block_start") || !strings.Contains(joinedDelta, "text_delta") {
 		t.Fatalf("delta events = %#v, want content_block_start + text_delta", delta)
 	}
 
 	completed := translateGitHubCopilotResponsesStreamToClaude([]byte(`data: {"type":"response.completed","response":{"usage":{"input_tokens":7,"output_tokens":9}}}`), &param)
-	joinedCompleted := strings.Join(completed, "")
+	completedStrs := make([]string, len(completed))
+	for i, c := range completed {
+		completedStrs[i] = string(c)
+	}
+	joinedCompleted := strings.Join(completedStrs, "")
 	if !strings.Contains(joinedCompleted, "message_delta") || !strings.Contains(joinedCompleted, "message_stop") {
 		t.Fatalf("completed events = %#v, want message_delta + message_stop", completed)
 	}
