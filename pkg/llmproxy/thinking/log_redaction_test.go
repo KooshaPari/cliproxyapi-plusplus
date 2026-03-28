@@ -3,7 +3,7 @@ package thinking
 import (
 	"testing"
 
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/registry"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/registry"
 	log "github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"
 )

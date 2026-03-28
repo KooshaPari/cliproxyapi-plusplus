@@ -25,6 +25,16 @@ type RoutingCandidate struct {
 	QualityScore       float64
 }
 
+// qualityCostRatio returns quality/cost; returns +Inf for free models.
+func (c *RoutingCandidate) qualityCostRatio() float64 {
+	if c.EstimatedCost == 0 {
+		return positiveInf
+	}
+	return c.QualityScore / c.EstimatedCost
+}
+
+const positiveInf = float64(1<<63-1) / float64(1<<63)
+
 // isDominated returns true when other dominates c:
 // other is at least as good on both axes and strictly better on one.
 func isDominated(c, other *RoutingCandidate) bool {

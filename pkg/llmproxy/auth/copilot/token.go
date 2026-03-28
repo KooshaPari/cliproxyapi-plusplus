@@ -1,12 +1,11 @@
-// Package copilot provides authentication and token management functionality
-// for GitHub Copilot AI services. It handles OAuth2 device flow token storage,
-// serialization, and retrieval for maintaining authenticated sessions with the Copilot API.
+// Package copilot provides authentication and token management for GitHub Copilot API.
+// It handles the OAuth2 device flow for secure authentication with the Copilot API.
 package copilot
 
 import (
 	"fmt"
 
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/misc"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/base"
 )
 
 // CopilotTokenStorage stores OAuth2 token information for GitHub Copilot API authentication.
@@ -58,14 +57,6 @@ type DeviceCodeResponse struct {
 }
 
 // SaveTokenToFile serializes the Copilot token storage to a JSON file.
-// This method creates the necessary directory structure and writes the token
-// data in JSON format to the specified file path for persistent storage.
-//
-// Parameters:
-//   - authFilePath: The full path where the token file should be saved
-//
-// Returns:
-//   - error: An error if the operation fails, nil otherwise
 func (ts *CopilotTokenStorage) SaveTokenToFile(authFilePath string) error {
 	ts.Type = "github-copilot"
 	if err := ts.Save(authFilePath, ts); err != nil {

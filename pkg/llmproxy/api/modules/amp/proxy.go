@@ -62,13 +62,12 @@ func createReverseProxy(upstreamURL string, secretSource SecretSource) (*httputi
 		return nil, fmt.Errorf("invalid amp upstream url: %w", err)
 	}
 
-	proxy := &httputil.ReverseProxy{}
-	proxy.Rewrite = func(pr *httputil.ProxyRequest) {
-		pr.SetURL(parsed)
-		pr.SetXForwarded()
-		pr.Out.Host = parsed.Host
+	proxy := httputil.NewSingleHostReverseProxy(parsed)
+	// Wrap the default Director to also inject API key and fix routing
+	defaultDirector := proxy.Director
+	proxy.Director = func(req *http.Request) {
+		defaultDirector(req)
 
-		req := pr.Out
 		// Remove client's Authorization header - it was only used for CLI Proxy API authentication
 		// We will set our own Authorization using the configured upstream-api-key
 		req.Header.Del("Authorization")

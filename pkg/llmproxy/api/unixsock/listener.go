@@ -28,10 +28,10 @@ const (
 
 // Config holds Unix socket configuration
 type Config struct {
-	Enabled      bool   `yaml:"enabled" json:"enabled"`
-	Path         string `yaml:"path" json:"path"`
-	Perm         int    `yaml:"perm" json:"perm"`
-	RemoveOnStop bool   `yaml:"remove_on_stop" json:"remove_on_stop"`
+	Enabled   bool   `yaml:"enabled" json:"enabled"`
+	Path      string `yaml:"path" json:"path"`
+	Perm      int    `yaml:"perm" json:"perm"`
+	RemoveOnStop bool `yaml:"remove_on_stop" json:"remove_on_stop"`
 }
 
 // DefaultConfig returns default Unix socket configuration
@@ -99,7 +99,7 @@ func (l *Listener) Serve(handler http.Handler) error {
 
 	// Set permissions
 	if err := os.Chmod(l.config.Path, os.FileMode(l.config.Perm)); err != nil {
-		_ = ln.Close()
+		ln.Close()
 		return fmt.Errorf("failed to set socket permissions: %w", err)
 	}
 
@@ -207,7 +207,7 @@ func CheckSocket(path string) bool {
 	if err != nil {
 		return false
 	}
-	_ = conn.Close()
+	conn.Close()
 	return true
 }
 

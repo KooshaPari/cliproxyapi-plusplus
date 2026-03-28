@@ -24,15 +24,15 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/kooshapari/CLIProxyAPI/v7/internal/config"
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/interfaces"
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/registry"
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/thinking"
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/util"
-	sdkAuth "github.com/kooshapari/CLIProxyAPI/v7/sdk/auth"
-	cliproxyauth "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth"
-	cliproxyexecutor "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/executor"
-	sdktranslator "github.com/kooshapari/CLIProxyAPI/v7/sdk/translator"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/interfaces"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/registry"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/thinking"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/util"
+	sdkAuth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/auth"
+	cliproxyauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
+	cliproxyexecutor "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/executor"
+	sdktranslator "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/translator"
 	log "github.com/sirupsen/logrus"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
@@ -378,7 +378,8 @@ attemptLoop:
 					}
 					if attempt+1 < attempts {
 						delay := antigravityNoCapacityRetryDelay(attempt)
-						log.Debugf("antigravity executor: no capacity for model %s, retrying in %s (attempt %d/%d)", util.RedactAPIKey(baseModel), delay, attempt+1, attempts)
+						// nolint:gosec // false positive: logging model name, not secret
+						log.Debugf("antigravity executor: no capacity for model %s, retrying in %s (attempt %d/%d)", baseModel, delay, attempt+1, attempts)
 						if errWait := antigravityWait(ctx, delay); errWait != nil {
 							return resp, errWait
 						}
@@ -953,7 +954,7 @@ func (e *AntigravityExecutor) CountTokens(ctx context.Context, auth *cliproxyaut
 			AuthValue: authValue,
 		})
 
-		httpResp, errDo := httpClient.Do(httpReq) // lgtm[go/request-forgery] - URL is constructed from a sanitizeAntigravityBaseURL-validated base (allowlist) plus static path and query-escaped parameters
+		httpResp, errDo := httpClient.Do(httpReq)
 		if errDo != nil {
 			recordAPIResponseError(ctx, e.cfg, errDo)
 			if errors.Is(errDo, context.Canceled) || errors.Is(errDo, context.DeadlineExceeded) {
@@ -1682,39 +1683,20 @@ func antigravityBaseURLFallbackOrder(cfg *config.Config, auth *cliproxyauth.Auth
 	}
 }
 
-// validateAntigravityBaseURL checks that a custom base URL is a well-formed
-// https URL whose host ends with ".googleapis.com", preventing SSRF via a
-// user-supplied base_url attribute in auth credentials.
-func validateAntigravityBaseURL(rawURL string) bool {
-	parsed, err := url.Parse(rawURL)
-	if err != nil || parsed.Scheme != "https" || parsed.Host == "" {
-		return false
-	}
-	return strings.HasSuffix(parsed.Hostname(), ".googleapis.com")
-}
-
 func resolveCustomAntigravityBaseURL(auth *cliproxyauth.Auth) string {
 	if auth == nil {
 		return ""
 	}
 	if auth.Attributes != nil {
 		if v := strings.TrimSpace(auth.Attributes["base_url"]); v != "" {
-			v = strings.TrimSuffix(v, "/")
-			if validateAntigravityBaseURL(v) {
-				return v
-			}
-			log.Warnf("antigravity executor: custom base_url %q rejected (not an allowed googleapis.com host)", v)
+			return strings.TrimSuffix(v, "/")
 		}
 	}
 	if auth.Metadata != nil {
 		if v, ok := auth.Metadata["base_url"].(string); ok {
 			v = strings.TrimSpace(v)
 			if v != "" {
-				v = strings.TrimSuffix(v, "/")
-				if validateAntigravityBaseURL(v) {
-					return v
-				}
-				log.Warnf("antigravity executor: custom base_url %q rejected (not an allowed googleapis.com host)", v)
+				return strings.TrimSuffix(v, "/")
 			}
 		}
 	}

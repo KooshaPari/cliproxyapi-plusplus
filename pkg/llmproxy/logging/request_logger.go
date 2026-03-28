@@ -21,9 +21,9 @@ import (
 	"github.com/klauspost/compress/zstd"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/buildinfo"
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/interfaces"
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/util"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/buildinfo"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/interfaces"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/util"
 )
 
 var requestLogID atomic.Uint64
@@ -228,13 +228,7 @@ func (l *FileRequestLogger) logRequest(url, method string, requestHeaders map[st
 	if force && !l.enabled {
 		filename = l.generateErrorFilename(url, requestID)
 	}
-	// Apply filepath.Clean immediately so static analysis recognises the sanitised path.
-	filePath := filepath.Clean(filepath.Join(l.logsDir, filename))
-	// Guard: ensure the resolved log file path stays within the logs directory.
-	cleanLogsDir := filepath.Clean(l.logsDir)
-	if !strings.HasPrefix(filePath, cleanLogsDir+string(os.PathSeparator)) {
-		return fmt.Errorf("log file path escapes logs directory")
-	}
+	filePath := filepath.Join(l.logsDir, filename)
 
 	requestBodyPath, errTemp := l.writeRequestBodyTempFile(body)
 	if errTemp != nil {

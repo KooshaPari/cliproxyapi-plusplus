@@ -4,14 +4,11 @@ package usage
 import (
 	"strings"
 
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/util"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/util"
 )
 
 func normalizeProvider(apiKey string) string {
 	key := strings.TrimSpace(apiKey)
-	if key == "" {
-		return key
-	}
 	parts := strings.Split(key, "-")
 	provider := strings.TrimSpace(parts[0])
 	return util.NormalizeProviderAlias(provider)

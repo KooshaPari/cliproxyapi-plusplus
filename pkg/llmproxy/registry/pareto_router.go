@@ -15,7 +15,7 @@ import (
 	"math"
 	"strings"
 
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/benchmarks"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/benchmarks"
 )
 
 // qualityProxy maps known model IDs to their quality scores in [0,1].
@@ -174,13 +174,13 @@ func (p *ParetoRouter) SelectModel(_ context.Context, req *RoutingRequest) (*Rou
 // Falls back to hardcoded maps if benchmark store unavailable.
 func (p *ParetoRouter) buildCandidates(req *RoutingRequest) []*RoutingCandidate {
 	candidates := make([]*RoutingCandidate, 0, len(qualityProxy))
-
+	
 	for modelID, quality := range qualityProxy {
 		// Try dynamic benchmarks first, fallback to hardcoded
 		var costPer1k float64
 		var latencyMs int
 		var ok bool
-
+		
 		if p.benchmarkStore != nil {
 			// Use unified benchmark store with fallback
 			costPer1k = p.benchmarkStore.GetCost(modelID)
@@ -204,9 +204,9 @@ func (p *ParetoRouter) buildCandidates(req *RoutingRequest) []*RoutingCandidate 
 				latencyMs = 2000
 			}
 		}
-
+		
 		estimatedCost := costPer1k * 1.0 // Scale to per-call
-
+		
 		candidates = append(candidates, &RoutingCandidate{
 			ModelID:            modelID,
 			Provider:           inferProvider(modelID),

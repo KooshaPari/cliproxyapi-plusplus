@@ -19,7 +19,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/yaml.v3"
 
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/ratelimit"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/ratelimit"
 )
 
 const (

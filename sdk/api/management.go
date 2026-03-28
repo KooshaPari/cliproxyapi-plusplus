@@ -6,9 +6,9 @@ package api
 
 import (
 	"github.com/gin-gonic/gin"
-	internalmanagement "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/api/handlers/management"
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/config"
-	coreauth "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth"
+	internalmanagement "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/api/handlers/management"
+	coreauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
 )
 
 // ManagementTokenRequester exposes a limited subset of management endpoints for requesting tokens.

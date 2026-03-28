@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	coreexecutor "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/executor"
+	coreexecutor "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/executor"
 )
 
 func requestContextWithHeader(t *testing.T, idempotencyKey string) context.Context {
@@ -19,7 +19,7 @@ func requestContextWithHeader(t *testing.T, idempotencyKey string) context.Conte
 
 	ginCtx, _ := gin.CreateTestContext(httptest.NewRecorder())
 	ginCtx.Request = req
-	return context.WithValue(context.Background(), CtxKeyGin, ginCtx)
+	return context.WithValue(context.Background(), "gin", ginCtx)
 }
 
 func TestRequestExecutionMetadata_GeneratesIdempotencyKey(t *testing.T) {

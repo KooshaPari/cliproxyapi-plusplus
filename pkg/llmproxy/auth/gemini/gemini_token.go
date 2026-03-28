@@ -7,8 +7,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/misc"
-	log "github.com/sirupsen/logrus"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/base"
 )
 
 // GeminiTokenStorage stores OAuth2 token information for Google Gemini API authentication.
@@ -35,14 +34,6 @@ type GeminiTokenStorage struct {
 }
 
 // SaveTokenToFile serializes the Gemini token storage to a JSON file.
-// This method creates the necessary directory structure and writes the token
-// data in JSON format to the specified file path for persistent storage.
-//
-// Parameters:
-//   - authFilePath: The full path where the token file should be saved
-//
-// Returns:
-//   - error: An error if the operation fails, nil otherwise
 func (ts *GeminiTokenStorage) SaveTokenToFile(authFilePath string) error {
 	ts.Type = "gemini"
 	if err := ts.Save(authFilePath, ts); err != nil {

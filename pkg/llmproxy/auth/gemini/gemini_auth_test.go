@@ -12,7 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kooshapari/CLIProxyAPI/v7/internal/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/base"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
 	"golang.org/x/oauth2"
 )
 
@@ -46,11 +47,13 @@ func TestGeminiTokenStorage_SaveAndLoad(t *testing.T) {
 	path := filepath.Join(tmpDir, "gemini-token.json")
 
 	ts := &GeminiTokenStorage{
+		BaseTokenStorage: base.BaseTokenStorage{
+			Email: "test@example.com",
+			Type:  "gemini",
+		},
 		Token:     "raw-token-data",
 		ProjectID: "test-project",
 	}
-	ts.Email = "test@example.com"
-	ts.Type = "gemini"
 
 	err := ts.SaveTokenToFile(path)
 	if err != nil {
@@ -76,7 +79,7 @@ func TestGeminiTokenStorage_SaveTokenToFile_RejectsTraversalPath(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for traversal path")
 	}
-	if !strings.Contains(err.Error(), "invalid file path") && !strings.Contains(err.Error(), "invalid token file path") {
+	if !strings.Contains(err.Error(), "invalid file path") {
 		t.Fatalf("expected invalid path error, got %v", err)
 	}
 }

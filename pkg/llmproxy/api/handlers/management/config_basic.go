@@ -10,16 +10,16 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/config"
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/registry"
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/util"
-	sdkconfig "github.com/kooshapari/CLIProxyAPI/v7/sdk/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/registry"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/util"
+	sdkconfig "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/config"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 )
 
 const (
-	latestReleaseURL       = "https://api.github.com/repos/kooshapari/cliproxyapi-plusplus/releases/latest"
+	latestReleaseURL       = "https://api.github.com/repos/KooshaPari/cliproxyapi-plusplus/releases/latest"
 	latestReleaseUserAgent = "cliproxyapi++"
 )
 
@@ -46,7 +46,8 @@ func (h *Handler) GetLatestVersion(c *gin.Context) {
 		proxyURL = strings.TrimSpace(h.cfg.ProxyURL)
 	}
 	if proxyURL != "" {
-		util.SetProxy(&h.cfg.SDKConfig, client)
+		sdkCfg := &sdkconfig.SDKConfig{ProxyURL: proxyURL}
+		util.SetProxy(sdkCfg, client)
 	}
 
 	req, err := http.NewRequestWithContext(c.Request.Context(), http.MethodGet, latestReleaseURL, nil)
@@ -327,6 +328,7 @@ func (h *Handler) GetProxyURL(c *gin.Context) { c.JSON(200, gin.H{"proxy-url": h
 func (h *Handler) PutProxyURL(c *gin.Context) {
 	h.updateStringField(c, func(v string) { h.cfg.ProxyURL = v })
 }
+
 func (h *Handler) DeleteProxyURL(c *gin.Context) {
 	h.cfg.ProxyURL = ""
 	h.persist(c)

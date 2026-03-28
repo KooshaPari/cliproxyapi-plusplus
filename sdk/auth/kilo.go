@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/auth/kilo"
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/config"
-	coreauth "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/base"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/kilo"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+	coreauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
 )
 
 // KiloAuthenticator implements the login flow for Kilo AI accounts.
@@ -97,12 +98,15 @@ func (a *KiloAuthenticator) Login(ctx context.Context, cfg *config.Config, opts 
 	}
 
 	ts := &kilo.KiloTokenStorage{
+		BaseTokenStorage: base.BaseTokenStorage{
+			AccessToken: status.Token,
+			Email:       status.UserEmail,
+			Type:        "kilo",
+		},
 		Token:          status.Token,
 		OrganizationID: orgID,
 		Model:          defaults.Model,
 	}
-	ts.Email = status.UserEmail
-	ts.Type = "kilo"
 
 	fileName := kilo.CredentialFileName(status.UserEmail)
 	metadata := map[string]any{

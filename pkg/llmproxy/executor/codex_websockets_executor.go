@@ -17,13 +17,13 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/config"
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/misc"
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/thinking"
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/util"
-	cliproxyauth "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth"
-	cliproxyexecutor "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/executor"
-	sdktranslator "github.com/kooshapari/CLIProxyAPI/v7/sdk/translator"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/misc"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/thinking"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/util"
+	cliproxyauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
+	cliproxyexecutor "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/executor"
+	sdktranslator "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/translator"
 	log "github.com/sirupsen/logrus"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
@@ -1295,23 +1295,19 @@ func (e *CodexWebsocketsExecutor) closeExecutionSession(sess *codexWebsocketSess
 }
 
 func logCodexWebsocketConnected(sessionID string, authID string, wsURL string) {
-	log.Infof("codex websockets: upstream connected session=%s auth=%s url=%s", sanitizeCodexWebsocketLogField(sessionID), sanitizeCodexWebsocketLogField(authID), sanitizeCodexWebsocketLogURL(wsURL))
+	log.Infof("codex websockets: upstream connected session=%s auth=%s url=%s", strings.TrimSpace(sessionID), sanitizeCodexWebsocketLogField(authID), sanitizeCodexWebsocketLogURL(wsURL))
 }
 
 func logCodexWebsocketDisconnected(sessionID, authID, wsURL, reason string, err error) {
-	safeSession := sanitizeCodexWebsocketLogField(sessionID)
-	safeAuth := sanitizeCodexWebsocketLogField(authID)
-	safeURL := sanitizeCodexWebsocketLogURL(wsURL)
-	safeReason := strings.TrimSpace(reason)
 	if err != nil {
-		log.Infof("codex websockets: upstream disconnected session=%s auth=%s url=%s reason=%s err=%v", safeSession, safeAuth, safeURL, safeReason, err)
+		log.Infof("codex websockets: upstream disconnected session=%s auth=%s url=%s reason=%s err=%v", strings.TrimSpace(sessionID), sanitizeCodexWebsocketLogField(authID), sanitizeCodexWebsocketLogURL(wsURL), strings.TrimSpace(reason), err)
 		return
 	}
-	log.Infof("codex websockets: upstream disconnected session=%s auth=%s url=%s reason=%s", safeSession, safeAuth, safeURL, safeReason)
+	log.Infof("codex websockets: upstream disconnected session=%s auth=%s url=%s reason=%s", strings.TrimSpace(sessionID), sanitizeCodexWebsocketLogField(authID), sanitizeCodexWebsocketLogURL(wsURL), strings.TrimSpace(reason))
 }
 
 func sanitizeCodexWebsocketLogField(raw string) string {
-	return util.HideAPIKey(strings.TrimSpace(raw))
+	return util.RedactAPIKey(strings.TrimSpace(raw))
 }
 
 func sanitizeCodexWebsocketLogURL(raw string) string {

@@ -13,8 +13,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/thinking"
-	cliproxyexecutor "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/executor"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/thinking"
+	cliproxyexecutor "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/executor"
 )
 
 // RoundRobinSelector provides a simple provider scoped round-robin selection strategy.
@@ -39,16 +39,6 @@ type StickyRoundRobinSelector struct {
 	cursors  map[string]int    // fallback round-robin cursors
 	maxKeys  int
 }
-
-// NewStickyRoundRobinSelector creates a StickyRoundRobinSelector with the given max session keys.
-func NewStickyRoundRobinSelector(maxKeys int) *StickyRoundRobinSelector {
-	return &StickyRoundRobinSelector{
-		sessions: make(map[string]string),
-		cursors:  make(map[string]int),
-		maxKeys:  maxKeys,
-	}
-}
-
 type blockReason int
 
 const (
@@ -466,7 +456,6 @@ func (s *StickyRoundRobinSelector) Pick(ctx context.Context, provider, model str
 
 	return selected, nil
 }
-
 func isAuthBlockedForModel(auth *Auth, model string, now time.Time) (bool, blockReason, time.Time) {
 	if auth == nil {
 		return true, blockReasonOther, time.Time{}

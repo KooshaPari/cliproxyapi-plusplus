@@ -5,15 +5,14 @@ package kilo
 import (
 	"fmt"
 
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/misc"
-	log "github.com/sirupsen/logrus"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/base"
 )
 
 // KiloTokenStorage stores token information for Kilo AI authentication.
 //
 // Note: Kilo uses a proprietary token format stored under the "kilocodeToken" JSON key
 // rather than the standard "access_token" key, so BaseTokenStorage.AccessToken is not
-// populated for this provider.  The Email and Type fields from BaseTokenStorage are used.
+// populated for this provider. The Email and Type fields from BaseTokenStorage are used.
 type KiloTokenStorage struct {
 	base.BaseTokenStorage
 

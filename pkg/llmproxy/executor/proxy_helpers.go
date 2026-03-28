@@ -11,9 +11,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/config"
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/interfaces"
-	cliproxyauth "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+	cliproxyauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/proxy"
 )
@@ -104,7 +103,7 @@ func newProxyAwareHTTPClient(ctx context.Context, cfg *config.Config, auth *clip
 	}
 
 	// Priority 3: Use RoundTripper from context (typically from RoundTripperFor)
-	if rt, ok := ctx.Value(interfaces.ContextKeyRoundRobin).(http.RoundTripper); ok && rt != nil {
+	if rt, ok := ctx.Value("cliproxy.roundtripper").(http.RoundTripper); ok && rt != nil {
 		httpClient.Transport = rt
 	}
 
@@ -116,6 +115,22 @@ func newProxyAwareHTTPClient(ctx context.Context, cfg *config.Config, auth *clip
 	}
 
 	return httpClient
+}
+
+// buildProxyTransport creates an HTTP transport configured for the given proxy URL.
+// It supports SOCKS5, HTTP, and HTTPS proxy protocols.
+//
+// Parameters:
+//   - proxyURL: The proxy URL string (e.g., "socks5://user:pass@host:port", "http://host:port")
+//
+// Returns:
+//   - *http.Transport: A configured transport, or nil if the proxy URL is invalid
+func buildProxyTransport(proxyURL string) *http.Transport {
+	transport, errBuild := buildProxyTransportWithError(proxyURL)
+	if errBuild != nil {
+		return nil
+	}
+	return transport
 }
 
 func buildProxyTransportWithError(proxyURL string) (*http.Transport, error) {

@@ -3,7 +3,7 @@ package responses
 import (
 	"strings"
 
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/gemini/common"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/translator/gemini/common"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
 )

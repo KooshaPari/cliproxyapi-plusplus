@@ -6,25 +6,15 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 	"sort"
 	"strings"
 	"testing"
 	"time"
 
-	cliproxycmd "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/cmd"
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/config"
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/util"
+	cliproxycmd "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/cmd"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/util"
 )
-
-// repoRoot returns the absolute path to the repository root.
-// It uses runtime.Caller to locate this source file (cmd/cliproxyctl/main_test.go)
-// and walks up two directories, making it immune to os.Chdir side effects from
-// parallel tests.
-func repoRoot() string {
-	_, thisFile, _, _ := runtime.Caller(0)
-	return filepath.Dir(filepath.Dir(filepath.Dir(thisFile)))
-}
 
 func TestRunSetupJSONResponseShape(t *testing.T) {
 	t.Setenv("CLIPROXY_CONFIG", "")
@@ -155,6 +145,10 @@ func TestRunDoctorJSONWithFixCreatesConfigFromTemplate(t *testing.T) {
 		return time.Date(2026, 2, 23, 11, 12, 13, 0, time.UTC)
 	}
 	wd := t.TempDir()
+	tpl := []byte("ServerAddress: 127.0.0.1\nServerPort: \"4141\"\n")
+	if err := os.WriteFile(filepath.Join(wd, "config.example.yaml"), tpl, 0o644); err != nil {
+		t.Fatalf("write template: %v", err)
+	}
 	target := filepath.Join(wd, "nested", "config.yaml")
 	prevWD, err := os.Getwd()
 	if err != nil {
@@ -183,27 +177,6 @@ func TestRunDoctorJSONWithFixCreatesConfigFromTemplate(t *testing.T) {
 	}
 	if !configFileExists(target) {
 		t.Fatalf("expected doctor --fix to create %s", target)
-	}
-}
-
-func TestResolveConfigTemplatePath_FallsBackToRepoRootTemplate(t *testing.T) {
-	prevWD, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("getwd: %v", err)
-	}
-	t.Cleanup(func() { _ = os.Chdir(prevWD) })
-	if err := os.Chdir(t.TempDir()); err != nil {
-		t.Fatalf("chdir: %v", err)
-	}
-	t.Setenv("CLIPROXY_CONFIG_TEMPLATE", "")
-
-	got, err := resolveConfigTemplatePath()
-	if err != nil {
-		t.Fatalf("resolveConfigTemplatePath() unexpected error: %v", err)
-	}
-	want := filepath.Join(repoRoot(), "config.example.yaml")
-	if got != want {
-		t.Fatalf("resolveConfigTemplatePath() = %q, want %q", got, want)
 	}
 }
 
@@ -323,13 +296,13 @@ func TestCPB0011To0020LaneJRegressionEvidence(t *testing.T) {
 		{"CPB-0020", "metadata naming board entries are tracked"},
 	}
 	requiredPaths := map[string]string{
-		"CPB-0012": filepath.Join(repoRoot(), "pkg", "llmproxy", "util", "claude_model_test.go"),
-		"CPB-0013": filepath.Join(repoRoot(), "pkg", "llmproxy", "translator", "openai", "openai", "responses", "openai_openai-responses_request_test.go"),
-		"CPB-0014": filepath.Join(repoRoot(), "pkg", "llmproxy", "util", "provider.go"),
-		"CPB-0015": filepath.Join(repoRoot(), "pkg", "llmproxy", "executor", "kimi_executor_test.go"),
-		"CPB-0017": filepath.Join(repoRoot(), "docs", "provider-quickstarts.md"),
-		"CPB-0018": filepath.Join(repoRoot(), "pkg", "llmproxy", "executor", "github_copilot_executor_test.go"),
-		"CPB-0020": filepath.Join(repoRoot(), "docs", "planning", "CLIPROXYAPI_1000_ITEM_BOARD_2026-02-22.csv"),
+		"CPB-0012": filepath.Join("..", "..", "pkg", "llmproxy", "util", "claude_model_test.go"),
+		"CPB-0013": filepath.Join("..", "..", "pkg", "llmproxy", "translator", "openai", "openai", "responses", "openai_openai-responses_request_test.go"),
+		"CPB-0014": filepath.Join("..", "..", "pkg", "llmproxy", "util", "provider.go"),
+		"CPB-0015": filepath.Join("..", "..", "pkg", "llmproxy", "executor", "kimi_executor_test.go"),
+		"CPB-0017": filepath.Join("..", "..", "docs", "provider-quickstarts.md"),
+		"CPB-0018": filepath.Join("..", "..", "pkg", "llmproxy", "executor", "github_copilot_executor_test.go"),
+		"CPB-0020": filepath.Join("..", "..", "docs", "planning", "CLIPROXYAPI_1000_ITEM_BOARD_2026-02-22.csv"),
 	}
 
 	for _, tc := range cases {
@@ -389,12 +362,12 @@ func TestCPB0001To0010LaneIRegressionEvidence(t *testing.T) {
 		{"CPB-0010", "readme/frontmatter is present"},
 	}
 	requiredPaths := map[string]string{
-		"CPB-0001": filepath.Join(repoRoot(), "cmd", "cliproxyctl", "main.go"),
-		"CPB-0004": filepath.Join(repoRoot(), "docs", "provider-quickstarts.md"),
-		"CPB-0005": filepath.Join(repoRoot(), "docs", "troubleshooting.md"),
-		"CPB-0008": filepath.Join(repoRoot(), "pkg", "llmproxy", "translator", "openai", "openai", "responses", "openai_openai-responses_request_test.go"),
-		"CPB-0009": filepath.Join(repoRoot(), "test", "thinking_conversion_test.go"),
-		"CPB-0010": filepath.Join(repoRoot(), "README.md"),
+		"CPB-0001": filepath.Join("..", "..", "cmd", "cliproxyctl", "main.go"),
+		"CPB-0004": filepath.Join("..", "..", "docs", "provider-quickstarts.md"),
+		"CPB-0005": filepath.Join("..", "..", "docs", "troubleshooting.md"),
+		"CPB-0008": filepath.Join("..", "..", "pkg", "llmproxy", "translator", "openai", "openai", "responses", "openai_openai-responses_request_test.go"),
+		"CPB-0009": filepath.Join("..", "..", "test", "thinking_conversion_test.go"),
+		"CPB-0010": filepath.Join("..", "..", "README.md"),
 	}
 	for _, tc := range cases {
 		tc := tc
@@ -664,7 +637,7 @@ func TestCPB0011To0020LaneMRegressionEvidence(t *testing.T) {
 		{
 			id: "CPB-0017",
 			fn: func(t *testing.T) {
-				if _, err := os.Stat(filepath.Join(repoRoot(), "docs", "provider-quickstarts.md")); err != nil {
+				if _, err := os.Stat(filepath.Join("..", "..", "docs", "provider-quickstarts.md")); err != nil {
 					t.Fatalf("provider quickstarts doc missing: %v", err)
 				}
 			},

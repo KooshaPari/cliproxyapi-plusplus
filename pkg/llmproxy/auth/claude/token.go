@@ -6,7 +6,7 @@ package claude
 import (
 	"fmt"
 
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/misc"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/base"
 )
 
 // ClaudeTokenStorage stores OAuth2 token information for Anthropic Claude API authentication.
@@ -14,9 +14,6 @@ import (
 // for managing access tokens, refresh tokens, and user account information.
 type ClaudeTokenStorage struct {
 	base.BaseTokenStorage
-
-	// IDToken is the JWT ID token containing user claims and identity information.
-	IDToken string `json:"id_token"`
 
 	// LastRefresh is the timestamp of the last token refresh operation.
 	LastRefresh string `json:"last_refresh"`

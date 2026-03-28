@@ -8,10 +8,10 @@ import (
 	"net/http"
 	"strings"
 
-	kiroclaude "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/kiro/claude"
-	kiroopenai "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/kiro/openai"
-	clipproxyauth "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth"
-	sdktranslator "github.com/kooshapari/CLIProxyAPI/v7/sdk/translator"
+	kiroclaude "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/translator/kiro/claude"
+	kiroopenai "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/translator/kiro/openai"
+	clipproxyauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
+	sdktranslator "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/translator"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -85,7 +85,7 @@ func buildKiroEndpointConfigs(region string) []kiroEndpointConfig {
 // 2. ProfileARN region - extracted from arn:aws:service:REGION:account:resource
 // 3. kiroDefaultRegion (us-east-1) - fallback
 // Note: OIDC "region" is NOT used - it's for token refresh, not API calls
-func resolveKiroAPIRegion(auth *cliproxyauth.Auth) string {
+func resolveKiroAPIRegion(auth *clipproxyauth.Auth) string {
 	if auth == nil || auth.Metadata == nil {
 		return kiroDefaultRegion
 	}
@@ -121,7 +121,7 @@ var kiroEndpointConfigs = buildKiroEndpointConfigs(kiroDefaultRegion)
 // 2. ProfileARN region - extracted from arn:aws:service:REGION:account:resource
 // 3. kiroDefaultRegion (us-east-1) - fallback
 // Note: OIDC "region" is NOT used - it's for token refresh, not API calls
-func getKiroEndpointConfigs(auth *cliproxyauth.Auth) []kiroEndpointConfig {
+func getKiroEndpointConfigs(auth *clipproxyauth.Auth) []kiroEndpointConfig {
 	if auth == nil {
 		return kiroEndpointConfigs
 	}
@@ -195,13 +195,6 @@ func getKiroEndpointConfigs(auth *cliproxyauth.Auth) []kiroEndpointConfig {
 }
 
 // isIDCAuth checks if the auth uses IDC (Identity Center) authentication method.
-func isIDCAuth(auth *cliproxyauth.Auth) bool {
-	if auth == nil || auth.Metadata == nil {
-		return false
-	}
-	authMethod, _ := auth.Metadata["auth_method"].(string)
-	return strings.ToLower(authMethod) == "idc"
-}
 
 // buildKiroPayloadForFormat builds the Kiro API payload based on the source format.
 // This is critical because OpenAI and Claude formats have different tool structures:
@@ -239,40 +232,6 @@ func sanitizeKiroPayload(body []byte) []byte {
 		return body
 	}
 	return sanitized
-}
-
-func kiroCredentials(auth *cliproxyauth.Auth) (accessToken, profileArn string) {
-	if auth == nil {
-		return "", ""
-	}
-
-	// Try Metadata first (wrapper format)
-	if auth.Metadata != nil {
-		if token, ok := auth.Metadata["access_token"].(string); ok {
-			accessToken = token
-		}
-		if arn, ok := auth.Metadata["profile_arn"].(string); ok {
-			profileArn = arn
-		}
-	}
-
-	// Try Attributes
-	if accessToken == "" && auth.Attributes != nil {
-		accessToken = auth.Attributes["access_token"]
-		profileArn = auth.Attributes["profile_arn"]
-	}
-
-	// Try direct fields from flat JSON format (new AWS Builder ID format)
-	if accessToken == "" && auth.Metadata != nil {
-		if token, ok := auth.Metadata["accessToken"].(string); ok {
-			accessToken = token
-		}
-		if arn, ok := auth.Metadata["profileArn"].(string); ok {
-			profileArn = arn
-		}
-	}
-
-	return accessToken, profileArn
 }
 
 // findRealThinkingEndTag finds the real </thinking> end tag, skipping false positives.
@@ -335,7 +294,7 @@ func getMetadataString(metadata map[string]any, keys ...string) string {
 // 1. Check auth_method field: "builder-id" or "idc"
 // 2. Check auth_type field: "aws_sso_oidc" (from kiro-cli tokens)
 // 3. Check for client_id + client_secret presence (AWS SSO OIDC signature)
-func getEffectiveProfileArnWithWarning(auth *cliproxyauth.Auth, profileArn string) string {
+func getEffectiveProfileArnWithWarning(auth *clipproxyauth.Auth, profileArn string) string {
 	if auth != nil && auth.Metadata != nil {
 		// Check 1: auth_method field (from CLIProxyAPI tokens)
 		authMethod := strings.ToLower(getMetadataString(auth.Metadata, "auth_method", "authMethod"))

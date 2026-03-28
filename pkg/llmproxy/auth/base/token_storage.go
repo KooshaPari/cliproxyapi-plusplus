@@ -10,7 +10,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/misc"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/misc"
 )
 
 // BaseTokenStorage holds the fields and file-I/O methods that every provider
@@ -31,10 +31,21 @@ type BaseTokenStorage struct {
 	// which authentication provider a credential file belongs to.
 	Type string `json:"type"`
 
+	// LastRefresh is the timestamp of the last token refresh operation.
+	LastRefresh string `json:"last_refresh,omitempty"`
+
+	// Expire is the timestamp when the current access token expires.
+	Expire string `json:"expired,omitempty"`
+
 	// FilePath is the on-disk path used by Save/Load/Clear.  It is not
 	// serialised to JSON; it is populated at runtime from the caller-supplied
 	// authFilePath argument.
 	FilePath string `json:"-"`
+}
+
+// NewBaseTokenStorage creates a new BaseTokenStorage with the given file path.
+func NewBaseTokenStorage(filePath string) *BaseTokenStorage {
+	return &BaseTokenStorage{FilePath: filePath}
 }
 
 // GetAccessToken returns the OAuth2 access token.
@@ -57,21 +68,19 @@ func (b *BaseTokenStorage) GetType() string { return b.Type }
 // BaseTokenStorage itself ensures that all provider-specific fields are
 // persisted alongside the base fields.
 func (b *BaseTokenStorage) Save(authFilePath string, v any) error {
-	validatedPath, err := misc.ResolveSafeFilePath(authFilePath)
+	safePath, err := misc.ResolveSafeFilePath(authFilePath)
 	if err != nil {
 		return fmt.Errorf("base token storage: invalid file path: %w", err)
 	}
-	// Apply filepath.Clean at call site so static analysis can verify the path is sanitized.
-	safePath := filepath.Clean(validatedPath)
 	misc.LogSavingCredentials(safePath)
 
-	if err = os.MkdirAll(filepath.Dir(safePath), 0o700); err != nil { // lgtm[go/path-injection]
+	if err = os.MkdirAll(filepath.Dir(safePath), 0o700); err != nil {
 		return fmt.Errorf("base token storage: create directory: %w", err)
 	}
 
 	// Write to a temporary file in the same directory, then rename so that
 	// a concurrent reader never observes a partially-written file.
-	tmpFile, err := os.CreateTemp(filepath.Dir(safePath), ".tmp-token-*") // lgtm[go/path-injection]
+	tmpFile, err := os.CreateTemp(filepath.Dir(safePath), ".tmp-token-*")
 	if err != nil {
 		return fmt.Errorf("base token storage: create temp file: %w", err)
 	}
@@ -89,7 +98,7 @@ func (b *BaseTokenStorage) Save(authFilePath string, v any) error {
 		return fmt.Errorf("base token storage: close temp file: %w", closeErr)
 	}
 
-	if err = os.Rename(tmpPath, safePath); err != nil { // lgtm[go/path-injection]
+	if err = os.Rename(tmpPath, safePath); err != nil {
 		_ = os.Remove(tmpPath)
 		return fmt.Errorf("base token storage: rename temp file: %w", err)
 	}
@@ -100,11 +109,10 @@ func (b *BaseTokenStorage) Save(authFilePath string, v any) error {
 // v should be a pointer to the outer provider struct so that all fields
 // are populated.
 func (b *BaseTokenStorage) Load(authFilePath string, v any) error {
-	validatedPath, err := misc.ResolveSafeFilePath(authFilePath)
+	safePath, err := misc.ResolveSafeFilePath(authFilePath)
 	if err != nil {
 		return fmt.Errorf("base token storage: invalid file path: %w", err)
 	}
-	safePath := filepath.Clean(validatedPath)
 
 	data, err := os.ReadFile(safePath)
 	if err != nil {
@@ -120,11 +128,10 @@ func (b *BaseTokenStorage) Load(authFilePath string, v any) error {
 // Clear removes the token file at authFilePath.  It returns nil if the file
 // does not exist (idempotent delete).
 func (b *BaseTokenStorage) Clear(authFilePath string) error {
-	validatedPath, err := misc.ResolveSafeFilePath(authFilePath)
+	safePath, err := misc.ResolveSafeFilePath(authFilePath)
 	if err != nil {
 		return fmt.Errorf("base token storage: invalid file path: %w", err)
 	}
-	safePath := filepath.Clean(validatedPath)
 
 	if err = os.Remove(safePath); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("base token storage: remove token file: %w", err)

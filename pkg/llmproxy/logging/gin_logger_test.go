@@ -10,37 +10,35 @@ import (
 )
 
 func TestGinLogrusRecoveryRepanicsErrAbortHandler(t *testing.T) {
-	// Test the recovery logic directly: gin.CustomRecovery's internal recovery
-	// handling varies across platforms (macOS vs Linux) and Go versions, so we
-	// invoke the recovery callback that GinLogrusRecovery passes to
-	// gin.CustomRecovery and verify it re-panics ErrAbortHandler.
 	gin.SetMode(gin.TestMode)
 
-	var repanicked bool
-	var repanic interface{}
+	engine := gin.New()
+	engine.Use(GinLogrusRecovery())
+	engine.GET("/abort", func(c *gin.Context) {
+		panic(http.ErrAbortHandler)
+	})
 
-	func() {
-		defer func() {
-			if r := recover(); r != nil {
-				repanicked = true
-				repanic = r
-			}
-		}()
-		// Simulate what gin.CustomRecovery does: call the recovery func
-		// with the recovered value.
-		ginLogrusRecoveryFunc(nil, http.ErrAbortHandler)
+	req := httptest.NewRequest(http.MethodGet, "/abort", nil)
+	recorder := httptest.NewRecorder()
+
+	defer func() {
+		recovered := recover()
+		if recovered == nil {
+			t.Fatalf("expected panic, got nil")
+		}
+		err, ok := recovered.(error)
+		if !ok {
+			t.Fatalf("expected error panic, got %T", recovered)
+		}
+		if !errors.Is(err, http.ErrAbortHandler) {
+			t.Fatalf("expected ErrAbortHandler, got %v", err)
+		}
+		if err != http.ErrAbortHandler {
+			t.Fatalf("expected exact ErrAbortHandler sentinel, got %v", err)
+		}
 	}()
 
-	if !repanicked {
-		t.Fatalf("expected ginLogrusRecoveryFunc to re-panic http.ErrAbortHandler, but it did not")
-	}
-	err, ok := repanic.(error)
-	if !ok {
-		t.Fatalf("expected error panic, got %T", repanic)
-	}
-	if !errors.Is(err, http.ErrAbortHandler) {
-		t.Fatalf("expected ErrAbortHandler, got %v", err)
-	}
+	engine.ServeHTTP(recorder, req)
 }
 
 func TestGinLogrusRecoveryHandlesRegularPanic(t *testing.T) {

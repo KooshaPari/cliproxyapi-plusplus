@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	sdkAuth "github.com/kooshapari/CLIProxyAPI/v7/sdk/auth"
-	coreauth "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth"
+	sdkAuth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/auth"
+	coreauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
 )
 
 func (h *Handler) authIDForPath(path string) string {

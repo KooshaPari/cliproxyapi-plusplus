@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/auth/gemini"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/gemini"
 	// legacy client removed
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/config"
-	coreauth "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+	coreauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
 )
 
 // GeminiAuthenticator implements the login flow for Google Gemini CLI accounts.

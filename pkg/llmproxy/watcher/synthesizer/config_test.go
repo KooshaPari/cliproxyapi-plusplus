@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kooshapari/CLIProxyAPI/v7/internal/config"
-	coreauth "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+	coreauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
 )
 
 func TestNewConfigSynthesizer(t *testing.T) {

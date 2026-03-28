@@ -7,8 +7,9 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/auth/copilot"
-	coreauth "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth"
+	baseauth "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/base"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/copilot"
+	coreauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -51,12 +52,15 @@ func (h *Handler) RequestGitHubToken(c *gin.Context) {
 		}
 
 		tokenStorage := &copilot.CopilotTokenStorage{
+			BaseTokenStorage: baseauth.BaseTokenStorage{
+				AccessToken: tokenData.AccessToken,
+				Email:       username,
+				Type:        "github-copilot",
+			},
 			TokenType: tokenData.TokenType,
 			Scope:     tokenData.Scope,
 			Username:  username,
 		}
-		tokenStorage.AccessToken = tokenData.AccessToken
-		tokenStorage.Type = "github-copilot"
 
 		fileName := fmt.Sprintf("github-%s.json", username)
 		record := &coreauth.Auth{

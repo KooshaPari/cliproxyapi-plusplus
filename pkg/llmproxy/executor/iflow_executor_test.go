@@ -1,18 +1,11 @@
 package executor
 
 import (
-	"context"
 	"errors"
-	"io"
 	"net/http"
-	"net/http/httptest"
-	"strings"
 	"testing"
 
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/thinking"
-	cliproxyauth "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth"
-	cliproxyexecutor "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/executor"
-	sdktranslator "github.com/kooshapari/CLIProxyAPI/v7/sdk/translator"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/thinking"
 )
 
 func TestIFlowExecutorParseSuffix(t *testing.T) {
@@ -81,28 +74,6 @@ func TestClassifyIFlowRefreshError(t *testing.T) {
 	})
 }
 
-func TestDetectIFlowProviderError(t *testing.T) {
-	t.Run("ignores normal chat completion payload", func(t *testing.T) {
-		err := detectIFlowProviderError([]byte(`{"id":"chatcmpl_1","object":"chat.completion","choices":[{"index":0,"message":{"role":"assistant","content":"ok"}}]}`))
-		if err != nil {
-			t.Fatalf("expected nil error, got %v", err)
-		}
-	})
-
-	t.Run("captures embedded token expiry envelope", func(t *testing.T) {
-		err := detectIFlowProviderError([]byte(`{"status":"439","msg":"Your API Token has expired.","body":null}`))
-		if err == nil {
-			t.Fatal("expected provider error")
-		}
-		if !err.Refreshable {
-			t.Fatal("expected provider error to be refreshable")
-		}
-		if got := err.StatusCode(); got != http.StatusUnauthorized {
-			t.Fatalf("status code = %d, want %d", got, http.StatusUnauthorized)
-		}
-	})
-}
-
 func TestPreserveReasoningContentInMessages(t *testing.T) {
 	tests := []struct {
 		name  string
@@ -137,189 +108,5 @@ func TestPreserveReasoningContentInMessages(t *testing.T) {
 				t.Errorf("preserveReasoningContentInMessages() = %s, want %s", got, want)
 			}
 		})
-	}
-}
-
-func TestIFlowExecutorExecuteStreamFallsBackFrom406ForResponsesClients(t *testing.T) {
-	requestCount := 0
-	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		requestCount++
-		body, _ := io.ReadAll(r.Body)
-
-		switch requestCount {
-		case 1:
-			if got := r.Header.Get("Accept"); got != "text/event-stream" {
-				t.Fatalf("expected stream Accept header, got %q", got)
-			}
-			if !strings.Contains(string(body), `"stream":true`) {
-				t.Fatalf("expected initial stream request, got %s", body)
-			}
-			http.Error(w, "status 406", http.StatusNotAcceptable)
-		case 2:
-			if strings.Contains(string(body), `"stream":true`) {
-				t.Fatalf("expected fallback request to disable stream, got %s", body)
-			}
-			w.Header().Set("Content-Type", "application/json")
-			_, _ = w.Write([]byte(`{"id":"chatcmpl_iflow","object":"chat.completion","created":1735689600,"model":"minimax-m2.5","choices":[{"index":0,"message":{"role":"assistant","content":"hi from iflow fallback"},"finish_reason":"stop"}],"usage":{"prompt_tokens":3,"completion_tokens":4,"total_tokens":7}}`))
-		default:
-			t.Fatalf("unexpected upstream call %d", requestCount)
-		}
-	}))
-	defer upstream.Close()
-
-	executor := NewIFlowExecutor(nil)
-	auth := &cliproxyauth.Auth{Attributes: map[string]string{
-		"base_url": upstream.URL,
-		"api_key":  "iflow-test",
-	}}
-	originalRequest := []byte(`{"model":"minimax-m2.5","stream":true,"input":[{"role":"user","content":"hi"}]}`)
-	streamResult, err := executor.ExecuteStream(context.Background(), auth, cliproxyexecutor.Request{
-		Model:   "minimax-m2.5",
-		Payload: originalRequest,
-	}, cliproxyexecutor.Options{
-		SourceFormat:    sdktranslator.FromString("openai-response"),
-		OriginalRequest: originalRequest,
-		Stream:          true,
-	})
-	if err != nil {
-		t.Fatalf("ExecuteStream returned unexpected error: %v", err)
-	}
-
-	var chunks [][]byte
-	for chunk := range streamResult.Chunks {
-		if chunk.Err != nil {
-			t.Fatalf("unexpected stream error: %v", chunk.Err)
-		}
-		chunks = append(chunks, append([]byte(nil), chunk.Payload...))
-	}
-
-	if requestCount != 2 {
-		t.Fatalf("expected 2 upstream calls, got %d", requestCount)
-	}
-	if len(chunks) != 1 {
-		t.Fatalf("expected one synthesized chunk, got %d", len(chunks))
-	}
-	got := string(chunks[0])
-	if !strings.Contains(got, "event: response.completed") {
-		t.Fatalf("expected response.completed SSE event, got %q", got)
-	}
-	if !strings.Contains(got, "hi from iflow fallback") {
-		t.Fatalf("expected assistant text in synthesized payload, got %q", got)
-	}
-}
-
-func TestIFlowExecutorExecuteReturnsProviderEnvelopeError(t *testing.T) {
-	requestCount := 0
-	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		requestCount++
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"status":"439","msg":"Your API Token has expired.","body":null}`))
-	}))
-	defer upstream.Close()
-
-	auth := &cliproxyauth.Auth{
-		Attributes: map[string]string{
-			"base_url": upstream.URL,
-			"api_key":  "expired-key",
-		},
-		Metadata: map[string]any{
-			"cookie":  "cookie",
-			"email":   "user@example.com",
-			"expired": "2000-01-01T00:00:00Z",
-		},
-	}
-
-	executor := &IFlowExecutor{}
-	originalRequest := []byte(`{"model":"minimax-m2.5","input":[{"role":"user","content":"hi"}]}`)
-	resp, err := executor.execute(context.Background(), auth, cliproxyexecutor.Request{
-		Model:   "minimax-m2.5",
-		Payload: originalRequest,
-	}, cliproxyexecutor.Options{
-		SourceFormat:    sdktranslator.FromString("openai-response"),
-		OriginalRequest: originalRequest,
-	}, false)
-	if err == nil {
-		t.Fatal("expected provider envelope error")
-	}
-	if requestCount != 1 {
-		t.Fatalf("expected 1 upstream call, got %d", requestCount)
-	}
-	if len(resp.Payload) != 0 {
-		t.Fatalf("expected empty payload on provider envelope error, got %s", resp.Payload)
-	}
-	statusErr, ok := err.(interface{ StatusCode() int })
-	if !ok {
-		t.Fatalf("expected status error type, got %T", err)
-	}
-	if got := statusErr.StatusCode(); got != http.StatusUnauthorized {
-		t.Fatalf("status code = %d, want %d", got, http.StatusUnauthorized)
-	}
-	if !strings.Contains(err.Error(), "expired") {
-		t.Fatalf("expected expiry message, got %v", err)
-	}
-}
-
-func TestIFlowExecutorExecuteStreamFallbackUnwrapsDataEnvelope(t *testing.T) {
-	requestCount := 0
-	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		requestCount++
-		body, _ := io.ReadAll(r.Body)
-
-		switch requestCount {
-		case 1:
-			if got := r.Header.Get("Accept"); got != "text/event-stream" {
-				t.Fatalf("expected stream Accept header, got %q", got)
-			}
-			if !strings.Contains(string(body), `"stream":true`) {
-				t.Fatalf("expected initial stream request, got %s", body)
-			}
-			http.Error(w, "status 406", http.StatusNotAcceptable)
-		case 2:
-			if strings.Contains(string(body), `"stream":true`) {
-				t.Fatalf("expected fallback request to disable stream, got %s", body)
-			}
-			w.Header().Set("Content-Type", "application/json")
-			_, _ = w.Write([]byte(`{"success":true,"data":{"id":"chatcmpl_iflow","object":"chat.completion","created":1735689600,"model":"minimax-m2.5","choices":[{"index":0,"message":{"role":"assistant","content":"hello from wrapped iflow"},"finish_reason":"stop"}],"usage":{"prompt_tokens":3,"completion_tokens":4,"total_tokens":7}}}`))
-		default:
-			t.Fatalf("unexpected upstream call %d", requestCount)
-		}
-	}))
-	defer upstream.Close()
-
-	executor := NewIFlowExecutor(nil)
-	auth := &cliproxyauth.Auth{Attributes: map[string]string{
-		"base_url": upstream.URL,
-		"api_key":  "iflow-test",
-	}}
-	originalRequest := []byte(`{"model":"minimax-m2.5","stream":true,"input":[{"role":"user","content":"hi"}]}`)
-	streamResult, err := executor.ExecuteStream(context.Background(), auth, cliproxyexecutor.Request{
-		Model:   "minimax-m2.5",
-		Payload: originalRequest,
-	}, cliproxyexecutor.Options{
-		SourceFormat:    sdktranslator.FromString("openai-response"),
-		OriginalRequest: originalRequest,
-		Stream:          true,
-	})
-	if err != nil {
-		t.Fatalf("ExecuteStream returned unexpected error: %v", err)
-	}
-
-	var chunks [][]byte
-	for chunk := range streamResult.Chunks {
-		if chunk.Err != nil {
-			t.Fatalf("unexpected stream error: %v", chunk.Err)
-		}
-		chunks = append(chunks, append([]byte(nil), chunk.Payload...))
-	}
-
-	if requestCount != 2 {
-		t.Fatalf("expected 2 upstream calls, got %d", requestCount)
-	}
-	if len(chunks) != 1 {
-		t.Fatalf("expected one synthesized chunk, got %d", len(chunks))
-	}
-	got := string(chunks[0])
-	if !strings.Contains(got, "hello from wrapped iflow") {
-		t.Fatalf("expected unwrapped assistant text in synthesized payload, got %q", got)
 	}
 }

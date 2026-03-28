@@ -13,11 +13,11 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/constant"
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/interfaces"
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/registry"
-	responsesconverter "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/openai/openai/responses"
-	"github.com/kooshapari/CLIProxyAPI/v7/sdk/api/handlers"
+	. "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/constant"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/interfaces"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/registry"
+	responsesconverter "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/translator/openai/openai/responses"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/api/handlers"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
 )
@@ -44,7 +44,7 @@ func NewOpenAIResponsesAPIHandler(apiHandlers *handlers.BaseAPIHandler) *OpenAIR
 
 // HandlerType returns the identifier for this handler implementation.
 func (h *OpenAIResponsesAPIHandler) HandlerType() string {
-	return constant.OpenaiResponse
+	return OpenaiResponse
 }
 
 // Models returns the OpenAIResponses-compatible model metadata supported by this handler.
@@ -182,7 +182,7 @@ func (h *OpenAIResponsesAPIHandler) handleNonStreamingResponseViaChat(c *gin.Con
 
 	modelName := gjson.GetBytes(chatJSON, "model").String()
 	cliCtx, cliCancel := h.GetContextWithCancel(h, c, context.Background())
-	resp, upstreamHeaders, errMsg := h.ExecuteWithAuthManager(cliCtx, constant.OpenAI, modelName, chatJSON, "")
+	resp, upstreamHeaders, errMsg := h.ExecuteWithAuthManager(cliCtx, OpenAI, modelName, chatJSON, "")
 	if errMsg != nil {
 		h.WriteErrorResponse(c, errMsg)
 		cliCancel(errMsg.Error)
@@ -299,7 +299,7 @@ func (h *OpenAIResponsesAPIHandler) handleStreamingResponseViaChat(c *gin.Contex
 
 	modelName := gjson.GetBytes(chatJSON, "model").String()
 	cliCtx, cliCancel := h.GetContextWithCancel(h, c, context.Background())
-	dataChan, upstreamHeaders, errChan := h.ExecuteStreamWithAuthManager(cliCtx, constant.OpenAI, modelName, chatJSON, "")
+	dataChan, upstreamHeaders, errChan := h.ExecuteStreamWithAuthManager(cliCtx, OpenAI, modelName, chatJSON, "")
 	var param any
 
 	setSSEHeaders := func() {

@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/kooshapari/CLIProxyAPI/v7/internal/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
 )
 
 type OAuthModelAliasSummary struct {

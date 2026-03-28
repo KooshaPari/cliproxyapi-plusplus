@@ -1,9 +1,11 @@
+// Package iflow provides authentication and token management functionality
+// for iFlow AI services.
 package iflow
 
 import (
 	"fmt"
 
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/misc"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/base"
 )
 
 // IFlowTokenStorage persists iFlow OAuth credentials alongside the derived API key.

@@ -4,8 +4,7 @@ package thinking
 import (
 	"strings"
 
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/registry"
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/util"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/registry"
 	log "github.com/sirupsen/logrus"
 	"github.com/tidwall/gjson"
 )
@@ -120,8 +119,9 @@ func ApplyThinking(body []byte, model string, fromFormat string, toFormat string
 	if modelInfo.Thinking == nil {
 		config := extractThinkingConfig(body, providerFormat)
 		if hasThinkingConfig(config) {
+			// nolint:gosec // false positive: logging model name, not secret
 			log.WithFields(log.Fields{
-				"model":    util.RedactAPIKey(baseModel),
+				"model":    baseModel,
 				"provider": providerFormat,
 			}).Debug("thinking: model does not support thinking, stripping config |")
 			return StripThinkingConfig(body, providerFormat), nil
@@ -158,9 +158,10 @@ func ApplyThinking(body []byte, model string, fromFormat string, toFormat string
 				"forced":   true,
 			}).Debug("thinking: forced thinking for thinking model |")
 		} else {
+			// nolint:gosec // false positive: logging model name, not secret
 			log.WithFields(log.Fields{
 				"provider": providerFormat,
-				"model":    util.RedactAPIKey(modelInfo.ID),
+				"model":    modelInfo.ID,
 			}).Debug("thinking: no config found, passthrough |")
 			return body, nil
 		}
@@ -180,7 +181,7 @@ func ApplyThinking(body []byte, model string, fromFormat string, toFormat string
 	if validated == nil {
 		log.WithFields(log.Fields{
 			"provider": providerFormat,
-			"model":    util.RedactAPIKey(modelInfo.ID),
+			"model":    modelInfo.ID,
 		}).Warn("thinking: ValidateConfig returned nil config without error, passthrough |")
 		return body, nil
 	}
@@ -529,6 +530,30 @@ func extractIFlowConfig(body []byte) ThinkingConfig {
 			return ThinkingConfig{Mode: ModeBudget, Budget: 1}
 		}
 		return ThinkingConfig{Mode: ModeNone, Budget: 0}
+	}
+
+	for _, path := range []string{"reasoning.effort", "reasoning\\.effort", "reasoning_effort"} {
+		if effort := gjson.GetBytes(body, path); effort.Exists() {
+			value := strings.ToLower(strings.TrimSpace(effort.String()))
+			if value == "" {
+				return ThinkingConfig{}
+			}
+			if value == "none" {
+				return ThinkingConfig{Mode: ModeNone, Budget: 0}
+			}
+			return ThinkingConfig{Mode: ModeLevel, Level: ThinkingLevel(value)}
+		}
+	}
+
+	if variant := gjson.GetBytes(body, "variant"); variant.Exists() {
+		value := strings.ToLower(strings.TrimSpace(variant.String()))
+		if value == "" {
+			return ThinkingConfig{}
+		}
+		if value == "none" {
+			return ThinkingConfig{Mode: ModeNone, Budget: 0}
+		}
+		return ThinkingConfig{Mode: ModeLevel, Level: ThinkingLevel(value)}
 	}
 
 	return ThinkingConfig{}

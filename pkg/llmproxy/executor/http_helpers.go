@@ -5,8 +5,8 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/config"
-	cliproxyauth "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+	cliproxyauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
 	log "github.com/sirupsen/logrus"
 )
 

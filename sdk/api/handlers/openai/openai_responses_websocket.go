@@ -13,9 +13,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/interfaces"
-	"github.com/kooshapari/CLIProxyAPI/v7/sdk/api/handlers"
-	cliproxyexecutor "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/executor"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/interfaces"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/api/handlers"
+	cliproxyexecutor "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/executor"
 	log "github.com/sirupsen/logrus"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
@@ -84,6 +84,8 @@ func (h *OpenAIResponsesAPIHandler) ResponsesWebsocket(c *gin.Context) {
 			appendWebsocketEvent(&wsBodyLog, "disconnect", []byte(errReadMessage.Error()))
 			if websocket.IsCloseError(errReadMessage, websocket.CloseNormalClosure, websocket.CloseGoingAway, websocket.CloseNoStatusReceived) {
 				log.Infof("responses websocket: client disconnected id=%s error=%v", passthroughSessionID, errReadMessage)
+			} else {
+				// log.Warnf("responses websocket: read message failed id=%s error=%v", passthroughSessionID, errReadMessage)
 			}
 			return
 		}
@@ -116,7 +118,7 @@ func (h *OpenAIResponsesAPIHandler) ResponsesWebsocket(c *gin.Context) {
 			allowIncrementalInputWithPreviousResponseID,
 		)
 		if errMsg != nil {
-			h.LoggingAPIResponseError(context.WithValue(context.Background(), handlers.CtxKeyGin, c), errMsg)
+			h.LoggingAPIResponseError(context.WithValue(context.Background(), "gin", c), errMsg)
 			markAPIResponseTimestamp(c)
 			errorPayload, errWrite := writeResponsesWebsocketError(conn, errMsg)
 			appendWebsocketEvent(&wsBodyLog, "response", errorPayload)
@@ -400,7 +402,7 @@ func (h *OpenAIResponsesAPIHandler) forwardResponsesWebsocket(
 				continue
 			}
 			if errMsg != nil {
-				h.LoggingAPIResponseError(context.WithValue(context.Background(), handlers.CtxKeyGin, c), errMsg)
+				h.LoggingAPIResponseError(context.WithValue(context.Background(), "gin", c), errMsg)
 				markAPIResponseTimestamp(c)
 				errorPayload, errWrite := writeResponsesWebsocketError(conn, errMsg)
 				appendWebsocketEvent(wsBodyLog, "response", errorPayload)
@@ -435,7 +437,7 @@ func (h *OpenAIResponsesAPIHandler) forwardResponsesWebsocket(
 						StatusCode: http.StatusRequestTimeout,
 						Error:      fmt.Errorf("stream closed before response.completed"),
 					}
-					h.LoggingAPIResponseError(context.WithValue(context.Background(), handlers.CtxKeyGin, c), errMsg)
+					h.LoggingAPIResponseError(context.WithValue(context.Background(), "gin", c), errMsg)
 					markAPIResponseTimestamp(c)
 					errorPayload, errWrite := writeResponsesWebsocketError(conn, errMsg)
 					appendWebsocketEvent(wsBodyLog, "response", errorPayload)

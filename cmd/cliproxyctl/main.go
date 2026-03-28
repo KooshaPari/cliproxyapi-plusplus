@@ -10,15 +10,14 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"runtime"
 	"sort"
 	"strings"
 	"syscall"
 	"time"
 
-	cliproxycmd "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/cmd"
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/config"
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/util"
+	cliproxycmd "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/cmd"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/util"
 )
 
 const responseSchemaVersion = "cliproxyctl.response.v1"
@@ -135,6 +134,39 @@ func runProviderLogin(cfg *config.Config, provider string, projectID string, opt
 	return nil
 }
 
+func normalizeProvider(provider string) string {
+	normalized := strings.ToLower(strings.TrimSpace(provider))
+	switch normalized {
+	case "github-copilot":
+		return "copilot"
+	case "githubcopilot":
+		return "copilot"
+	case "ampcode":
+		return "amp"
+	case "amp-code":
+		return "amp"
+	case "kilo-code":
+		return "kilo"
+	case "kilocode":
+		return "kilo"
+	case "roo-code":
+		return "roo"
+	case "roocode":
+		return "roo"
+	case "droid":
+		return "gemini"
+	case "droid-cli":
+		return "gemini"
+	case "droidcli":
+		return "gemini"
+	case "factoryapi":
+		return "factory-api"
+	case "openai-compatible":
+		return "factory-api"
+	default:
+		return normalized
+	}
+}
 func main() {
 	os.Exit(run(os.Args[1:], os.Stdout, os.Stderr, time.Now, defaultCommandExecutor()))
 }
@@ -574,10 +606,7 @@ func ensureConfigFile(configPath string) error {
 		return fmt.Errorf("config directory not writable: %w", err)
 	}
 
-	templatePath, err := resolveConfigTemplatePath()
-	if err != nil {
-		return err
-	}
+	templatePath := "config.example.yaml"
 	payload, err := os.ReadFile(templatePath)
 	if err != nil {
 		return fmt.Errorf("read %s: %w", templatePath, err)
@@ -589,37 +618,6 @@ func ensureConfigFile(configPath string) error {
 		return fmt.Errorf("write config file: %w", err)
 	}
 	return nil
-}
-
-func resolveConfigTemplatePath() (string, error) {
-	candidates := make([]string, 0, 6)
-	addCandidate := func(path string) {
-		if trimmed := strings.TrimSpace(path); trimmed != "" {
-			candidates = append(candidates, trimmed)
-		}
-	}
-
-	addCandidate(os.Getenv("CLIPROXY_CONFIG_TEMPLATE"))
-	addCandidate("config.example.yaml")
-
-	if executablePath, err := os.Executable(); err == nil {
-		executableDir := filepath.Dir(executablePath)
-		addCandidate(filepath.Join(executableDir, "config.example.yaml"))
-		addCandidate(filepath.Join(executableDir, "..", "config.example.yaml"))
-	}
-
-	_, thisFile, _, ok := runtime.Caller(0)
-	if ok {
-		repoRoot := filepath.Dir(filepath.Dir(filepath.Dir(thisFile)))
-		addCandidate(filepath.Join(repoRoot, "config.example.yaml"))
-	}
-
-	for _, candidate := range candidates {
-		if configFileExists(candidate) {
-			return candidate, nil
-		}
-	}
-	return "", fmt.Errorf("read config.example.yaml: no template file found in known locations")
 }
 
 func persistDefaultKiroAliases(configPath string) error {

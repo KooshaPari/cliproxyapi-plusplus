@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/kooshapari/CLIProxyAPI/v7/internal/config"
-	sdkAuth "github.com/kooshapari/CLIProxyAPI/v7/sdk/auth"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+	sdkAuth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/auth"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -37,17 +37,14 @@ func DoKiroGoogleLogin(cfg *config.Config, options *LoginOptions) {
 
 	manager := newAuthManager()
 
-	// LoginWithGoogle currently always returns an error because Google login
-	// is not available for third-party apps due to AWS Cognito restrictions.
-	// When a real implementation is provided, this function should handle the
-	// returned auth record (save, display label, etc.).
+	// Use KiroAuthenticator with Google login
 	authenticator := sdkAuth.NewKiroAuthenticator()
-	record, err := authenticator.LoginWithGoogle(context.Background(), castToInternalConfig(cfg), &sdkAuth.LoginOptions{ //nolint:staticcheck // SA4023: LoginWithGoogle is a stub that always errors; retained for future implementation
+	record, err := authenticator.LoginWithGoogle(context.Background(), castToInternalConfig(cfg), &sdkAuth.LoginOptions{
 		NoBrowser: options.NoBrowser,
 		Metadata:  map[string]string{},
 		Prompt:    options.Prompt,
 	})
-	if err != nil { //nolint:staticcheck // SA4023: see above
+	if err != nil {
 		log.Errorf("Kiro Google authentication failed: %v", err)
 		fmt.Println("\nTroubleshooting:")
 		fmt.Println("1. Make sure the protocol handler is installed")
@@ -56,6 +53,7 @@ func DoKiroGoogleLogin(cfg *config.Config, options *LoginOptions) {
 		return
 	}
 
+	// Save the auth record
 	savedPath, err := manager.SaveAuth(record, castToInternalConfig(cfg))
 	if err != nil {
 		log.Errorf("Failed to save auth: %v", err)

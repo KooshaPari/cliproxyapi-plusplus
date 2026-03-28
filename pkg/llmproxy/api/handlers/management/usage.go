@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/usage"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/usage"
 )
 
 type usageExportPayload struct {

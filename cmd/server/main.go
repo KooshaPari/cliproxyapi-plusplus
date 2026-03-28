@@ -17,21 +17,21 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
-	configaccess "github.com/kooshapari/CLIProxyAPI/v7/internal/access/config_access"
-	"github.com/kooshapari/CLIProxyAPI/v7/internal/auth/kiro"
-	"github.com/kooshapari/CLIProxyAPI/v7/internal/buildinfo"
-	"github.com/kooshapari/CLIProxyAPI/v7/internal/cmd"
-	"github.com/kooshapari/CLIProxyAPI/v7/internal/config"
-	"github.com/kooshapari/CLIProxyAPI/v7/internal/logging"
-	"github.com/kooshapari/CLIProxyAPI/v7/internal/managementasset"
-	"github.com/kooshapari/CLIProxyAPI/v7/internal/misc"
-	"github.com/kooshapari/CLIProxyAPI/v7/internal/store"
-	_ "github.com/kooshapari/CLIProxyAPI/v7/internal/translator"
-	"github.com/kooshapari/CLIProxyAPI/v7/internal/tui"
-	"github.com/kooshapari/CLIProxyAPI/v7/internal/usage"
-	"github.com/kooshapari/CLIProxyAPI/v7/internal/util"
-	sdkAuth "github.com/kooshapari/CLIProxyAPI/v7/sdk/auth"
-	coreauth "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth"
+	configaccess "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/access/config_access"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/kiro"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/buildinfo"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/cmd"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/logging"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/managementasset"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/misc"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/store"
+	_ "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/translator"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/tui"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/usage"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/util"
+	sdkAuth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/auth"
+	coreauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -61,13 +61,6 @@ func setKiroIncognitoMode(cfg *config.Config, useIncognito, noIncognito bool) {
 	} else {
 		cfg.IncognitoBrowser = true // Kiro default
 	}
-}
-
-func validateKiroIncognitoFlags(useIncognito, noIncognito bool) error {
-	if useIncognito && noIncognito {
-		return fmt.Errorf("--incognito and --no-incognito cannot be used together")
-	}
-	return nil
 }
 
 // main is the entry point of the application.
@@ -161,13 +154,9 @@ func main() {
 
 	// Parse the command-line flags.
 	flag.Parse()
-	var err error
-	if err = validateKiroIncognitoFlags(useIncognito, noIncognito); err != nil {
-		log.Errorf("invalid Kiro browser flags: %v", err)
-		return
-	}
 
 	// Core application variables.
+	var err error
 	var cfg *config.Config
 	var isCloudDeploy bool
 	var (
@@ -426,18 +415,12 @@ func main() {
 			log.Errorf("failed to get working directory: %v", err)
 			return
 		}
-		configFilePath = resolveDefaultConfigPath(wd, isCloudDeploy)
+		configFilePath = filepath.Join(wd, "config.yaml")
 		cfg, err = config.LoadConfigOptional(configFilePath, isCloudDeploy)
 	}
 	if err != nil {
 		log.Errorf("failed to load config: %v", err)
 		return
-	}
-	if configFileExists(configFilePath) {
-		if err := validateConfigFileStrict(configFilePath); err != nil {
-			log.Errorf("failed strict config validation: %v", err)
-			return
-		}
 	}
 	if cfg == nil {
 		cfg = &config.Config{}
@@ -642,15 +625,15 @@ func main() {
 				}
 			}
 		} else {
-			// Start the main proxy service
-			managementasset.StartAutoUpdater(context.Background(), configFilePath)
+      // Start the main proxy service
+      managementasset.StartAutoUpdater(context.Background(), configFilePath)
 
-			if cfg.AuthDir != "" {
-				kiro.InitializeAndStart(cfg.AuthDir, cfg)
-				defer kiro.StopGlobalRefreshManager()
-			}
+      if cfg.AuthDir != "" {
+        kiro.InitializeAndStart(cfg.AuthDir, cfg)
+        defer kiro.StopGlobalRefreshManager()
+      }
 
-			cmd.StartService(cfg, configFilePath, password)
+      cmd.StartService(cfg, configFilePath, password)
 		}
 	}
 }

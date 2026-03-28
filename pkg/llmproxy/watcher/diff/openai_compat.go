@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/kooshapari/CLIProxyAPI/v7/internal/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
 )
 
 // DiffOpenAICompatibility produces human-readable change descriptions.
@@ -178,10 +178,6 @@ func openAICompatSignature(entry config.OpenAICompatibility) string {
 	if len(parts) == 0 {
 		return ""
 	}
-	// SHA-256 fingerprint for structural change detection (not password hashing).
-	// Build a sanitized fingerprint string that contains no secret material —
-	// API keys are excluded above and only their count is included.
-	fingerprint := strings.Join(parts, "|")
-	sum := sha256.Sum256([]byte(fingerprint))
+	sum := sha256.Sum256([]byte(strings.Join(parts, "|")))
 	return hex.EncodeToString(sum[:])
 }

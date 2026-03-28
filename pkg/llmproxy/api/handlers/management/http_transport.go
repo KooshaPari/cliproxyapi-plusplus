@@ -11,7 +11,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/proxy"
 
-	coreauth "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth"
+	coreauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
 )
 
 func (h *Handler) apiCallTransport(auth *coreauth.Auth) http.RoundTripper {

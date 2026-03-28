@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	chatcompletions "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/claude/openai/chat-completions"
+	chatcompletions "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/translator/claude/openai/chat-completions"
 	"github.com/tidwall/gjson"
 )
 

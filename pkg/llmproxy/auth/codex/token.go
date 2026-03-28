@@ -5,8 +5,7 @@ package codex
 
 import (
 	"fmt"
-
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/misc"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/base"
 )
 
 // CodexTokenStorage stores OAuth2 token information for OpenAI Codex API authentication.
@@ -14,7 +13,6 @@ import (
 // for managing access tokens, refresh tokens, and user account information.
 type CodexTokenStorage struct {
 	base.BaseTokenStorage
-
 	// IDToken is the JWT ID token containing user claims and identity information.
 	IDToken string `json:"id_token"`
 	// AccountID is the OpenAI account identifier associated with this token.

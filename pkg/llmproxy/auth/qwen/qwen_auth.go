@@ -13,8 +13,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kooshapari/CLIProxyAPI/v7/internal/config"
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/util"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/base"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/util"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -349,13 +350,14 @@ func (o *QwenAuth) RefreshTokensWithRetry(ctx context.Context, refreshToken stri
 // CreateTokenStorage creates a QwenTokenStorage object from a QwenTokenData object.
 func (o *QwenAuth) CreateTokenStorage(tokenData *QwenTokenData) *QwenTokenStorage {
 	storage := &QwenTokenStorage{
-		BaseTokenStorage: &BaseTokenStorage{
+		BaseTokenStorage: base.BaseTokenStorage{
 			AccessToken:  tokenData.AccessToken,
 			RefreshToken: tokenData.RefreshToken,
-			LastRefresh:  time.Now().Format(time.RFC3339),
-			Expire:       tokenData.Expire,
+			Type:         "qwen",
 		},
+		LastRefresh: time.Now().Format(time.RFC3339),
 		ResourceURL: tokenData.ResourceURL,
+		Expire:      tokenData.Expire,
 	}
 
 	return storage
@@ -363,7 +365,9 @@ func (o *QwenAuth) CreateTokenStorage(tokenData *QwenTokenData) *QwenTokenStorag
 
 // UpdateTokenStorage updates an existing token storage with new token data
 func (o *QwenAuth) UpdateTokenStorage(storage *QwenTokenStorage, tokenData *QwenTokenData) {
-	storage.BaseTokenStorage.AccessToken = tokenData.AccessToken
-	storage.BaseTokenStorage.RefreshToken = tokenData.RefreshToken
+	storage.AccessToken = tokenData.AccessToken
+	storage.RefreshToken = tokenData.RefreshToken
+	storage.LastRefresh = time.Now().Format(time.RFC3339)
 	storage.ResourceURL = tokenData.ResourceURL
+	storage.Expire = tokenData.Expire
 }

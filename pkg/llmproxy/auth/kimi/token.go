@@ -1,13 +1,13 @@
 // Package kimi provides authentication and token management functionality
-// for Kimi (Moonshot AI) services. It handles OAuth2 device flow token storage,
-// serialization, and retrieval for maintaining authenticated sessions with the Kimi API.
+// for Kimi (Moonshot AI) services. It handles OAuth2 token storage, serialization,
+// and retrieval for maintaining authenticated sessions with the Kimi API.
 package kimi
 
 import (
 	"fmt"
 	"time"
 
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/misc"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/base"
 )
 
 // KimiTokenStorage stores OAuth2 token information for Kimi API authentication.

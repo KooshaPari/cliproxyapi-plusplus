@@ -14,13 +14,13 @@ import (
 	"strings"
 	"time"
 
-	vertexauth "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/auth/vertex"
-	"github.com/kooshapari/CLIProxyAPI/v7/internal/config"
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/interfaces"
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/thinking"
-	cliproxyauth "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth"
-	cliproxyexecutor "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/executor"
-	sdktranslator "github.com/kooshapari/CLIProxyAPI/v7/sdk/translator"
+	vertexauth "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/vertex"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/interfaces"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/thinking"
+	cliproxyauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
+	cliproxyexecutor "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/executor"
+	sdktranslator "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/translator"
 	log "github.com/sirupsen/logrus"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
@@ -1018,8 +1018,7 @@ func vertexAccessToken(ctx context.Context, cfg *config.Config, auth *cliproxyau
 		ctx = context.WithValue(ctx, oauth2.HTTPClient, httpClient)
 	}
 	// Use cloud-platform scope for Vertex AI.
-	//lint:ignore SA1019 migration to cloud.google.com/go/auth tracked separately
-	creds, errCreds := google.CredentialsFromJSON(ctx, saJSON, "https://www.googleapis.com/auth/cloud-platform") //nolint:staticcheck // SA1019
+	creds, errCreds := google.CredentialsFromJSON(ctx, saJSON, "https://www.googleapis.com/auth/cloud-platform")
 	if errCreds != nil {
 		return "", fmt.Errorf("vertex executor: parse service account json failed: %w", errCreds)
 	}

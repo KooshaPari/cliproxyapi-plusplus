@@ -11,17 +11,9 @@ import (
 	"sync"
 	"time"
 
-	misc "github.com/kooshapari/CLIProxyAPI/v7/internal/misc"
+	misc "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/misc"
 	log "github.com/sirupsen/logrus"
 )
-
-// redactClientID redacts a client ID for safe logging, avoiding circular imports with util.
-func redactClientID(id string) string {
-	if id == "" {
-		return ""
-	}
-	return "[REDACTED]"
-}
 
 // ModelInfo represents information about an available model
 type ModelInfo struct {
@@ -610,8 +602,7 @@ func (r *ModelRegistry) SetModelQuotaExceeded(clientID, modelID string) {
 
 	if registration, exists := r.models[modelID]; exists {
 		registration.QuotaExceededClients[clientID] = new(time.Now())
-		safeClient := redactClientID(clientID)
-		log.Debugf("Marked model %s as quota exceeded for client %s", modelID, safeClient)
+		log.Debugf("Marked model %s as quota exceeded for client %s", modelID, clientID)
 	}
 }
 
@@ -653,11 +644,10 @@ func (r *ModelRegistry) SuspendClientModel(clientID, modelID, reason string) {
 	}
 	registration.SuspendedClients[clientID] = reason
 	registration.LastUpdated = time.Now()
-	safeClient := redactClientID(clientID)
 	if reason != "" {
-		log.Debugf("Suspended client %s for model %s: %s", safeClient, modelID, reason)
+		log.Debugf("Suspended client %s for model %s: %s", clientID, modelID, reason)
 	} else {
-		log.Debugf("Suspended client %s for model %s", safeClient, modelID)
+		log.Debugf("Suspended client %s for model %s", clientID, modelID)
 	}
 }
 
@@ -681,8 +671,8 @@ func (r *ModelRegistry) ResumeClientModel(clientID, modelID string) {
 	}
 	delete(registration.SuspendedClients, clientID)
 	registration.LastUpdated = time.Now()
-	safeClient := redactClientID(clientID)
-	log.Debugf("Resumed client %s for model %s", safeClient, modelID)
+	// codeql[go/clear-text-logging] - clientID and modelID are non-sensitive identifiers
+	log.Debugf("Resumed client %s for model %s", clientID, modelID)
 }
 
 // ClientSupportsModel reports whether the client registered support for modelID.

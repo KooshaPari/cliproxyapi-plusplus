@@ -19,7 +19,7 @@ import (
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 
-	coreauth "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth"
+	coreauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
 )
 
 var lastRefreshKeys = []string{"last_refresh", "lastRefresh", "last_refreshed_at", "lastRefreshedAt"}
@@ -207,6 +207,17 @@ func validateCallbackForwarderTarget(targetBase string) (*url.URL, error) {
 		return nil, fmt.Errorf("target host must be localhost or loopback")
 	}
 	return parsed, nil
+}
+
+func stopCallbackForwarder(port int) {
+	callbackForwardersMu.Lock()
+	forwarder := callbackForwarders[port]
+	if forwarder != nil {
+		delete(callbackForwarders, port)
+	}
+	callbackForwardersMu.Unlock()
+
+	stopForwarderInstance(port, forwarder)
 }
 
 func stopCallbackForwarderInstance(port int, forwarder *callbackForwarder) {

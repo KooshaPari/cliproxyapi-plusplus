@@ -3,8 +3,8 @@ package diff
 import (
 	"testing"
 
-	"github.com/kooshapari/CLIProxyAPI/v7/internal/config"
-	sdkconfig "github.com/kooshapari/CLIProxyAPI/v7/sdk/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+	sdkconfig "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/config"
 )
 
 func TestBuildConfigChangeDetails(t *testing.T) {

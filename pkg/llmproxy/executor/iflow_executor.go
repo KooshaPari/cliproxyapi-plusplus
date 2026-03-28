@@ -14,12 +14,12 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	iflowauth "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/auth/iflow"
-	"github.com/kooshapari/CLIProxyAPI/v7/internal/config"
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/thinking"
-	cliproxyauth "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth"
-	cliproxyexecutor "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/executor"
-	sdktranslator "github.com/kooshapari/CLIProxyAPI/v7/sdk/translator"
+	iflowauth "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/iflow"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/thinking"
+	cliproxyauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
+	cliproxyexecutor "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/executor"
+	sdktranslator "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/translator"
 	log "github.com/sirupsen/logrus"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
@@ -42,8 +42,8 @@ func NewIFlowExecutor(cfg *config.Config) *IFlowExecutor { return &IFlowExecutor
 func (e *IFlowExecutor) Identifier() string { return "iflow" }
 
 type iflowProviderError struct {
-	Code       string
-	Message    string
+	Code        string
+	Message     string
 	Refreshable bool
 }
 
@@ -368,11 +368,6 @@ func (e *IFlowExecutor) executeResponsesStreamFallback(
 		return nil, err
 	}
 
-	payload, err := synthesizeOpenAIResponsesCompletionEvent(resp.Payload)
-	if err != nil {
-		return nil, err
-	}
-
 	headers := resp.Headers.Clone()
 	if headers == nil {
 		headers = make(http.Header)
@@ -381,7 +376,7 @@ func (e *IFlowExecutor) executeResponsesStreamFallback(
 	headers.Del("Content-Length")
 
 	out := make(chan cliproxyexecutor.StreamChunk, 1)
-	out <- cliproxyexecutor.StreamChunk{Payload: payload}
+	out <- cliproxyexecutor.StreamChunk{Payload: resp.Payload}
 	close(out)
 	return &cliproxyexecutor.StreamResult{Headers: headers, Chunks: out}, nil
 }

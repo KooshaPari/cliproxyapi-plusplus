@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/kooshapari/CLIProxyAPI/v7/sdk/translator"
-	_ "github.com/kooshapari/CLIProxyAPI/v7/sdk/translator/builtin"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/translator"
+	_ "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/translator/builtin"
 )
 
 func main() {

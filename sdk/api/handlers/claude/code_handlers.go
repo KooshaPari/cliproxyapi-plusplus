@@ -16,10 +16,10 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/constant"
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/interfaces"
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/registry"
-	"github.com/kooshapari/CLIProxyAPI/v7/sdk/api/handlers"
+	. "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/constant"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/interfaces"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/registry"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/api/handlers"
 	log "github.com/sirupsen/logrus"
 	"github.com/tidwall/gjson"
 )
@@ -46,7 +46,7 @@ func NewClaudeCodeAPIHandler(apiHandlers *handlers.BaseAPIHandler) *ClaudeCodeAP
 
 // HandlerType returns the identifier for this handler implementation.
 func (h *ClaudeCodeAPIHandler) HandlerType() string {
-	return constant.Claude
+	return Claude
 }
 
 // Models returns a list of models supported by this handler.

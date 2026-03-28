@@ -6,7 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	coreauth "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth"
+	coreauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
 )
 
 func firstNonEmptyString(values ...*string) string {

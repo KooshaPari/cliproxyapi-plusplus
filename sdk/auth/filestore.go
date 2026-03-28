@@ -14,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	cliproxyauth "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth"
+	cliproxyauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
 )
 
 // FileTokenStore persists token records and auth metadata using the filesystem as backing storage.
@@ -43,15 +43,13 @@ func (s *FileTokenStore) Save(ctx context.Context, auth *cliproxyauth.Auth) (str
 		return "", fmt.Errorf("auth filestore: auth is nil")
 	}
 
-	rawPath, err := s.resolveAuthPath(auth)
+	path, err := s.resolveAuthPath(auth)
 	if err != nil {
 		return "", err
 	}
-	if rawPath == "" {
+	if path == "" {
 		return "", fmt.Errorf("auth filestore: missing file path attribute for %s", auth.ID)
 	}
-	// Apply filepath.Clean at the call site so static analysis can verify the path is sanitized.
-	path := filepath.Clean(rawPath)
 
 	if auth.Disabled {
 		if _, statErr := os.Stat(path); os.IsNotExist(statErr) {
@@ -172,22 +170,14 @@ func (s *FileTokenStore) Delete(ctx context.Context, id string) error {
 }
 
 func (s *FileTokenStore) resolveDeletePath(id string) (string, error) {
+	if strings.ContainsRune(id, os.PathSeparator) || filepath.IsAbs(id) {
+		return id, nil
+	}
 	dir := s.baseDirSnapshot()
 	if dir == "" {
 		return "", fmt.Errorf("auth filestore: directory not configured")
 	}
-	var candidate string
-	if filepath.IsAbs(id) {
-		candidate = filepath.Clean(id)
-	} else {
-		candidate = filepath.Clean(filepath.Join(dir, filepath.FromSlash(id)))
-	}
-	// Validate that the resolved path is contained within the configured base directory.
-	cleanBase := filepath.Clean(dir)
-	if candidate != cleanBase && !strings.HasPrefix(candidate, cleanBase+string(os.PathSeparator)) {
-		return "", fmt.Errorf("auth filestore: auth identifier escapes base directory")
-	}
-	return candidate, nil
+	return filepath.Join(dir, id), nil
 }
 
 func (s *FileTokenStore) readAuthFile(path, baseDir string) (*cliproxyauth.Auth, error) {
@@ -292,68 +282,29 @@ func (s *FileTokenStore) resolveAuthPath(auth *cliproxyauth.Auth) (string, error
 	}
 	if auth.Attributes != nil {
 		if p := strings.TrimSpace(auth.Attributes["path"]); p != "" {
-			return s.sanitizeAuthFilePath(p)
+			return p, nil
 		}
 	}
 	if fileName := strings.TrimSpace(auth.FileName); fileName != "" {
 		if filepath.IsAbs(fileName) {
-			return s.sanitizeAuthFilePath(fileName)
+			return fileName, nil
 		}
 		if dir := s.baseDirSnapshot(); dir != "" {
-			return s.sanitizeAuthFilePathInDir(dir, fileName)
+			return filepath.Join(dir, fileName), nil
 		}
-		return s.sanitizeAuthFilePath(fileName)
+		return fileName, nil
 	}
 	if auth.ID == "" {
 		return "", fmt.Errorf("auth filestore: missing id")
 	}
 	if filepath.IsAbs(auth.ID) {
-		return s.sanitizeAuthFilePath(auth.ID)
+		return auth.ID, nil
 	}
 	dir := s.baseDirSnapshot()
 	if dir == "" {
 		return "", fmt.Errorf("auth filestore: directory not configured")
 	}
-	return s.sanitizeAuthFilePathInDir(dir, auth.ID)
-}
-
-// sanitizeAuthFilePath cleans and validates a standalone file path, rejecting traversal components.
-func (s *FileTokenStore) sanitizeAuthFilePath(p string) (string, error) {
-	cleaned := filepath.Clean(p)
-	if cleaned == "." || cleaned == ".." {
-		return "", fmt.Errorf("auth filestore: invalid file path")
-	}
-	// Reject any remaining traversal sequences by checking each component.
-	for _, component := range strings.Split(filepath.ToSlash(cleaned), "/") {
-		if component == ".." {
-			return "", fmt.Errorf("auth filestore: path traversal is not allowed")
-		}
-	}
-	return cleaned, nil
-}
-
-// sanitizeAuthFilePathInDir resolves fileName inside baseDir and rejects paths that escape it.
-func (s *FileTokenStore) sanitizeAuthFilePathInDir(baseDir, fileName string) (string, error) {
-	if strings.Contains(fileName, "/") || strings.Contains(fileName, "\\") {
-		return "", fmt.Errorf("auth filestore: file name must not contain path separators")
-	}
-	cleanName := filepath.Clean(fileName)
-	if cleanName == "." || cleanName == ".." {
-		return "", fmt.Errorf("auth filestore: invalid file name")
-	}
-	baseAbs, err := filepath.Abs(baseDir)
-	if err != nil {
-		return "", fmt.Errorf("auth filestore: resolve base directory: %w", err)
-	}
-	resolved := filepath.Clean(filepath.Join(baseAbs, cleanName))
-	rel, err := filepath.Rel(baseAbs, resolved)
-	if err != nil {
-		return "", fmt.Errorf("auth filestore: resolve relative path: %w", err)
-	}
-	if rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
-		return "", fmt.Errorf("auth filestore: resolved path escapes base directory")
-	}
-	return resolved, nil
+	return filepath.Join(dir, auth.ID), nil
 }
 
 func (s *FileTokenStore) labelFor(metadata map[string]any) string {

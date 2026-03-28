@@ -17,27 +17,26 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-	"unsafe"
 
 	"github.com/gin-gonic/gin"
-	"github.com/kooshapari/CLIProxyAPI/v7/internal/access"
-	managementHandlers "github.com/kooshapari/CLIProxyAPI/v7/internal/api/handlers/management"
-	"github.com/kooshapari/CLIProxyAPI/v7/internal/api/middleware"
-	"github.com/kooshapari/CLIProxyAPI/v7/internal/api/modules"
-	ampmodule "github.com/kooshapari/CLIProxyAPI/v7/internal/api/modules/amp"
-	"github.com/kooshapari/CLIProxyAPI/v7/internal/auth/kiro"
-	"github.com/kooshapari/CLIProxyAPI/v7/internal/config"
-	"github.com/kooshapari/CLIProxyAPI/v7/internal/logging"
-	"github.com/kooshapari/CLIProxyAPI/v7/internal/managementasset"
-	"github.com/kooshapari/CLIProxyAPI/v7/internal/usage"
-	"github.com/kooshapari/CLIProxyAPI/v7/internal/util"
-	sdkaccess "github.com/kooshapari/CLIProxyAPI/v7/sdk/access"
-	"github.com/kooshapari/CLIProxyAPI/v7/sdk/api/handlers"
-	"github.com/kooshapari/CLIProxyAPI/v7/sdk/api/handlers/claude"
-	"github.com/kooshapari/CLIProxyAPI/v7/sdk/api/handlers/gemini"
-	"github.com/kooshapari/CLIProxyAPI/v7/sdk/api/handlers/openai"
-	sdkAuth "github.com/kooshapari/CLIProxyAPI/v7/sdk/auth"
-	"github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/access"
+	managementHandlers "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/api/handlers/management"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/api/middleware"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/api/modules"
+	ampmodule "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/api/modules/amp"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/kiro"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/logging"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/managementasset"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/usage"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/util"
+	sdkaccess "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/access"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/api/handlers"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/api/handlers/claude"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/api/handlers/gemini"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/api/handlers/openai"
+	sdkAuth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/auth"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 )
@@ -65,10 +64,6 @@ func defaultRequestLoggerFactory(cfg *config.Config, configPath string) logging.
 		return logging.NewFileRequestLogger(cfg.RequestLog, filepath.Join(base, "logs"), configDir, cfg.ErrorLogsMaxFiles)
 	}
 	return logging.NewFileRequestLogger(cfg.RequestLog, "logs", configDir, cfg.ErrorLogsMaxFiles)
-}
-
-func castToSDKConfig(cfg *config.SDKConfig) *sdkconfig.SDKConfig {
-	return (*sdkconfig.SDKConfig)(unsafe.Pointer(cfg))
 }
 
 // WithMiddleware appends additional Gin middleware during server construction.
@@ -250,7 +245,7 @@ func NewServer(cfg *config.Config, authManager *auth.Manager, accessManager *sdk
 	// Create server instance
 	s := &Server{
 		engine:              engine,
-		handlers:            handlers.NewBaseAPIHandlers(castToSDKConfig(&cfg.SDKConfig), authManager),
+		handlers:            handlers.NewBaseAPIHandlers(&cfg.SDKConfig, authManager),
 		cfg:                 cfg,
 		accessManager:       accessManager,
 		requestLogger:       requestLogger,
@@ -1005,7 +1000,7 @@ func (s *Server) UpdateClients(cfg *config.Config) {
 	// Save YAML snapshot for next comparison
 	s.oldConfigYaml, _ = yaml.Marshal(cfg)
 
-	s.handlers.UpdateClients(castToSDKConfig(&cfg.SDKConfig))
+	s.handlers.UpdateClients(&cfg.SDKConfig)
 
 	if s.mgmt != nil {
 		s.mgmt.SetConfig(cfg)
@@ -1031,9 +1026,9 @@ func (s *Server) UpdateClients(cfg *config.Config) {
 		dirSetter.SetBaseDir(cfg.AuthDir)
 	}
 	authEntries := util.CountAuthFiles(context.Background(), tokenStore)
-	geminiClientCount := len(cfg.GeminiKey)
-	claudeClientCount := len(cfg.ClaudeKey)
-	codexClientCount := len(cfg.CodexKey)
+	geminiAPIKeyCount := len(cfg.GeminiKey)
+	claudeAPIKeyCount := len(cfg.ClaudeKey)
+	codexAPIKeyCount := len(cfg.CodexKey)
 	vertexAICompatCount := len(cfg.VertexCompatAPIKey)
 	openAICompatCount := 0
 	for i := range cfg.OpenAICompatibility {
@@ -1041,13 +1036,13 @@ func (s *Server) UpdateClients(cfg *config.Config) {
 		openAICompatCount += len(entry.APIKeyEntries)
 	}
 
-	total := authEntries + geminiClientCount + claudeClientCount + codexClientCount + vertexAICompatCount + openAICompatCount
+	total := authEntries + geminiAPIKeyCount + claudeAPIKeyCount + codexAPIKeyCount + vertexAICompatCount + openAICompatCount
 	fmt.Printf("server clients and configuration updated: %d clients (%d auth entries + %d Gemini API keys + %d Claude API keys + %d Codex keys + %d Vertex-compat + %d OpenAI-compat)\n",
 		total,
 		authEntries,
-		geminiClientCount,
-		claudeClientCount,
-		codexClientCount,
+		geminiAPIKeyCount,
+		claudeAPIKeyCount,
+		codexAPIKeyCount,
 		vertexAICompatCount,
 		openAICompatCount,
 	)

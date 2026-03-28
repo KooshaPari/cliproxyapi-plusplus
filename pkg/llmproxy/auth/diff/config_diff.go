@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/kooshapari/CLIProxyAPI/v7/internal/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
 )
 
 // BuildConfigChangeDetails computes a redacted, human-readable list of config changes.
@@ -230,10 +230,10 @@ func BuildConfigChangeDetails(oldCfg, newCfg *config.Config) []string {
 	if oldCfg.AmpCode.ForceModelMappings != newCfg.AmpCode.ForceModelMappings {
 		changes = append(changes, fmt.Sprintf("ampcode.force-model-mappings: %t -> %t", oldCfg.AmpCode.ForceModelMappings, newCfg.AmpCode.ForceModelMappings))
 	}
-	oldUpstreamEntryCount := len(oldCfg.AmpCode.UpstreamAPIKeys)
-	newUpstreamEntryCount := len(newCfg.AmpCode.UpstreamAPIKeys)
+	oldUpstreamAPIKeysCount := len(oldCfg.AmpCode.UpstreamAPIKeys)
+	newUpstreamAPIKeysCount := len(newCfg.AmpCode.UpstreamAPIKeys)
 	if !equalUpstreamAPIKeys(oldCfg.AmpCode.UpstreamAPIKeys, newCfg.AmpCode.UpstreamAPIKeys) {
-		changes = append(changes, fmt.Sprintf("ampcode.upstream-api-keys: updated (%d -> %d entries)", oldUpstreamEntryCount, newUpstreamEntryCount))
+		changes = append(changes, fmt.Sprintf("ampcode.upstream-api-keys: updated (%d -> %d entries)", oldUpstreamAPIKeysCount, newUpstreamAPIKeysCount))
 	}
 
 	if entries, _ := DiffOAuthExcludedModelChanges(oldCfg.OAuthExcludedModels, newCfg.OAuthExcludedModels); len(entries) > 0 {

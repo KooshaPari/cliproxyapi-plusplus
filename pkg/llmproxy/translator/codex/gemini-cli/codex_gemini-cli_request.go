@@ -6,7 +6,7 @@
 package geminiCLI
 
 import (
-	codexgemini "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/codex/gemini"
+	codexgemini "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/translator/codex/gemini"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
 )

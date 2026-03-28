@@ -24,14 +24,14 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/config"
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/logging"
-	"github.com/kooshapari/CLIProxyAPI/v7/sdk/api"
-	sdkAuth "github.com/kooshapari/CLIProxyAPI/v7/sdk/auth"
-	"github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy"
-	coreauth "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth"
-	clipexec "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/executor"
-	sdktr "github.com/kooshapari/CLIProxyAPI/v7/sdk/translator"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/logging"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/api"
+	sdkAuth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/auth"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy"
+	coreauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
+	clipexec "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/executor"
+	sdktr "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/translator"
 )
 
 const (

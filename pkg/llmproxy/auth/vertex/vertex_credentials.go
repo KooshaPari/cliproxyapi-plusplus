@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/misc"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/misc"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -45,17 +45,15 @@ func (s *VertexCredentialStorage) SaveTokenToFile(authFilePath string) error {
 	}
 	// Ensure we tag the file with the provider type.
 	s.Type = "vertex"
-	validatedPath, err := cleanCredentialPath(authFilePath, "vertex credential")
+	cleanPath, err := cleanCredentialPath(authFilePath, "vertex credential")
 	if err != nil {
 		return err
 	}
-	// Apply filepath.Clean at call site so static analysis can verify the path is sanitized.
-	cleanPath := filepath.Clean(validatedPath)
 
-	if err := os.MkdirAll(filepath.Dir(cleanPath), 0o700); err != nil { // lgtm[go/path-injection]
+	if err := os.MkdirAll(filepath.Dir(cleanPath), 0o700); err != nil {
 		return fmt.Errorf("vertex credential: create directory failed: %w", err)
 	}
-	f, err := os.Create(cleanPath) // lgtm[go/path-injection]
+	f, err := os.Create(cleanPath)
 	if err != nil {
 		return fmt.Errorf("vertex credential: create file failed: %w", err)
 	}

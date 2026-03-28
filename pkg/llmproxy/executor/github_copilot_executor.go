@@ -12,12 +12,12 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	copilotauth "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/auth/copilot"
-	"github.com/kooshapari/CLIProxyAPI/v7/internal/config"
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/thinking"
-	cliproxyauth "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth"
-	cliproxyexecutor "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/executor"
-	sdktranslator "github.com/kooshapari/CLIProxyAPI/v7/sdk/translator"
+	copilotauth "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/copilot"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/thinking"
+	cliproxyauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
+	cliproxyexecutor "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/executor"
+	sdktranslator "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/translator"
 	log "github.com/sirupsen/logrus"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
@@ -1163,6 +1163,10 @@ func translateGitHubCopilotResponsesStreamToClaude(line []byte, param *any) []st
 	}
 
 	return results
+}
+
+func isHTTPSuccess(statusCode int) bool {
+	return statusCode >= 200 && statusCode < 300
 }
 
 // CloseExecutionSession implements ProviderExecutor.

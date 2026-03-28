@@ -7,8 +7,9 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/auth/kilo"
-	coreauth "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth"
+	baseauth "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/base"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/kilo"
+	coreauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -56,12 +57,14 @@ func (h *Handler) RequestKiloToken(c *gin.Context) {
 		}
 
 		ts := &kilo.KiloTokenStorage{
+			BaseTokenStorage: baseauth.BaseTokenStorage{
+				Email: status.UserEmail,
+				Type:  "kilo",
+			},
 			Token:          status.Token,
 			OrganizationID: orgID,
 			Model:          defaults.Model,
 		}
-		ts.Email = status.UserEmail
-		ts.Type = "kilo"
 
 		fileName := kilo.CredentialFileName(status.UserEmail)
 		record := &coreauth.Auth{

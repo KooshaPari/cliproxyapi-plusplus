@@ -4,7 +4,7 @@
 // thinking configurations across various AI providers (Claude, Gemini, OpenAI, iFlow).
 package thinking
 
-import "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/registry"
+import "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/registry"
 
 // ThinkingMode represents the type of thinking configuration mode.
 type ThinkingMode int

@@ -3,7 +3,7 @@ package synthesizer
 import (
 	"time"
 
-	"github.com/kooshapari/CLIProxyAPI/v7/internal/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
 )
 
 // SynthesisContext provides the context needed for auth synthesis.

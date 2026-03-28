@@ -5,9 +5,9 @@ import (
 	"strconv"
 	"strings"
 
-	kiroauth "github.com/kooshapari/CLIProxyAPI/v7/internal/auth/kiro"
-	"github.com/kooshapari/CLIProxyAPI/v7/internal/watcher/diff"
-	coreauth "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth"
+	kiroauth "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/kiro"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/watcher/diff"
+	coreauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
 	log "github.com/sirupsen/logrus"
 )
 

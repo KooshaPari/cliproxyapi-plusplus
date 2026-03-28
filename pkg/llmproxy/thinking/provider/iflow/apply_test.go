@@ -3,8 +3,8 @@ package iflow
 import (
 	"testing"
 
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/registry"
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/thinking"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/registry"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/thinking"
 	"github.com/tidwall/gjson"
 )
 

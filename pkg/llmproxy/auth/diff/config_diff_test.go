@@ -1,7 +1,7 @@
 package diff
 
 import (
-	"github.com/kooshapari/CLIProxyAPI/v7/internal/config"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/config"
 	"testing"
 )
 

@@ -2,9 +2,9 @@
 package builtin
 
 import (
-	sdktranslator "github.com/kooshapari/CLIProxyAPI/v7/sdk/translator"
+	sdktranslator "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/translator"
 
-	_ "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator"
+	_ "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/translator"
 )
 
 // Registry exposes the default registry populated with all built-in translators.

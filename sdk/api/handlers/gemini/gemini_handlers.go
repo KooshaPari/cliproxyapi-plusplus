@@ -13,10 +13,10 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/constant"
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/interfaces"
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/registry"
-	"github.com/kooshapari/CLIProxyAPI/v7/sdk/api/handlers"
+	. "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/constant"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/interfaces"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/registry"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/api/handlers"
 )
 
 // GeminiAPIHandler contains the handlers for Gemini API endpoints.
@@ -35,7 +35,7 @@ func NewGeminiAPIHandler(apiHandlers *handlers.BaseAPIHandler) *GeminiAPIHandler
 
 // HandlerType returns the identifier for this handler implementation.
 func (h *GeminiAPIHandler) HandlerType() string {
-	return constant.Gemini
+	return Gemini
 }
 
 // Models returns the Gemini-compatible model metadata supported by this handler.
@@ -70,7 +70,7 @@ func (h *GeminiAPIHandler) GeminiModels(c *gin.Context) {
 		if _, ok := normalizedModel["supportedGenerationMethods"]; !ok {
 			normalizedModel["supportedGenerationMethods"] = defaultMethods
 		}
-		normalizedModels = append(normalizedModels, filterGeminiModelFields(normalizedModel))
+		normalizedModels = append(normalizedModels, normalizedModel)
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"models": normalizedModels,
@@ -112,7 +112,7 @@ func (h *GeminiAPIHandler) GeminiGetHandler(c *gin.Context) {
 		if name, ok := targetModel["name"].(string); ok && name != "" && !strings.HasPrefix(name, "models/") {
 			targetModel["name"] = "models/" + name
 		}
-		c.JSON(http.StatusOK, filterGeminiModelFields(targetModel))
+		c.JSON(http.StatusOK, targetModel)
 		return
 	}
 
@@ -122,22 +122,6 @@ func (h *GeminiAPIHandler) GeminiGetHandler(c *gin.Context) {
 			Type:    "not_found",
 		},
 	})
-}
-
-func filterGeminiModelFields(input map[string]any) map[string]any {
-	if len(input) == 0 {
-		return map[string]any{}
-	}
-	filtered := make(map[string]any, len(input))
-	for k, v := range input {
-		switch k {
-		case "id", "object", "created", "owned_by", "type", "context_length", "max_completion_tokens", "thinking":
-			continue
-		default:
-			filtered[k] = v
-		}
-	}
-	return filtered
 }
 
 // GeminiHandler handles POST requests for Gemini API operations.

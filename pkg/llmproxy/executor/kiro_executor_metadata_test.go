@@ -3,7 +3,7 @@ package executor
 import (
 	"testing"
 
-	cliproxyauth "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth"
+	cliproxyauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
 )
 
 func TestGetEffectiveProfileArnWithWarning_UsesCamelCaseIDCMetadata(t *testing.T) {

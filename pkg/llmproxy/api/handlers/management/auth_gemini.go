@@ -11,10 +11,11 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	geminiAuth "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/auth/gemini"
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/interfaces"
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/util"
-	coreauth "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth"
+	baseauth "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/base"
+	geminiAuth "github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/auth/gemini"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/interfaces"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/util"
+	coreauth "github.com/kooshapari/cliproxyapi-plusplus/v6/sdk/cliproxy/auth"
 	log "github.com/sirupsen/logrus"
 	"github.com/tidwall/gjson"
 	"golang.org/x/oauth2"
@@ -138,11 +139,14 @@ func (h *Handler) RequestGeminiCLIToken(c *gin.Context) {
 		ifToken["universe_domain"] = "googleapis.com"
 
 		ts := geminiAuth.GeminiTokenStorage{
+			BaseTokenStorage: baseauth.BaseTokenStorage{
+				Email: email,
+				Type:  "gemini",
+			},
 			Token:     ifToken,
 			ProjectID: requestedProjectID,
 			Auto:      requestedProjectID == "",
 		}
-		ts.Email = email
 
 		// Initialize authenticated HTTP client via GeminiAuth to honor proxy settings
 		gemAuth := geminiAuth.NewGeminiAuth()

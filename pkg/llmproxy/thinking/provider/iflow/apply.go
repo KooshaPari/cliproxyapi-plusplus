@@ -11,8 +11,8 @@ package iflow
 import (
 	"strings"
 
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/registry"
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/thinking"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/registry"
+	"github.com/kooshapari/cliproxyapi-plusplus/v6/pkg/llmproxy/thinking"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
 )
@@ -117,7 +117,8 @@ func applyEnableThinking(body []byte, config thinking.ThinkingConfig, setClearTh
 		body = []byte(`{}`)
 	}
 
-	result, _ := sjson.SetBytes(body, "chat_template_kwargs.enable_thinking", enableThinking)
+	result := stripLegacyThinkingFields(body)
+	result, _ = sjson.SetBytes(result, "chat_template_kwargs.enable_thinking", enableThinking)
 
 	// clear_thinking is a GLM-only knob, strip it for other models.
 	result, _ = sjson.DeleteBytes(result, "chat_template_kwargs.clear_thinking")
@@ -142,8 +143,24 @@ func applyMiniMax(body []byte, config thinking.ThinkingConfig) []byte {
 		body = []byte(`{}`)
 	}
 
-	result, _ := sjson.SetBytes(body, "reasoning_split", reasoningSplit)
+	result := stripLegacyThinkingFields(body)
+	result, _ = sjson.DeleteBytes(result, "chat_template_kwargs")
+	result, _ = sjson.SetBytes(result, "reasoning_split", reasoningSplit)
 
+	return result
+}
+
+func stripLegacyThinkingFields(body []byte) []byte {
+	result := body
+	for _, path := range []string{
+		"reasoning",
+		"reasoning\\.effort",
+		"reasoning_effort",
+		"variant",
+		"reasoning_split",
+	} {
+		result, _ = sjson.DeleteBytes(result, path)
+	}
 	return result
 }
 
