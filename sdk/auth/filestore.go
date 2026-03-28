@@ -288,31 +288,51 @@ func (s *FileTokenStore) resolveAuthPath(auth *cliproxyauth.Auth) (string, error
 	if auth == nil {
 		return "", fmt.Errorf("auth filestore: auth is nil")
 	}
+
+	var candidate string
+
+	// Determine the candidate path from various sources.
 	if auth.Attributes != nil {
 		if p := strings.TrimSpace(auth.Attributes["path"]); p != "" {
-			return p, nil
+			candidate = p
 		}
 	}
-	if fileName := strings.TrimSpace(auth.FileName); fileName != "" {
+	if candidate == "" && auth.FileName != "" {
+		fileName := strings.TrimSpace(auth.FileName)
 		if filepath.IsAbs(fileName) {
-			return fileName, nil
+			candidate = fileName
+		} else if dir := s.baseDirSnapshot(); dir != "" {
+			candidate = filepath.Join(dir, fileName)
+		} else {
+			candidate = fileName
 		}
-		if dir := s.baseDirSnapshot(); dir != "" {
-			return filepath.Join(dir, fileName), nil
+	}
+	if candidate == "" {
+		if auth.ID == "" {
+			return "", fmt.Errorf("auth filestore: missing id")
 		}
-		return fileName, nil
+		id := strings.TrimSpace(auth.ID)
+		if filepath.IsAbs(id) {
+			candidate = id
+		} else {
+			dir := s.baseDirSnapshot()
+			if dir == "" {
+				return "", fmt.Errorf("auth filestore: directory not configured")
+			}
+			candidate = filepath.Join(dir, id)
+		}
 	}
-	if auth.ID == "" {
-		return "", fmt.Errorf("auth filestore: missing id")
+
+	// Normalize and validate the resolved path stays within the configured base directory.
+	resolved := filepath.Clean(candidate)
+	if dir := s.baseDirSnapshot(); dir != "" {
+		cleanBase := filepath.Clean(dir)
+		if resolved != cleanBase && !strings.HasPrefix(resolved, cleanBase+string(os.PathSeparator)) {
+			return "", fmt.Errorf("auth filestore: path escapes base directory")
+		}
 	}
-	if filepath.IsAbs(auth.ID) {
-		return auth.ID, nil
-	}
-	dir := s.baseDirSnapshot()
-	if dir == "" {
-		return "", fmt.Errorf("auth filestore: directory not configured")
-	}
-	return filepath.Join(dir, auth.ID), nil
+
+	return resolved, nil
 }
 
 func (s *FileTokenStore) labelFor(metadata map[string]any) string {
