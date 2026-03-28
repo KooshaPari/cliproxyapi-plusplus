@@ -13,9 +13,9 @@ import (
 	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/misc"
 )
 
-// BaseTokenStorage holds the fields and file-I/O methods that every provider
-// token struct shares.  Provider-specific structs embed a *BaseTokenStorage
-// (or a copy by value) and extend it with their own fields.
+// BaseTokenStorage is the common token data stored for every OAuth2 provider.
+// Provider implementations embed this struct (or a copy by value) and extend it
+// with their own fields.
 type BaseTokenStorage struct {
 	// AccessToken is the OAuth2 bearer token used to authenticate API requests.
 	AccessToken string `json:"access_token"`
@@ -57,39 +57,49 @@ func (b *BaseTokenStorage) GetType() string { return b.Type }
 // BaseTokenStorage itself ensures that all provider-specific fields are
 // persisted alongside the base fields.
 func (b *BaseTokenStorage) Save(authFilePath string, v any) error {
-	validatedPath, err := misc.ResolveSafeFilePath(authFilePath)
+	// Use ResolveSafeFilePathInDir to ensure path stays within parent directory.
+	// This prevents path-injection attacks by validating the resolved path
+	// doesn't escape the expected directory structure.
+	validatedPath, err := misc.ResolveSafeFilePathInDir(
+		authFilePath,
+		filepath.Dir(authFilePath),
+	)
 	if err != nil {
 		return fmt.Errorf("base token storage: invalid file path: %w", err)
 	}
-	// Apply filepath.Clean at call site so static analysis can verify the path is sanitized.
-	safePath := filepath.Clean(validatedPath)
-	misc.LogSavingCredentials(safePath)
 
-	if err = os.MkdirAll(filepath.Dir(safePath), 0o700); err != nil {
+	// Ensure directory exists with secure permissions.
+	if err = os.MkdirAll(filepath.Dir(validatedPath), 0o700); err != nil {
 		return fmt.Errorf("base token storage: create directory: %w", err)
+	}
+
+	// Serialize v to JSON.
+	data, err := json.Marshal(v)
+	if err != nil {
+		return fmt.Errorf("base token storage: marshal token: %w", err)
 	}
 
 	// Write to a temporary file in the same directory, then rename so that
 	// a concurrent reader never observes a partially-written file.
-	tmpFile, err := os.CreateTemp(filepath.Dir(safePath), ".tmp-token-*")
+	tmpFile, err := os.CreateTemp(filepath.Dir(validatedPath), ".tmp-token-*")
 	if err != nil {
 		return fmt.Errorf("base token storage: create temp file: %w", err)
 	}
 	tmpPath := tmpFile.Name()
 
-	writeErr := json.NewEncoder(tmpFile).Encode(v)
+	_, writeErr := tmpFile.Write(data)
 	closeErr := tmpFile.Close()
 
 	if writeErr != nil {
 		_ = os.Remove(tmpPath)
-		return fmt.Errorf("base token storage: encode token: %w", writeErr)
+		return fmt.Errorf("base token storage: write token: %w", writeErr)
 	}
 	if closeErr != nil {
 		_ = os.Remove(tmpPath)
 		return fmt.Errorf("base token storage: close temp file: %w", closeErr)
 	}
 
-	if err = os.Rename(tmpPath, safePath); err != nil {
+	if err = os.Rename(tmpPath, validatedPath); err != nil {
 		_ = os.Remove(tmpPath)
 		return fmt.Errorf("base token storage: rename temp file: %w", err)
 	}
@@ -100,13 +110,16 @@ func (b *BaseTokenStorage) Save(authFilePath string, v any) error {
 // v should be a pointer to the outer provider struct so that all fields
 // are populated.
 func (b *BaseTokenStorage) Load(authFilePath string, v any) error {
-	validatedPath, err := misc.ResolveSafeFilePath(authFilePath)
+	// Use ResolveSafeFilePathInDir to ensure path stays within parent directory.
+	validatedPath, err := misc.ResolveSafeFilePathInDir(
+		authFilePath,
+		filepath.Dir(authFilePath),
+	)
 	if err != nil {
 		return fmt.Errorf("base token storage: invalid file path: %w", err)
 	}
-	safePath := filepath.Clean(validatedPath)
 
-	data, err := os.ReadFile(safePath)
+	data, err := os.ReadFile(validatedPath)
 	if err != nil {
 		return fmt.Errorf("base token storage: read token file: %w", err)
 	}
@@ -120,13 +133,16 @@ func (b *BaseTokenStorage) Load(authFilePath string, v any) error {
 // Clear removes the token file at authFilePath.  It returns nil if the file
 // does not exist (idempotent delete).
 func (b *BaseTokenStorage) Clear(authFilePath string) error {
-	validatedPath, err := misc.ResolveSafeFilePath(authFilePath)
+	// Use ResolveSafeFilePathInDir to ensure path stays within parent directory.
+	validatedPath, err := misc.ResolveSafeFilePathInDir(
+		authFilePath,
+		filepath.Dir(authFilePath),
+	)
 	if err != nil {
 		return fmt.Errorf("base token storage: invalid file path: %w", err)
 	}
-	safePath := filepath.Clean(validatedPath)
 
-	if err = os.Remove(safePath); err != nil && !os.IsNotExist(err) {
+	if err = os.Remove(validatedPath); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("base token storage: remove token file: %w", err)
 	}
 	return nil

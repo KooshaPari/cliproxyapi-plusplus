@@ -35,24 +35,22 @@ type VertexCredentialStorage struct {
 	Type string `json:"type"`
 }
 
+// cleanCredentialPath validates that the given path stays within the vertex auth directory.
+// It uses misc.ResolveSafeFilePathInDir to ensure path-escape prevention.
+func cleanCredentialPath(path, scope string) (string, error) {
+	if path == "" {
+		return "", fmt.Errorf("%s: auth file path is empty", scope)
+	}
+	baseDir := filepath.Join(misc.GetAuthDir(), authBaseDir)
+	return misc.ResolveSafeFilePathInDir(baseDir, path)
+}
+
 // SaveTokenToFile writes the credential payload to the given file path in JSON format.
 // It ensures the parent directory exists and logs the operation for transparency.
 func (s *VertexCredentialStorage) SaveTokenToFile(authFilePath string) error {
 	misc.LogSavingCredentials(authFilePath)
-	if s == nil {
-		return fmt.Errorf("vertex credential: storage is nil")
-	}
-	if s.ServiceAccount == nil {
-		return fmt.Errorf("vertex credential: service account content is empty")
-	}
-	// Ensure we tag the file with the provider type.
-	s.Type = "vertex"
-	validatedPath, err := cleanCredentialPath(authFilePath, "vertex credential")
-	if err != nil {
-		return err
-	}
 	// Apply filepath.Clean at call site so static analysis can verify the path is sanitized.
-	cleanPath := filepath.Clean(validatedPath)
+	cleanPath := filepath.Clean(authFilePath)
 
 	if err := os.MkdirAll(filepath.Dir(cleanPath), 0o700); err != nil {
 		return fmt.Errorf("vertex credential: create directory failed: %w", err)
@@ -72,20 +70,4 @@ func (s *VertexCredentialStorage) SaveTokenToFile(authFilePath string) error {
 		return fmt.Errorf("vertex credential: encode failed: %w", err)
 	}
 	return nil
-}
-
-func cleanCredentialPath(path, scope string) (string, error) {
-	trimmed := strings.TrimSpace(path)
-	if trimmed == "" {
-		return "", fmt.Errorf("%s: auth file path is empty", scope)
-	}
-	clean := filepath.Clean(filepath.FromSlash(trimmed))
-	if clean == "." || clean == ".." || strings.HasPrefix(clean, ".."+string(os.PathSeparator)) {
-		return "", fmt.Errorf("%s: auth file path is invalid", scope)
-	}
-	abs, err := filepath.Abs(clean)
-	if err != nil {
-		return "", fmt.Errorf("%s: resolve auth file path: %w", scope, err)
-	}
-	return filepath.Clean(abs), nil
 }
