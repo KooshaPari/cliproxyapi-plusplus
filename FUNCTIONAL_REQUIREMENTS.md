@@ -1,6 +1,6 @@
 # Functional Requirements — cliproxyapi-plusplus
 
-> Traces to: PRD.md epics E1–E7
+> Traces to: PRD.md epics E1–E9
 > Module path: `github.com/kooshapari/CLIProxyAPI/v7`
 
 ---
@@ -69,6 +69,7 @@ Translators verified in codebase: `pkg/llmproxy/translator/` — gemini, gemini-
 - **FR-STORE-006:** Setting `OBJECTSTORE_ENDPOINT` SHALL activate an S3-compatible object token store. Traces to E3.4. Requires `OBJECTSTORE_ACCESS_KEY`, `OBJECTSTORE_SECRET_KEY`, `OBJECTSTORE_BUCKET`.
 - **FR-STORE-007:** The object store SHALL support both `http://` and `https://` endpoint URLs with auto-detected TLS. Traces to E3.4.
 - **FR-STORE-008:** All token store backends SHALL register via `sdkAuth.RegisterTokenStore` so all service components share the same persistence instance. Traces to E3.1–E3.4.
+- **FR-STORE-009:** The system SHALL include a SQLite-backed token store as an embedded single-file alternative to PostgreSQL. Traces to E3.2. Dependency: `modernc.org/sqlite v1.46.1` (confirmed in `go.mod`).
 
 ---
 
@@ -152,3 +153,41 @@ Translators verified in codebase: `pkg/llmproxy/translator/` — gemini, gemini-
 - **FR-DEP-004:** `config.example.yaml` SHALL document all configuration keys with default values and descriptions. Traces to E7.2.
 - **FR-DEP-005:** `cmd/cliproxyctl` SHALL build a separate `cliproxyctl` binary. Traces to E7.3.
 - **FR-DEP-006:** `cmd/releasebatch` SHALL build a release batch tooling binary. Traces to E7.2.
+
+---
+
+## FR-AMP: AmpCode Management Sub-System
+
+- **FR-AMP-001:** `GET /v0/management/ampcode/upstream-url` SHALL return the currently configured AmpCode upstream base URL. Traces to E8.1.
+- **FR-AMP-002:** `PUT /v0/management/ampcode/upstream-url` SHALL replace the upstream URL and apply the change immediately. Traces to E8.1.
+- **FR-AMP-003:** `DELETE /v0/management/ampcode/upstream-url` SHALL clear the upstream URL and disable AmpCode routing. Traces to E8.1.
+- **FR-AMP-004:** `GET /v0/management/ampcode/upstream-api-key` SHALL return the active single API key. Traces to E8.1.
+- **FR-AMP-005:** `PUT /v0/management/ampcode/upstream-api-key` SHALL replace the single API key. Traces to E8.1.
+- **FR-AMP-006:** `DELETE /v0/management/ampcode/upstream-api-key` SHALL remove the single API key. Traces to E8.1.
+- **FR-AMP-007:** `GET /v0/management/ampcode/restrict-management-to-localhost` SHALL return the localhost-restriction flag. Traces to E8.1.
+- **FR-AMP-008:** `PUT /v0/management/ampcode/restrict-management-to-localhost` SHALL set or clear the localhost-restriction flag; when set, management endpoints SHALL reject non-loopback callers. Traces to E8.1.
+- **FR-AMP-009:** `GET /v0/management/ampcode/upstream-api-keys` SHALL return all pooled API keys. Traces to E8.2.
+- **FR-AMP-010:** `PUT /v0/management/ampcode/upstream-api-keys` SHALL replace the entire API key pool atomically. Traces to E8.2.
+- **FR-AMP-011:** `DELETE /v0/management/ampcode/upstream-api-keys` SHALL clear the API key pool. Traces to E8.2.
+- **FR-AMP-012:** When the API key pool is non-empty, the system SHALL select keys per-request using round-robin or random strategy. Traces to E8.2.
+- **FR-AMP-013:** `GET /v0/management/ampcode/model-mappings` SHALL return the full model name translation table. Traces to E8.3.
+- **FR-AMP-014:** `PUT /v0/management/ampcode/model-mappings` SHALL replace the mapping table atomically. Traces to E8.3.
+- **FR-AMP-015:** `DELETE /v0/management/ampcode/model-mappings` SHALL clear all model mappings. Traces to E8.3.
+- **FR-AMP-016:** `GET /v0/management/ampcode/force-model-mappings` SHALL return the force-map flag. Traces to E8.3.
+- **FR-AMP-017:** `PUT /v0/management/ampcode/force-model-mappings` SHALL set or clear the force-map flag. Traces to E8.3.
+- **FR-AMP-018:** `DELETE /v0/management/ampcode/force-model-mappings` SHALL reset the force-map flag to false. Traces to E8.3.
+- **FR-AMP-019:** All AmpCode management configuration changes SHALL persist across server restarts via the active storage backend. Traces to E8.1–E8.3.
+
+Test coverage: `test/amp_management_test.go` covers all 19 FR-AMP items.
+
+---
+
+## FR-BSY: BoardSync Release Tooling
+
+- **FR-BSY-001:** `boardsync` binary SHALL be buildable from `cmd/boardsync` and SHALL be included in the release artifact set. Traces to E9.1.
+- **FR-BSY-002:** `boardsync` SHALL fetch issues and pull requests from `kooshapari/cliproxyapi-plusplus` and `kooshapari/cliproxyapi` via the `gh` CLI. Traces to E9.1.
+- **FR-BSY-003:** `boardsync` SHALL deduplicate items that appear in both repositories (matched by title and number) before writing output. Traces to E9.1.
+- **FR-BSY-004:** `boardsync` SHALL write aggregated results as JSON to stdout by default. Traces to E9.1.
+- **FR-BSY-005:** `boardsync` SHALL support a `--csv` flag to emit output as CSV instead of JSON. Traces to E9.1.
+- **FR-BSY-006:** `boardsync` SHALL support a `--limit` flag controlling the maximum number of items fetched (default 2000). Traces to E9.1.
+- **FR-BSY-007:** `boardsync` SHALL fail with a clear, non-zero exit code and actionable error message if `gh` CLI is not present or not authenticated. Traces to E9.1.
