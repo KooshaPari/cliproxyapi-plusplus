@@ -34,7 +34,7 @@ func NewFileTokenStore() *FileTokenStore {
 // SetBaseDir updates the default directory used for auth JSON persistence when no explicit path is provided.
 func (s *FileTokenStore) SetBaseDir(dir string) {
 	s.dirLock.Lock()
-	s.baseDir = strings.TrimSpace(dir)
+	s.baseDir = filepath.Clean(strings.TrimSpace(dir))
 	s.dirLock.Unlock()
 }
 
@@ -294,7 +294,11 @@ func (s *FileTokenStore) resolveAuthPath(auth *cliproxyauth.Auth) (string, error
 			return fileName, nil
 		}
 		if dir := s.baseDirSnapshot(); dir != "" {
-			return filepath.Join(dir, fileName), nil
+		resolvedPath := filepath.Join(dir, fileName)
+		if !strings.HasPrefix(resolvedPath, dir + string(filepath.Separator)) && resolvedPath != dir {
+			return "", fmt.Errorf("auth filestore: path escape detected: %s", resolvedPath)
+		}
+		return resolvedPath, nil
 		}
 		return fileName, nil
 	}
