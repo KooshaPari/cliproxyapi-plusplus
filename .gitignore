@@ -33,6 +33,7 @@ auths/*
 
 # Documentation
 docs/*
+!docs/specs
 AGENTS.md
 CLAUDE.md
 GEMINI.md
