@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/KooshaPari/phenotype-go-kit/pkg/auth"
+	"github.com/KooshaPari/phenotype-go-auth"
 	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/misc"
 )
 
