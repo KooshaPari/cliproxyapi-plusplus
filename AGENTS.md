@@ -1,34 +1,147 @@
-# Project — AI Agent Instructions
+# AGENTS.md
 
-This file guides Claude agents working on this project.
+This file provides guidance to AI agents working with code in this repository.
 
-## Scope
+## Quick Start
 
-- Full project ownership: implementation, testing, documentation, PR preparation
-- Authority: create branches, commits, PRs, merge to main (via PR)
+```bash
+# Build the API server
+go build -o cliproxy-server ./cmd/server
 
-## Process
+# Build the operational CLI
+go build -o cliproxyctl ./cmd/cliproxyctl
 
-1. **Pre-work**: Check AgilePlus for specs (`agileplus list`)
-2. **Implementation**: Work in feature branch at `repos/worktrees/<project>/<category>/<feature>`
-3. **Testing**: Run quality checks locally before pushing
-4. **PR prep**: Ensure all checks pass before requesting merge
-5. **Integration**: Rebase/restack if needed, merge to main via PR
+# Run the API server
+./cliproxy-server --config config.yaml
 
-## Quality Standards
+# Run diagnostics / setup
+./cliproxyctl doctor --config config.yaml
+./cliproxyctl setup --config config.yaml
 
-- All tests pass locally
-- Lint: 0 errors
-- Coverage: ≥80% (or project default)
-- Documentation updated for new features
+# Docker
+docker compose up -d
+```
 
-## Integration Points
+## Environment
 
-- Coordinate with Phenotype shared packages
-- Cross-repo updates tracked in AgilePlus
+```bash
+# Required environment variables
+export OPENAI_API_KEY="sk-..."
+export ANTHROPIC_API_KEY="sk-..."
+```
 
-## Escalation
+---
 
-- Blocking issues: surface in AgilePlus worklog
-- Design decisions: document in ADR files
-- Architecture changes: reference governance framework
+## Development Philosophy
+
+### Extend, Never Duplicate
+
+- NEVER create a v2 file. Refactor the original.
+- NEVER create a new class if an existing one can be made generic.
+- NEVER create custom implementations when an OSS library exists.
+- Before writing ANY new code: search the codebase for existing patterns.
+
+### Primitives First
+
+- Build generic building blocks before application logic.
+- A provider interface + registry is better than N isolated classes.
+- Template strings > hardcoded messages. Config-driven > code-driven.
+
+## Worktree Discipline
+
+- Use `.worktrees/` for active worktree lanes.
+- Treat `PROJECT-wtrees/` as migration-only legacy layout.
+- Keep the primary checkout on `main` and avoid branch development there.
+
+### Research Before Implementing
+
+- Check pkg.go.dev for existing libraries.
+- Search GitHub for 80%+ implementations to fork/adapt.
+
+---
+
+## Library Preferences (DO NOT REINVENT)
+
+| Need | Use | NOT |
+|------|-----|-----|
+| HTTP router | chi | custom router |
+| Logging | zerolog | fmt.Print |
+| Config | viper | manual env parsing |
+| Validation | go-playground/validator | manual if/else |
+| Rate limiting | golang.org/x/time/rate | custom limiter |
+
+---
+
+## Code Quality Non-Negotiables
+
+- Zero new lint suppressions without inline justification
+- All new code must pass: go fmt, go vet, golint
+- Max function: 40 lines
+- No placeholder TODOs in committed code
+
+---
+
+## Verifiable Constraints
+
+| Metric | Threshold | Enforcement |
+|--------|-----------|-------------|
+| Tests | 80% coverage | CI gate |
+| Lint | 0 errors | golangci-lint |
+| Security | 0 critical | trivy scan |
+
+---
+
+## Provider Support
+
+| Provider | Auth | Status |
+|----------|------|--------|
+| OpenAI | API Key | ✅ |
+| Anthropic | API Key | ✅ |
+| Azure OpenAI | API Key/OAuth | ✅ |
+| Google Gemini | API Key | ✅ |
+| AWS Bedrock | IAM | ✅ |
+| Kiro (CodeWhisperer) | OAuth | ✅ |
+| GitHub Copilot | OAuth | ✅ |
+| Ollama | Local | ✅ |
+
+---
+
+## Kush Ecosystem
+
+This project is part of the Kush multi-repo system:
+
+```
+kush/
+├── thegent/         # Agent orchestration
+├── agentapi++/      # HTTP API for coding agents
+├── cliproxy++/      # LLM proxy with multi-provider support (this repo)
+├── tokenledger/     # Token and cost tracking
+├── 4sgm/           # Python tooling workspace
+├── civ/             # Deterministic simulation
+├── parpour/        # Spec-first planning
+└── pheno-sdk/       # Python SDK
+```
+
+<!-- PHENOTYPE_GOVERNANCE_OVERLAY_V1 -->
+## Phenotype Governance Overlay v1
+
+- Enforce `TDD + BDD + SDD` for all feature and workflow changes.
+- Enforce `Hexagonal + Clean + SOLID` boundaries by default.
+- Favor explicit failures over silent degradation; required dependencies must fail clearly when unavailable.
+- Keep local hot paths deterministic and low-latency; place distributed workflow logic behind durable orchestration boundaries.
+- Require policy gating, auditability, and traceable correlation IDs for agent and workflow actions.
+- Document architectural and protocol decisions before broad rollout changes.
+
+
+## Bot Review Retrigger and Rate-Limit Governance
+
+- Retrigger commands:
+  - CodeRabbit: `@coderabbitai full review`
+  - Gemini Code Assist: `@gemini-code-assist review` (fallback: `/gemini review`)
+- Rate-limit contract:
+  - Maximum one retrigger per bot per PR every 15 minutes.
+  - Before triggering, check latest PR comments for existing trigger markers and bot quota/rate-limit responses.
+  - If rate-limited, queue the retry for the later of 15 minutes or bot-provided retry time.
+  - After two consecutive rate-limit responses for the same bot/PR, stop auto-retries and post queued status with next attempt time.
+- Tracking marker required in PR comments for each trigger:
+  - `bot-review-trigger: <bot> <iso8601-time> <reason>`

@@ -4,51 +4,51 @@
 // embed CLIProxyAPI without importing internal packages.
 package config
 
-import internalconfig "github.com/router-for-me/CLIProxyAPI/v6/internal/config"
+import llmproxyconfig "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/config"
 
-type SDKConfig = internalconfig.SDKConfig
+type SDKConfig = llmproxyconfig.SDKConfig
 
-type Config = internalconfig.Config
+type Config = llmproxyconfig.Config
 
-type StreamingConfig = internalconfig.StreamingConfig
-type TLSConfig = internalconfig.TLSConfig
-type RemoteManagement = internalconfig.RemoteManagement
-type AmpCode = internalconfig.AmpCode
-type OAuthModelAlias = internalconfig.OAuthModelAlias
-type PayloadConfig = internalconfig.PayloadConfig
-type PayloadRule = internalconfig.PayloadRule
-type PayloadFilterRule = internalconfig.PayloadFilterRule
-type PayloadModelRule = internalconfig.PayloadModelRule
+type StreamingConfig = llmproxyconfig.StreamingConfig
+type TLSConfig = llmproxyconfig.TLSConfig
+type RemoteManagement = llmproxyconfig.RemoteManagement
+type AmpCode = llmproxyconfig.AmpCode
+type OAuthModelAlias = llmproxyconfig.OAuthModelAlias
+type PayloadConfig = llmproxyconfig.PayloadConfig
+type PayloadRule = llmproxyconfig.PayloadRule
+type PayloadFilterRule = llmproxyconfig.PayloadFilterRule
+type PayloadModelRule = llmproxyconfig.PayloadModelRule
 
-type GeminiKey = internalconfig.GeminiKey
-type CodexKey = internalconfig.CodexKey
-type ClaudeKey = internalconfig.ClaudeKey
-type VertexCompatKey = internalconfig.VertexCompatKey
-type VertexCompatModel = internalconfig.VertexCompatModel
-type OpenAICompatibility = internalconfig.OpenAICompatibility
-type OpenAICompatibilityAPIKey = internalconfig.OpenAICompatibilityAPIKey
-type OpenAICompatibilityModel = internalconfig.OpenAICompatibilityModel
+type GeminiKey = llmproxyconfig.GeminiKey
+type CodexKey = llmproxyconfig.CodexKey
+type ClaudeKey = llmproxyconfig.ClaudeKey
+type VertexCompatKey = llmproxyconfig.VertexCompatKey
+type VertexCompatModel = llmproxyconfig.VertexCompatModel
+type OpenAICompatibility = llmproxyconfig.OpenAICompatibility
+type OpenAICompatibilityAPIKey = llmproxyconfig.OpenAICompatibilityAPIKey
+type OpenAICompatibilityModel = llmproxyconfig.OpenAICompatibilityModel
 
-type TLS = internalconfig.TLSConfig
+type TLS = llmproxyconfig.TLSConfig
 
 const (
-	DefaultPanelGitHubRepository = internalconfig.DefaultPanelGitHubRepository
+	DefaultPanelGitHubRepository = llmproxyconfig.DefaultPanelGitHubRepository
 )
 
-func LoadConfig(configFile string) (*Config, error) { return internalconfig.LoadConfig(configFile) }
+func LoadConfig(configFile string) (*Config, error) { return llmproxyconfig.LoadConfig(configFile) }
 
 func LoadConfigOptional(configFile string, optional bool) (*Config, error) {
-	return internalconfig.LoadConfigOptional(configFile, optional)
+	return llmproxyconfig.LoadConfigOptional(configFile, optional)
 }
 
 func SaveConfigPreserveComments(configFile string, cfg *Config) error {
-	return internalconfig.SaveConfigPreserveComments(configFile, cfg)
+	return llmproxyconfig.SaveConfigPreserveComments(configFile, cfg)
 }
 
 func SaveConfigPreserveCommentsUpdateNestedScalar(configFile string, path []string, value string) error {
-	return internalconfig.SaveConfigPreserveCommentsUpdateNestedScalar(configFile, path, value)
+	return llmproxyconfig.SaveConfigPreserveCommentsUpdateNestedScalar(configFile, path, value)
 }
 
 func NormalizeCommentIndentation(data []byte) []byte {
-	return internalconfig.NormalizeCommentIndentation(data)
+	return llmproxyconfig.NormalizeCommentIndentation(data)
 }

@@ -6,21 +6,22 @@ import (
 	"testing"
 	"time"
 
-	_ "github.com/router-for-me/CLIProxyAPI/v6/internal/translator"
+	_ "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator"
 
 	// Import provider packages to trigger init() registration of ProviderAppliers
-	_ "github.com/router-for-me/CLIProxyAPI/v6/internal/thinking/provider/antigravity"
-	_ "github.com/router-for-me/CLIProxyAPI/v6/internal/thinking/provider/claude"
-	_ "github.com/router-for-me/CLIProxyAPI/v6/internal/thinking/provider/codex"
-	_ "github.com/router-for-me/CLIProxyAPI/v6/internal/thinking/provider/gemini"
-	_ "github.com/router-for-me/CLIProxyAPI/v6/internal/thinking/provider/geminicli"
-	_ "github.com/router-for-me/CLIProxyAPI/v6/internal/thinking/provider/iflow"
-	_ "github.com/router-for-me/CLIProxyAPI/v6/internal/thinking/provider/kimi"
-	_ "github.com/router-for-me/CLIProxyAPI/v6/internal/thinking/provider/openai"
+	_ "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/thinking/provider/antigravity"
+	_ "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/thinking/provider/claude"
+	_ "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/thinking/provider/codex"
+	_ "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/thinking/provider/gemini"
+	_ "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/thinking/provider/geminicli"
+	_ "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/thinking/provider/iflow"
+	_ "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/thinking/provider/kimi"
+	_ "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/thinking/provider/minimax"
+	_ "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/thinking/provider/openai"
 
-	"github.com/router-for-me/CLIProxyAPI/v6/internal/registry"
-	"github.com/router-for-me/CLIProxyAPI/v6/internal/thinking"
-	sdktranslator "github.com/router-for-me/CLIProxyAPI/v6/sdk/translator"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/registry"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/thinking"
+	sdktranslator "github.com/kooshapari/CLIProxyAPI/v7/sdk/translator"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
 )
@@ -194,7 +195,7 @@ func TestThinkingE2EMatrix_Suffix(t *testing.T) {
 			expectValue: "high",
 			expectErr:   false,
 		},
-		// Case 14: Budget 0 → clamped to minimal (ZeroAllowed=false)
+		// Case 14: Budget 0 → clamped to low (OpenAI doesn't support minimal)
 		{
 			name:        "14",
 			from:        "claude",
@@ -202,7 +203,7 @@ func TestThinkingE2EMatrix_Suffix(t *testing.T) {
 			model:       "level-model(0)",
 			inputJSON:   `{"model":"level-model(0)","messages":[{"role":"user","content":"hi"}]}`,
 			expectField: "reasoning_effort",
-			expectValue: "minimal",
+			expectValue: "low",
 			expectErr:   false,
 		},
 		// Case 15: Budget -1 → auto → DynamicAllowed=false → medium (mid-range)
@@ -817,7 +818,7 @@ func TestThinkingE2EMatrix_Suffix(t *testing.T) {
 			expectValue: "medium",
 			expectErr:   false,
 		},
-		// Case 68: Budget 64000 → passthrough logic → xhigh
+		// Case 68: Budget 64000 → high (OpenAI doesn't support xhigh)
 		{
 			name:        "68",
 			from:        "gemini",
@@ -825,7 +826,7 @@ func TestThinkingE2EMatrix_Suffix(t *testing.T) {
 			model:       "user-defined-model(64000)",
 			inputJSON:   `{"model":"user-defined-model(64000)","contents":[{"role":"user","parts":[{"text":"hi"}]}]}`,
 			expectField: "reasoning_effort",
-			expectValue: "xhigh",
+			expectValue: "high",
 			expectErr:   false,
 		},
 		// Case 69: Budget 0 → passthrough logic → none
@@ -839,7 +840,7 @@ func TestThinkingE2EMatrix_Suffix(t *testing.T) {
 			expectValue: "none",
 			expectErr:   false,
 		},
-		// Case 70: Budget -1 → passthrough logic → auto
+		// Case 70: Budget -1 → medium (OpenAI maps auto to medium)
 		{
 			name:        "70",
 			from:        "gemini",
@@ -847,7 +848,7 @@ func TestThinkingE2EMatrix_Suffix(t *testing.T) {
 			model:       "user-defined-model(-1)",
 			inputJSON:   `{"model":"user-defined-model(-1)","contents":[{"role":"user","parts":[{"text":"hi"}]}]}`,
 			expectField: "reasoning_effort",
-			expectValue: "auto",
+			expectValue: "medium",
 			expectErr:   false,
 		},
 		// Case 71: Claude to Codex no suffix → injected default → medium
@@ -1357,7 +1358,7 @@ func TestThinkingE2EMatrix_Suffix(t *testing.T) {
 			expectValue: "none",
 			expectErr:   false,
 		},
-		// Case 115: OpenAI to gpt-5.2, level xhigh → xhigh
+		// Case 115: OpenAI to gpt-5.2, level xhigh → xhigh (gpt-5.2 supports xhigh)
 		{
 			name:        "115",
 			from:        "openai",
@@ -1594,7 +1595,7 @@ func TestThinkingE2EMatrix_Body(t *testing.T) {
 			expectValue: "high",
 			expectErr:   false,
 		},
-		// Case 14: thinking.budget_tokens=0 → clamped to minimal
+		// Case 14: thinking.budget_tokens=0 → clamped to low (OpenAI doesn't support minimal)
 		{
 			name:        "14",
 			from:        "claude",
@@ -1602,7 +1603,7 @@ func TestThinkingE2EMatrix_Body(t *testing.T) {
 			model:       "level-model",
 			inputJSON:   `{"model":"level-model","messages":[{"role":"user","content":"hi"}],"thinking":{"type":"enabled","budget_tokens":0}}`,
 			expectField: "reasoning_effort",
-			expectValue: "minimal",
+			expectValue: "low",
 			expectErr:   false,
 		},
 		// Case 15: thinking.budget_tokens=-1 → medium (DynamicAllowed=false)
@@ -2217,7 +2218,7 @@ func TestThinkingE2EMatrix_Body(t *testing.T) {
 			expectValue: "medium",
 			expectErr:   false,
 		},
-		// Case 68: thinkingBudget=64000 → xhigh (passthrough)
+		// Case 68: thinkingBudget=64000 → high (OpenAI doesn't support xhigh)
 		{
 			name:        "68",
 			from:        "gemini",
@@ -2225,7 +2226,7 @@ func TestThinkingE2EMatrix_Body(t *testing.T) {
 			model:       "user-defined-model",
 			inputJSON:   `{"model":"user-defined-model","contents":[{"role":"user","parts":[{"text":"hi"}]}],"generationConfig":{"thinkingConfig":{"thinkingBudget":64000}}}`,
 			expectField: "reasoning_effort",
-			expectValue: "xhigh",
+			expectValue: "high",
 			expectErr:   false,
 		},
 		// Case 69: thinkingBudget=0 → none
@@ -2239,7 +2240,7 @@ func TestThinkingE2EMatrix_Body(t *testing.T) {
 			expectValue: "none",
 			expectErr:   false,
 		},
-		// Case 70: thinkingBudget=-1 → auto
+		// Case 70: thinkingBudget=-1 → medium (OpenAI maps auto to medium)
 		{
 			name:        "70",
 			from:        "gemini",
@@ -2247,7 +2248,7 @@ func TestThinkingE2EMatrix_Body(t *testing.T) {
 			model:       "user-defined-model",
 			inputJSON:   `{"model":"user-defined-model","contents":[{"role":"user","parts":[{"text":"hi"}]}],"generationConfig":{"thinkingConfig":{"thinkingBudget":-1}}}`,
 			expectField: "reasoning_effort",
-			expectValue: "auto",
+			expectValue: "medium",
 			expectErr:   false,
 		},
 		// Case 71: Claude no param → injected default → medium
@@ -2744,7 +2745,7 @@ func TestThinkingE2EMatrix_Body(t *testing.T) {
 			expectValue: "none",
 			expectErr:   false,
 		},
-		// Case 115: OpenAI to gpt-5.2, reasoning_effort=xhigh → xhigh
+		// Case 115: OpenAI to gpt-5.2, reasoning_effort=xhigh → xhigh (gpt-5.2 supports xhigh)
 		{
 			name:        "115",
 			from:        "openai",

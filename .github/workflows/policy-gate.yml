@@ -1,0 +1,9 @@
+name: policy-gate
+on: [workflow_dispatch]
+jobs:
+  enforce:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Enforce engineering policies
+        run: ./scripts/policy-gate.sh
