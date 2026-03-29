@@ -305,3 +305,23 @@ func assertNoSchemaKeywords(t *testing.T, value any) {
 		}
 	}
 }
+
+func assertNoSchemaKeywords(t *testing.T, value any) {
+	t.Helper()
+
+	switch typed := value.(type) {
+	case map[string]any:
+		for key, nested := range typed {
+			switch key {
+			case "$ref", "$defs":
+				t.Fatalf("schema keyword %q should be removed for Antigravity request", key)
+			default:
+				assertNoSchemaKeywords(t, nested)
+			}
+		}
+	case []any:
+		for _, nested := range typed {
+			assertNoSchemaKeywords(t, nested)
+		}
+	}
+}

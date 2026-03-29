@@ -69,6 +69,10 @@ func castToSDKConfig(cfg *config.SDKConfig) *sdkconfig.SDKConfig {
 	return (*sdkconfig.SDKConfig)(unsafe.Pointer(cfg))
 }
 
+func castToSDKConfig(cfg *config.SDKConfig) *sdkconfig.SDKConfig {
+	return (*sdkconfig.SDKConfig)(unsafe.Pointer(cfg))
+}
+
 // WithMiddleware appends additional Gin middleware during server construction.
 func WithMiddleware(mw ...gin.HandlerFunc) ServerOption {
 	return func(cfg *serverOptionConfig) {
