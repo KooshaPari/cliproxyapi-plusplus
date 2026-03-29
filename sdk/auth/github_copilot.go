@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/router-for-me/CLIProxyAPI/v6/internal/auth/copilot"
-	"github.com/router-for-me/CLIProxyAPI/v6/internal/browser"
-	"github.com/router-for-me/CLIProxyAPI/v6/internal/config"
-	coreauth "github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/auth"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/auth/copilot"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/browser"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/config"
+	coreauth "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -40,7 +40,7 @@ func (a GitHubCopilotAuthenticator) Login(ctx context.Context, cfg *config.Confi
 		opts = &LoginOptions{}
 	}
 
-	authSvc := copilot.NewCopilotAuth(cfg)
+	authSvc := copilot.NewCopilotAuth(cfg, nil)
 
 	// Start the device flow
 	fmt.Println("Starting GitHub Copilot authentication...")
@@ -86,8 +86,6 @@ func (a GitHubCopilotAuthenticator) Login(ctx context.Context, cfg *config.Confi
 	metadata := map[string]any{
 		"type":         "github-copilot",
 		"username":     authBundle.Username,
-		"email":        authBundle.Email,
-		"name":         authBundle.Name,
 		"access_token": authBundle.TokenData.AccessToken,
 		"token_type":   authBundle.TokenData.TokenType,
 		"scope":        authBundle.TokenData.Scope,
@@ -100,18 +98,13 @@ func (a GitHubCopilotAuthenticator) Login(ctx context.Context, cfg *config.Confi
 
 	fileName := fmt.Sprintf("github-copilot-%s.json", authBundle.Username)
 
-	label := authBundle.Email
-	if label == "" {
-		label = authBundle.Username
-	}
-
 	fmt.Printf("\nGitHub Copilot authentication successful for user: %s\n", authBundle.Username)
 
 	return &coreauth.Auth{
 		ID:       fileName,
 		Provider: a.Provider(),
 		FileName: fileName,
-		Label:    label,
+		Label:    authBundle.Username,
 		Storage:  tokenStorage,
 		Metadata: metadata,
 	}, nil
@@ -124,7 +117,7 @@ func RefreshGitHubCopilotToken(ctx context.Context, cfg *config.Config, storage 
 		return fmt.Errorf("no token available")
 	}
 
-	authSvc := copilot.NewCopilotAuth(cfg)
+	authSvc := copilot.NewCopilotAuth(cfg, nil)
 
 	// Validate the token can still get a Copilot API token
 	_, err := authSvc.GetCopilotAPIToken(ctx, storage.AccessToken)

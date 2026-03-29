@@ -15,7 +15,7 @@ import (
 	"sync"
 	"time"
 
-	cliproxyauth "github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/auth"
+	cliproxyauth "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth"
 )
 
 // FileTokenStore persists token records and auth metadata using the filesystem as backing storage.
@@ -171,14 +171,22 @@ func (s *FileTokenStore) Delete(ctx context.Context, id string) error {
 }
 
 func (s *FileTokenStore) resolveDeletePath(id string) (string, error) {
-	if strings.ContainsRune(id, os.PathSeparator) || filepath.IsAbs(id) {
-		return id, nil
-	}
 	dir := s.baseDirSnapshot()
 	if dir == "" {
 		return "", fmt.Errorf("auth filestore: directory not configured")
 	}
-	return filepath.Join(dir, id), nil
+	var candidate string
+	if filepath.IsAbs(id) {
+		candidate = filepath.Clean(id)
+	} else {
+		candidate = filepath.Clean(filepath.Join(dir, filepath.FromSlash(id)))
+	}
+	// Validate that the resolved path is contained within the configured base directory.
+	cleanBase := filepath.Clean(dir)
+	if candidate != cleanBase && !strings.HasPrefix(candidate, cleanBase+string(os.PathSeparator)) {
+		return "", fmt.Errorf("auth filestore: auth identifier escapes base directory")
+	}
+	return candidate, nil
 }
 
 func (s *FileTokenStore) readAuthFile(path, baseDir string) (*cliproxyauth.Auth, error) {
@@ -284,35 +292,51 @@ func (s *FileTokenStore) resolveAuthPath(auth *cliproxyauth.Auth) (string, error
 	if auth == nil {
 		return "", fmt.Errorf("auth filestore: auth is nil")
 	}
+
+	var candidate string
+
+	// Determine the candidate path from various sources.
 	if auth.Attributes != nil {
 		if p := strings.TrimSpace(auth.Attributes["path"]); p != "" {
-			return p, nil
+			candidate = p
 		}
 	}
-	if fileName := strings.TrimSpace(auth.FileName); fileName != "" {
+	if candidate == "" && auth.FileName != "" {
+		fileName := strings.TrimSpace(auth.FileName)
 		if filepath.IsAbs(fileName) {
-			return fileName, nil
+			candidate = fileName
+		} else if dir := s.baseDirSnapshot(); dir != "" {
+			candidate = filepath.Join(dir, fileName)
+		} else {
+			candidate = fileName
 		}
-		if dir := s.baseDirSnapshot(); dir != "" {
-		resolvedPath := filepath.Join(dir, fileName)
-		if !strings.HasPrefix(resolvedPath, dir + string(filepath.Separator)) && resolvedPath != dir {
-			return "", fmt.Errorf("auth filestore: path escape detected: %s", resolvedPath)
+	}
+	if candidate == "" {
+		if auth.ID == "" {
+			return "", fmt.Errorf("auth filestore: missing id")
 		}
-		return resolvedPath, nil
+		id := strings.TrimSpace(auth.ID)
+		if filepath.IsAbs(id) {
+			candidate = id
+		} else {
+			dir := s.baseDirSnapshot()
+			if dir == "" {
+				return "", fmt.Errorf("auth filestore: directory not configured")
+			}
+			candidate = filepath.Join(dir, id)
 		}
-		return fileName, nil
 	}
-	if auth.ID == "" {
-		return "", fmt.Errorf("auth filestore: missing id")
+
+	// Normalize and validate the resolved path stays within the configured base directory.
+	resolved := filepath.Clean(candidate)
+	if dir := s.baseDirSnapshot(); dir != "" {
+		cleanBase := filepath.Clean(dir)
+		if resolved != cleanBase && !strings.HasPrefix(resolved, cleanBase+string(os.PathSeparator)) {
+			return "", fmt.Errorf("auth filestore: path escapes base directory")
+		}
 	}
-	if filepath.IsAbs(auth.ID) {
-		return auth.ID, nil
-	}
-	dir := s.baseDirSnapshot()
-	if dir == "" {
-		return "", fmt.Errorf("auth filestore: directory not configured")
-	}
-	return filepath.Join(dir, auth.ID), nil
+
+	return resolved, nil
 }
 
 func (s *FileTokenStore) labelFor(metadata map[string]any) string {

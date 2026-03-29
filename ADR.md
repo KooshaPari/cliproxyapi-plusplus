@@ -1,147 +1,89 @@
-# Architecture Decision Records — CLIProxyAPI Plus
+# Architecture Decision Records — CLIProxyAPI++
+
+## ADR-001 | Go HTTP Proxy Server | Adopted
+
+**Status:** Adopted
+
+**Context:** Need a high-performance LLM API proxy that can handle concurrent streaming connections with minimal latency overhead.
+
+**Decision:** Use Go with net/http for the core proxy server on port 8317, implementing OpenAI-compatible endpoints that translate to multiple backend providers.
+
+**Consequences:**
+- Excellent concurrency via goroutines for streaming connections
+- Single binary deployment simplifies Docker and bare-metal installs
+- Strong stdlib HTTP support reduces external dependencies
 
 ---
 
-## ADR-001: Go as Implementation Language
+## ADR-002 | Provider Abstraction Layer | Adopted
 
-**Status**: Accepted
-**Date**: 2024-Q4
+**Status:** Adopted
 
-### Context
-CLIProxyAPI Plus is a high-throughput HTTP proxy requiring low latency, concurrent request handling, and a single deployable binary.
+**Context:** The proxy must support multiple LLM providers (GitHub Copilot, Kiro/AWS) with different auth flows and API formats while exposing a unified OpenAI-compatible interface.
 
-### Decision
-Use Go (1.26+) as the sole implementation language.
+**Decision:** Implement a provider abstraction with pluggable auth adapters in `auths/`, model name conversion, and per-provider request/response translation.
 
-### Rationale
-- Native goroutine concurrency maps directly to concurrent proxy request handling.
-- Single-binary distribution simplifies deployment (Docker, bare metal, CI runners).
-- Strong stdlib for HTTP/WebSocket without heavy framework dependencies.
-- Mainline CLIProxyAPI is Go — staying aligned avoids fork divergence.
-
-### Alternatives Considered
-- **Rust**: Higher performance ceiling but steeper contributor ramp-up and longer compile cycles.
-- **Node.js/TypeScript**: Familiar to web devs but lacks Go's goroutine model for high-concurrency proxy work.
+**Consequences:**
+- Adding new providers requires only a new auth adapter and model mapping
+- Model name converter handles provider-specific naming transparently
+- Each provider manages its own token lifecycle independently
 
 ---
 
-## ADR-002: gin as HTTP Framework
+## ADR-003 | OAuth Web UI for Kiro/AWS | Adopted
 
-**Status**: Accepted
-**Date**: 2024-Q4
+**Status:** Adopted
 
-### Context
-Need an HTTP router that supports middleware chains, SSE streaming, and has low overhead.
+**Context:** Kiro authentication requires AWS Builder ID or Identity Center flows that involve browser-based OAuth redirects, unlike Copilot's device code flow.
 
-### Decision
-Use `github.com/gin-gonic/gin v1.10.1`.
+**Decision:** Embed a web UI at `/v0/oauth/kiro` that handles the full OAuth PKCE flow, token import from IDE, and background refresh.
 
-### Rationale
-- Fastest commonly-used Go HTTP router with middleware support.
-- First-class SSE and streaming response support.
-- Large ecosystem; familiar to Go contributors.
-- Context-based request handling aligns with provider translator pattern.
-
-### Alternatives Considered
-- **net/http stdlib**: Less routing ergonomics; more boilerplate for middleware.
-- **echo**: Comparable performance; gin chosen for wider contributor familiarity.
-- **fiber**: Fasthttp-based; incompatible with standard `net/http` idioms used in SDK.
+**Consequences:**
+- Users can authenticate via browser without CLI interaction
+- Token import supports copying tokens from Kiro IDE directly
+- Background goroutine handles token refresh before expiry
 
 ---
 
-## ADR-003: Provider Plugin Architecture via Interface Registry
+## ADR-004 | Docker-First Deployment | Adopted
 
-**Status**: Accepted
-**Date**: 2024-Q4
+**Status:** Adopted
 
-### Context
-CLIProxyAPI Plus must support multiple AI providers (Claude, Gemini, Cursor, GitLab Duo, Codex) without coupling core routing logic to provider-specific code.
+**Context:** Users need a simple, reproducible deployment that works across platforms with minimal configuration.
 
-### Decision
-Define a common provider interface in `internal/interfaces`; register concrete implementations in `internal/registry` at startup from config.
+**Decision:** Provide `Dockerfile` and `docker-compose.yml` with YAML config via volume mount (`config.yaml`).
 
-### Rationale
-- Open/Closed Principle: new providers added without modifying routing or auth layers.
-- Community contributors can implement a single interface to add providers.
-- Registry pattern allows runtime provider selection based on model name.
-
-### Consequences
-- All provider translators must implement the interface contract — breaking changes to the interface require all providers to update.
-- Provider registry must be initialized before request routing begins.
+**Consequences:**
+- Single `docker-compose up` for deployment
+- Config changes require only volume-mounted YAML edits
+- Multi-provider configuration in a single config file
 
 ---
 
-## ADR-004: tiktoken-go for Token Counting
+## ADR-005 | Rate Limiting with Smart Cooldown | Adopted
 
-**Status**: Accepted
-**Date**: 2025-Q1
+**Status:** Adopted
 
-### Context
-Usage tracking requires accurate per-request token counts compatible with OpenAI's tokenization scheme.
+**Context:** Provider APIs enforce rate limits; aggressive retries waste quota and risk bans.
 
-### Decision
-Use `github.com/tiktoken-go/tokenizer v0.7.0` for token counting.
+**Decision:** Implement a rate limiter with smart cooldown manager that tracks per-provider limits and backs off exponentially.
 
-### Rationale
-- Go port of OpenAI's tiktoken — produces identical counts to the Python reference.
-- Required for accurate billing attribution and quota enforcement.
-- Avoids HTTP round-trips to count tokens server-side.
+**Consequences:**
+- Prevents provider API ban from excessive requests
+- Cooldown periods auto-adjust based on response headers
+- Metrics module tracks usage for observability
 
 ---
 
-## ADR-005: Bubble Tea for TUI Dashboard
+## ADR-006 | Plus Fork Strategy | Adopted
 
-**Status**: Accepted
-**Date**: 2025-Q1
+**Status:** Adopted
 
-### Context
-Operators need a terminal-based monitoring dashboard for real-time proxy activity.
+**Context:** CLIProxyAPI++ is an enhanced fork adding multi-provider support, Kiro auth, and observability to the original CLIProxyAPI.
 
-### Decision
-Use `github.com/charmbracelet/bubbletea v1.3.10` with `lipgloss v1.1.0` for TUI rendering.
+**Decision:** Maintain as independent "plus-plus" fork with additive features, preserving compatibility with upstream API contract.
 
-### Rationale
-- Elm-Architecture TUI model (bubbletea) provides predictable state management for dynamic dashboards.
-- lipgloss provides rich terminal styling without custom ANSI codes.
-- Charm toolchain is the current Go TUI standard and has strong community support.
-- Consistent with other Phenotype org tools using Charm stack.
-
----
-
-## ADR-006: fsnotify for Hot Config Reload
-
-**Status**: Accepted
-**Date**: 2025-Q1
-
-### Context
-Production deployments require config changes (new API keys, provider toggles) without service restarts.
-
-### Decision
-Use `github.com/fsnotify/fsnotify v1.9.0` for config file watching.
-
-### Rationale
-- Cross-platform (Linux inotify, macOS kqueue, Windows ReadDirectoryChangesW).
-- Minimal API surface: just watch a path and receive `Event` structs.
-- In-flight requests complete against the old config; new requests use the reloaded config.
-
----
-
-## ADR-007: Third-Party Provider Separation (Plus vs Mainline)
-
-**Status**: Accepted
-**Date**: 2024-Q4
-
-### Context
-The mainline CLIProxyAPI only supports first-party providers. Community wants to add providers without creating merge conflicts with mainline.
-
-### Decision
-Maintain CLIProxyAPI Plus as a separate repository that tracks mainline via periodic sync, with all third-party provider code isolated in `auths/` and `internal/registry/`.
-
-### Rationale
-- Clean separation of maintenance responsibility: mainline team does not review third-party provider code.
-- Plus can release independently on community cadence.
-- Providers added in Plus that gain wide adoption can be proposed back to mainline.
-
-### Consequences
-- Plus must periodically rebase/merge from mainline — merge conflicts possible at integration points.
-- Breaking interface changes in mainline require Plus to update all third-party providers.
+**Consequences:**
+- Upstream changes can be cherry-picked when compatible
+- New features (Kiro, metrics, fingerprint) are additive, not breaking
+- Original Copilot-only flow remains functional
