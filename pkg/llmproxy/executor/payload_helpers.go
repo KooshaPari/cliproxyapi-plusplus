@@ -167,37 +167,12 @@ func payloadModelRulesMatch(rules []config.PayloadModelRule, protocol string, mo
 		}
 		return false
 	}
-
-	// Empty models means no specific model context.
-	// In this case, check if any rule is unconditional (has no models specified).
-	if len(models) == 0 {
-		for _, entry := range rules {
-			name := strings.TrimSpace(entry.Name)
-			if name == "" {
-				// Empty Name means unconditional rule - applies to all models.
-				// Check if protocol matches (if rule has a specific protocol).
-				ep := strings.TrimSpace(entry.Protocol)
-				if ep == "" || protocol == "" || strings.EqualFold(ep, protocol) {
-					return true
-				}
-			}
-		}
-		return false
-	}
-
 	for _, model := range models {
 		for _, entry := range rules {
 			name := strings.TrimSpace(entry.Name)
-			// Empty Name means unconditional rule - matches any model.
 			if name == "" {
-				// Check if protocol matches (if rule has a specific protocol).
-				ep := strings.TrimSpace(entry.Protocol)
-				if ep == "" || protocol == "" || strings.EqualFold(ep, protocol) {
-					return true
-				}
 				continue
 			}
-			// Check protocol filter.
 			if ep := strings.TrimSpace(entry.Protocol); ep != "" && protocol != "" && !strings.EqualFold(ep, protocol) {
 				continue
 			}
