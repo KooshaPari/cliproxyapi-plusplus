@@ -34,7 +34,7 @@ require (
 	golang.org/x/sync v0.20.0
 	golang.org/x/term v0.41.0
 	golang.org/x/text v0.35.0
-	google.golang.org/protobuf v1.36.10
+	google.golang.org/protobuf v1.36.11
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	gopkg.in/yaml.v3 v3.0.1
 	modernc.org/sqlite v1.48.0
