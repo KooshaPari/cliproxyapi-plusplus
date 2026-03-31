@@ -130,14 +130,27 @@ Track convoy progress across repos. Shows:
 
 ## Merge Modes
 
-When a bead's work is ready to land:
+Kilo supports different merge strategies for integrating bead work:
 
 | Mode | Description |
 |------|-------------|
+| `squash` | All commits squashed into one (clean history) |
+| `rebase` | Commits replayed on target (linear history) |
+| `merge` | Full commit history preserved |
 | `in_review` | Work submitted to review queue; refinery handles merge |
 | `closed` | Work fully completed and merged |
 
 **Important:** Agents do NOT merge directly. They push their branch and call `gt_done`, which transitions the bead to `in_review` and submits to the refinery queue.
+
+---
+
+## Agent Roles in cliproxyapi++
+
+| Role | Function | Tools |
+|------|----------|-------|
+| **TownDO** | Orchestrator; creates and assigns beads, manages convoys | gt_prime, gt_sling, gt_sling_batch |
+| **Polecat** | Worker agent; implements beads assigned to it | gt_done, gt_bead_close, gt_checkpoint |
+| **Refinery** | Merge gate; validates and lands approved changes | gt_list_convoys, gt_bead_status |
 
 ---
 
@@ -156,6 +169,7 @@ When a bead's work is ready to land:
 2. Run quality gates: `task quality`
 3. Commit frequently with descriptive messages
 4. Push after each commit (worktree disk is ephemeral)
+5. Call `gt_checkpoint` after significant milestones
 
 ### Completing Work
 
@@ -222,39 +236,42 @@ kush/
 
 ### Bot Review Governance
 
-For PR reviews in this repo:
+When requesting bot reviews (CodeRabbit, Gemini Code Assist):
 
-| Bot | Retrigger Command |
-|-----|-------------------|
-| CodeRabbit | `@coderabbitai full review` |
-| Gemini Code Assist | `@gemini-code-assist review` (fallback: `/gemini review`) |
-
-**Rate-limit contract:**
-- 1 retrigger per bot per PR every 15 minutes
-- Check for existing trigger markers before re-triggering
-- Track with `bot-review-trigger: <bot> <iso8601-time> <reason>`
+1. Check latest PR comments for existing trigger markers
+2. If rate-limited, queue retry for 15+ minutes later
+3. After two consecutive rate-limit responses, stop auto-retries and post status
+4. Required marker format: `bot-review-trigger: <bot> <iso8601-time> <reason>`
 
 ---
 
 ## Quality Gates
 
-Before calling `gt_done`, run:
+Before calling `gt_done`, polecats must verify:
 
+| Gate | Command | Threshold |
+|------|---------|-----------|
+| Tests | `go test ./...` | 80% coverage |
+| Lint | `golangci-lint run` | 0 errors |
+| Vet | `go vet ./...` | 0 errors |
+| Format | `go fmt ./...` | No diff |
+
+Alternative quality task:
 ```bash
 task quality
 ```
 
-**cliproxyapi++ specific gates:**
-- `go fmt` pass
-- `go vet` pass  
-- `golangci-lint` zero errors
-- 80% test coverage (CI gate)
-- Zero critical security issues (trivy scan)
+---
+
+## References & Related Documentation
+
+- [cliproxyapi++ SPEC.md](./SPEC.md) — Technical architecture
+- [cliproxyapi++ FEATURE_CHANGES_PLUSPLUS.md](./FEATURE_CHANGES_PLUSPLUS.md) — ++ vs baseline changes
+- [AGENTS.md: Agent guidance for this repository](./AGENTS.md)
+- [Phenotype Governance Overlay v1: TDD/BDD/SDD requirements](../governance/PHENOTYPE_GOVERNANCE.md)
+- [Kush Ecosystem: Multi-repo system overview](../README.md)
 
 ---
 
-## References
-
-- AGENTS.md: Agent guidance for this repository
-- Phenotype Governance Overlay v1: TDD/BDD/SDD requirements
-- Kush Ecosystem: Multi-repo system overview
+**Document version:** 1.1  
+**Last updated:** 2026-03-31
