@@ -1,4 +1,6 @@
 # cliproxyapi-plusplus
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FKooshaPari%2Fcliproxyapi-plusplus.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2FKooshaPari%2Fcliproxyapi-plusplus?ref=badge_shield)
+
 
 Agent-native, multi-provider OpenAI-compatible proxy for production and local model routing.
 
@@ -104,3 +106,6 @@ If you need to submit any non-third-party provider changes, please open them aga
 ## License
 
 MIT License. See `LICENSE`.
+
+
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FKooshaPari%2Fcliproxyapi-plusplus.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2FKooshaPari%2Fcliproxyapi-plusplus?ref=badge_large)
