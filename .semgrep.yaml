@@ -1,0 +1,27 @@
+rules:
+  - id: config
+    include:
+      - .semgrep-rules/
+
+exclude:
+  - tests/
+  - "**/*_test.rs"
+  - "**/*_test.go"
+  - "**/*.test.ts"
+  - "**/*.test.js"
+  - "**/__pycache__"
+  - "**/__tests__"
+  - node_modules/
+  - target/
+  - build/
+  - dist/
+
+max-lines-per-finding: 10
+paths:
+  exclude:
+    - ".git/"
+    - "target/"
+    - ".archive/"
+    - "node_modules/"
+    - "dist/"
+    - "build/"
