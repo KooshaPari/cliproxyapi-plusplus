@@ -1,7 +1,7 @@
 package interfaces
 
 import (
-	internalinterfaces "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/interfaces"
+	"net/http"
 )
 
 // ErrorMessage encapsulates an error with an associated HTTP status code.
