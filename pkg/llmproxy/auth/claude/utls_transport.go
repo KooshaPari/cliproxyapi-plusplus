@@ -8,8 +8,8 @@ import (
 	"sync"
 
 	pkgconfig "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/config"
+	"github.com/kooshapari/CLIProxyAPI/v7/sdk/proxyutil"
 	tls "github.com/refraction-networking/utls"
-	pkgconfig "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/config"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/proxy"
@@ -29,7 +29,7 @@ type utlsRoundTripper struct {
 }
 
 // newUtlsRoundTripper creates a new utls-based round tripper with optional proxy support
-func newUtlsRoundTripper(cfg *config.SDKConfig) *utlsRoundTripper {
+func newUtlsRoundTripper(cfg *pkgconfig.SDKConfig) *utlsRoundTripper {
 	var dialer proxy.Dialer = proxy.Direct
 	if cfg != nil {
 		proxyDialer, mode, errBuild := proxyutil.BuildDialer(cfg.ProxyURL)
@@ -155,7 +155,7 @@ func (t *utlsRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 // NewAnthropicHttpClient creates an HTTP client that bypasses TLS fingerprinting
 // for Anthropic domains by using utls with Chrome fingerprint.
 // It accepts optional SDK configuration for proxy settings.
-func NewAnthropicHttpClient(cfg *config.SDKConfig) *http.Client {
+func NewAnthropicHttpClient(cfg *pkgconfig.SDKConfig) *http.Client {
 	return &http.Client{
 		Transport: newUtlsRoundTripper(cfg),
 	}

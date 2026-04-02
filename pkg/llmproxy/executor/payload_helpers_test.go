@@ -55,6 +55,13 @@ func TestPayloadModelRulesMatch(t *testing.T) {
 			want:     false,
 		},
 		{
+			name:     "unconditional rule matches non-empty models",
+			rules:    []config.PayloadModelRule{{Name: "", Protocol: ""}},
+			protocol: "gemini",
+			models:   []string{"gemini-2.0-flash"},
+			want:     true,
+		},
+		{
 			name:     "conditional rule matches model",
 			rules:    []config.PayloadModelRule{{Name: "gemini-*", Protocol: ""}},
 			protocol: "gemini",
@@ -164,8 +171,8 @@ func TestApplyPayloadConfigWithRoot_UnconditionalRules(t *testing.T) {
 			Default: []config.PayloadRule{
 				{
 					// Unconditional rule - no models specified
-					Models:  []config.PayloadModelRule{},
-					Params:  map[string]any{"maxTokens": 1000},
+					Models: []config.PayloadModelRule{},
+					Params: map[string]any{"maxTokens": 1000},
 				},
 			},
 			Override: []config.PayloadRule{
@@ -181,7 +188,7 @@ func TestApplyPayloadConfigWithRoot_UnconditionalRules(t *testing.T) {
 	}
 
 	payload := []byte(`{"model":"gemini-2.0-flash","maxTokens":500}`)
-	original := []byte(`{"model":"gemini-2.0-flash","maxTokens":200}`)
+	original := []byte(`{"model":"gemini-2.0-flash"}`)
 
 	result := applyPayloadConfigWithRoot(cfg, "gemini-2.0-flash", "", "", payload, original, "")
 
@@ -189,8 +196,8 @@ func TestApplyPayloadConfigWithRoot_UnconditionalRules(t *testing.T) {
 	err := json.Unmarshal(result, &got)
 	require.NoError(t, err)
 
-	// Unconditional default rule should set maxTokens (1000 > 200 but source has it)
-	assert.Equal(t, float64(200), got["maxTokens"], "should keep original maxTokens")
+	// Unconditional default rule should set maxTokens because it is missing in the original.
+	assert.Equal(t, float64(1000), got["maxTokens"], "unconditional default should apply")
 
 	// Conditional override rule should apply temperature
 	assert.Equal(t, 0.7, got["temperature"], "conditional override should apply")

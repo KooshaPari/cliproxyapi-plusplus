@@ -1,0 +1,61 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    if: contains(github.event.head_commit.message, 'release:') || contains(github.event.head_commit.message, 'chore(release)')
+    outputs:
+      version: $123steps.version.outputs.version125
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.22'
+
+      - name: Build
+        run: go build ./...
+
+      - name: Test
+        run: go test ./... -v -race
+
+      - name: Determine version
+        id: version
+        run: |
+          VERSION=$(git describe --tags --always --abbrev=7)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Publish to Go proxy
+        run: |
+          # Go packages are published automatically via git tags
+          git tag v$123steps.version.outputs.version125
+          git push origin v$123steps.version.outputs.version125
+      
+
+  promote:
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Promote to staging
+        uses: KooshaPari/phenotypeActions/promote@main
+        with:
+          version: $123needs.release.outputs.version125
+          channel: beta
+          registry: go_proxy

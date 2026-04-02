@@ -744,7 +744,7 @@ func (e *KiroExecutor) executeWithRetry(ctx context.Context, auth *cliproxyauth.
 			// Build response in Claude format for Kiro translator
 			// stopReason is extracted from upstream response by parseEventStream
 			requestedModel := payloadRequestedModel(opts, req.Model)
-			kiroResponse := kiroclaude.BuildClaudeResponse(content, toolUses, requestedModel, usageInfo, stopReason)
+			kiroResponse := kiroclaude.BuildClaudeResponse(content, normalizeKiroToolUsesForClaude(toolUses), requestedModel, usageInfo, stopReason)
 			out := sdktranslator.TranslateNonStream(ctx, to, from, requestedModel, bytes.Clone(opts.OriginalRequest), body, kiroResponse, nil)
 			resp = cliproxyexecutor.Response{Payload: []byte(out)}
 			return resp, nil
@@ -1184,4 +1184,28 @@ func (e *KiroExecutor) isTokenExpired(accessToken string) bool {
 	}
 
 	return isExpired
+}
+
+func normalizeKiroToolUsesForClaude(toolUses []kiroclaude.KiroToolUse) []kiroclaude.KiroToolUse {
+	if len(toolUses) == 0 {
+		return toolUses
+	}
+
+	normalized := make([]kiroclaude.KiroToolUse, 0, len(toolUses))
+	for _, toolUse := range toolUses {
+		if toolUse.IsTruncated {
+			normalized = append(normalized, kiroclaude.KiroToolUse{
+				ToolUseID: toolUse.ToolUseID,
+				Name:      toolUse.Name,
+				Input: map[string]interface{}{
+					"_status":  "SOFT_LIMIT_REACHED",
+					"_message": "Tool output was truncated. Split content into smaller chunks (max 300 lines). Due to potential model hallucination, you MUST re-fetch the current working directory and generate the correct file_path.",
+				},
+			})
+			continue
+		}
+		normalized = append(normalized, toolUse)
+	}
+
+	return normalized
 }

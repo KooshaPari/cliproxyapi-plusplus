@@ -175,7 +175,7 @@ func TestNormalizeGitHubCopilotResponsesTools_FlattenFunctionTools(t *testing.T)
 
 func TestNormalizeGitHubCopilotResponsesTools_ClaudeFormatTools(t *testing.T) {
 	t.Parallel()
-	body := []byte(`{"tools":[{"name":"Bash","description":"Run commands","input_schema":{"type":"object","properties":{"command":{"type":"string"}},"required":["command"]}},{"name":"Read","description":"Read files","input_schema":{"type":"object","properties":{"path":{"type":"string"}}}}]}`)
+	body := []byte(`{"tools":[{"type":"tool","name":"Bash","description":"Run commands","input_schema":{"type":"object","properties":{"command":{"type":"string"}},"required":["command"]}},{"name":"Read","description":"Read files","input_schema":{"type":"object","properties":{"path":{"type":"string"}}}}]}`)
 	got := normalizeGitHubCopilotResponsesTools(body)
 	tools := gjson.GetBytes(got, "tools").Array()
 	if len(tools) != 2 {

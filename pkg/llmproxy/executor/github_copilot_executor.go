@@ -832,38 +832,9 @@ func normalizeGitHubCopilotResponsesTools(body []byte) []byte {
 		filtered := "[]"
 		if tools.IsArray() {
 			for _, tool := range tools.Array() {
-				toolType := tool.Get("type").String()
-				if isGitHubCopilotResponsesBuiltinTool(toolType) {
-					filtered, _ = sjson.SetRaw(filtered, "-1", tool.Raw)
-					continue
+				if normalizedTool, ok := normalizeGitHubCopilotResponsesTool(tool); ok {
+					filtered, _ = sjson.SetRaw(filtered, "-1", normalizedTool)
 				}
-				// Accept OpenAI format (type="function") and Claude format
-				// (no type field, but has top-level name + input_schema).
-				if toolType != "" && toolType != "function" {
-					continue
-				}
-				name := tool.Get("name").String()
-				if name == "" {
-					name = tool.Get("function.name").String()
-				}
-				if name == "" {
-					continue
-				}
-				normalized := `{"type":"function","name":""}`
-				normalized, _ = sjson.Set(normalized, "name", name)
-				if desc := tool.Get("description").String(); desc != "" {
-					normalized, _ = sjson.Set(normalized, "description", desc)
-				} else if desc = tool.Get("function.description").String(); desc != "" {
-					normalized, _ = sjson.Set(normalized, "description", desc)
-				}
-				if params := tool.Get("parameters"); params.Exists() {
-					normalized, _ = sjson.SetRaw(normalized, "parameters", params.Raw)
-				} else if params = tool.Get("function.parameters"); params.Exists() {
-					normalized, _ = sjson.SetRaw(normalized, "parameters", params.Raw)
-				} else if params = tool.Get("input_schema"); params.Exists() {
-					normalized, _ = sjson.SetRaw(normalized, "parameters", params.Raw)
-				}
-				filtered, _ = sjson.SetRaw(filtered, "-1", normalized)
 			}
 		}
 		body, _ = sjson.SetRawBytes(body, "tools", []byte(filtered))
@@ -903,6 +874,37 @@ func normalizeGitHubCopilotResponsesTools(body []byte) []byte {
 	}
 	body, _ = sjson.SetBytes(body, "tool_choice", "auto")
 	return body
+}
+
+func normalizeGitHubCopilotResponsesTool(tool gjson.Result) (string, bool) {
+	toolType := tool.Get("type").String()
+	if isGitHubCopilotResponsesBuiltinTool(toolType) {
+		return tool.Raw, true
+	}
+
+	name := tool.Get("name").String()
+	if name == "" {
+		name = tool.Get("function.name").String()
+	}
+	if name == "" {
+		return "", false
+	}
+
+	normalized := `{"type":"function","name":""}`
+	normalized, _ = sjson.Set(normalized, "name", name)
+	if desc := tool.Get("description").String(); desc != "" {
+		normalized, _ = sjson.Set(normalized, "description", desc)
+	} else if desc := tool.Get("function.description").String(); desc != "" {
+		normalized, _ = sjson.Set(normalized, "description", desc)
+	}
+	if params := tool.Get("parameters"); params.Exists() {
+		normalized, _ = sjson.SetRaw(normalized, "parameters", params.Raw)
+	} else if params := tool.Get("function.parameters"); params.Exists() {
+		normalized, _ = sjson.SetRaw(normalized, "parameters", params.Raw)
+	} else if params := tool.Get("input_schema"); params.Exists() {
+		normalized, _ = sjson.SetRaw(normalized, "parameters", params.Raw)
+	}
+	return normalized, true
 }
 
 type githubCopilotResponsesStreamToolState struct {

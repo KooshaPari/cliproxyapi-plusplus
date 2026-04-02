@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strings"
 
+	kiroauth "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/auth/kiro"
 	kiroclaude "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/kiro/claude"
 	kiroopenai "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/kiro/openai"
 	clipproxyauth "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth"
@@ -27,6 +28,14 @@ type kiroEndpointConfig struct {
 	Origin    string // Request Origin: "CLI" for Amazon Q quota, "AI_EDITOR" for Kiro IDE quota
 	AmzTarget string // X-Amz-Target header value
 	Name      string // Endpoint name for logging
+}
+
+var endpointAliases = map[string]string{
+	"amazonq":       "amazonq",
+	"cli":           "amazonq",
+	"codewhisperer": "codewhisperer",
+	"ide":           "codewhisperer",
+	"q":             "amazonq",
 }
 
 // kiroDefaultRegion is the default AWS region for Kiro API endpoints.
@@ -161,6 +170,10 @@ func getKiroEndpointConfigs(auth *cliproxyauth.Auth) []kiroEndpointConfig {
 	}
 
 	preference = strings.ToLower(strings.TrimSpace(preference))
+	canonicalPreference, ok := endpointAliases[preference]
+	if !ok {
+		return endpointConfigs
+	}
 
 	// Create new slice to avoid modifying global state
 	var sorted []kiroEndpointConfig
@@ -168,17 +181,7 @@ func getKiroEndpointConfigs(auth *cliproxyauth.Auth) []kiroEndpointConfig {
 
 	for _, cfg := range endpointConfigs {
 		name := strings.ToLower(cfg.Name)
-		// Check for matches
-		// CodeWhisperer aliases: codewhisperer, ide
-		// AmazonQ aliases: amazonq, q, cli
-		isMatch := false
-		if (preference == "codewhisperer" || preference == "ide") && name == "codewhisperer" {
-			isMatch = true
-		} else if (preference == "amazonq" || preference == "q" || preference == "cli") && name == "amazonq" {
-			isMatch = true
-		}
-
-		if isMatch {
+		if name == canonicalPreference {
 			sorted = append(sorted, cfg)
 		} else {
 			remaining = append(remaining, cfg)
@@ -314,6 +317,71 @@ func getMetadataString(metadata map[string]any, keys ...string) string {
 		}
 	}
 	return ""
+}
+
+func getAuthAttributeString(attributes map[string]string, keys ...string) string {
+	if attributes == nil {
+		return ""
+	}
+	for _, key := range keys {
+		if value, ok := attributes[key]; ok {
+			trimmed := strings.TrimSpace(value)
+			if trimmed != "" {
+				return trimmed
+			}
+		}
+	}
+	return ""
+}
+
+func toCamelKey(key string) string {
+	if !strings.Contains(key, "_") {
+		return key
+	}
+	parts := strings.Split(key, "_")
+	if len(parts) == 0 {
+		return key
+	}
+	for i := 1; i < len(parts); i++ {
+		if parts[i] == "" {
+			continue
+		}
+		parts[i] = strings.ToUpper(parts[i][:1]) + parts[i][1:]
+	}
+	return strings.Join(parts, "")
+}
+
+func getAuthValue(auth *clipproxyauth.Auth, key string) string {
+	if auth == nil || key == "" {
+		return ""
+	}
+
+	camelKey := toCamelKey(key)
+	if value := getMetadataString(auth.Metadata, key, camelKey); value != "" {
+		return strings.ToLower(value)
+	}
+	if value := getAuthAttributeString(auth.Attributes, key, camelKey); value != "" {
+		return strings.ToLower(value)
+	}
+	return ""
+}
+
+func getAccountKey(auth *cliproxyauth.Auth) string {
+	if auth == nil {
+		return kiroauth.GetAccountKey("", "")
+	}
+
+	clientID := getMetadataString(auth.Metadata, "client_id", "clientId")
+	if clientID == "" {
+		clientID = getAuthAttributeString(auth.Attributes, "client_id", "clientId")
+	}
+
+	refreshToken := getMetadataString(auth.Metadata, "refresh_token", "refreshToken")
+	if refreshToken == "" {
+		refreshToken = getAuthAttributeString(auth.Attributes, "refresh_token", "refreshToken")
+	}
+
+	return kiroauth.GetAccountKey(clientID, refreshToken)
 }
 
 // getEffectiveProfileArn determines if profileArn should be included based on auth method.

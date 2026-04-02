@@ -7,9 +7,9 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	"github.com/router-for-me/CLIProxyAPI/v6/internal/config"
-	cliproxyauth "github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/auth"
-	sdkconfig "github.com/router-for-me/CLIProxyAPI/v6/sdk/config"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/config"
+	cliproxyauth "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth"
+	sdkconfig "github.com/kooshapari/CLIProxyAPI/v7/sdk/config"
 	"github.com/tidwall/gjson"
 )
 
@@ -274,7 +274,7 @@ func contextWithGinHeaders(headers map[string]string) context.Context {
 	for key, value := range headers {
 		ginCtx.Request.Header.Set(key, value)
 	}
-	return context.WithValue(context.Background(), "gin", ginCtx)
+	return context.WithValue(context.Background(), ginContextKey, ginCtx)
 }
 
 func TestNewProxyAwareWebsocketDialerDirectDisablesProxy(t *testing.T) {

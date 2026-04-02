@@ -1,0 +1,35 @@
+[tasks.format]
+description = "Format code"
+
+run = "gofmt -w ."
+
+
+[tasks.lint]
+description = "Lint code"
+
+run = "golangci-lint run"
+
+
+[tasks.test]
+description = "Run tests"
+
+run = "go test ./..."
+
+
+[tasks.build]
+description = "Build project"
+
+run = "go build ./..."
+
+
+[tasks.audit]
+description = "Audit dependencies"
+
+run = "go list -json -m all | nancy sleuth"
+
+
+[tasks.docs:build]
+description = "Build documentation"
+
+run = "go doc -all -html ./... > docs/api.html"
+

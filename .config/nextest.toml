@@ -1,0 +1,70 @@
+# nextest configuration for Rust projects
+# https://nexte.st/book/configuration.html
+
+[store]
+dir = "target/nextest"
+
+[test-groups]
+serial = { max-threads = 1 }
+
+[profile.default]
+retries = 0
+test-threads = "num-cpus"
+fail-fast = false
+slow-timeout = { period = "60s", terminate-after = 3, grace-period = "10s" }
+
+[profile.ci]
+# Optimized for CI environments
+retries = { backoff = "fixed", count = 2, delay = "1s" }
+test-threads = "num-cpus"
+fail-fast = false
+slow-timeout = { period = "120s", terminate-after = 2, grace-period = "30s" }
+output = "test-stdout-on-failure"
+
+[profile.coverage]
+# Profile for coverage collection
+test-threads = 1
+fail-fast = false
+slow-timeout = { period = "300s" }
+
+[profile.e2e]
+# Profile for E2E tests
+retries = 1
+test-threads = 2
+fail-fast = false
+slow-timeout = { period = "300s", terminate-after = 2 }
+
+[profile.integration]
+# Profile for integration tests
+test-threads = 4
+fail-fast = false
+slow-timeout = { period = "120s" }
+
+[execution]
+timeout = { period = "60s", terminate-after = 3, grace-period = "10s" }
+
+[runner]
+test-runner = "cargo-test"
+
+[junit]
+path = "junit.xml"
+report-name = "nextest"
+store-success-output = true
+store-failure-output = true
+
+# Override settings for specific tests
+[[profile.default.overrides]]
+filter = 'test(/_integration_/)'
+test-group = "serial"
+slow-timeout = { period = "120s" }
+
+[[profile.ci.overrides]]
+filter = 'test(/_e2e_/)'
+retries = 2
+slow-timeout = { period = "300s" }
+
+# Platform-specific settings
+[profile.ci.platform]
+darwin = { test-threads = 4 }
+linux = { test-threads = 8 }
+windows = { test-threads = 4 }

@@ -12,14 +12,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/router-for-me/CLIProxyAPI/v6/internal/auth/gitlab"
-	"github.com/router-for-me/CLIProxyAPI/v6/internal/config"
-	"github.com/router-for-me/CLIProxyAPI/v6/internal/registry"
-	"github.com/router-for-me/CLIProxyAPI/v6/internal/thinking"
-	"github.com/router-for-me/CLIProxyAPI/v6/internal/util"
-	cliproxyauth "github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/auth"
-	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/executor"
-	sdktranslator "github.com/router-for-me/CLIProxyAPI/v6/sdk/translator"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/config"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/registry"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/thinking"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/util"
+	gitlabauth "github.com/kooshapari/CLIProxyAPI/v7/sdk/auth"
+	cliproxyauth "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth"
+	cliproxyexecutor "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/executor"
+	sdktranslator "github.com/kooshapari/CLIProxyAPI/v7/sdk/translator"
 	"github.com/tidwall/gjson"
 )
 
@@ -75,7 +75,7 @@ var gitLabAgenticCatalog = []gitLabCatalogModel{
 }
 
 var gitLabModelAliases = map[string]string{
-	"duo-chat-haiku-4-6":  "duo-chat-haiku-4-5",
+	"duo-chat-haiku-4-6": "duo-chat-haiku-4-5",
 }
 
 func NewGitLabExecutor(cfg *config.Config) *GitLabExecutor {
@@ -86,7 +86,12 @@ func (e *GitLabExecutor) Identifier() string { return gitLabProviderKey }
 
 func (e *GitLabExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, req cliproxyexecutor.Request, opts cliproxyexecutor.Options) (resp cliproxyexecutor.Response, err error) {
 	if nativeExec, nativeAuth, nativeReq, ok := e.nativeGateway(auth, req); ok {
-		return nativeExec.Execute(ctx, nativeAuth, nativeReq, opts)
+		resp, err = nativeExec.Execute(ctx, nativeAuth, nativeReq, opts)
+		if err != nil || !gitLabUsesOpenAIGateway(auth, req.Model) {
+			return resp, err
+		}
+		resp.Payload = normalizeGitLabOpenAIResponse(gitLabResolvedModel(auth, req.Model), req.Payload, resp.Payload)
+		return resp, nil
 	}
 	baseModel := thinking.ParseSuffix(req.Model).ModelName
 
@@ -960,6 +965,36 @@ func buildGitLabOpenAIResponse(model, text string, translatedReq []byte) []byte 
 	}
 	raw, _ := json.Marshal(payload)
 	return raw
+}
+
+func normalizeGitLabOpenAIResponse(model string, translatedReq []byte, payload []byte) []byte {
+	if len(payload) == 0 {
+		return payload
+	}
+	root := gjson.ParseBytes(payload)
+	if root.Get("choices").Exists() {
+		return payload
+	}
+	text := gitLabOpenAIResponseText(root)
+	if strings.TrimSpace(text) == "" {
+		return payload
+	}
+	return buildGitLabOpenAIResponse(model, text, translatedReq)
+}
+
+func gitLabOpenAIResponseText(root gjson.Result) string {
+	for _, key := range []string{
+		"output.0.content.0.text",
+		"response.output.0.content.0.text",
+		"response.output.0.content.0.content.0.text",
+		"response.content.0.text",
+		"content.0.text",
+	} {
+		if value := strings.TrimSpace(root.Get(key).String()); value != "" {
+			return value
+		}
+	}
+	return ""
 }
 
 func buildGitLabOpenAIStream(model, text string) []string {
