@@ -39,6 +39,9 @@ func (a CursorAuthenticator) Login(ctx context.Context, cfg *config.Config, opts
 	if opts == nil {
 		opts = &LoginOptions{}
 	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
 
 	// Generate PKCE auth parameters
 	authParams, err := cursorauth.GenerateAuthParams()
