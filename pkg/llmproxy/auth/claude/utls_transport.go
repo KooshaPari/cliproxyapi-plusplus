@@ -7,7 +7,8 @@ import (
 	"strings"
 	"sync"
 
-	pkgconfig "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/config"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/config"
+	"github.com/kooshapari/CLIProxyAPI/v7/sdk/proxyutil"
 	tls "github.com/refraction-networking/utls"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/http2"
