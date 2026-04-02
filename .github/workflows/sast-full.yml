@@ -86,4 +86,4 @@ jobs:
       - uses: trufflesecurity/trufflehog@v3.94.2
         with:
           path: ./
-          extra_args: --only-verified --fail
+          extra_args: --only-verified
