@@ -16,21 +16,51 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
       - name: Install Semgrep
         run: python -m pip install --disable-pip-version-check semgrep==1.157.0
       - name: Run Semgrep
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
+          HEAD_SHA: ${{ github.sha }}
         run: |
-          semgrep scan \
-            --config p/security-audit \
-            --config p/owasp-top-ten \
-            --config p/cwe-top-25 \
-            --error \
-            --sarif \
-            --output semgrep.sarif \
-            .
+          set -euo pipefail
+
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            git fetch --no-tags --depth=1 origin "$PR_BASE_REF"
+            mapfile -t changed_files < <(
+              git diff --name-only --diff-filter=ACMR "origin/$PR_BASE_REF...$HEAD_SHA" -- \
+                '*.go' '*.yaml' '*.yml' '*.sh' '*.json' '*.ts' '*.tsx' '*.js' '*.jsx'
+            )
+            if [ "${#changed_files[@]}" -eq 0 ]; then
+              cat > semgrep.sarif <<'EOF'
+          {"version":"2.1.0","runs":[]}
+          EOF
+              exit 0
+            fi
+            semgrep scan \
+              --config p/security-audit \
+              --config p/owasp-top-ten \
+              --config p/cwe-top-25 \
+              --error \
+              --sarif \
+              --output semgrep.sarif \
+              "${changed_files[@]}"
+          else
+            semgrep scan \
+              --config p/security-audit \
+              --config p/owasp-top-ten \
+              --config p/cwe-top-25 \
+              --error \
+              --sarif \
+              --output semgrep.sarif \
+              .
+          fi
 
       - name: Upload SARIF
         uses: github/codeql-action/upload-sarif@v4
