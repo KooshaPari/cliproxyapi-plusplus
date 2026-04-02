@@ -184,6 +184,26 @@ Kilo supports different merge strategies for integrating bead work:
 - If blocked: use `gt_mail_send` to coordinate with other agents
 - If container restarts: recover from last `gt_checkpoint`
 
+### GUPP Principle
+
+Work is on your hook — execute immediately. Do not announce what you will do; just do it. When you receive a bead (work item), start working on it right away. No preamble, no status updates, no asking for permission. Produce code, commits, and results.
+
+---
+
+## Worktree Discipline
+
+Worktrees isolate feature branches from the main checkout:
+
+- Primary checkout remains on `main`
+- Feature work happens in `.worktrees/` directories
+- Naming convention: `convoy__<project>__<bead_id>__gt__<agent_name>__<bead_id>`
+- Treat `PROJECT-wtrees/` as migration-only legacy layout
+
+**In cliproxyapi++:**
+- Each polecat works in its own worktree within `.worktrees/`
+- Worktrees are ephemeral — push frequently to avoid data loss
+- Never do development work on the main checkout
+
 ---
 
 ## Gastown Tool Reference
@@ -243,6 +263,33 @@ When requesting bot reviews (CodeRabbit, Gemini Code Assist):
 3. After two consecutive rate-limit responses, stop auto-retries and post status
 4. Required marker format: `bot-review-trigger: <bot> <iso8601-time> <reason>`
 
+**Retrigger commands:**
+| Bot | Command |
+|-----|---------|
+| CodeRabbit | `@coderabbitai full review` |
+| Gemini Code Assist | `@gemini-code-assist review` or `/gemini review` |
+
+---
+
+## Governance Principles
+
+### Phenotype Governance Overlay v1
+
+- Enforce `TDD + BDD + SDD` for all feature and workflow changes
+- Enforce `Hexagonal + Clean + SOLID` boundaries by default
+- Favor explicit failures over silent degradation
+- Required dependencies must fail clearly when unavailable
+- Keep local hot paths deterministic and low-latency
+- Place distributed workflow logic behind durable orchestration boundaries
+- Require policy gating, auditability, and traceable correlation IDs for agent and workflow actions
+
+### Development Philosophy
+
+- **Extend, Never Duplicate**: Refactor rather than create v2 files
+- **Generic First**: Build primitives before application logic (provider interface + registry)
+- **Library First**: Use existing OSS libraries before custom implementations
+- **Config Driven**: Template strings and config over hardcoded messages
+
 ---
 
 ## Quality Gates
@@ -255,6 +302,58 @@ Before calling `gt_done`, polecats must verify:
 | Lint | `golangci-lint run` | 0 errors |
 | Vet | `go vet ./...` | 0 errors |
 | Format | `go fmt ./...` | No diff |
+| Max function length | lint | 40 lines |
+| TODOs | lint | Not allowed |
+
+### Pre-Submission Flow
+
+1. Run all quality gates
+2. If any gate fails, fix and re-run
+3. After two consecutive failures, call `gt_escalate`
+4. Call `gt_done` to submit for review
+
+---
+
+## Coordination Mechanisms
+
+### Mail (gt_mail_send)
+
+Typed messages for coordination:
+- Persistent and queued
+- Delivered on next agent idle moment
+- Use for status sharing and questions
+
+### Nudges (gt_nudge)
+
+Time-sensitive coordination:
+- Immediate delivery at agent's next idle moment
+- Modes: `immediate`, `wait-idle`, `queue`
+- Use for wake-ups and blocking issues
+
+### Escalation (gt_escalate)
+
+Unresolvable issues:
+- Creates an escalation bead
+- Routes to supervisor or mayor
+- Use when stuck after multiple attempts
+
+---
+
+## Kush Ecosystem
+
+This project is part of the Kush multi-repo system:
+
+```
+kush/
+├── thegent/         # Agent orchestration
+├── agentapi++/      # HTTP API for coding agents
+├── cliproxy++/      # LLM proxy with multi-provider support (this repo)
+├── tokenledger/     # Token and cost tracking
+├── 4sgm/           # Python tooling workspace
+├── civ/             # Deterministic simulation
+├── parpour/        # Spec-first planning
+└── pheno-sdk/      # Python SDK
+```
 
 Alternative quality task:
 ```bash
@@ -268,6 +367,7 @@ task quality
 - [cliproxyapi++ SPEC.md](./SPEC.md) — Technical architecture
 - [cliproxyapi++ FEATURE_CHANGES_PLUSPLUS.md](./FEATURE_CHANGES_PLUSPLUS.md) — ++ vs baseline changes
 - [AGENTS.md: Agent guidance for this repository](./AGENTS.md)
+- [Kush AGENTS.md](../AGENTS.md) — Full Kilo Gastown methodology reference
 - [Phenotype Governance Overlay v1: TDD/BDD/SDD requirements](../governance/PHENOTYPE_GOVERNANCE.md)
 - [Kush Ecosystem: Multi-repo system overview](../README.md)
 
