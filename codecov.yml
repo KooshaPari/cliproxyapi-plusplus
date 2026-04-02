@@ -1,0 +1,44 @@
+coverage:
+  status:
+    project:
+      default:
+        target: 70%
+        threshold: 1%
+        paths:
+          - "src/"
+          - "cliproxyapi-plusplus/"
+        
+        - "*.go"
+        
+    patch:
+      default:
+        target: 80%
+        threshold: 1%
+
+comment:
+  layout: "reach, diff, flags, files, footer"
+  behavior: default
+  require_changes: true
+  hide_project_coverage: false
+
+ignore:
+  - "**/tests/**"
+  - "**/test_*.py"
+  - "**/*_test.go"
+  - "**/tests/"
+  - "docs/"
+  - ".github/"
+  - "examples/"
+  - "scripts/"
+  
+  
+
+flags:
+  unit:
+    paths:
+      - tests/unit/
+    carryforward: true
+  integration:
+    paths:
+      - tests/integration/
+    carryforward: true
