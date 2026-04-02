@@ -53,6 +53,7 @@ func (s *H2Stream) FrameNum() int64 {
 func DialH2Stream(host string, headers map[string]string) (*H2Stream, error) {
 	tlsConn, err := tls.Dial("tcp", host+":443", &tls.Config{
 		NextProtos: []string{"h2"},
+		MinVersion: tls.VersionTLS13,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("h2: TLS dial failed: %w", err)

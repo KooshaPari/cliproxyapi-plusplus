@@ -1350,7 +1350,7 @@ func applyCursorHeaders(req *http.Request, accessToken string) {
 func newH2Client() *http.Client {
 	return &http.Client{
 		Transport: &http2.Transport{
-			TLSClientConfig: &tls.Config{},
+			TLSClientConfig: &tls.Config{MinVersion: tls.VersionTLS13},
 		},
 	}
 }
@@ -1464,10 +1464,9 @@ func decodeMcpArgsToJSON(args map[string][]byte) string {
 		if decoded, err := cursorproto.ProtobufValueBytesToJSON(v); err == nil {
 			result[k] = decoded
 		} else {
-			// Fallback: try raw JSON
-			var jsonVal interface{}
-			if err := json.Unmarshal(v, &jsonVal); err == nil {
-				result[k] = jsonVal
+			// Preserve valid JSON payloads without deserializing into arbitrary interface values.
+			if json.Valid(v) {
+				result[k] = json.RawMessage(append([]byte(nil), v...))
 			} else {
 				result[k] = string(v)
 			}
