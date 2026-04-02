@@ -44,6 +44,7 @@ jobs:
               exit 0
             fi
             semgrep scan \
+              --config .semgrep-rules/ \
               --config p/security-audit \
               --config p/owasp-top-ten \
               --config p/cwe-top-25 \
@@ -53,6 +54,7 @@ jobs:
               "${changed_files[@]}"
           else
             semgrep scan \
+              --config .semgrep-rules/ \
               --config p/security-audit \
               --config p/owasp-top-ten \
               --config p/cwe-top-25 \
@@ -86,6 +88,7 @@ jobs:
   go-quality:
     name: Go Quality
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -94,11 +97,13 @@ jobs:
           cache: true
       - name: Enforce gofmt
         run: |
-          files=$(git ls-files '*.go')
-          if [ -z "$files" ]; then
+          if ! git ls-files -z '*.go' | grep -q .; then
             exit 0
           fi
-          unformatted=$(gofmt -l $files)
+          unformatted=$(
+            git ls-files -z '*.go' |
+              xargs -0 gofmt -l
+          )
           if [ -n "$unformatted" ]; then
             echo "$unformatted"
             exit 1
@@ -109,6 +114,7 @@ jobs:
   license-check:
     name: License Compliance
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5

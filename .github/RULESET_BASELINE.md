@@ -1,5 +1,12 @@
 # cliproxyapi-plusplus Ruleset Baseline
 
+Version: 2026-04-02
+Ruleset JSON: `.github/rulesets/main.json`
+
+## Changelog
+
+- 2026-04-02: aligned the checked-in baseline with the repo-local governance wave, safer workflow pins, and the next required-check manifest pass.
+
 This repository now has a checked-in baseline that matches the repaired remote `Main` ruleset.
 
 ## Enforced Branch Protection Baseline
@@ -9,9 +16,10 @@ This repository now has a checked-in baseline that matches the repaired remote `
 - no force push / non-fast-forward updates
 - require at least 1 approval
 - dismiss stale approvals on new push
+- require code owner review
+- require last push approval before merge
 - require resolved review threads before merge
 - allow merge methods: `merge`, `squash`
-- enable GitHub `code_quality`
 - enable GitHub `copilot_code_review`
 
 ## Repo-Local Governance Gates
@@ -32,6 +40,7 @@ Current required check manifests:
 
 - `.github/required-checks.txt`
 - `.github/release-required-checks.txt`
+- `.github/rulesets/main.json`
 
 Those manifests should drive the next remote ruleset wave once the stable job names are re-verified
 against live workflow output.

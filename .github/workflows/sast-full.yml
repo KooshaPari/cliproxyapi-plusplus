@@ -31,6 +31,7 @@ jobs:
   trivy-repo:
     name: Trivy Repository Scan
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: aquasecurity/trivy-action@v0.35.0
@@ -60,6 +61,7 @@ jobs:
       - name: Run Semgrep
         run: |
           semgrep scan \
+            --config .semgrep-rules/ \
             --config p/security-audit \
             --config p/owasp-top-ten \
             --config p/cwe-top-25 \
@@ -78,6 +80,7 @@ jobs:
   full-secrets:
     name: Full Secret Scan
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
         with:

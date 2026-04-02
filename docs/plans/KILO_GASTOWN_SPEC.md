@@ -364,11 +364,11 @@ task quality
 
 ## References & Related Documentation
 
-- [cliproxyapi++ SPEC.md](./SPEC.md) — Technical architecture
-- [cliproxyapi++ FEATURE_CHANGES_PLUSPLUS.md](./FEATURE_CHANGES_PLUSPLUS.md) — ++ vs baseline changes
-- [AGENTS.md: Agent guidance for this repository](./AGENTS.md)
-- [Repos shelf AGENTS.md](../AGENTS.md) — Shelf-level governance and Kilo Gastown reference
-- [Kush Ecosystem: Multi-repo system overview](../README.md)
+- [cliproxyapi++ SPEC.html](../../SPEC.html) — Technical architecture
+- [cliproxyapi++ FEATURE_CHANGES_PLUSPLUS.html](../../FEATURE_CHANGES_PLUSPLUS.html) — ++ vs baseline changes
+- [AGENTS.md: Agent guidance for this repository](../../AGENTS.md)
+- [Repos shelf AGENTS.md](../../../AGENTS.md) — Shelf-level governance and Kilo Gastown reference
+- [Kush Ecosystem: Multi-repo system overview](../../README.md)
 
 ---
 
