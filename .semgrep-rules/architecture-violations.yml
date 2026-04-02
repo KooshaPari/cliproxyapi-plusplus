@@ -1,52 +1,28 @@
 rules:
-  - id: circular-module-dependency
-    patterns:
-      - pattern-either:
-          - pattern: |
-              use crate::domain::*;
-          - pattern: |
-              use crate::adapters::*;
-    message: Potential circular dependency. Check module import hierarchy.
-    languages: [rust]
+  - id: no-dot-imports
+    pattern: import . "$PKG"
+    message: Dot imports hide call sites and make ownership harder to trace. Use explicit package names.
+    languages: [go]
     severity: MEDIUM
 
-  - id: layer-violation-adapter-accessing-domain
+  - id: no-blank-imports-outside-entrypoints
     patterns:
-      - pattern: |
-          mod adapters {
-              ...
-              use crate::domain::...
-              ...
-          }
-    message: Adapter layer should not directly access domain logic. Use ports/traits instead.
-    languages: [rust]
+      - pattern: import _ "$PKG"
+    message: Blank imports belong in explicit wiring points only. Move them out of library packages.
+    languages: [go]
     severity: MEDIUM
+    paths:
+      exclude:
+        - "cmd/**"
+        - "**/*_test.go"
 
-  - id: mixed-concerns-in-handler
+  - id: getenv-in-http-handler
     patterns:
-      - pattern: |
-          async fn $HANDLER(...) {
-              ...
-              database.query(...)
-              ...
-              api.call(...)
-              ...
-              filesystem.write(...)
-              ...
+      - pattern-inside: |
+          func $HANDLER($W http.ResponseWriter, $R *http.Request) {
+            ...
           }
-    message: Handler mixes database, API, and filesystem concerns. Consider dependency injection.
-    languages: [rust]
+      - pattern: os.Getenv(...)
+    message: Avoid reading process environment directly inside request handlers. Inject configuration instead.
+    languages: [go]
     severity: LOW
-
-  - id: direct-database-in-tests
-    patterns:
-      - pattern: |
-          #[test]
-          fn $TEST(...) {
-              ...
-              Database::connect(...)
-              ...
-          }
-    message: Tests should use mocks/fixtures, not direct database connections.
-    languages: [rust]
-    severity: MEDIUM

@@ -367,8 +367,7 @@ task quality
 - [cliproxyapi++ SPEC.md](./SPEC.md) — Technical architecture
 - [cliproxyapi++ FEATURE_CHANGES_PLUSPLUS.md](./FEATURE_CHANGES_PLUSPLUS.md) — ++ vs baseline changes
 - [AGENTS.md: Agent guidance for this repository](./AGENTS.md)
-- [Kush AGENTS.md](../AGENTS.md) — Full Kilo Gastown methodology reference
-- [Phenotype Governance Overlay v1: TDD/BDD/SDD requirements](../governance/PHENOTYPE_GOVERNANCE.md)
+- [Repos shelf AGENTS.md](../AGENTS.md) — Shelf-level governance and Kilo Gastown reference
 - [Kush Ecosystem: Multi-repo system overview](../README.md)
 
 ---

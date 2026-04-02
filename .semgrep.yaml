@@ -1,22 +1,16 @@
 rules:
-  - id: config
-    include:
-      - .semgrep-rules/
-
-exclude:
-  - tests/
-  - "**/*_test.rs"
-  - "**/*_test.go"
-  - "**/*.test.ts"
-  - "**/*.test.js"
-  - "**/__pycache__"
-  - "**/__tests__"
-  - node_modules/
-  - target/
-  - build/
-  - dist/
-
-max-lines-per-finding: 10
+  - id: no-debug-prints-in-library-code
+    message: Replace temporary fmt.Print* debugging with structured logging before merge.
+    languages: [go]
+    severity: INFO
+    patterns:
+      - pattern-either:
+          - pattern: fmt.Println(...)
+          - pattern: fmt.Printf(...)
+    paths:
+      exclude:
+        - cmd/**
+        - "**/*_test.go"
 paths:
   exclude:
     - ".git/"
@@ -25,3 +19,6 @@ paths:
     - "node_modules/"
     - "dist/"
     - "build/"
+    - "docsets/"
+    - "reports/"
+    - "**/*_test.go"

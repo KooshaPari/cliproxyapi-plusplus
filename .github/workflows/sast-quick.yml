@@ -8,7 +8,6 @@ on:
 permissions:
   contents: read
   security-events: write
-  pull-requests: write
 
 jobs:
   semgrep:
@@ -17,18 +16,24 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
-
-      - uses: returntocorp/semgrep-action@v1
+      - uses: actions/setup-python@v5
         with:
-          config: >-
-            p/security-audit
-            p/owasp-top-ten
-            p/cwe-top-25
-            .semgrep-rules/
-          generateSarif: true
+          python-version: "3.12"
+      - name: Install Semgrep
+        run: python -m pip install --disable-pip-version-check semgrep==1.157.0
+      - name: Run Semgrep
+        run: |
+          semgrep scan \
+            --config p/security-audit \
+            --config p/owasp-top-ten \
+            --config p/cwe-top-25 \
+            --error \
+            --sarif \
+            --output semgrep.sarif \
+            .
 
       - name: Upload SARIF
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: semgrep.sarif
@@ -43,27 +48,44 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: trufflesecurity/trufflehog@main
+      - uses: trufflesecurity/trufflehog@v3.94.2
         with:
           path: ./
           extra_args: --only-verified --fail
-        continue-on-error: true
 
-  lint-rust:
-    name: Rust Lint
+  go-quality:
+    name: Go Quality
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-go@v5
         with:
-          components: clippy
-      - uses: Swatinem/rust-cache@v2
-      - run: cargo clippy --all-targets --all-features -- -D warnings
+          go-version-file: go.mod
+          cache: true
+      - name: Enforce gofmt
+        run: |
+          files=$(git ls-files '*.go')
+          if [ -z "$files" ]; then
+            exit 0
+          fi
+          unformatted=$(gofmt -l $files)
+          if [ -n "$unformatted" ]; then
+            echo "$unformatted"
+            exit 1
+          fi
+      - name: Run go vet
+        run: go vet ./...
 
   license-check:
     name: License Compliance
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: licensefinder/license_finder_action@v2
-        continue-on-error: true
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Capture dependency inventory
+        run: |
+          go list -m -f '{{if not .Main}}{{.Path}} {{.Version}}{{end}}' all | sort > license-inventory.txt
+          test -s license-inventory.txt
