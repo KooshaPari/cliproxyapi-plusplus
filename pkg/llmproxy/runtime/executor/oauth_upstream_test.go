@@ -3,7 +3,7 @@ package executor
 import (
 	"testing"
 
-	"github.com/kooshapari/CLIProxyAPI/v7/internal/config"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/config"
 )
 
 func resolveOAuthBaseURLWithOverride(cfg *config.Config, provider, defaultURL, authURL string) string {
