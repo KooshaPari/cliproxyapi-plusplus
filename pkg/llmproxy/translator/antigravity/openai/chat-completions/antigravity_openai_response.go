@@ -13,7 +13,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/router-for-me/CLIProxyAPI/v6/internal/util"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/util"
 	log "github.com/sirupsen/logrus"
 
 	geminiopenai "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/gemini/openai/chat-completions"
