@@ -3,6 +3,8 @@ package iflow
 import (
 	"fmt"
 
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/auth/base"
+
 	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/misc"
 )
 

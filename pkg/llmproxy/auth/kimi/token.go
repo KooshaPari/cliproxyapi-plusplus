@@ -5,6 +5,8 @@ package kimi
 
 import (
 	"fmt"
+
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/auth/base"
 	"time"
 
 	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/misc"
