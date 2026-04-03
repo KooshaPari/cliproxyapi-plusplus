@@ -5,7 +5,6 @@ import (
 
 	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/auth/base"
 
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/misc"
 )
 
 // IFlowTokenStorage persists iFlow OAuth credentials alongside the derived API key.

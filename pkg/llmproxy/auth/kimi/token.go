@@ -9,7 +9,6 @@ import (
 	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/auth/base"
 	"time"
 
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/misc"
 )
 
 // KimiTokenStorage stores OAuth2 token information for Kimi API authentication.

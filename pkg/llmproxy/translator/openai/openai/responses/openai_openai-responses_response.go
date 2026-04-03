@@ -91,7 +91,7 @@ func emitCompletionEvents(st *oaiToResponsesState) []string {
 		return st.Seq
 	}
 
-	completed := `{"type":"response.completed","sequence_number":0,"response":{"id":"","object":"response","created_at":0,"status":"completed","background":false,"error":null}}`
+	completed := []byte(`{"type":"response.completed","sequence_number":0,"response":{"id":"","object":"response","created_at":0,"status":"completed","background":false,"error":null}}`)
 	completed, _ = sjson.SetBytes(completed, "sequence_number", nextSeq())
 	completed, _ = sjson.SetBytes(completed, "response.id", st.ResponseID)
 	completed, _ = sjson.SetBytes(completed, "response.created_at", st.Created)
@@ -532,7 +532,7 @@ func ConvertOpenAIChatCompletionsResponseToOpenAIResponses(ctx context.Context, 
 						st.FuncArgsDone[i] = true
 					}
 				}
-				completed := `{"type":"response.completed","sequence_number":0,"response":{"id":"","object":"response","created_at":0,"status":"completed","background":false,"error":null}}`
+				completed := []byte(`{"type":"response.completed","sequence_number":0,"response":{"id":"","object":"response","created_at":0,"status":"completed","background":false,"error":null}}`)
 				completed, _ = sjson.SetBytes(completed, "sequence_number", nextSeq())
 				completed, _ = sjson.SetBytes(completed, "response.id", st.ResponseID)
 				completed, _ = sjson.SetBytes(completed, "response.created_at", st.Created)

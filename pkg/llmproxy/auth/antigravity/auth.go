@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/auth/base"
 	"io"
 	"net/http"
 	"net/url"
