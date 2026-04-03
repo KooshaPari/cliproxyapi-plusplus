@@ -8,7 +8,7 @@ import (
 
 	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/auth/base"
 
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/misc"
+	
 )
 
 // CopilotTokenStorage stores OAuth2 token information for GitHub Copilot API authentication.
