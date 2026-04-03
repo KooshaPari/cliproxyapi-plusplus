@@ -214,18 +214,18 @@ func ConvertOpenAIChatCompletionsResponseToOpenAIResponses(ctx context.Context, 
 		st.StopSeen = false
 		st.Annotations = make(map[int][]interface{})
 		// response.created
-		created := `{"type":"response.created","sequence_number":0,"response":{"id":"","object":"response","created_at":0,"status":"in_progress","background":false,"error":null,"output":[]}}`
+		// response.created
+		created := []byte(`{"type":"response.created","sequence_number":0,"response":{"id":"","object":"response","created_at":0,"status":"in_progress","background":false,"error":null,"output":[]}}`)
 		created, _ = sjson.SetBytes(created, "sequence_number", nextSeq())
 		created, _ = sjson.SetBytes(created, "response.id", st.ResponseID)
 		created, _ = sjson.SetBytes(created, "response.created_at", st.Created)
-		out = append(out, emitRespEvent("response.created", created))
+		out = append(out, emitRespEvent("response.created", string(created)))
 
-		inprog := `{"type":"response.in_progress","sequence_number":0,"response":{"id":"","object":"response","created_at":0,"status":"in_progress"}}`
+		inprog := []byte(`{"type":"response.in_progress","sequence_number":0,"response":{"id":"","object":"response","created_at":0,"status":"in_progress"}}`)
 		inprog, _ = sjson.SetBytes(inprog, "sequence_number", nextSeq())
 		inprog, _ = sjson.SetBytes(inprog, "response.id", st.ResponseID)
 		inprog, _ = sjson.SetBytes(inprog, "response.created_at", st.Created)
-		out = append(out, emitRespEvent("response.in_progress", inprog))
-		st.Started = true
+		out = append(out, emitRespEvent("response.in_progress", string(inprog)))
 	}
 
 	stopReasoning := func(text string) {
@@ -266,21 +266,19 @@ func ConvertOpenAIChatCompletionsResponseToOpenAIResponses(ctx context.Context, 
 						st.ReasoningBuf.Reset()
 					}
 					if !st.MsgItemAdded[idx] {
-						item := `{"type":"response.output_item.added","sequence_number":0,"output_index":0,"item":{"id":"","type":"message","status":"in_progress","content":[],"role":"assistant"}}`
-						item, _ = sjson.SetBytes(item, "sequence_number", nextSeq())
-						item, _ = sjson.SetBytes(item, "output_index", idx)
-						item, _ = sjson.SetBytes(item, "item.id", fmt.Sprintf("msg_%s_%d", st.ResponseID, idx))
-						out = append(out, emitRespEvent("response.output_item.added", item))
-						st.MsgItemAdded[idx] = true
-					}
-					if !st.MsgContentAdded[idx] {
-						part := `{"type":"response.content_part.added","sequence_number":0,"item_id":"","output_index":0,"content_index":0,"part":{"type":"output_text","annotations":[],"logprobs":[],"text":""}}`
-						part, _ = sjson.SetBytes(part, "sequence_number", nextSeq())
-						part, _ = sjson.SetBytes(part, "item_id", fmt.Sprintf("msg_%s_%d", st.ResponseID, idx))
-						part, _ = sjson.SetBytes(part, "output_index", idx)
-						part, _ = sjson.SetBytes(part, "content_index", 0)
-						out = append(out, emitRespEvent("response.content_part.added", part))
-						st.MsgContentAdded[idx] = true
+						// response.output_item.added + output_item.content_part.added
+						added := []byte(`{"type":"response.output_item.added","sequence_number":0,"output_index":0,"item":{"id":"","type":"message","status":"in_progress","role":"assistant","content":[]}}`)
+						added, _ = sjson.SetBytes(added, "sequence_number", nextSeq())
+						added, _ = sjson.SetBytes(added, "output_index", nextOut())
+						added, _ = sjson.SetBytes(added, "item.id", st.MessageID)
+						out = append(out, emitRespEvent("response.output_item.added", string(added)))
+						st.LastItemIndex = nextOut() - 1
+
+						contentAdded := []byte(`{"type":"output_item.content_part.added","sequence_number":0,"output_index":0,"content_index":0,"part":{"type":"output_text","text":"","annotations":[]}}`)
+						contentAdded, _ = sjson.SetBytes(contentAdded, "sequence_number", nextSeq())
+						contentAdded, _ = sjson.SetBytes(contentAdded, "output_index", st.LastItemIndex)
+						contentAdded, _ = sjson.SetBytes(contentAdded, "content_index", 0)
+						out = append(out, emitRespEvent("output_item.content_part.added", string(contentAdded)))
 					}
 
 					msg := `{"type":"response.output_text.delta","sequence_number":0,"item_id":"","output_index":0,"content_index":0,"delta":"","logprobs":[]}`
