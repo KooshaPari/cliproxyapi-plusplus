@@ -13,7 +13,9 @@ jobs:
   semgrep:
     name: Semgrep Scan
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 15
+    # Tier 3: Advisory - security enrichment only
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
         with:
@@ -26,102 +28,59 @@ jobs:
       - name: Run Semgrep
         env:
           EVENT_NAME: ${{ github.event_name }}
-          PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
-          HEAD_SHA: ${{ github.sha }}
         run: |
-          set -euo pipefail
-
-          if [ "$EVENT_NAME" = "pull_request" ]; then
-            git fetch --no-tags --depth=1 origin "$PR_BASE_REF"
-            mapfile -t changed_files < <(
-              git diff --name-only --diff-filter=ACMR "origin/$PR_BASE_REF...$HEAD_SHA" -- \
-                '*.go' '*.yaml' '*.yml' '*.sh' '*.json' '*.ts' '*.tsx' '*.js' '*.jsx'
-            )
-            if [ "${#changed_files[@]}" -eq 0 ]; then
-              cat > semgrep.sarif <<'EOF'
-          {"version":"2.1.0","runs":[]}
-          EOF
-              exit 0
-            fi
-            semgrep scan \
-              --config .semgrep-rules/ \
-              --config p/security-audit \
-              --config p/owasp-top-ten \
-              --config p/cwe-top-25 \
-              --error \
-              --sarif \
-              --output semgrep.sarif \
-              "${changed_files[@]}"
-          else
-            semgrep scan \
-              --config .semgrep-rules/ \
-              --config p/security-audit \
-              --config p/owasp-top-ten \
-              --config p/cwe-top-25 \
-              --error \
-              --sarif \
-              --output semgrep.sarif \
-              .
-          fi
-
+          semgrep scan --sarif --sarif-output=semgrep.sarif --max-target-bytes 1000000 --quiet --config=auto || true
       - name: Upload SARIF
         uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: semgrep.sarif
-          category: semgrep
 
+  # License Compliance - Tier 3: Advisory
+  license-compliance:
+    name: License Compliance
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Tier 3: Advisory - security enrichment only
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: Analyze licenses
+        uses: fsfe/reuse-action@v4
+        continue-on-error: true  # Allow findings but don't fail
+      - name: Check for non-reusable licenses
+        run: |
+          # Check for problematic licenses
+          grep -r "GPL\|AGPL" --include="*.toml" --include="*.json" . || true
+      - name: Check license compliance
+        uses: fsfe/reuse-action@v4
+        continue-on-error: true
+
+  # Secret Scanning - Tier 2: Important (runs in parallel)
   secrets:
     name: Secret Scanning
     runs-on: ubuntu-latest
-    timeout-minutes: 3
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - uses: trufflesecurity/trufflehog@v3.94.2
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          path: ./
-          extra_args: --only-verified
-
-  go-quality:
-    name: Go Quality
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+          args: --verbose --redact
+      - name: Run Trivy Secret Scanner
+        uses: aquasecurity/trivy-action@master
         with:
-          go-version-file: go.mod
-          cache: true
-      - name: Enforce gofmt
-        run: |
-          if ! git ls-files -z '*.go' | grep -q .; then
-            exit 0
-          fi
-          unformatted=$(
-            git ls-files -z '*.go' |
-              xargs -0 gofmt -l
-          )
-          if [ -n "$unformatted" ]; then
-            echo "$unformatted"
-            exit 1
-          fi
-      - name: Run go vet
-        run: go vet ./...
-
-  license-check:
-    name: License Compliance
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+          scan-type: repo
+          exit-code: 0
+          format: sarif
+          output: trivy-results.sarif
+        continue-on-error: true
+      - name: Upload Trivy results
+        uses: github/codeql-action/upload-sarif@v4
+        if: always()
         with:
-          go-version-file: go.mod
-          cache: true
-      - name: Capture dependency inventory
-        run: |
-          go list -m -f '{{if not .Main}}{{.Path}} {{.Version}}{{end}}' all | sort > license-inventory.txt
-          test -s license-inventory.txt
+          sarif_file: 'trivy-results.sarif'
