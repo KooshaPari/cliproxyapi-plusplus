@@ -11,7 +11,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/tidwall/sjson"
 	"os"
 	"strings"
 	"syscall"

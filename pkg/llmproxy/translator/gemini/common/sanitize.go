@@ -52,12 +52,12 @@ func NormalizeOpenAIFunctionSchemaForGemini(params gjson.Result, strict bool) st
 			out = SanitizeParametersJSONSchemaForGemini(raw)
 		}
 	}
-	out, _ = sjson.SetBytesM(out, "type", "OBJECT")
+	out, _ = sjson.SetBytes(out, "type", "OBJECT")
 	if !gjson.Get(out, "properties").Exists() {
 		out, _ = sjson.SetRaw(out, "properties", `{}`)
 	}
 	if strict {
-		out, _ = sjson.SetBytesM(out, "additionalProperties", false)
+		out, _ = sjson.SetBytes(out, "additionalProperties", false)
 	}
 	return out
 }
