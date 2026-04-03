@@ -9,6 +9,7 @@ package config
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/tidwall/sjson"
 	"errors"
 	"fmt"
 	"os"
