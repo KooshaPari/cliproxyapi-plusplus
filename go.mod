@@ -13,7 +13,7 @@ require (
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/fxamacker/cbor/v2 v2.9.0
 	github.com/gin-gonic/gin v1.12.0
-	github.com/go-git/go-git/v6 v6.0.0-20260328145551-a93bccd59f82
+	github.com/go-git/go-git/v6 v6.0.0-alpha.1
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.3
 	github.com/jackc/pgx/v5 v5.9.1

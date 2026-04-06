@@ -77,8 +77,8 @@ github.com/go-git/go-billy/v6 v6.0.0-20260226131633-45bd0956d66f h1:Uvbx7nITO3Sd
 github.com/go-git/go-billy/v6 v6.0.0-20260226131633-45bd0956d66f/go.mod h1:ZW9JC5gionMP1kv5uiaOaV23q0FFmNrVOV8VW+y/acc=
 github.com/go-git/go-git-fixtures/v5 v5.1.2-0.20260122163445-0622d7459a67 h1:3hutPZF+/FBjR/9MdsLJ7e1mlt9pwHgwxMW7CrbmWII=
 github.com/go-git/go-git-fixtures/v5 v5.1.2-0.20260122163445-0622d7459a67/go.mod h1:xKt0pNHST9tYHvbiLxSY27CQWFwgIxBJuDrOE0JvbZw=
-github.com/go-git/go-git/v6 v6.0.0-20260328145551-a93bccd59f82 h1:pHgLJO75wmbnENFYxLb/baSAZhPQEZCP6+cHpRcV46Q=
-github.com/go-git/go-git/v6 v6.0.0-20260328145551-a93bccd59f82/go.mod h1:MD0nNvDdZ1yFG91XCLWTOQI48oqCRnQBMqraGrKV1p4=
+github.com/go-git/go-git/v6 v6.0.0-alpha.1 h1:tGohX5luKeO50DZD0/Zqd5dYjJzKtub91S4I+1qFVIs=
+github.com/go-git/go-git/v6 v6.0.0-alpha.1/go.mod h1:qtzfNHlFsnq6vCw54aT4KvFWPK5bsOpTVtFC2sysdB8=
 github.com/go-ini/ini v1.67.0 h1:z6ZrTEZqSWOTyH2FlglNbNgARyHG8oLW9gMELqKr06A=
 github.com/go-ini/ini v1.67.0/go.mod h1:ByCAeIL28uOIIG0E3PJtZPDL8WnHpFKFOtgjp+3Ies8=
 github.com/go-playground/assert/v2 v2.2.0 h1:JvknZsQTYeFEAhQwI4qEt9cyV5ONwRHC+lYKSsYSR8s=
