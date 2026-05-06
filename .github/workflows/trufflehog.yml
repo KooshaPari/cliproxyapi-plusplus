@@ -11,7 +11,10 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           fetch-depth: 0
-      - uses: trufflehog/actions/setup@main
+      - uses: actions/setup-go@0a12ed9e1a4ce4b1a02a5f2dd1e3a9c9e6c7f8b1
+        with:
+          go-version: 'stable'
+      - run: go install github.com/trufflehog/trufflehog/v3@latest
       - run: trufflehog github --only-verified --no-update
         env:
           GH_TOKEN: \${{ secrets.GITHUB_TOKEN }}
