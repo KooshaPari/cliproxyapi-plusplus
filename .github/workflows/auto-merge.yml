@@ -6,6 +6,12 @@ on:
   pull_request:
     branches: [main, master, develop]
   workflow_dispatch:
+
+
+concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
 permissions:
   contents: read
   pull-requests: write
@@ -21,6 +27,7 @@ jobs:
         if: |
           contains(github.event.pull_request.labels.*.name, 'automerge') &&
           !contains(github.event.pull_request.labels.*.name, 'do-not-merge')
-        uses: peter-evans/enable-pull-request-automerge@a660677d5469627102a1c1e11409dd063606628d # v3with:
+        uses: peter-evans/enable-pull-request-automerge@a660677d5469627102a1c1e11409dd063606628d # v3
+        with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           merge-method: squash
