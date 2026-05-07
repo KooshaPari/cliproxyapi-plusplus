@@ -1,9 +1,12 @@
 name: Alert sync issues
 on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master, develop]
   schedule:
     - cron: '17 * * * *'
   workflow_dispatch:
-
 permissions:
   contents: read
   issues: write

@@ -1,8 +1,11 @@
 name: VitePress Pages
 
 on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master, develop]
   workflow_dispatch:
-
 concurrency:
   group: pages-${{ github.ref }}
   cancel-in-progress: true
@@ -37,7 +40,7 @@ jobs:
         run: bun run lint
 
       - name: Check docs TS/JS formatting with OXC
-        run: bun run format:check
+        run: "bun run format:check"
 
       - name: Install dependencies
         working-directory: docs
@@ -45,7 +48,7 @@ jobs:
 
       - name: Build docs
         working-directory: docs
-        run: npm run docs:build
+        run: "npm run docs:build"
 
       - name: Verify built docs
         run: test -f docs/.vitepress/dist/index.html

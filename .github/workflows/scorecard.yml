@@ -4,12 +4,11 @@ concurrency:
   cancel-in-progress: true
 
 on:
-  branch_protection_rule:
-  schedule:
-    - cron: '17 3 * * 6'
   push:
-    branches: [main]
-
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master, develop]
+  branch_protection_rule:
 permissions:
   contents: read
   security-events: write

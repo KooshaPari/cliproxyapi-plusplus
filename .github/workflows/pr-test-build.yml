@@ -1,8 +1,11 @@
 name: pr-test-build
 
 on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master, develop]
   workflow_dispatch:
-
 permissions:
   contents: read
 
@@ -86,7 +89,7 @@ jobs:
         env:
           QUALITY_DIFF_RANGE: "${{ github.event.pull_request.base.sha }}...${{ github.sha }}"
           ENABLE_STATICCHECK: "1"
-        run: task quality:ci
+        run: "task quality:ci"
 
   quality-staged-check:
     name: quality-staged-check
@@ -109,7 +112,7 @@ jobs:
       - name: Check staged/diff files in PR range
         env:
           QUALITY_DIFF_RANGE: "${{ github.event.pull_request.base.sha }}...${{ github.sha }}"
-        run: task quality:fmt-staged:check
+        run: "task quality:fmt-staged:check"
 
   fmt-check:
     name: fmt-check
@@ -125,7 +128,7 @@ jobs:
           version: 3.x
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Verify formatting
-        run: task quality:fmt:check
+        run: "task quality:fmt:check"
 
   golangci-lint:
     name: golangci-lint
@@ -237,7 +240,7 @@ jobs:
           version: 3.x
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Run startup and control-plane smoke tests
-        run: task test:smoke
+        run: "task test:smoke"
 
   pre-release-config-compat-smoke:
     name: pre-release-config-compat-smoke
@@ -284,7 +287,7 @@ jobs:
             base_ref="origin/${{ github.base_ref }}"
           fi
           if git rev-parse --verify "${base_ref}" >/dev/null 2>&1; then
-            true
+            'true'
           else
             git fetch origin "${{ github.base_ref }}" --depth=1 || true
           fi
