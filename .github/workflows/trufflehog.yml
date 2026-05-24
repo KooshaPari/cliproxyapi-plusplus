@@ -21,4 +21,4 @@ jobs:
       - run: go install github.com/trufflehog/trufflehog/v3@latest
       - run: trufflehog github --only-verified --no-update
         env:
-          GH_TOKEN: \${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
