@@ -41,7 +41,7 @@ jobs:
 
       - name: Install dependencies
         working-directory: docs
-        run: npm install --frozen-lockfile
+        run: npm ci --frozen-lockfile
 
       - name: Build docs
         working-directory: docs
