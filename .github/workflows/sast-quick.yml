@@ -16,7 +16,7 @@ permissions:
 jobs:
   semgrep:
     name: Semgrep Scan
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     # Tier 3: Advisory - security enrichment only
     continue-on-error: true
@@ -43,7 +43,7 @@ jobs:
   # License Compliance - Tier 3: Advisory
   license-compliance:
     name: License Compliance
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     # Tier 3: Advisory - security enrichment only
     continue-on-error: true
@@ -63,7 +63,7 @@ jobs:
   # Secret Scanning - Tier 2: Important (runs in parallel)
   secrets:
     name: Secret Scanning
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4

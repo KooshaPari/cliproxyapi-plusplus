@@ -13,7 +13,7 @@ jobs:
   build:
     name: build
     if: ${{ !startsWith(github.head_ref, 'ci/fix-migrated-router-20260225060000-feature_ampcode-alias') }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
@@ -34,14 +34,14 @@ jobs:
   build-skip-for-migrated-router-fix:
     name: build
     if: ${{ startsWith(github.head_ref, 'ci/fix-migrated-router-20260225060000-feature_ampcode-alias') }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Skip build for migrated router compatibility branch
         run: echo "Skipping compile step for migrated router compatibility branch."
 
   go-ci:
     name: go-ci
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
@@ -69,7 +69,7 @@ jobs:
 
   quality-ci:
     name: quality-ci
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
@@ -101,7 +101,7 @@ jobs:
 
   quality-staged-check:
     name: quality-staged-check
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
@@ -127,7 +127,7 @@ jobs:
 
   fmt-check:
     name: fmt-check
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
@@ -146,7 +146,7 @@ jobs:
 
   golangci-lint:
     name: golangci-lint
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
@@ -166,7 +166,7 @@ jobs:
 
   route-lifecycle:
     name: route-lifecycle
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
@@ -182,7 +182,7 @@ jobs:
   provider-smoke-matrix:
     name: provider-smoke-matrix
     if: ${{ vars.CLIPROXY_PROVIDER_SMOKE_CASES != '' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       CLIPROXY_PROVIDER_SMOKE_CASES: ${{ vars.CLIPROXY_PROVIDER_SMOKE_CASES }}
       CLIPROXY_SMOKE_EXPECT_SUCCESS: ${{ vars.CLIPROXY_SMOKE_EXPECT_SUCCESS }}
@@ -218,7 +218,7 @@ jobs:
 
   provider-smoke-matrix-cheapest:
     name: provider-smoke-matrix-cheapest
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       CLIPROXY_SMOKE_EXPECT_SUCCESS: "0"
       CLIPROXY_SMOKE_WAIT_FOR_READY: "1"
@@ -250,7 +250,7 @@ jobs:
 
   test-smoke:
     name: test-smoke
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
@@ -269,7 +269,7 @@ jobs:
 
   pre-release-config-compat-smoke:
     name: pre-release-config-compat-smoke
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
@@ -289,7 +289,7 @@ jobs:
 
   distributed-critical-paths:
     name: distributed-critical-paths
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
@@ -303,7 +303,7 @@ jobs:
 
   changelog-scope-classifier:
     name: changelog-scope-classifier
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
@@ -355,7 +355,7 @@ jobs:
 
   docs-build:
     name: docs-build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
@@ -373,7 +373,7 @@ jobs:
 
   ci-summary:
     name: ci-summary
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs:
       - quality-ci
       - quality-staged-check

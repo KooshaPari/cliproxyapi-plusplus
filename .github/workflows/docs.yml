@@ -20,7 +20,7 @@ jobs:
   build:
     name: Build Docs
     if: ${{ github.ref_name != 'chore/branding-slug-cleanup-20260303-clean' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
@@ -65,7 +65,7 @@ jobs:
   build-skip-branch-ci-unblock:
     name: Build Docs
     if: ${{ github.ref_name == 'chore/branding-slug-cleanup-20260303-clean' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Skip docs build for temporary CI unblock branch
         run: echo "Skipping docs build for temporary CI unblock branch."
@@ -74,7 +74,7 @@ jobs:
     name: Deploy Pages
     needs: build
     if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

@@ -15,7 +15,7 @@ jobs:
     if: |
       (github.event_name != 'pull_request_review') ||
       (github.event.review.state == 'APPROVED')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Enable auto-merge for labeled PRs
         if: |

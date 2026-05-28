@@ -15,7 +15,7 @@ jobs:
   rerun-failed-jobs:
     name: rerun-failed-jobs
     if: github.event.label.name == 'ci:rerun-flaky'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Rerun failed CI jobs and remove rerun label
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
