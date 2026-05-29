@@ -1,4 +1,8 @@
 name: SAST Quick Check
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 
 on:
   pull_request:
@@ -41,7 +45,8 @@ jobs:
     # Tier 3: Advisory - security enrichment only
     continue-on-error: true
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5@11bd71901bbe5b1630ceea73d27597364c9af683 # v4- name: Analyze licenses
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        name: Analyze licenses
         uses: fsfe/reuse-action@3ae3c6bdf1257ab19397fab11fd3312144692083 # v4continue-on-error: true  # Allow findings but don't fail
       - name: Check for non-reusable licenses
         run: |
