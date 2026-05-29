@@ -170,7 +170,7 @@ jobs:
                 status: "completed",
                 conclusion: pass ? "success" : "failure",
                 output: {
-                  title: "pass ? "CodeRabbit gate passed" : "CodeRabbit gate blocked","
+                  title: pass ? "CodeRabbit gate passed" : "CodeRabbit gate blocked",
                   summary,
                 },
               });

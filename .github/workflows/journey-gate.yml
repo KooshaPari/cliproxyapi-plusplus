@@ -108,7 +108,7 @@ jobs:
       # ---------------------------------------------------------------------
       - name: Discover manifests
         id: discover
-      - run: |
+        run: |
           GLOB="${MANIFEST_PATH:-**/manifest.verified.json}"
           echo "Glob pattern: $GLOB"
 
@@ -194,7 +194,7 @@ jobs:
       # ---------------------------------------------------------------------
       - name: Live verification
         if: inputs.live_verification && github.event.inputs.live_verification != 'false'
-      - env:
+        env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           MANIFEST_LIST: ${{ steps.discover.outputs.MANIFEST_LIST }}
         run: |

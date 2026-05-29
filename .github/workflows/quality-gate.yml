@@ -4,8 +4,6 @@ concurrency:
   cancel-in-progress: true
 
 on:
-  push:
-    branches: [main, master, develop]
   pull_request:
     branches: [main, master, develop]
   workflow_dispatch:
@@ -16,6 +14,7 @@ jobs:
   verify:
     runs-on: ubuntu-24.04
     steps:
-      - actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231 # v4
+      - name: Checkout
+        uses: actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231 # v4
       - name: Run quality checks
         run: ./scripts/quality-gate.sh verify

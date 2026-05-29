@@ -1,8 +1,6 @@
 name: pr-test-build
 
 on:
-  push:
-    branches: [main, master, develop]
   pull_request:
     branches: [main, master, develop]
   workflow_dispatch:
@@ -44,9 +42,9 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
-        actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231 # v4
+        uses: actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231 # v4
       - name: Set up Go
-        actions/setup-go@78961f6f84d799cd858575bb931c3e51d3b13290 # v5
+        uses: actions/setup-go@78961f6f84d799cd858575bb931c3e51d3b13290 # v5
         with:
           go-version-file: go.mod
           cache: true
@@ -61,7 +59,7 @@ jobs:
           exit "${test_exit}"
       - name: Upload baseline artifact
         if: always()
-        actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v4
         with:
           name: go-test-baseline
           path: target/test-baseline.json
@@ -72,9 +70,9 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
-        actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231 # v4
+        uses: actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231 # v4
       - name: Set up Go
-        actions/setup-go@78961f6f84d799cd858575bb931c3e51d3b13290 # v5
+        uses: actions/setup-go@78961f6f84d799cd858575bb931c3e51d3b13290 # v5
         with:
           go-version-file: go.mod
           cache: true
@@ -89,7 +87,7 @@ jobs:
             go install honnef.co/go/tools/cmd/staticcheck@latest
           fi
       - name: Install Task
-        arduino/setup-task@696ff8f0a858f16a3c205ee53d273290513aad95
+        uses: arduino/setup-task@696ff8f0a858f16a3c205ee53d273290513aad95
         with:
           version: 3.x
           repo-token: ${{ secrets.GITHUB_TOKEN }}
@@ -104,9 +102,9 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
-        actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231 # v4
+        uses: actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231 # v4
       - name: Set up Go
-        actions/setup-go@78961f6f84d799cd858575bb931c3e51d3b13290 # v5
+        uses: actions/setup-go@78961f6f84d799cd858575bb931c3e51d3b13290 # v5
         with:
           go-version-file: go.mod
           cache: true
@@ -116,7 +114,7 @@ jobs:
             go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.1.6
           fi
       - name: Install Task
-        arduino/setup-task@696ff8f0a858f16a3c205ee53d273290513aad95
+        uses: arduino/setup-task@696ff8f0a858f16a3c205ee53d273290513aad95
         with:
           version: 3.x
           repo-token: ${{ secrets.GITHUB_TOKEN }}
@@ -130,14 +128,14 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
-        actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231 # v4
+        uses: actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231 # v4
       - name: Set up Go
-        actions/setup-go@78961f6f84d799cd858575bb931c3e51d3b13290 # v5
+        uses: actions/setup-go@78961f6f84d799cd858575bb931c3e51d3b13290 # v5
         with:
           go-version-file: go.mod
           cache: true
       - name: Install Task
-        arduino/setup-task@696ff8f0a858f16a3c205ee53d273290513aad95
+        uses: arduino/setup-task@696ff8f0a858f16a3c205ee53d273290513aad95
         with:
           version: 3.x
           repo-token: ${{ secrets.GITHUB_TOKEN }}
@@ -149,9 +147,9 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
-        actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231 # v4
+        uses: actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231 # v4
       - name: Set up Go
-        actions/setup-go@78961f6f84d799cd858575bb931c3e51d3b13290 # v5
+        uses: actions/setup-go@78961f6f84d799cd858575bb931c3e51d3b13290 # v5
         with:
           go-version-file: go.mod
           cache: true
@@ -169,9 +167,9 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
-        actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231 # v4
+        uses: actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231 # v4
       - name: Set up Go
-        actions/setup-go@78961f6f84d799cd858575bb931c3e51d3b13290 # v5
+        uses: actions/setup-go@78961f6f84d799cd858575bb931c3e51d3b13290 # v5
         with:
           go-version-file: go.mod
           cache: true
@@ -190,9 +188,9 @@ jobs:
       CLIPROXY_BASE_URL: "http://127.0.0.1:8317"
     steps:
       - name: Checkout
-        actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231 # v4
+        uses: actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231 # v4
       - name: Set up Go
-        actions/setup-go@78961f6f84d799cd858575bb931c3e51d3b13290 # v5
+        uses: actions/setup-go@78961f6f84d799cd858575bb931c3e51d3b13290 # v5
         with:
           go-version-file: go.mod
           cache: true
@@ -210,7 +208,7 @@ jobs:
           ./scripts/provider-smoke-matrix.sh
       - name: Stop proxy
         if: always()
-      - run: |
+        run: |
           if [ -f /tmp/cliproxy-smoke.pid ]; then
             kill "$(cat /tmp/cliproxy-smoke.pid)" || true
           fi
@@ -225,9 +223,9 @@ jobs:
       CLIPROXY_BASE_URL: "http://127.0.0.1:8317"
     steps:
       - name: Checkout
-        actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231 # v4
+        uses: actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231 # v4
       - name: Set up Go
-        actions/setup-go@78961f6f84d799cd858575bb931c3e51d3b13290 # v5
+        uses: actions/setup-go@78961f6f84d799cd858575bb931c3e51d3b13290 # v5
         with:
           go-version-file: go.mod
           cache: true
@@ -242,7 +240,7 @@ jobs:
         run: ./scripts/provider-smoke-matrix-cheapest.sh
       - name: Stop proxy
         if: always()
-      - run: |
+        run: |
           if [ -f /tmp/cliproxy-smoke.pid ]; then
             kill "$(cat /tmp/cliproxy-smoke.pid)" || true
           fi
@@ -253,14 +251,14 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
-        actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231 # v4
+        uses: actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231 # v4
       - name: Set up Go
-        actions/setup-go@78961f6f84d799cd858575bb931c3e51d3b13290 # v5
+        uses: actions/setup-go@78961f6f84d799cd858575bb931c3e51d3b13290 # v5
         with:
           go-version-file: go.mod
           cache: true
       - name: Install Task
-        arduino/setup-task@696ff8f0a858f16a3c205ee53d273290513aad95
+        uses: arduino/setup-task@696ff8f0a858f16a3c205ee53d273290513aad95
         with:
           version: 3.x
           repo-token: ${{ secrets.GITHUB_TOKEN }}
@@ -272,14 +270,14 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
-        actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231 # v4
+        uses: actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231 # v4
       - name: Set up Go
-        actions/setup-go@78961f6f84d799cd858575bb931c3e51d3b13290 # v5
+        uses: actions/setup-go@78961f6f84d799cd858575bb931c3e51d3b13290 # v5
         with:
           go-version-file: go.mod
           cache: true
       - name: Install Task
-        arduino/setup-task@696ff8f0a858f16a3c205ee53d273290513aad95
+        uses: arduino/setup-task@696ff8f0a858f16a3c205ee53d273290513aad95
         with:
           version: 3.x
           repo-token: ${{ secrets.GITHUB_TOKEN }}
@@ -292,9 +290,9 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
-        actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231 # v4
+        uses: actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231 # v4
       - name: Set up Go
-        actions/setup-go@78961f6f84d799cd858575bb931c3e51d3b13290 # v5
+        uses: actions/setup-go@78961f6f84d799cd858575bb931c3e51d3b13290 # v5
         with:
           go-version-file: go.mod
           cache: true
@@ -306,7 +304,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
-        actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231 # v4
+        uses: actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231 # v4
         with:
           fetch-depth: 0
       - name: Detect change scopes
@@ -348,7 +346,7 @@ jobs:
           echo "scope=${scope}" >> "$GITHUB_ENV"
           echo "scope=${scope}" > target/changelog-scope.txt
       - name: Upload changelog scope artifact
-        actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v4
         with:
           name: changelog-scope
           path: target/changelog-scope.txt
@@ -358,16 +356,16 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
-        actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231 # v4
+        uses: actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231 # v4
       - name: Setup Node
-        actions/setup-node@0355742c943ddb13ca8a6b700f824231caa91e75 # v4
+        uses: actions/setup-node@0355742c943ddb13ca8a6b700f824231caa91e75 # v4
         with:
           node-version: "20"
           cache: "npm"
           cache-dependency-path: docs/package.json
       - name: Build docs
         working-directory: docs
-      - run: |
+        run: |
           npm install
           npm run docs:build
 

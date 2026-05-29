@@ -2,8 +2,6 @@ name: pages-deploy
 on:
   push:
     branches: [main, master, develop]
-  pull_request:
-    branches: [main, master, develop]
   workflow_dispatch:
 permissions:
   contents: read
@@ -16,10 +14,14 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-24.04
     steps:
-      - actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231
-      - actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d
-      - actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9
+      - name: Checkout
+        uses: actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231
+      - name: Configure Pages
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9
         with:
           path: .
-      - id: deployment
-        actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v4
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v4

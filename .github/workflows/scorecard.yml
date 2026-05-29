@@ -3,8 +3,8 @@ name: OpenSSF Scorecard
 on:
   push:
     branches: [main, master, develop]
-  pull_request:
-    branches: [main, master, develop]
+  schedule:
+    - cron: '17 3 * * 6'
   branch_protection_rule:
 
 permissions: read-all
@@ -20,22 +20,26 @@ jobs:
       actions: read
 
     steps:
-      - actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231 # v4
+      - name: Checkout
+        uses: actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231 # v4
         with:
           persist-credentials: false
 
-      - ossf/scorecard-action@af76153369ae1eb1eaffc4118046b7fda9a8419e # v2.4.2
+      - name: Run Scorecard analysis
+        uses: ossf/scorecard-action@af76153369ae1eb1eaffc4118046b7fda9a8419e # v2.4.2
         with:
           results_file: results.sarif
           results_format: sarif
           publish_results: true
 
-      - actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v4
+      - name: Upload artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v4
         with:
           name: SARIF file
           path: results.sarif
           retention-days: 5
 
-      - github/codeql-action/upload-sarif@115001ba8d0198846992657731666b08686c8ded # v3
+      - name: Upload to code-scanning
+        uses: github/codeql-action/upload-sarif@115001ba8d0198846992657731666b08686c8ded # v3
         with:
           sarif_file: results.sarif

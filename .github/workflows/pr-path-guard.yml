@@ -1,8 +1,6 @@
 name: translator-path-guard
 
 on:
-  push:
-    branches: [main, master, develop]
   pull_request:
     branches: [main, master, develop]
   workflow_dispatch:
@@ -14,18 +12,19 @@ jobs:
     name: ensure-no-translator-changes
     runs-on: ubuntu-24.04
     steps:
-      - actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231 # v4
+      - name: Checkout
+        uses: actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231 # v4
         with:
           fetch-depth: 0
       - name: Detect pkg/llmproxy/translator changes
         id: changed-files
-        tj-actions/changed-files@934b2d2c7e653bb8c968afed5a0428617f09aa24 # v45
+        uses: tj-actions/changed-files@934b2d2c7e653bb8c968afed5a0428617f09aa24 # v45
         with:
           files: |
             pkg/llmproxy/translator/**
       - name: Fail when restricted paths change
         if: steps.changed-files.outputs.any_changed == 'true' && !(startsWith(github.head_ref, 'feature/koosh-migrate') || startsWith(github.head_ref, 'feature/migrate-') || startsWith(github.head_ref, 'migrated/') || startsWith(github.head_ref, 'ci/fix-feature-koosh-migrate') || startsWith(github.head_ref, 'ci/fix-feature-migrate-') || startsWith(github.head_ref, 'ci/fix-migrated/') || startsWith(github.head_ref, 'ci/fix-feat-'))
-      - run: |
+        run: |
           # Filter out whitelisted translator files (formatting-only and hotfix paths)
           disallowed_files="$(printf '%s\n' \
             $(printf '%s' '${{ steps.changed-files.outputs.all_changed_files }}' | tr ',' '\n') \

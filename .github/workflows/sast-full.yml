@@ -6,7 +6,7 @@ on:
   pull_request:
     branches: [main, master, develop]
   schedule:
-    - cron: '17 * * * *'
+    - cron: '0 2 * * *'
   workflow_dispatch:
 
 permissions:
@@ -22,13 +22,16 @@ jobs:
       matrix:
         language: [go, javascript]
     steps:
-      - actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231 # v4
+      - name: Checkout
+        uses: actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231 # v4
         with:
           fetch-depth: 0
-      - github/codeql-action/init@115001ba8d0198846992657731666b08686c8ded # v4
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@115001ba8d0198846992657731666b08686c8ded # v4
         with:
           languages: ${{ matrix.language }}
-      - github/codeql-action/analyze@115001ba8d0198846992657731666b08686c8ded # v4
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@115001ba8d0198846992657731666b08686c8ded # v4
         with:
           category: "/lang:${{ matrix.language }}"
 
@@ -37,16 +40,19 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
-      - actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231 # v4
+      - name: Checkout
+        uses: actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231 # v4
         with:
           fetch-depth: 0
-      - aquasecurity/trivy-action@314ff8b43182423b84c50b1670b0e10f858f2d98 # v0.35.0
+      - name: Run Trivy scanner
+        uses: aquasecurity/trivy-action@314ff8b43182423b84c50b1670b0e10f858f2d98 # v0.35.0
         with:
           scan-type: fs
           scan-ref: .
           format: sarif
           output: trivy-results.sarif
-      - github/codeql-action/upload-sarif@115001ba8d0198846992657731666b08686c8ded # v4
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@115001ba8d0198846992657731666b08686c8ded # v4
         if: always()
         with:
           sarif_file: trivy-results.sarif
@@ -57,10 +63,12 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
-      - actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231 # v4
+      - name: Checkout
+        uses: actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231 # v4
         with:
           fetch-depth: 0
-      - actions/setup-python@c8813ba1bc76ebf779b911ad8ffccbf2e449cb48 # v5
+      - name: Set up Python
+        uses: actions/setup-python@c8813ba1bc76ebf779b911ad8ffccbf2e449cb48 # v5
         with:
           python-version: "3.12"
       - name: Install Semgrep
@@ -76,7 +84,8 @@ jobs:
             --sarif \
             --output semgrep.sarif \
             .
-      - github/codeql-action/upload-sarif@115001ba8d0198846992657731666b08686c8ded # v4
+      - name: Upload Semgrep results to GitHub Security
+        uses: github/codeql-action/upload-sarif@115001ba8d0198846992657731666b08686c8ded # v4
         if: always()
         with:
           sarif_file: semgrep.sarif
@@ -87,10 +96,12 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
-      - actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231 # v4
+      - name: Checkout
+        uses: actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231 # v4
         with:
           fetch-depth: 0
-      - trufflesecurity/trufflehog@36f6f697079e637bccb1e05561a481d8b4016862 # v3.94.2
+      - name: Run TruffleHog scanner
+        uses: trufflesecurity/trufflehog@36f6f697079e637bccb1e05561a481d8b4016862 # v3.94.2
         with:
           path: ./
           extra_args: --only-verified

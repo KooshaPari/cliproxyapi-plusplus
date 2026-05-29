@@ -1,10 +1,6 @@
 name: goreleaser
 
 on:
-  push:
-    branches: [main, master, develop]
-  pull_request:
-    branches: [main, master, develop]
   workflow_dispatch:
 permissions:
   contents: write
@@ -13,7 +9,8 @@ jobs:
   goreleaser:
     runs-on: ubuntu-latest
     steps:
-      - actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231 # v4
+      - name: Checkout
+        uses: actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231 # v4
         with:
           fetch-depth: 0
       - name: Refresh models catalog
@@ -21,7 +18,8 @@ jobs:
           git fetch --depth 1 https://github.com/router-for-me/models.git main
           git show FETCH_HEAD:models.json > internal/registry/models/models.json
       - run: git fetch --force --tags
-      - actions/setup-go@78961f6f84d799cd858575bb931c3e51d3b13290 # v4
+      - name: Setup Go
+        uses: actions/setup-go@78961f6f84d799cd858575bb931c3e51d3b13290 # v4
         with:
           go-version: '>=1.26.0'
           cache: true
@@ -30,7 +28,8 @@ jobs:
           echo "VERSION=${GITHUB_REF_NAME}" >> $GITHUB_ENV
           echo COMMIT=`git rev-parse --short HEAD` >> $GITHUB_ENV
           echo BUILD_DATE=`date -u +%Y-%m-%dT%H:%M:%SZ` >> $GITHUB_ENV
-      - goreleaser/goreleaser-action@5fdedb94abba051217030cc86d4523cf3f02243d # v4
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@5fdedb94abba051217030cc86d4523cf3f02243d # v4
         with:
           distribution: goreleaser
           version: latest
@@ -45,7 +44,7 @@ jobs:
     runs-on: ubuntu-24.04-arm
     steps:
       - name: Checkout
-        actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231 # v4
+        uses: actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231 # v4
         with:
           fetch-depth: 0
       - name: Build in Termux Container
@@ -68,7 +67,7 @@ jobs:
               tar -czf cli-proxy-api-termux-aarch64.tar.gz cli-proxy-api LICENSE README.md README_CN.md config.example.yaml
             "
       - name: Upload to Release
-        softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: cli-proxy-api-termux-aarch64.tar.gz

@@ -16,8 +16,10 @@ jobs:
     permissions:
       contents: read
     steps:
-      - actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231
-      - actions/setup-python@c8813ba1bc76ebf779b911ad8ffccbf2e449cb48
+      - name: Checkout
+        uses: actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231
+      - name: Set up Python
+        uses: actions/setup-python@c8813ba1bc76ebf779b911ad8ffccbf2e449cb48
         with:
           python-version: "3.13"
       - name: Install ggshield

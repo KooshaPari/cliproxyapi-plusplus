@@ -22,21 +22,23 @@ jobs:
         language: [go]
     steps:
       - name: Checkout
-        actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231 # v4
-        name: Initialize CodeQL
-        github/codeql-action/init@115001ba8d0198846992657731666b08686c8ded # v4
+        uses: actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231 # v4
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@115001ba8d0198846992657731666b08686c8ded # v4
         with:
           languages: ${{ matrix.language }}
           config-file: .github/codeql/codeql-config.yml
       - name: Set up Go
-        actions/setup-go@78961f6f84d799cd858575bb931c3e51d3b13290 # v5
+        uses: actions/setup-go@78961f6f84d799cd858575bb931c3e51d3b13290 # v5
         with:
           go-version-file: go.mod
           cache: true
       - name: Build
         run: go build ./...
       - name: Perform CodeQL Analysis
-        github/codeql-action/analyze@115001ba8d0198846992657731666b08686c8ded # v4analyze-skip-for-migrated-router-fix:
+        uses: github/codeql-action/analyze@115001ba8d0198846992657731666b08686c8ded # v4
+
+  analyze-skip-for-migrated-router-fix:
     name: Analyze (Go)
     if: ${{ startsWith(github.head_ref, 'ci/fix-migrated-router-20260225060000-feature_ampcode-alias') }}
     runs-on: ubuntu-24.04

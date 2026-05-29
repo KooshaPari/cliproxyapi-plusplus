@@ -1,10 +1,6 @@
 name: Generate SDKs
 
 on:
-  push:
-    branches: [main, master, develop]
-  pull_request:
-    branches: [main, master, develop]
   workflow_dispatch:
 permissions:
   contents: write
@@ -14,9 +10,10 @@ jobs:
   generate-python-sdk:
     runs-on: ubuntu-latest
     steps:
-      - actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231 # v4
+      - name: Checkout
+        uses: actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231 # v4
       - name: Setup Python
-        actions/setup-python@c8813ba1bc76ebf779b911ad8ffccbf2e449cb48 # v5
+        uses: actions/setup-python@c8813ba1bc76ebf779b911ad8ffccbf2e449cb48 # v5
         with:
           python-version: '3.14'
       
@@ -34,7 +31,7 @@ jobs:
             --additional-properties=pythonVersion==3.12,generateSourceCodeOnly=true
       
       - name: Create Pull Request
-        peter-evans/create-pull-request@aa523f9db61947bd5e06efd77870ef065eae32cc # v6
+        uses: peter-evans/create-pull-request@aa523f9db61947bd5e06efd77870ef065eae32cc # v6
         with:
           commit-message: 'chore: generate Python SDK'
           title: 'chore: generate Python SDK'
@@ -46,9 +43,10 @@ jobs:
   generate-typescript-sdk:
     runs-on: ubuntu-latest
     steps:
-      - actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231 # v4
+      - name: Checkout
+        uses: actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231 # v4
       - name: Setup Node
-        actions/setup-node@0355742c943ddb13ca8a6b700f824231caa91e75 # v4
+        uses: actions/setup-node@0355742c943ddb13ca8a6b700f824231caa91e75 # v4
         with:
           node-version: '20'
       
@@ -65,7 +63,7 @@ jobs:
             --additional-properties=typescriptVersion=5.0,npmName=@cliproxy/api
       
       - name: Create Pull Request
-        peter-evans/create-pull-request@aa523f9db61947bd5e06efd77870ef065eae32cc # v6
+        uses: peter-evans/create-pull-request@aa523f9db61947bd5e06efd77870ef065eae32cc # v6
         with:
           commit-message: 'chore: generate TypeScript SDK'
           title: 'chore: generate TypeScript SDK'
