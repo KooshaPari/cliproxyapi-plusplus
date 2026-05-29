@@ -1,4 +1,11 @@
 name: Trufflehog Secrets Scan
+permissions:
+  contents: read
+  pull-requests: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches: [main]
@@ -6,12 +13,15 @@ on:
 
 jobs:
   trufflehog:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231
         with:
           fetch-depth: 0
-      - uses: trufflehog/actions/setup@main
+      - uses: actions/setup-go@78961f6f84d799cd858575bb931c3e51d3b13290
+        with:
+          go-version: 'stable'
+      - run: go install github.com/trufflehog/trufflehog/v3@latest
       - run: trufflehog github --only-verified --no-update
         env:
-          GH_TOKEN: \${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

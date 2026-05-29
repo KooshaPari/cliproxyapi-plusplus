@@ -1,8 +1,11 @@
 name: coderabbit-rate-limit-retry
 
 on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master, develop]
   workflow_dispatch:
-
 permissions:
   checks: write
   contents: read
@@ -12,10 +15,11 @@ permissions:
 jobs:
   retrigger:
     name: retrigger-coderabbit-on-rate-limit
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Re-request CodeRabbit when backlog is high and check is stale
-        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7with:
+        actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v7
+        with:
           script: |
             const owner = context.repo.owner;
             const repo = context.repo.repo;
@@ -166,7 +170,7 @@ jobs:
                 status: "completed",
                 conclusion: pass ? "success" : "failure",
                 output: {
-                  title: pass ? "CodeRabbit gate passed" : "CodeRabbit gate blocked",
+                  title: "pass ? "CodeRabbit gate passed" : "CodeRabbit gate blocked","
                   summary,
                 },
               });

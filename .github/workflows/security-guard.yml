@@ -12,12 +12,12 @@ permissions:
 
 jobs:
   ggshield-scan:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+      - actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231
+      - actions/setup-python@c8813ba1bc76ebf779b911ad8ffccbf2e449cb48
         with:
           python-version: "3.13"
       - name: Install ggshield

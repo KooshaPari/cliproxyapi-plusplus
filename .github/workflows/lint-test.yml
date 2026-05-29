@@ -1,15 +1,20 @@
 name: Lint & Test
 
 on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master, develop]
   workflow_dispatch:
-
 permissions:
   contents: read
 
 jobs:
   lint-test:
     name: lint-test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5@11bd71901bbe5b1630ceea73d27597364c9af683 # v4- uses: KooshaPari/phenotypeActions/actions/lint-test@main
+        actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231
+
+      - uses: KooshaPari/phenotypeActions/actions/lint-test@48772d7560c964fff01a209742429f24283e96cf

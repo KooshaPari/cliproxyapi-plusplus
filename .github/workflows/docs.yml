@@ -1,6 +1,10 @@
 name: VitePress Pages
 
 on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master, develop]
   workflow_dispatch:
 
 concurrency:
@@ -16,17 +20,21 @@ jobs:
   build:
     name: Build Docs
     if: ${{ github.ref_name != 'chore/branding-slug-cleanup-20260303-clean' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5@11bd71901bbe5b1630ceea73d27597364c9af683 # v4- name: Setup Node
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020@8f152de45cc393bb48ce5d89d36b731f54556e65 # v4with:
+        actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231 # v4
+
+      - name: Setup Node
+        actions/setup-node@0355742c943ddb13ca8a6b700f824231caa91e75 # v4
+        with:
           node-version: "20"
           cache: "npm"
           cache-dependency-path: docs/package.json
 
       - name: Setup Bun
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2with:
+        oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
           bun-version: latest
 
       - name: Install OXC dependencies
@@ -36,7 +44,7 @@ jobs:
         run: bun run lint
 
       - name: Check docs TS/JS formatting with OXC
-        run: bun run format:check
+        run: "bun run format:check"
 
       - name: Install dependencies
         working-directory: docs
@@ -44,19 +52,20 @@ jobs:
 
       - name: Build docs
         working-directory: docs
-        run: npm run docs:build
+        run: "npm run docs:build"
 
       - name: Verify built docs
         run: test -f docs/.vitepress/dist/index.html
 
       - name: Upload pages artifact
-        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3with:
+        actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v3
+        with:
           path: docs/.vitepress/dist/
 
   build-skip-branch-ci-unblock:
     name: Build Docs
     if: ${{ github.ref_name == 'chore/branding-slug-cleanup-20260303-clean' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Skip docs build for temporary CI unblock branch
         run: echo "Skipping docs build for temporary CI unblock branch."
@@ -65,12 +74,14 @@ jobs:
     name: Deploy Pages
     needs: build
     if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Configure Pages
-        uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5- name: Deploy
+        actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v5
+
+      - name: Deploy
         id: deployment
-        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
+        actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v4
