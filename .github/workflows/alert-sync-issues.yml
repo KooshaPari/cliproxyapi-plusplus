@@ -1,16 +1,19 @@
 name: Alert sync issues
 on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master, develop]
   schedule:
     - cron: '17 * * * *'
   workflow_dispatch:
-
 permissions:
   contents: read
   issues: write
 
 jobs:
   sync:
-    uses: KooshaPari/phenoShared/.github/workflows/alert-sync-issues.yml@main
+    uses: KooshaPari/phenoShared/.github/workflows/alert-sync-issues.yml@4b820a6d1eca7884e692e4ec4edf2b59732809cd
     with:
       auto-label: auto-alert-sync
       min_severity: high

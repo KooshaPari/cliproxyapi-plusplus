@@ -1,4 +1,7 @@
 # =============================================================================
+permissions:
+  contents: read
+  pull-requests: read
 # Journey Gate — Reusable Workflow
 # =============================================================================
 # Canonical source: phenotype-infra/docs/governance/ci-journey-gate.yml
@@ -54,12 +57,12 @@ env:
 jobs:
   journey-gate:
     name: Journey Verification
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
 
     steps:
       - name: Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5@11bd71901bbe5b1630ceea73d27597364c9af683
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
 
       # ---------------------------------------------------------------------
       # 1. Install runtime dependencies
@@ -105,7 +108,7 @@ jobs:
       # ---------------------------------------------------------------------
       - name: Discover manifests
         id: discover
-        run: |
+      - run: |
           GLOB="${MANIFEST_PATH:-**/manifest.verified.json}"
           echo "Glob pattern: $GLOB"
 
@@ -191,7 +194,7 @@ jobs:
       # ---------------------------------------------------------------------
       - name: Live verification
         if: inputs.live_verification && github.event.inputs.live_verification != 'false'
-        env:
+      - env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           MANIFEST_LIST: ${{ steps.discover.outputs.MANIFEST_LIST }}
         run: |
@@ -237,7 +240,7 @@ jobs:
   # --------------------------------------------------------------------------
   stub-mode:
     name: Journey Gate — No Manifests Found
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: journey-gate
     if: needs.journey-gate.result == 'failure' && needs.journey-gate.outputs.MANIFEST_COUNT == '0'
     steps:

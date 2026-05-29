@@ -1,8 +1,11 @@
 name: ci-rerun-flaky
 
 on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master, develop]
   workflow_dispatch:
-
 permissions:
   actions: write
   contents: read
@@ -12,10 +15,11 @@ jobs:
   rerun-failed-jobs:
     name: rerun-failed-jobs
     if: github.event.label.name == 'ci:rerun-flaky'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Rerun failed CI jobs and remove rerun label
-        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7with:
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        with:
           script: |
             const label = 'ci:rerun-flaky';
             const { owner, repo } = context.repo;
