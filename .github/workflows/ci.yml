@@ -58,5 +58,4 @@ jobs:
       
 
   phenotype-validate:
-    runs-on: ubuntu-24.04
     uses: KooshaPari/phenotypeActions/.github/workflows/validate-governance.yml@48772d7560c964fff01a209742429f24283e96cf

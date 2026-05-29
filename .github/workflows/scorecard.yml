@@ -6,6 +6,8 @@ on:
   pull_request:
     branches: [main, master, develop]
   branch_protection_rule:
+  schedule:
+    - cron: '17 3 * * 6'
 
 permissions: read-all
 
