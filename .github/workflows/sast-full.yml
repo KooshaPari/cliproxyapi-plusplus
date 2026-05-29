@@ -22,13 +22,13 @@ jobs:
       matrix:
         language: [go, javascript]
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231 # v4
         with:
           fetch-depth: 0
-      - uses: github/codeql-action/init@95e58e9a2cdfd71adc6e0353d5c52f41a045d225 # v4
+      - github/codeql-action/init@115001ba8d0198846992657731666b08686c8ded # v4
         with:
           languages: ${{ matrix.language }}
-      - uses: github/codeql-action/analyze@95e58e9a2cdfd71adc6e0353d5c52f41a045d225 # v4
+      - github/codeql-action/analyze@115001ba8d0198846992657731666b08686c8ded # v4
         with:
           category: "/lang:${{ matrix.language }}"
 
@@ -37,16 +37,16 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231 # v4
         with:
           fetch-depth: 0
-      - uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
+      - aquasecurity/trivy-action@314ff8b43182423b84c50b1670b0e10f858f2d98 # v0.35.0
         with:
           scan-type: fs
           scan-ref: .
           format: sarif
           output: trivy-results.sarif
-      - uses: github/codeql-action/upload-sarif@95e58e9a2cdfd71adc6e0353d5c52f41a045d225 # v4
+      - github/codeql-action/upload-sarif@115001ba8d0198846992657731666b08686c8ded # v4
         if: always()
         with:
           sarif_file: trivy-results.sarif
@@ -57,10 +57,10 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231 # v4
         with:
           fetch-depth: 0
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+      - actions/setup-python@c8813ba1bc76ebf779b911ad8ffccbf2e449cb48 # v5
         with:
           python-version: "3.12"
       - name: Install Semgrep
@@ -76,7 +76,7 @@ jobs:
             --sarif \
             --output semgrep.sarif \
             .
-      - uses: github/codeql-action/upload-sarif@95e58e9a2cdfd71adc6e0353d5c52f41a045d225 # v4
+      - github/codeql-action/upload-sarif@115001ba8d0198846992657731666b08686c8ded # v4
         if: always()
         with:
           sarif_file: semgrep.sarif
@@ -87,10 +87,10 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231 # v4
         with:
           fetch-depth: 0
-      - uses: trufflesecurity/trufflehog@6bd2d14f7a4bc1e569fa3550efa7ec632a4fa67b # v3.94.2
+      - trufflesecurity/trufflehog@36f6f697079e637bccb1e05561a481d8b4016862 # v3.94.2
         with:
           path: ./
           extra_args: --only-verified

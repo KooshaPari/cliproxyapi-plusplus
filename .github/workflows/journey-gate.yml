@@ -62,7 +62,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231
 
       # ---------------------------------------------------------------------
       # 1. Install runtime dependencies

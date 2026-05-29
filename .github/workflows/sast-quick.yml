@@ -21,10 +21,10 @@ jobs:
     # Tier 3: Advisory - security enrichment only
     continue-on-error: true
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231 # v4
         with:
           fetch-depth: 0
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+      - actions/setup-python@c8813ba1bc76ebf779b911ad8ffccbf2e449cb48 # v5
         with:
           python-version: "3.12"
       - name: Install Semgrep
@@ -35,7 +35,7 @@ jobs:
         run: |
           semgrep scan --sarif --sarif-output=semgrep.sarif --max-target-bytes 1000000 --quiet --config=auto || true
       - name: Upload SARIF
-        uses: github/codeql-action/upload-sarif@95e58e9a2cdfd71adc6e0353d5c52f41a045d225 # v4
+        github/codeql-action/upload-sarif@115001ba8d0198846992657731666b08686c8ded # v4
         if: always()
         with:
           sarif_file: semgrep.sarif
@@ -48,16 +48,16 @@ jobs:
     # Tier 3: Advisory - security enrichment only
     continue-on-error: true
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231 # v4
       - name: Analyze licenses
-        uses: fsfe/reuse-action@3ae3c6bdf1257ab19397fab11fd3312144692083 # v4
+        fsfe/reuse-action@6ac5c823270d369f01e3c491c708f706f2bdc355 # v4
         continue-on-error: true  # Allow findings but don't fail
       - name: Check for non-reusable licenses
         run: |
           # Check for problematic licenses
           grep -r "GPL\|AGPL" --include="*.toml" --include="*.json" . || true
       - name: Check license compliance
-        uses: fsfe/reuse-action@3ae3c6bdf1257ab19397fab11fd3312144692083 # v4
+        fsfe/reuse-action@6ac5c823270d369f01e3c491c708f706f2bdc355 # v4
         continue-on-error: true
 
   # Secret Scanning - Tier 2: Important (runs in parallel)
@@ -66,17 +66,17 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231 # v4
         with:
           fetch-depth: 0
       - name: Run Gitleaks
-        uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2
+        gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           args: --verbose --redact
       - name: Run Trivy Secret Scanner
-        uses: aquasecurity/trivy-action@314ff8b43182423b84c50b1670b0e10f858f2d98 # master
+        aquasecurity/trivy-action@314ff8b43182423b84c50b1670b0e10f858f2d98 # master
         with:
           scan-type: repo
           exit-code: 0
@@ -84,7 +84,7 @@ jobs:
           output: trivy-results.sarif
         continue-on-error: true
       - name: Upload Trivy results
-        uses: github/codeql-action/upload-sarif@95e58e9a2cdfd71adc6e0353d5c52f41a045d225 # v4
+        github/codeql-action/upload-sarif@115001ba8d0198846992657731666b08686c8ded # v4
         if: always()
         with:
           sarif_file: 'trivy-results.sarif'
