@@ -11,5 +11,6 @@
     "oxfmt": "^0.36.0",
     "oxlint": "^1.51.0",
     "oxlint-tsgolint": "^0.16.0"
-  }
+  },
+  "packageManager": "npm@10"
 }
