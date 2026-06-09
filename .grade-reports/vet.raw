@@ -1,0 +1,42 @@
+sdk/api/handlers/claude/gitlab_duo_handler_test.go:13:2: no required module provides package github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/runtime/executor; to add it:
+	go get github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/runtime/executor
+sdk/api/handlers/claude/gitlab_duo_handler_test.go:13:2: no required module provides package github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/runtime/executor; to add it:
+	go get github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/runtime/executor
+# github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/codex/gemini
+# [github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/codex/gemini]
+vet: pkg/llmproxy/translator/codex/gemini/codex_gemini_response_test.go:20:21: cannot use got[0] (variable of type []byte) as string value in argument to gjson.Parse
+# github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/codex/claude
+# [github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/codex/claude]
+vet: pkg/llmproxy/translator/codex/claude/codex_claude_response_test.go:49:21: cannot use got (variable of type []byte) as string value in argument to gjson.Parse
+# github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/auth/kiro
+# [github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/auth/kiro]
+vet: pkg/llmproxy/auth/kiro/aws_extra_test.go:83:3: unknown field endpoint in struct literal of type KiroAuth
+# github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/gemini/openai/responses
+# [github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/gemini/openai/responses]
+vet: pkg/llmproxy/translator/gemini/openai/responses/gemini_openai-responses_response_test.go:44:21: cannot use ConvertGeminiResponseToOpenAIResponses(context.Background(), "test-model", originalReq, nil, []byte(line), &param) (value of type []string) as [][]byte value in argument to append
+# github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/api/handlers/management
+# [github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/api/handlers/management]
+vet: pkg/llmproxy/api/handlers/management/test_store_test.go:10:6: memoryAuthStore redeclared in this block
+# github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/executor
+# [github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/executor]
+vet: pkg/llmproxy/executor/antigravity_executor_buildrequest_test.go:309:6: assertNoSchemaKeywords redeclared in this block
+# github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/translator
+# [github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/translator]
+vet: pkg/llmproxy/translator/translator/translator_test.go:50:11: cannot use (func(_ context.Context, model string, _, _, rawJSON []byte, _ *any) []string literal) (value of type func(_ context.Context, model string, _ []byte, _ []byte, rawJSON []byte, _ *any) []string) as "github.com/kooshapari/CLIProxyAPI/v7/sdk/translator".ResponseStreamTransform value in struct literal
+# github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/watcher
+# [github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/watcher]
+vet: pkg/llmproxy/watcher/watcher_test.go:520:11: undefined: authSliceToMap
+# github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/util
+# [github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/util]
+vet: pkg/llmproxy/util/gemini_schema_test.go:5:2: "github.com/tidwall/sjson" imported and not used
+# github.com/kooshapari/CLIProxyAPI/v7/test
+# [github.com/kooshapari/CLIProxyAPI/v7/test]
+vet: test/openai_websearch_translation_test.go:75:16: cannot use r (variable of type []byte) as string value in argument to gjson.Get
+# github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy
+# [github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy]
+vet: sdk/cliproxy/rtprovider_test.go:14:33: cannot use &coreauth.Auth{…} (value of type *"github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/auth".Auth) as *"github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth".Auth value in argument to provider.RoundTripperFor
+# github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth
+# [github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth]
+vet: sdk/cliproxy/auth/conductor_overrides_test.go:17:38: too many arguments in call to m.SetRetryConfig
+	have (number, time.Duration, number)
+	want (int, time.Duration)

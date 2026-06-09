@@ -1,0 +1,5 @@
+pkg/llmproxy/util/claude_tool_id.go:1: : # github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/util [github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/util.test]
+pkg/llmproxy/util/gemini_schema_test.go:5:2: "github.com/tidwall/sjson" imported and not used (typecheck)
+package util
+1 issues:
+* typecheck: 1

@@ -1,0 +1,17 @@
+========================================
+  GRADE — cliproxyapi-plusplus
+  Stack: go
+  Mode:  fast
+========================================
+  [PASS] build
+  [FAIL] test-unit
+  [FAIL] fmt
+  [FAIL] vet
+  [FAIL] lint
+  [FAIL] audit
+
+========================================
+  SCORE: 2 / 12 (16%)
+  GRADE: F
+========================================
+EXIT_CODE=1

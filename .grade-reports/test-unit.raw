@@ -1,0 +1,319 @@
+# github.com/kooshapari/CLIProxyAPI/v7/sdk/api/handlers/claude
+sdk/api/handlers/claude/gitlab_duo_handler_test.go:13:2: no required module provides package github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/runtime/executor; to add it:
+	go get github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/runtime/executor
+FAIL	github.com/kooshapari/CLIProxyAPI/v7/sdk/api/handlers/claude [setup failed]
+# github.com/kooshapari/CLIProxyAPI/v7/sdk/api/handlers/openai
+sdk/api/handlers/claude/gitlab_duo_handler_test.go:13:2: no required module provides package github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/runtime/executor; to add it:
+	go get github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/runtime/executor
+FAIL	github.com/kooshapari/CLIProxyAPI/v7/sdk/api/handlers/openai [setup failed]
+ok  	github.com/kooshapari/CLIProxyAPI/v7/cliproxyctl	(cached)
+?   	github.com/kooshapari/CLIProxyAPI/v7/cmd/boardsync	[no test files]
+ok  	github.com/kooshapari/CLIProxyAPI/v7/cmd/cliproxyctl	(cached)
+?   	github.com/kooshapari/CLIProxyAPI/v7/cmd/codegen	[no test files]
+?   	github.com/kooshapari/CLIProxyAPI/v7/cmd/fetch_antigravity_models	[no test files]
+?   	github.com/kooshapari/CLIProxyAPI/v7/cmd/mcpdebug	[no test files]
+?   	github.com/kooshapari/CLIProxyAPI/v7/cmd/protocheck	[no test files]
+ok  	github.com/kooshapari/CLIProxyAPI/v7/cmd/releasebatch	(cached)
+ok  	github.com/kooshapari/CLIProxyAPI/v7/cmd/server	(cached)
+?   	github.com/kooshapari/CLIProxyAPI/v7/examples/custom-provider	[no test files]
+?   	github.com/kooshapari/CLIProxyAPI/v7/examples/http-request	[no test files]
+?   	github.com/kooshapari/CLIProxyAPI/v7/examples/translator	[no test files]
+?   	github.com/kooshapari/CLIProxyAPI/v7/internal/auth/base	[no test files]
+ok  	github.com/kooshapari/CLIProxyAPI/v7/internal/auth/codebuddy	(cached)
+?   	github.com/kooshapari/CLIProxyAPI/v7/internal/auth/cursor	[no test files]
+?   	github.com/kooshapari/CLIProxyAPI/v7/internal/auth/cursor/proto	[no test files]
+ok  	github.com/kooshapari/CLIProxyAPI/v7/internal/auth/gitlab	(cached)
+?   	github.com/kooshapari/CLIProxyAPI/v7/internal/browser	[no test files]
+?   	github.com/kooshapari/CLIProxyAPI/v7/internal/interfaces	[no test files]
+ok  	github.com/kooshapari/CLIProxyAPI/v7/internal/pathsafe	(cached)
+?   	github.com/kooshapari/CLIProxyAPI/v7/internal/translator/common	[no test files]
+?   	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/access	[no test files]
+ok  	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/access/config_access	(cached)
+ok  	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/api	(cached)
+ok  	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/api/handlers	(cached)
+# github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/auth/kiro [github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/auth/kiro.test]
+pkg/llmproxy/auth/kiro/aws_extra_test.go:83:3: unknown field endpoint in struct literal of type KiroAuth
+pkg/llmproxy/auth/kiro/aws_extra_test.go:114:3: unknown field endpoint in struct literal of type KiroAuth
+# github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/api/handlers/management [github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/api/handlers/management.test]
+pkg/llmproxy/api/handlers/management/test_store_test.go:10:6: memoryAuthStore redeclared in this block
+	pkg/llmproxy/api/handlers/management/api_tools_test.go:42:6: other declaration of memoryAuthStore
+pkg/llmproxy/api/handlers/management/test_store_test.go:15:27: method memoryAuthStore.List already declared at pkg/llmproxy/api/handlers/management/api_tools_test.go:47:27
+pkg/llmproxy/api/handlers/management/test_store_test.go:26:27: method memoryAuthStore.Save already declared at pkg/llmproxy/api/handlers/management/api_tools_test.go:58:27
+pkg/llmproxy/api/handlers/management/test_store_test.go:41:27: method memoryAuthStore.Delete already declared at pkg/llmproxy/api/handlers/management/api_tools_test.go:72:27
+pkg/llmproxy/api/handlers/management/auth_files_batch_test.go:25:73: cannot use manager (variable of type *"github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/auth".Manager) as *"github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth".Manager value in argument to NewHandlerWithoutConfigFilePath
+pkg/llmproxy/api/handlers/management/auth_files_batch_test.go:93:73: cannot use manager (variable of type *"github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/auth".Manager) as *"github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth".Manager value in argument to NewHandlerWithoutConfigFilePath
+pkg/llmproxy/api/handlers/management/auth_files_batch_test.go:166:73: cannot use manager (variable of type *"github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/auth".Manager) as *"github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth".Manager value in argument to NewHandlerWithoutConfigFilePath
+pkg/llmproxy/api/handlers/management/auth_files_delete_test.go:61:73: cannot use manager (variable of type *"github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/auth".Manager) as *"github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth".Manager value in argument to NewHandlerWithoutConfigFilePath
+pkg/llmproxy/api/handlers/management/auth_files_delete_test.go:114:73: cannot use manager (variable of type *"github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/auth".Manager) as *"github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth".Manager value in argument to NewHandlerWithoutConfigFilePath
+pkg/llmproxy/api/handlers/management/auth_files_gitlab_test.go:62:77: cannot use coreauth.NewManager(nil, nil, nil) (value of type *"github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/auth".Manager) as *"github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth".Manager value in argument to NewHandlerWithoutConfigFilePath
+pkg/llmproxy/api/handlers/management/auth_files_gitlab_test.go:62:77: too many errors
+FAIL	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/api/handlers/management [build failed]
+ok  	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/api/middleware	(cached)
+?   	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/api/modules	[no test files]
+ok  	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/api/modules/amp	(cached)
+?   	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/api/unixsock	[no test files]
+?   	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/api/ws	[no test files]
+ok  	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/auth	(cached)
+ok  	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/auth/antigravity	(cached)
+?   	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/auth/base	[no test files]
+ok  	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/auth/claude	(cached)
+# github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/executor [github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/executor.test]
+pkg/llmproxy/executor/antigravity_executor_buildrequest_test.go:309:6: assertNoSchemaKeywords redeclared in this block
+	pkg/llmproxy/executor/antigravity_executor_buildrequest_test.go:289:6: other declaration of assertNoSchemaKeywords
+pkg/llmproxy/executor/claude_executor_betas_test.go:12:6: extractAndRemoveBetas redeclared in this block
+	pkg/llmproxy/executor/claude_executor.go:505:6: other declaration of extractAndRemoveBetas
+pkg/llmproxy/executor/codex_executor_cache_test.go:30:44: cannot use sdktranslator.FromString("openai") (value of string type "github.com/router-for-me/CLIProxyAPI/v6/sdk/translator".Format) as "github.com/kooshapari/CLIProxyAPI/v7/sdk/translator".Format value in argument to executor.cacheHelper
+pkg/llmproxy/executor/codex_executor_cache_test.go:30:85: cannot use req (variable of struct type "github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/executor".Request) as "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/executor".Request value in argument to executor.cacheHelper
+pkg/llmproxy/executor/codex_executor_cache_test.go:52:45: cannot use sdktranslator.FromString("openai") (value of string type "github.com/router-for-me/CLIProxyAPI/v6/sdk/translator".Format) as "github.com/kooshapari/CLIProxyAPI/v7/sdk/translator".Format value in argument to executor.cacheHelper
+pkg/llmproxy/executor/codex_executor_cache_test.go:52:86: cannot use req (variable of struct type "github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/executor".Request) as "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/executor".Request value in argument to executor.cacheHelper
+pkg/llmproxy/executor/codex_websockets_executor_test.go:70:60: cannot use auth (variable of type *"github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/auth".Auth) as *"github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth".Auth value in argument to applyCodexWebsocketHeaders
+pkg/llmproxy/executor/codex_websockets_executor_test.go:98:77: cannot use auth (variable of type *"github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/auth".Auth) as *"github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth".Auth value in argument to applyCodexWebsocketHeaders
+pkg/llmproxy/executor/codex_websockets_executor_test.go:130:50: cannot use auth (variable of type *"github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/auth".Auth) as *"github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth".Auth value in argument to applyCodexWebsocketHeaders
+pkg/llmproxy/executor/codex_websockets_executor_test.go:156:60: cannot use auth (variable of type *"github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/auth".Auth) as *"github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth".Auth value in argument to applyCodexWebsocketHeaders
+pkg/llmproxy/executor/codex_websockets_executor_test.go:156:60: too many errors
+# github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/codex/claude [github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/codex/claude.test]
+pkg/llmproxy/translator/codex/claude/codex_claude_response_test.go:49:21: cannot use got (variable of type []byte) as string value in argument to gjson.Parse
+# github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/codex/gemini [github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/codex/gemini.test]
+pkg/llmproxy/translator/codex/gemini/codex_gemini_response_test.go:20:21: cannot use got[0] (variable of type []byte) as string value in argument to gjson.Parse
+pkg/llmproxy/translator/codex/gemini/codex_gemini_response_test.go:31:20: cannot use got[0] (variable of type []byte) as string value in argument to gjson.Parse
+pkg/llmproxy/translator/codex/gemini/codex_gemini_response_test.go:50:21: cannot use got (variable of type []byte) as string value in argument to gjson.Parse
+# github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/gemini/openai/responses [github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/gemini/openai/responses.test]
+pkg/llmproxy/translator/gemini/openai/responses/gemini_openai-responses_response_test.go:44:21: cannot use ConvertGeminiResponseToOpenAIResponses(context.Background(), "test-model", originalReq, nil, []byte(line), &param) (value of type []string) as [][]byte value in argument to append
+pkg/llmproxy/translator/gemini/openai/responses/gemini_openai-responses_response_test.go:168:21: cannot use ConvertGeminiResponseToOpenAIResponses(context.Background(), "test-model", nil, nil, []byte(line), &param) (value of type []string) as [][]byte value in argument to append
+pkg/llmproxy/translator/gemini/openai/responses/gemini_openai-responses_response_test.go:208:21: cannot use ConvertGeminiResponseToOpenAIResponses(context.Background(), "test-model", nil, nil, []byte(line), &param) (value of type []string) as [][]byte value in argument to append
+pkg/llmproxy/translator/gemini/openai/responses/gemini_openai-responses_response_test.go:312:21: cannot use ConvertGeminiResponseToOpenAIResponses(context.Background(), "test-model", nil, nil, []byte(line), &param) (value of type []string) as [][]byte value in argument to append
+# github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/translator [github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/translator.test]
+pkg/llmproxy/translator/translator/translator_test.go:50:11: cannot use func(_ context.Context, model string, _, _, rawJSON []byte, _ *any) []string {…} (value of type func(_ context.Context, model string, _ []byte, _ []byte, rawJSON []byte, _ *any) []string) as "github.com/kooshapari/CLIProxyAPI/v7/sdk/translator".ResponseStreamTransform value in struct literal
+pkg/llmproxy/translator/translator/translator_test.go:54:14: cannot use func(_ context.Context, model string, _, _, rawJSON []byte, _ *any) string {…} (value of type func(_ context.Context, model string, _ []byte, _ []byte, rawJSON []byte, _ *any) string) as "github.com/kooshapari/CLIProxyAPI/v7/sdk/translator".ResponseNonStreamTransform value in struct literal
+pkg/llmproxy/translator/translator/translator_test.go:77:14: cannot use func(_ context.Context, model string, _, _, rawJSON []byte, _ *any) string {…} (value of type func(_ context.Context, model string, _ []byte, _ []byte, rawJSON []byte, _ *any) string) as "github.com/kooshapari/CLIProxyAPI/v7/sdk/translator".ResponseNonStreamTransform value in struct literal
+pkg/llmproxy/translator/translator/translator_test.go:83:12: invalid operation: got != `payload::model-1::nonstream` (mismatched types []byte and untyped string)
+pkg/llmproxy/translator/translator/translator_test.go:90:12: invalid operation: got != "payload" (mismatched types []byte and untyped string)
+# github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/util [github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/util.test]
+pkg/llmproxy/util/gemini_schema_test.go:5:2: "github.com/tidwall/sjson" imported and not used
+# github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/watcher [github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/watcher.test]
+pkg/llmproxy/watcher/watcher_test.go:520:11: undefined: authSliceToMap
+# github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth [github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth.test]
+sdk/cliproxy/auth/conductor_overrides_test.go:17:38: too many arguments in call to m.SetRetryConfig
+	have (number, "time".Duration, number)
+	want (int, "time".Duration)
+sdk/cliproxy/auth/conductor_overrides_test.go:40:19: assignment mismatch: 3 variables but m.retrySettings returns 2 values
+sdk/cliproxy/auth/conductor_overrides_test.go:185:25: too many arguments in call to m.SetRetryConfig
+	have (number, number, int)
+	want (int, "time".Duration)
+sdk/cliproxy/auth/conductor_overrides_test.go:188:21: cannot use executor (variable of type *credentialRetryLimitExecutor) as ProviderExecutor value in argument to m.RegisterExecutor: *credentialRetryLimitExecutor does not implement ProviderExecutor (wrong type for method CountTokens)
+		have CountTokens(context.Context, *Auth, "github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/executor".Request, "github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/executor".Options) ("github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/executor".Response, error)
+		want CountTokens(context.Context, *Auth, "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/executor".Request, "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/executor".Options) ("github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/executor".Response, error)
+sdk/cliproxy/auth/conductor_overrides_test.go:222:74: cannot use request (variable of struct type "github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/executor".Request) as "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/executor".Request value in argument to m.Execute
+sdk/cliproxy/auth/conductor_overrides_test.go:222:83: cannot use cliproxyexecutor.Options{} (value of struct type "github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/executor".Options) as "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/executor".Options value in argument to m.Execute
+sdk/cliproxy/auth/conductor_overrides_test.go:229:79: cannot use request (variable of struct type "github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/executor".Request) as "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/executor".Request value in argument to m.ExecuteCount
+sdk/cliproxy/auth/conductor_overrides_test.go:229:88: cannot use cliproxyexecutor.Options{} (value of struct type "github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/executor".Options) as "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/executor".Options value in argument to m.ExecuteCount
+sdk/cliproxy/auth/conductor_overrides_test.go:236:80: cannot use request (variable of struct type "github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/executor".Request) as "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/executor".Request value in argument to m.ExecuteStream
+sdk/cliproxy/auth/conductor_overrides_test.go:236:89: cannot use cliproxyexecutor.Options{} (value of struct type "github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/executor".Options) as "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/executor".Options value in argument to m.ExecuteStream
+sdk/cliproxy/auth/conductor_overrides_test.go:236:89: too many errors
+# github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy [github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy.test]
+sdk/cliproxy/rtprovider_test.go:14:33: cannot use &coreauth.Auth{…} (value of type *"github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/auth".Auth) as *"github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth".Auth value in argument to provider.RoundTripperFor
+sdk/cliproxy/service_gitlab_models_test.go:12:27: cannot use &config.Config{} (value of type *"github.com/router-for-me/CLIProxyAPI/v6/sdk/config".Config) as *"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/config".Config value in struct literal
+sdk/cliproxy/service_gitlab_models_test.go:29:32: cannot use auth (variable of type *"github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/auth".Auth) as *"github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth".Auth value in argument to service.registerModelsForAuth
+sdk/cliproxy/service_gitlab_models_test.go:51:27: cannot use &config.Config{} (value of type *"github.com/router-for-me/CLIProxyAPI/v6/sdk/config".Config) as *"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/config".Config value in struct literal
+sdk/cliproxy/service_gitlab_models_test.go:62:32: cannot use auth (variable of type *"github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/auth".Auth) as *"github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth".Auth value in argument to service.registerModelsForAuth
+# github.com/kooshapari/CLIProxyAPI/v7/test [github.com/kooshapari/CLIProxyAPI/v7/test.test]
+test/openai_websearch_translation_test.go:75:16: cannot use r (variable of type []byte) as string value in argument to gjson.Get
+test/openai_websearch_translation_test.go:76:19: cannot use r (variable of type []byte) as string value in assignment
+test/openai_websearch_translation_test.go:120:24: cannot use out (variable of type []byte) as string value in argument to gjson.Get
+test/openai_websearch_translation_test.go:124:22: cannot use out (variable of type []byte) as string value in argument to gjson.Get
+test/openai_websearch_translation_test.go:127:22: cannot use out (variable of type []byte) as string value in argument to gjson.Get
+test/openai_websearch_translation_test.go:132:27: cannot use out (variable of type []byte) as string value in argument to gjson.Get
+test/openai_websearch_translation_test.go:165:16: cannot use r (variable of type []byte) as string value in argument to gjson.Get
+test/openai_websearch_translation_test.go:166:17: cannot use r (variable of type []byte) as string value in assignment
+test/openai_websearch_translation_test.go:205:16: cannot use out (variable of type []byte) as string value in argument to gjson.Get
+test/openai_websearch_translation_test.go:209:24: cannot use out (variable of type []byte) as string value in argument to gjson.Get
+test/openai_websearch_translation_test.go:209:24: too many errors
+time="2026-06-08T20:59:49-07:00" level=error msg="OAuth error received: access_denied"
+time="2026-06-08T20:59:49-07:00" level=error msg="No authorization code received"
+time="2026-06-08T20:59:49-07:00" level=error msg="No state parameter received"
+time="2026-06-08T20:59:49-07:00" level=warning msg="Failed to parse refreshed ID token: failed to unmarshal JWT claims: invalid character 'e' looking for beginning of object key string"
+time="2026-06-08T20:59:49-07:00" level=warning msg="Token refresh attempt 1 failed: token refresh failed with status 503: service temporarily unavailable"
+time="2026-06-08T20:59:49-07:00" level=warning msg="Token refresh attempt 1 failed: token refresh failed with status 500: "
+time="2026-06-08T20:59:50-07:00" level=warning msg="Failed to parse refreshed ID token: invalid JWT token format: expected 3 parts, got 1"
+--- FAIL: TestCodexTokenStorage_SaveTokenToFile (0.00s)
+    token_test.go:28: SaveTokenToFile failed: codex token: base token storage: invalid file path: file name must not contain path separators
+FAIL
+FAIL	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/auth/codex	2.930s
+--- FAIL: TestCopilotTokenStorage_SaveTokenToFile (1.68s)
+    token_test.go:25: SaveTokenToFile failed: copilot token: base token storage: invalid file path: file name must not contain path separators
+FAIL
+FAIL	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/auth/copilot	17.437s
+?   	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/auth/cursor	[no test files]
+ok  	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/auth/diff	(cached)
+?   	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/auth/empty	[no test files]
+--- FAIL: TestGeminiTokenStorage_SaveAndLoad (0.01s)
+    gemini_auth_test.go:57: SaveTokenToFile failed: gemini token: base token storage: invalid file path: file name must not contain path separators
+Authenticated user email: test@example.com
+time="2026-06-08T20:59:48-07:00" level=warning msg="Gemini OAuth callback port 8085 busy, falling back to an ephemeral port: listen tcp 127.0.0.1:8085: bind: address already in use"
+FAIL
+FAIL	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/auth/gemini	1.248s
+?   	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/auth/gitlab	[no test files]
+ok  	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/auth/iflow	(cached)
+ok  	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/auth/kilo	(cached)
+ok  	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/auth/kimi	(cached)
+FAIL	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/auth/kiro [build failed]
+--- FAIL: TestQwenTokenStorage_SaveTokenToFile (0.00s)
+    qwen_token_test.go:21: SaveTokenToFile failed: token file path is empty
+FAIL
+FAIL	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/auth/qwen	2.452s
+ok  	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/auth/synthesizer	(cached)
+?   	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/auth/vertex	[no test files]
+?   	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/benchmarks	[no test files]
+?   	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/browser	[no test files]
+?   	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/buildinfo	[no test files]
+ok  	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/cache	(cached)
+ok  	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/client	(cached)
+ok  	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/cmd	(cached)
+--- FAIL: TestLoadConfigOptional_ClaudeHeaderDefaults (0.03s)
+    claude_header_defaults_test.go:32: UserAgent = "  claude-cli/2.1.70 (external, cli)  ", want "claude-cli/2.1.70 (external, cli)"
+--- FAIL: TestLoadConfigOptional_CodexHeaderDefaults (0.04s)
+    codex_websocket_header_defaults_test.go:27: UserAgent = "  my-codex-client/1.0  ", want "my-codex-client/1.0"
+FAIL
+FAIL	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/config	2.932s
+?   	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/constant	[no test files]
+?   	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/cursorstorage	[no test files]
+FAIL	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/executor [build failed]
+?   	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/interfaces	[no test files]
+ok  	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/logging	(cached)
+?   	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/managementasset	[no test files]
+ok  	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/misc	(cached)
+ok  	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/ratelimit	(cached)
+ok  	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/registry	(cached)
+?   	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/runtime/geminicli	[no test files]
+ok  	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/store	(cached)
+time="2026-06-08T20:59:50-07:00" level=debug msg="thinking: mode converted, dynamic not allowed, using medium level |" clamped_to="[REDACTED]" model="[REDACTED]" original_mode=auto provider="[REDACTED]"
+time="2026-06-08T20:59:50-07:00" level=debug msg="thinking: mode converted, dynamic not allowed |" clamped_to="[REDACTED]" model="[REDACTED]" original_mode=auto provider="[REDACTED]"
+time="2026-06-08T20:59:50-07:00" level=debug msg="thinking: level clamped |" clamped_to="[REDACTED]" model="[REDACTED]" original_value="[REDACTED]" provider="[REDACTED]"
+time="2026-06-08T20:59:50-07:00" level=warning msg="thinking: budget zero not allowed |" clamped_to="[REDACTED]" max="[REDACTED]" min="[REDACTED]" model="[REDACTED]" original_value="[REDACTED]" provider="[REDACTED]"
+time="2026-06-08T20:59:50-07:00" level=debug msg="thinking: budget clamped |" clamped_to="[REDACTED]" max="[REDACTED]" min="[REDACTED]" model="[REDACTED]" original_value="[REDACTED]" provider="[REDACTED]"
+time="2026-06-08T20:59:50-07:00" level=debug msg="Registered new model model-secret-l6-apply from provider claude"
+time="2026-06-08T20:59:50-07:00" level=debug msg="Registered client redaction-test-client-l6-apply from provider claude with 1 models"
+time="2026-06-08T20:59:50-07:00" level=debug msg="thinking: request includes thinking config |" provider=claude
+time="2026-06-08T20:59:50-07:00" level=debug msg="thinking: processed config to apply |" budget="[REDACTED]" fields.level="[REDACTED]" mode="[REDACTED]" model="[REDACTED]" provider="[REDACTED]"
+time="2026-06-08T20:59:50-07:00" level=debug msg="thinking: unknown suffix format, treating as no config |" model="[REDACTED]" provider="[REDACTED]" raw_suffix="[REDACTED]"
+time="2026-06-08T20:59:50-07:00" level=debug msg="thinking: user-defined model, passthrough (no config) |" model="[REDACTED]" provider="[REDACTED]"
+time="2026-06-08T20:59:50-07:00" level=debug msg="thinking: user-defined model, passthrough (unknown provider) |" model="[REDACTED]" provider="[REDACTED]"
+time="2026-06-08T20:59:50-07:00" level=debug msg="thinking: applying config for user-defined model (skip validation)" budget="[REDACTED]" fields.level="[REDACTED]" mode="[REDACTED]" model="[REDACTED]" provider="[REDACTED]"
+time="2026-06-08T20:59:50-07:00" level=debug msg="Decremented count for model model-secret-l6-apply, now 0 clients"
+time="2026-06-08T20:59:50-07:00" level=debug msg="Removed model model-secret-l6-apply as no clients remain"
+time="2026-06-08T20:59:50-07:00" level=debug msg="Unregistered client redaction-test-client-l6-apply"
+--- FAIL: TestApplyThinking_UserDefinedClaudePreservesAdaptiveLevel (0.00s)
+    --- FAIL: TestApplyThinking_UserDefinedClaudePreservesAdaptiveLevel/suffix_level (0.00s)
+        apply_user_defined_test.go:45: thinking.type = "", want "adaptive", body={}
+FAIL
+FAIL	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/thinking	2.488s
+ok  	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/thinking/provider/antigravity	(cached)
+ok  	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/thinking/provider/claude	(cached)
+?   	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/thinking/provider/codex	[no test files]
+ok  	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/thinking/provider/gemini	(cached)
+ok  	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/thinking/provider/geminicli	(cached)
+ok  	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/thinking/provider/iflow	(cached)
+ok  	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/thinking/provider/kimi	(cached)
+?   	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/thinking/provider/minimax	[no test files]
+?   	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/thinking/provider/openai	[no test files]
+?   	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator	[no test files]
+ok  	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/acp	(cached)
+ok  	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/antigravity/claude	(cached)
+ok  	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/antigravity/gemini	(cached)
+ok  	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/antigravity/openai/chat-completions	(cached)
+ok  	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/antigravity/openai/responses	(cached)
+?   	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/claude/gemini	[no test files]
+?   	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/claude/gemini-cli	[no test files]
+ok  	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/claude/openai/chat-completions	(cached)
+ok  	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/claude/openai/responses	(cached)
+FAIL	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/codex/claude [build failed]
+FAIL	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/codex/gemini [build failed]
+ok  	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/codex/gemini-cli	(cached)
+ok  	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/codex/openai/chat-completions	(cached)
+ok  	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/codex/openai/responses	(cached)
+ok  	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/gemini/claude	(cached)
+ok  	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/gemini/common	(cached)
+ok  	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/gemini/gemini	(cached)
+?   	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/gemini/gemini-cli	[no test files]
+ok  	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/gemini/openai/chat-completions	(cached)
+FAIL	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/gemini/openai/responses [build failed]
+ok  	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/gemini-cli/claude	(cached)
+ok  	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/gemini-cli/gemini	(cached)
+ok  	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/gemini-cli/openai/chat-completions	(cached)
+?   	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/gemini-cli/openai/responses	[no test files]
+time="2026-06-08T20:59:51-07:00" level=info msg="kiro: injected thinking prompt (official mode), has_tools: false"
+time="2026-06-08T20:59:51-07:00" level=info msg="kiro: skipping Claude built-in web_search tool in mixed-tool request (type=web_search_20250305)"
+time="2026-06-08T20:59:51-07:00" level=info msg="kiro: dropped 1 orphaned tool_result(s) from currentMessage (compaction artifact)"
+time="2026-06-08T20:59:51-07:00" level=info msg="kiro: messages started with assistant role, prepended placeholder user message for Kiro API compatibility"
+--- FAIL: TestBuildUserMessageStruct_SoftLimit (0.00s)
+    kiro_claude_request_test.go:251: expected status success for soft limit error, got error
+time="2026-06-08T20:59:51-07:00" level=warning msg="kiro: buildClaudeResponse skipping truncated tool: f1 (ID: c1)"
+--- FAIL: TestBuildClaudeResponse_Truncated (0.00s)
+    kiro_claude_response_test.go:97: expected SOFT_LIMIT_REACHED status, got 
+time="2026-06-08T20:59:51-07:00" level=warning msg="kiro: extractThinkingFromContent - missing closing </thinking> tag"
+time="2026-06-08T20:59:51-07:00" level=info msg="kiro: starting new tool use: sequentialthinking (ID: toolu_1)"
+time="2026-06-08T20:59:51-07:00" level=info msg="kiro: tool use sequentialthinking input length: 46 bytes (no truncation)"
+time="2026-06-08T20:59:51-07:00" level=info msg="kiro: completed tool use: sequentialthinking (ID: toolu_1, truncated: false)"
+time="2026-06-08T20:59:51-07:00" level=info msg="kiro: starting new tool use: sequentialthinking (ID: toolu_2)"
+time="2026-06-08T20:59:51-07:00" level=info msg="kiro: tool use sequentialthinking input length: 46 bytes (no truncation)"
+time="2026-06-08T20:59:51-07:00" level=info msg="kiro: completed tool use: sequentialthinking (ID: toolu_2, truncated: false)"
+time="2026-06-08T20:59:51-07:00" level=warning msg="kiro: truncation detected [empty_input] for tool Write (ID: c1): empty input buffer"
+time="2026-06-08T20:59:51-07:00" level=warning msg="kiro: truncation detected [invalid_json] for tool Write (ID: c1): JSON parse failed, raw length=43 bytes"
+time="2026-06-08T20:59:51-07:00" level=warning msg="kiro: truncation detected [missing_fields] for tool Write (ID: c1): missing required fields: [content]"
+time="2026-06-08T20:59:51-07:00" level=warning msg="kiro: truncation detected [incomplete_string] for tool Write (ID: c1): content contains unclosed code fence (```) suggesting truncation"
+time="2026-06-08T20:59:51-07:00" level=warning msg="kiro: truncation detected [missing_fields] for tool execute (ID: c5): missing required fields: [command cmd]"
+FAIL
+FAIL	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/kiro/claude	0.919s
+ok  	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/kiro/common	(cached)
+ok  	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/kiro/openai	(cached)
+ok  	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/openai/claude	(cached)
+ok  	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/openai/gemini	(cached)
+ok  	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/openai/gemini-cli	(cached)
+ok  	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/openai/openai/chat-completions	(cached)
+ok  	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/openai/openai/responses	(cached)
+FAIL	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/translator [build failed]
+?   	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/translatorcommon	[no test files]
+ok  	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/util	(cached)
+ok  	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/tui	(cached)
+ok  	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/usage	(cached)
+FAIL	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/util [build failed]
+ok  	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/util/urlguard	(cached)
+FAIL	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/watcher [build failed]
+--- FAIL: TestBuildConfigChangeDetails (0.00s)
+    config_diff_test.go:93: expected list to contain "remote-management.disable-auto-update-panel: false -> true", got []string{"port: 8080 -> 9090", "auth-dir: /tmp/auth-old -> /tmp/auth-new", "gemini[0].excluded-models: updated (1 -> 2 entries)", "ampcode.upstream-url: http://old-upstream -> http://new-upstream", "ampcode.restrict-management-to-localhost: false -> true", "ampcode.model-mappings: updated (1 -> 2 entries)", "oauth-excluded-models[providera]: updated (1 -> 2 entries)", "oauth-excluded-models[providerb]: added (1 entries)", "remote-management.allow-remote: false -> true", "remote-management.disable-control-panel: false -> true", "remote-management.panel-github-repository: repo-old -> repo-new", "remote-management.secret-key: updated", "openai-compatibility:", "  provider updated: compat-a (models 1 -> 2)", "  provider added: compat-b (api-keys=1, models=0)"}
+--- FAIL: TestBuildConfigChangeDetails_FlagsAndKeys (0.00s)
+    config_diff_test.go:292: expected list to contain "max-retry-credentials: 1 -> 3", got []string{"port: 1000 -> 2000", "auth-dir: /old -> /new", "debug: false -> true", "logging-to-file: false -> true", "usage-statistics-enabled: false -> true", "disable-cooling: false -> true", "request-log: false -> true", "request-retry: 1 -> 2", "max-retry-interval: 1 -> 3", "proxy-url: http://old-proxy -> http://new-proxy", "ws-auth: false -> true", "force-model-prefix: false -> true", "nonstream-keepalive-interval: 0 -> 5", "quota-exceeded.switch-project: false -> true", "quota-exceeded.switch-preview-model: false -> true", "api-keys count: 1 -> 2", "claude-api-key count: 1 -> 2", "codex-api-key count: 1 -> 2", "ampcode.upstream-api-key: removed", "ampcode.restrict-management-to-localhost: false -> true", "ampcode.model-mappings: updated (0 -> 1 entries)", "remote-management.disable-control-panel: false -> true", "remote-management.panel-github-repository: old/repo -> new/repo", "remote-management.secret-key: deleted"}
+--- FAIL: TestBuildConfigChangeDetails_AllBranches (0.00s)
+    config_diff_test.go:434: expected list to contain "max-retry-credentials: 1 -> 3", got []string{"port: 1 -> 2", "auth-dir: /a -> /b", "debug: false -> true", "logging-to-file: false -> true", "usage-statistics-enabled: false -> true", "disable-cooling: false -> true", "request-log: false -> true", "request-retry: 1 -> 2", "max-retry-interval: 1 -> 3", "proxy-url: http://old-proxy -> http://new-proxy", "ws-auth: false -> true", "quota-exceeded.switch-project: false -> true", "quota-exceeded.switch-preview-model: false -> true", "api-keys: values updated (count unchanged, redacted)", "gemini[0].base-url: http://g-old -> http://g-new", "gemini[0].proxy-url: http://gp-old -> http://gp-new", "gemini[0].api-key: updated", "gemini[0].headers: updated", "gemini[0].excluded-models: updated (0 -> 2 entries)", "claude[0].base-url: http://c-old -> http://c-new", "claude[0].proxy-url: http://cp-old -> http://cp-new", "claude[0].api-key: updated", "claude[0].headers: updated", "claude[0].excluded-models: updated (1 -> 2 entries)", "codex[0].base-url: http://x-old -> http://x-new", "codex[0].proxy-url: http://xp-old -> http://xp-new", "codex[0].api-key: updated", "codex[0].headers: updated", "codex[0].excluded-models: updated (1 -> 2 entries)", "ampcode.upstream-url: http://amp-old -> http://amp-new", "ampcode.upstream-api-key: removed", "ampcode.restrict-management-to-localhost: false -> true", "ampcode.model-mappings: updated (1 -> 1 entries)", "ampcode.force-model-mappings: false -> true", "oauth-excluded-models[p1]: updated (1 -> 2 entries)", "oauth-excluded-models[p2]: added (1 entries)", "remote-management.allow-remote: false -> true", "remote-management.disable-control-panel: false -> true", "remote-management.panel-github-repository: old/repo -> new/repo", "remote-management.secret-key: deleted", "openai-compatibility:", "  provider added: prov-new (api-keys=1, models=0)", "  provider updated: prov-old (api-keys 1 -> 2, models 1 -> 2)", "vertex[0].base-url: http://v-old -> http://v-new", "vertex[0].proxy-url: http://vp-old -> http://vp-new", "vertex[0].api-key: updated", "vertex[0].models: updated (1 -> 2 entries)", "vertex[0].headers: updated"}
+FAIL
+FAIL	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/watcher/diff	1.557s
+ok  	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/watcher/synthesizer	(cached)
+ok  	github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/wsrelay	(cached)
+ok  	github.com/kooshapari/CLIProxyAPI/v7/sdk/access	(cached)
+?   	github.com/kooshapari/CLIProxyAPI/v7/sdk/api	[no test files]
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+--- FAIL: TestBuildErrorResponseBody_RewrapsJSONWithoutErrorField (0.00s)
+    handlers_build_error_response_test.go:23: expected raw JSON passthrough, got {"error":{"message":"upstream returned JSON payload without top-level error field: {\"message\":\"oops\"}","type":"invalid_request_error"}}
+time="2026-06-08T20:59:52-07:00" level=info msg="Resolved 'auto' model to: gemini-2.5-pro"
+--- FAIL: TestExecuteStreamWithAuthManager_ValidatesOpenAIResponsesStreamDataJSON (0.00s)
+    handlers_stream_bootstrap_test.go:590: expected empty payload, got "event: response.completed\ndata: {\"type\""
+FAIL
+FAIL	github.com/kooshapari/CLIProxyAPI/v7/sdk/api/handlers	1.922s
+?   	github.com/kooshapari/CLIProxyAPI/v7/sdk/api/handlers/gemini	[no test files]
+ok  	github.com/kooshapari/CLIProxyAPI/v7/sdk/auth	(cached)
+FAIL	github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy [build failed]
+FAIL	github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth [build failed]
+?   	github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/executor	[no test files]
+?   	github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/pipeline	[no test files]
+?   	github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/usage	[no test files]
+ok  	github.com/kooshapari/CLIProxyAPI/v7/sdk/config	(cached)
+?   	github.com/kooshapari/CLIProxyAPI/v7/sdk/logging	[no test files]
+ok  	github.com/kooshapari/CLIProxyAPI/v7/sdk/proxyutil	(cached)
+ok  	github.com/kooshapari/CLIProxyAPI/v7/sdk/translator	(cached)
+?   	github.com/kooshapari/CLIProxyAPI/v7/sdk/translator/builtin	[no test files]
+?   	github.com/kooshapari/CLIProxyAPI/v7/sdk/watcher	[no test files]
+FAIL	github.com/kooshapari/CLIProxyAPI/v7/test [build failed]
+FAIL
