@@ -8,7 +8,10 @@ package claude
 import (
 	"strings"
 
+	sigcompat "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/signature"
 	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/thinking"
+	translatorcommon "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/common"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/util"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
 )
@@ -101,25 +104,9 @@ func ConvertClaudeRequestToOpenAI(modelName string, inputRawJSON []byte, stream 
 	// Handle system message first
 	systemMsgJSON := []byte(`{"role":"system","content":[]}`)
 	hasSystemContent := false
-	if system := root.Get("system"); system.Exists() {
-		switch system.Type {
-		case gjson.String:
-			if system.String() != "" {
-				oldSystem := []byte(`{"type":"text","text":""}`)
-				oldSystem, _ = sjson.SetBytes(oldSystem, "text", system.String())
-				systemMsgJSON, _ = sjson.SetRawBytes(systemMsgJSON, "content.-1", oldSystem)
-				hasSystemContent = true
-			}
-		case gjson.JSON:
-			if system.IsArray() {
-				systemResults := system.Array()
-				for i := 0; i < len(systemResults); i++ {
-					if contentItem, ok := convertClaudeContentPart(systemResults[i]); ok {
-						systemMsgJSON, _ = sjson.SetRawBytes(systemMsgJSON, "content.-1", []byte(contentItem))
-						hasSystemContent = true
-					}
-				}
-			}
+	appendSystemContent := func(content gjson.Result) {
+		if !content.Exists() {
+			return
 		}
 	}
 	// Only add system message if it has content
@@ -204,6 +191,7 @@ func ConvertClaudeRequestToOpenAI(modelName string, inputRawJSON []byte, stream 
 				hasContent := len(contentItems) > 0
 				hasReasoning := reasoningContent != ""
 				hasToolCalls := len(toolCalls) > 0
+				hasToolResults := len(toolResults) > 0
 
 				// OpenAI requires: tool messages MUST immediately follow the assistant message with tool_calls.
 				// Therefore, we emit tool_result messages FIRST (they respond to the previous assistant's tool_calls),
@@ -255,7 +243,9 @@ func ConvertClaudeRequestToOpenAI(modelName string, inputRawJSON []byte, stream 
 						}
 						msgJSON, _ = sjson.SetRawBytes(msgJSON, "content", contentArrayJSON)
 
-						messagesJSON, _ = sjson.SetBytes(messagesJSON, "-1", gjson.ParseBytes(msgJSON).Value())
+						messagesJSON, _ = sjson.SetRawBytes(messagesJSON, "-1", msgJSON)
+					} else if hasToolResults && !hasContent {
+						// tool_results already emitted above, no additional user message needed
 					}
 				}
 

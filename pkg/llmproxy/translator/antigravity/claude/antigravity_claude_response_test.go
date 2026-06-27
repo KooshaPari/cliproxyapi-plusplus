@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/cache"
+	"github.com/tidwall/gjson"
 )
 
 // ============================================================================

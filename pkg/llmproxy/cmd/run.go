@@ -10,8 +10,10 @@ import (
 	"syscall"
 	"time"
 
-	internalapi "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/api"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/api"
 	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/config"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/pluginhost"
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/safemode"
 	"github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy"
 	log "github.com/sirupsen/logrus"
 )
@@ -26,7 +28,7 @@ import (
 //   - localPassword: Optional password accepted for local management requests
 func StartService(cfg *config.Config, configPath string, localPassword string) {
 	builder := cliproxy.NewBuilder().
-		WithConfig(castToSDKConfig(cfg)).
+		WithConfig(cfg).
 		WithConfigPath(configPath).
 		WithLocalManagementPassword(localPassword)
 
@@ -37,7 +39,7 @@ func StartService(cfg *config.Config, configPath string, localPassword string) {
 	if localPassword != "" {
 		var keepAliveCancel context.CancelFunc
 		runCtx, keepAliveCancel = context.WithCancel(ctxSignal)
-		builder = builder.WithServerOptions(internalapi.WithKeepAliveEndpoint(10*time.Second, func() {
+		builder = builder.WithServerOptions(api.WithKeepAliveEndpoint(10*time.Second, func() {
 			log.Warn("keep-alive endpoint idle for 10s, shutting down")
 			keepAliveCancel()
 		}))
@@ -59,7 +61,7 @@ func StartService(cfg *config.Config, configPath string, localPassword string) {
 // and returns a cancel function for shutdown and a done channel.
 func StartServiceBackground(cfg *config.Config, configPath string, localPassword string) (cancel func(), done <-chan struct{}) {
 	builder := cliproxy.NewBuilder().
-		WithConfig(castToSDKConfig(cfg)).
+		WithConfig(cfg).
 		WithConfigPath(configPath).
 		WithLocalManagementPassword(localPassword)
 

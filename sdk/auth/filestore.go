@@ -16,6 +16,7 @@ import (
 	"time"
 
 	cliproxyauth "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth"
+	"github.com/kooshapari/CLIProxyAPI/v7/sdk/pluginapi"
 )
 
 // FileTokenStore persists token records and auth metadata using the filesystem as backing storage.

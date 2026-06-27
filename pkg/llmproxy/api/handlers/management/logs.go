@@ -503,7 +503,9 @@ func parseLimit(raw string) (int, error) {
 }
 
 func parseTimestamp(line string) int64 {
-	line = strings.TrimPrefix(line, "[")
+	if strings.HasPrefix(line, "[") {
+		line = line[1:]
+	}
 	if len(line) < 19 {
 		return 0
 	}
@@ -558,7 +560,9 @@ func timestampRotationOrder(name string) (int64, bool) {
 		return 0, false
 	}
 	clean := strings.TrimPrefix(name, prefix)
-	clean = strings.TrimSuffix(clean, ".gz")
+	if strings.HasSuffix(clean, ".gz") {
+		clean = strings.TrimSuffix(clean, ".gz")
+	}
 	if ext != "" {
 		if !strings.HasSuffix(clean, ext) {
 			return 0, false

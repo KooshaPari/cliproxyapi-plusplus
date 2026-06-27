@@ -131,7 +131,7 @@ func (m dashboardModel) renderDashboard(cfg, usage map[string]any, authFiles []m
 	// ━━━ Connection Status ━━━
 	connStyle := lipgloss.NewStyle().Bold(true).Foreground(colorSuccess)
 	sb.WriteString(connStyle.Render(T("connected")))
-	fmt.Fprintf(&sb, "  %s", m.client.baseURL)
+	sb.WriteString(fmt.Sprintf("  %s", m.client.baseURL))
 	sb.WriteString("\n\n")
 
 	// ━━━ Stats Cards ━━━
@@ -148,7 +148,7 @@ func (m dashboardModel) renderDashboard(cfg, usage map[string]any, authFiles []m
 		BorderForeground(lipgloss.Color("240")).
 		Padding(0, 1).
 		Width(cardWidth).
-		Height(3)
+		Height(2)
 
 	// Card 1: API Keys
 	keyCount := len(apiKeys)
@@ -238,9 +238,9 @@ func (m dashboardModel) renderDashboard(cfg, usage map[string]any, authFiles []m
 
 		// Render config items as a compact row
 		for _, item := range configItems {
-			fmt.Fprintf(&sb, "  %s %s\n",
+			sb.WriteString(fmt.Sprintf("  %s %s\n",
 				labelStyle.Render(item.label+":"),
-				valueStyle.Render(item.value))
+				valueStyle.Render(item.value)))
 		}
 
 		// Routing strategy
@@ -250,9 +250,9 @@ func (m dashboardModel) renderDashboard(cfg, usage map[string]any, authFiles []m
 				strategy = s
 			}
 		}
-		fmt.Fprintf(&sb, "  %s %s\n",
+		sb.WriteString(fmt.Sprintf("  %s %s\n",
 			labelStyle.Render(T("routing_strategy")+":"),
-			valueStyle.Render(strategy))
+			valueStyle.Render(strategy)))
 	}
 
 	sb.WriteString("\n")
@@ -290,6 +290,10 @@ func (m dashboardModel) renderDashboard(cfg, usage map[string]any, authFiles []m
 	}
 
 	return sb.String()
+}
+
+func formatKV(key, value string) string {
+	return fmt.Sprintf("  %s %s\n", labelStyle.Render(key+":"), valueStyle.Render(value))
 }
 
 func boolEmoji(b bool) string {

@@ -4,9 +4,10 @@
 // debug settings, proxy configuration, and API keys.
 package config
 
+// SDKConfig represents the application's configuration, loaded from a YAML file.
 type SDKConfig struct {
-	// ProxyURL overrides the global proxy setting for SDK-level HTTP clients.
-	ProxyURL string `yaml:"proxy-url,omitempty" json:"proxy-url,omitempty"`
+	// ProxyURL is the URL of an optional proxy server to use for outbound requests.
+	ProxyURL string `yaml:"proxy-url" json:"proxy-url"`
 
 	// ForceModelPrefix requires explicit model prefixes (e.g., "teamA/gemini-3-pro-preview")
 	// to target prefixed credentials. When false, unprefixed model requests may use prefixed
