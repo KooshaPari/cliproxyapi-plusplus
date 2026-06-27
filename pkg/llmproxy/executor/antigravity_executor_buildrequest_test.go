@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"net/http"
 	"testing"
 
 	cliproxyauth "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth"
@@ -98,10 +99,7 @@ func TestGenerateStableSessionID_FallsBackToContentRawForNonTextUserMessage(t *t
 
 func buildRequestBodyFromPayload(t *testing.T, modelName string) map[string]any {
 	t.Helper()
-
-	executor := &AntigravityExecutor{}
-	auth := &cliproxyauth.Auth{}
-	payload := []byte(`{
+	return buildRequestBodyFromRawPayload(t, modelName, []byte(`{
 		"request": {
 			"tools": [
 				{
@@ -111,17 +109,20 @@ func buildRequestBodyFromPayload(t *testing.T, modelName string) map[string]any 
 							"parametersJsonSchema": {
 								"$schema": "http://json-schema.org/draft-07/schema#",
 								"$id": "root-schema",
+								"$comment": "root comment should be removed",
 								"type": "object",
 								"properties": {
 									"$id": {"type": "string"},
 									"arg": {
 										"type": "object",
+										"$comment": "nested comment should be removed",
 										"prefill": "hello",
 										"properties": {
 											"mode": {
 												"type": "string",
 												"deprecated": true,
 												"enum": ["a", "b"],
+												"enumDescriptions": ["Alpha", "Beta"],
 												"enumTitles": ["A", "B"]
 											}
 										}
@@ -136,12 +137,25 @@ func buildRequestBodyFromPayload(t *testing.T, modelName string) map[string]any 
 				}
 			]
 		}
-	}`)
+	}`))
+}
+
+func buildRequestBodyFromRawPayload(t *testing.T, modelName string, payload []byte) map[string]any {
+	t.Helper()
+
+	executor := &AntigravityExecutor{}
+	auth := &cliproxyauth.Auth{Metadata: map[string]any{"project_id": "project-1"}}
 
 	req, err := executor.buildRequest(context.Background(), auth, "token", modelName, payload, false, "", "https://example.com")
 	if err != nil {
 		t.Fatalf("buildRequest error: %v", err)
 	}
+
+	return requestBody(t, req)
+}
+
+func requestBody(t *testing.T, req *http.Request) map[string]any {
+	t.Helper()
 
 	raw, err := io.ReadAll(req.Body)
 	if err != nil {
@@ -250,6 +264,9 @@ func assertSchemaSanitizedAndPropertyPreserved(t *testing.T, params map[string]a
 	if _, ok := params["$id"]; ok {
 		t.Fatalf("root $id should be removed from schema")
 	}
+	if _, ok := params["$comment"]; ok {
+		t.Fatalf("root $comment should be removed from schema")
+	}
 	if _, ok := params["patternProperties"]; ok {
 		t.Fatalf("patternProperties should be removed from schema")
 	}
@@ -269,6 +286,9 @@ func assertSchemaSanitizedAndPropertyPreserved(t *testing.T, params map[string]a
 	if _, ok := arg["prefill"]; ok {
 		t.Fatalf("prefill should be removed from nested schema")
 	}
+	if _, ok := arg["$comment"]; ok {
+		t.Fatalf("nested $comment should be removed from schema")
+	}
 
 	argProps, ok := arg["properties"].(map[string]any)
 	if !ok {
@@ -281,28 +301,11 @@ func assertSchemaSanitizedAndPropertyPreserved(t *testing.T, params map[string]a
 	if _, ok := mode["enumTitles"]; ok {
 		t.Fatalf("enumTitles should be removed from nested schema")
 	}
+	if _, ok := mode["enumDescriptions"]; ok {
+		t.Fatalf("enumDescriptions should be removed from nested schema")
+	}
 	if _, ok := mode["deprecated"]; ok {
 		t.Fatalf("deprecated should be removed from nested schema")
-	}
-}
-
-func assertNoSchemaKeywords(t *testing.T, value any) {
-	t.Helper()
-
-	switch typed := value.(type) {
-	case map[string]any:
-		for key, nested := range typed {
-			switch key {
-			case "$ref", "$defs":
-				t.Fatalf("schema keyword %q should be removed for Antigravity request", key)
-			default:
-				assertNoSchemaKeywords(t, nested)
-			}
-		}
-	case []any:
-		for _, nested := range typed {
-			assertNoSchemaKeywords(t, nested)
-		}
 	}
 }
 
