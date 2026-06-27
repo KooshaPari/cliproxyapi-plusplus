@@ -80,8 +80,16 @@ func runAutoUpdater(ctx context.Context) {
 
 	runOnce := func() {
 		cfg := currentConfigPtr.Load()
-		if reason, skip := autoUpdateSkipReason(cfg); skip {
-			log.Debugf("management asset auto-updater skipped: %s", reason)
+		if cfg == nil {
+			log.Debug("management asset auto-updater skipped: config not yet available")
+			return
+		}
+		if cfg.RemoteManagement.DisableControlPanel {
+			log.Debug("management asset auto-updater skipped: control panel disabled")
+			return
+		}
+		if cfg.RemoteManagement.DisableAutoUpdatePanel {
+			log.Debug("management asset auto-updater skipped: disable-auto-update-panel is enabled")
 			return
 		}
 
@@ -100,22 +108,6 @@ func runAutoUpdater(ctx context.Context) {
 			runOnce()
 		}
 	}
-}
-
-func autoUpdateSkipReason(cfg *config.Config) (string, bool) {
-	if cfg == nil {
-		return "config not yet available", true
-	}
-	if cfg.Home.Enabled {
-		return "cluster mode enabled", true
-	}
-	if cfg.RemoteManagement.DisableControlPanel {
-		return "control panel disabled", true
-	}
-	if cfg.RemoteManagement.DisableAutoUpdatePanel {
-		return "disable-auto-update-panel is enabled", true
-	}
-	return "", false
 }
 
 func newHTTPClient(proxyURL string) *http.Client {
@@ -344,22 +336,32 @@ func fetchLatestAsset(ctx context.Context, client *http.Client, releaseURL strin
 		releaseURL = defaultManagementReleaseURL
 	}
 
-	headers := map[string]string{
-		"Accept":     "application/vnd.github+json",
-		"User-Agent": httpUserAgent,
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, releaseURL, nil)
+	if err != nil {
+		return nil, "", fmt.Errorf("create release request: %w", err)
 	}
+	req.Header.Set("Accept", "application/vnd.github+json")
+	req.Header.Set("User-Agent", httpUserAgent)
 	gitURL := strings.ToLower(strings.TrimSpace(os.Getenv("GITSTORE_GIT_URL")))
 	if tok := strings.TrimSpace(os.Getenv("GITSTORE_GIT_TOKEN")); tok != "" && strings.Contains(gitURL, "github.com") {
-		headers["Authorization"] = "Bearer " + tok
+		req.Header.Set("Authorization", "Bearer "+tok)
 	}
 
-	data, err := httpfetch.GetBytes(ctx, client, releaseURL, headers, 0)
+	resp, err := client.Do(req)
 	if err != nil {
-		return nil, "", fmt.Errorf("fetch release: %w", err)
+		return nil, "", fmt.Errorf("execute release request: %w", err)
+	}
+	defer func() {
+		_ = resp.Body.Close()
+	}()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 1024))
+		return nil, "", fmt.Errorf("unexpected release status %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
 	}
 
 	var release releaseResponse
-	if err = json.Unmarshal(data, &release); err != nil {
+	if err = json.NewDecoder(resp.Body).Decode(&release); err != nil {
 		return nil, "", fmt.Errorf("decode release response: %w", err)
 	}
 
@@ -379,9 +381,31 @@ func downloadAsset(ctx context.Context, client *http.Client, downloadURL string)
 		return nil, "", fmt.Errorf("empty download url")
 	}
 
-	data, err := httpfetch.GetBytes(ctx, client, downloadURL, map[string]string{"User-Agent": httpUserAgent}, maxAssetDownloadSize)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, downloadURL, nil)
 	if err != nil {
-		return nil, "", fmt.Errorf("download asset: %w", err)
+		return nil, "", fmt.Errorf("create download request: %w", err)
+	}
+	req.Header.Set("User-Agent", httpUserAgent)
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, "", fmt.Errorf("execute download request: %w", err)
+	}
+	defer func() {
+		_ = resp.Body.Close()
+	}()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 1024))
+		return nil, "", fmt.Errorf("unexpected download status %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
+	}
+
+	data, err := io.ReadAll(io.LimitReader(resp.Body, maxAssetDownloadSize+1))
+	if err != nil {
+		return nil, "", fmt.Errorf("read download body: %w", err)
+	}
+	if int64(len(data)) > maxAssetDownloadSize {
+		return nil, "", fmt.Errorf("download exceeds maximum allowed size of %d bytes", maxAssetDownloadSize)
 	}
 
 	sum := sha256.Sum256(data)

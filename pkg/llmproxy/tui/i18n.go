@@ -140,6 +140,7 @@ var zhStrings = map[string]string{
 	"section_quota":     "配额超限处理",
 	"section_routing":   "路由",
 	"section_websocket": "WebSocket",
+	"section_ampcode":   "AMP Code",
 	"section_other":     "其他",
 
 	// ── Auth Files ──
@@ -209,7 +210,6 @@ var zhStrings = map[string]string{
 	"usage_output":        "输出",
 	"usage_cached":        "缓存",
 	"usage_reasoning":     "思考",
-	"usage_time":          "时间",
 
 	// ── Logs ──
 	"logs_title":       "📋 日志",
@@ -291,6 +291,7 @@ var enStrings = map[string]string{
 	"section_quota":     "Quota Exceeded Handling",
 	"section_routing":   "Routing",
 	"section_websocket": "WebSocket",
+	"section_ampcode":   "AMP Code",
 	"section_other":     "Other",
 
 	// ── Auth Files ──
@@ -360,7 +361,6 @@ var enStrings = map[string]string{
 	"usage_output":        "Output",
 	"usage_cached":        "Cached",
 	"usage_reasoning":     "Reasoning",
-	"usage_time":          "Time",
 
 	// ── Logs ──
 	"logs_title":       "📋 Logs",

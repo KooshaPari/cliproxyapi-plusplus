@@ -79,7 +79,19 @@ func ConvertGeminiRequestToGemini(_ string, inputRawJSON []byte, _ bool) []byte 
 		return true
 	})
 
-	out = signature.SanitizeGeminiRequestThoughtSignatures(out, "contents")
+	gjson.GetBytes(out, "contents").ForEach(func(key, content gjson.Result) bool {
+		if content.Get("role").String() == "model" {
+			content.Get("parts").ForEach(func(partKey, part gjson.Result) bool {
+				if part.Get("functionCall").Exists() {
+					out, _ = sjson.SetBytes(out, fmt.Sprintf("contents.%d.parts.%d.thoughtSignature", key.Int(), partKey.Int()), "skip_thought_signature_validator")
+				} else if part.Get("thoughtSignature").Exists() {
+					out, _ = sjson.SetBytes(out, fmt.Sprintf("contents.%d.parts.%d.thoughtSignature", key.Int(), partKey.Int()), "skip_thought_signature_validator")
+				}
+				return true
+			})
+		}
+		return true
+	})
 
 	if gjson.GetBytes(rawJSON, "generationConfig.responseSchema").Exists() {
 		strJson, _ := util.RenameKey(string(out), "generationConfig.responseSchema", "generationConfig.responseJsonSchema")
@@ -87,7 +99,7 @@ func ConvertGeminiRequestToGemini(_ string, inputRawJSON []byte, _ bool) []byte 
 	}
 
 	// Backfill empty functionResponse.name from the preceding functionCall.name.
-	// Some clients send function responses with empty names; the Gemini API rejects these.
+	// Amp may send function responses with empty names; the Gemini API rejects these.
 	out = backfillEmptyFunctionResponseNames(out)
 
 	out = common.AttachDefaultSafetySettings(out, "safetySettings")

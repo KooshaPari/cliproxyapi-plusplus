@@ -1,7 +1,7 @@
 // Package thinking provides unified thinking configuration processing.
 //
 // This package offers a unified interface for parsing, validating, and applying
-// thinking configurations across various AI providers (Claude, Gemini, OpenAI, Codex, Antigravity, Kimi, xAI).
+// thinking configurations across various AI providers (Claude, Gemini, OpenAI, iFlow).
 package thinking
 
 import "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/registry"

@@ -113,7 +113,6 @@ func ConvertGeminiRequestToOpenAI(modelName string, inputRawJSON []byte, stream 
 
 	// Process contents (Gemini messages) -> OpenAI messages
 	var toolCallIDs []string // Track tool call IDs for matching with tool results
-	toolCallConsumeIdx := 0
 
 	// System instruction -> OpenAI system message
 	// Gemini may provide `systemInstruction` or `system_instruction`; support both keys.
@@ -242,9 +241,12 @@ func ConvertGeminiRequestToOpenAI(modelName string, inputRawJSON []byte, stream 
 							}
 						}
 
-						if toolCallConsumeIdx < len(toolCallIDs) {
-							toolMsg, _ = sjson.SetBytes(toolMsg, "tool_call_id", toolCallIDs[toolCallConsumeIdx])
-							toolCallConsumeIdx++
+						// Try to match with previous tool call ID
+						_ = functionResponse.Get("name").String() // functionName not used for now
+						if len(toolCallIDs) > 0 {
+							// Use the last tool call ID (simple matching by function name)
+							// In a real implementation, you might want more sophisticated matching
+							toolMsg, _ = sjson.SetBytes(toolMsg, "tool_call_id", toolCallIDs[len(toolCallIDs)-1])
 						} else {
 							// Generate a tool call ID if none available
 							toolMsg, _ = sjson.SetBytes(toolMsg, "tool_call_id", genToolCallID())

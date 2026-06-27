@@ -2,18 +2,13 @@ package main
 
 import (
 	"fmt"
-	// TODO: cursor proto generation requires protoc; deferred for now
-	// cursorproto "github.com/kooshapari/CLIProxyAPI/v7/internal/auth/cursor/proto"
-	// "google.golang.org/protobuf/reflect/protoreflect"
+
+	cursorproto "github.com/kooshapari/CLIProxyAPI/v7/internal/auth/cursor/proto"
+	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 func main() {
-	// TODO: cursor proto generation requires protoc and proto files; deferred for now
-	fmt.Println("protocheck utility is temporarily disabled pending cursor proto generation")
-	return
-
-	// Original code below requires protoc-generated proto package:
-	/*
+	// Use Msg to get the descriptor, then list its fields
 	msgName := "ExecClientMessage"
 	descriptor := cursorproto.Msg(msgName)
 

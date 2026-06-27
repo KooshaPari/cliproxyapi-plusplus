@@ -1,19 +1,20 @@
 package synthesizer
 
 import (
-	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/runtime/geminicli"
 	coreauth "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth"
 )
 
 // FileSynthesizer generates Auth entries from OAuth JSON files.
-// It handles file-based authentication.
+// It handles file-based authentication and Gemini virtual auth generation.
 type FileSynthesizer struct{}
 
 // NewFileSynthesizer creates a new FileSynthesizer instance.
@@ -139,16 +140,23 @@ func (s *FileSynthesizer) Synthesize(ctx *SynthesisContext) ([]*coreauth.Auth, e
 	return out, nil
 }
 
-func parsePluginFileAuths(parser PluginAuthParser, req pluginapi.AuthParseRequest) ([]*coreauth.Auth, bool, error) {
-	if parser == nil {
-		return nil, false, nil
+// SynthesizeGeminiVirtualAuths creates virtual Auth entries for multi-project Gemini credentials.
+// It disables the primary auth and creates one virtual auth per project.
+func SynthesizeGeminiVirtualAuths(primary *coreauth.Auth, metadata map[string]any, now time.Time) []*coreauth.Auth {
+	if primary == nil || metadata == nil {
+		return nil
 	}
-	if multiParser, ok := parser.(PluginMultiAuthParser); ok {
-		return multiParser.ParseAuths(context.Background(), req)
+	projects := splitGeminiProjectIDs(metadata)
+	if len(projects) <= 1 {
+		return nil
 	}
-	auth, handled, errParse := parser.ParseAuth(context.Background(), req)
-	if errParse != nil || !handled || auth == nil {
-		return nil, handled, errParse
+	email, _ := metadata["email"].(string)
+	shared := geminicli.NewSharedCredential(primary.ID, email, metadata, projects)
+	primary.Disabled = true
+	primary.Status = coreauth.StatusDisabled
+	primary.Runtime = shared
+	if primary.Attributes == nil {
+		primary.Attributes = make(map[string]string)
 	}
 	primary.Attributes["gemini_virtual_primary"] = "true"
 	primary.Attributes["virtual_children"] = strings.Join(projects, ",")
@@ -218,48 +226,38 @@ func parsePluginFileAuths(parser PluginAuthParser, req pluginapi.AuthParseReques
 	return virtuals
 }
 
-func compactPluginAuths(auths []*coreauth.Auth) []*coreauth.Auth {
-	if len(auths) == 0 {
+// splitGeminiProjectIDs extracts and deduplicates project IDs from metadata.
+func splitGeminiProjectIDs(metadata map[string]any) []string {
+	raw, _ := metadata["project_id"].(string)
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
 		return nil
 	}
-	out := auths[:0]
-	for _, auth := range auths {
-		if auth == nil {
+	parts := strings.Split(trimmed, ",")
+	result := make([]string, 0, len(parts))
+	seen := make(map[string]struct{}, len(parts))
+	for _, part := range parts {
+		id := strings.TrimSpace(part)
+		if id == "" {
 			continue
 		}
-		out = append(out, auth)
+		if _, ok := seen[id]; ok {
+			continue
+		}
+		seen[id] = struct{}{}
+		result = append(result, id)
 	}
-	return out
+	return result
 }
 
-// extractOAuthModelAliasesFromMetadata reads per-account model aliases from OAuth JSON metadata.
-// Supports both "model_aliases" and "model-aliases" keys.
-func extractOAuthModelAliasesFromMetadata(metadata map[string]any) []config.OAuthModelAlias {
-	if metadata == nil {
-		return nil
+// buildGeminiVirtualID constructs a virtual auth ID from base ID and project ID.
+func buildGeminiVirtualID(baseID, projectID string) string {
+	project := strings.TrimSpace(projectID)
+	if project == "" {
+		project = "project"
 	}
-	raw, ok := metadata["model_aliases"]
-	if !ok {
-		raw, ok = metadata["model-aliases"]
-	}
-	if !ok || raw == nil {
-		return nil
-	}
-	data, errMarshal := json.Marshal(raw)
-	if errMarshal != nil {
-		return nil
-	}
-	var aliases []config.OAuthModelAlias
-	if errUnmarshal := json.Unmarshal(data, &aliases); errUnmarshal != nil {
-		return nil
-	}
-	cfg := config.Config{
-		OAuthModelAlias: map[string][]config.OAuthModelAlias{
-			"auth": aliases,
-		},
-	}
-	cfg.SanitizeOAuthModelAlias()
-	return cfg.OAuthModelAlias["auth"]
+	replacer := strings.NewReplacer("/", "_", "\\", "_", " ", "_")
+	return fmt.Sprintf("%s::%s", baseID, replacer.Replace(project))
 }
 
 // extractExcludedModelsFromMetadata reads per-account excluded models from the OAuth JSON metadata.

@@ -61,9 +61,6 @@ type ModelInfo struct {
 	SupportedInputModalities []string `json:"supportedInputModalities,omitempty"`
 	// SupportedOutputModalities lists supported output modalities (e.g., TEXT, IMAGE)
 	SupportedOutputModalities []string `json:"supportedOutputModalities,omitempty"`
-	// SupportsWebSearch indicates this Antigravity model is listed by
-	// fetchAvailableModels.webSearchModelIds and can execute native googleSearch.
-	SupportsWebSearch bool `json:"supports_web_search,omitempty"`
 
 	// Thinking holds provider-specific reasoning/thinking budget capabilities.
 	// This is optional and currently used for Gemini thinking budget normalization.
@@ -449,7 +446,7 @@ func (r *ModelRegistry) RegisterClient(clientID, clientProvider string, models [
 	r.invalidateAvailableModelsCacheLocked()
 	r.triggerModelsRegistered(provider, clientID, models)
 	if len(added) == 0 && len(removed) == 0 && !providerChanged {
-		// Only metadata (e.g., display name) changed; keep no-op re-registration quiet.
+		// Only metadata (e.g., display name) changed; skip separator when no log output.
 		return
 	}
 
@@ -1168,13 +1165,13 @@ func (r *ModelRegistry) convertModelToMap(model *ModelInfo, handlerType string) 
 			"owned_by": model.OwnedBy,
 		}
 		if model.Created > 0 {
-			result["created_at"] = time.Unix(model.Created, 0).UTC().Format(time.RFC3339)
+			result["created_at"] = model.Created
 		}
-		result["type"] = "model"
+		if model.Type != "" {
+			result["type"] = "model"
+		}
 		if model.DisplayName != "" {
 			result["display_name"] = model.DisplayName
-		} else {
-			result["display_name"] = model.ID
 		}
 		// Add thinking support for Claude Code client
 		// Claude Code checks for "thinking" field (simple boolean) to enable tab toggle

@@ -875,18 +875,15 @@ func TestCleanJSONSchemaForGemini_RemovesGeminiUnsupportedMetadataFields(t *test
 	input := `{
 		"$schema": "http://json-schema.org/draft-07/schema#",
 		"$id": "root-schema",
-		"$comment": "root comment should be removed",
 		"type": "object",
 		"properties": {
 			"payload": {
 				"type": "object",
-				"$comment": "nested comment should be removed",
 				"prefill": "hello",
 				"properties": {
 					"mode": {
 						"type": "string",
 						"enum": ["a", "b"],
-						"enumDescriptions": ["Alpha", "Beta"],
 						"enumTitles": ["A", "B"]
 					}
 				},
@@ -896,14 +893,6 @@ func TestCleanJSONSchemaForGemini_RemovesGeminiUnsupportedMetadataFields(t *test
 			},
 			"$id": {
 				"type": "string",
-				"description": "property name should not be removed"
-			},
-			"$comment": {
-				"type": "string",
-				"description": "property name should not be removed"
-			},
-			"enumDescriptions": {
-				"type": "array",
 				"description": "property name should not be removed"
 			}
 		}
@@ -924,14 +913,6 @@ func TestCleanJSONSchemaForGemini_RemovesGeminiUnsupportedMetadataFields(t *test
 			},
 			"$id": {
 				"type": "string",
-				"description": "property name should not be removed"
-			},
-			"$comment": {
-				"type": "string",
-				"description": "property name should not be removed"
-			},
-			"enumDescriptions": {
-				"type": "array",
 				"description": "property name should not be removed"
 			}
 		}

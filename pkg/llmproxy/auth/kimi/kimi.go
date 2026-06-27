@@ -19,7 +19,6 @@ import (
 	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/config"
 	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/util"
 	log "github.com/sirupsen/logrus"
-	"golang.org/x/sync/singleflight"
 )
 
 const (
@@ -40,8 +39,6 @@ const (
 	// refreshThresholdSeconds is when to refresh token before expiry (5 minutes).
 	refreshThresholdSeconds = 300
 )
-
-var kimiRefreshGroup singleflight.Group
 
 // KimiAuth handles Kimi authentication flow.
 type KimiAuth struct {
@@ -114,9 +111,6 @@ func NewDeviceFlowClientWithDeviceID(cfg *config.Config, deviceID string, httpCl
 			httpClient = util.SetProxy(&cfg.SDKConfig, httpClient)
 		}
 	}
-	sdkCfg.ProxyURL = effectiveProxyURL
-	client = util.SetProxy(&sdkCfg, client)
-
 	resolvedDeviceID := strings.TrimSpace(deviceID)
 	if resolvedDeviceID == "" {
 		resolvedDeviceID = getOrCreateDeviceID()
@@ -338,28 +332,6 @@ func (c *DeviceFlowClient) exchangeDeviceCode(ctx context.Context, deviceCode st
 
 // RefreshToken exchanges a refresh token for a new access token.
 func (c *DeviceFlowClient) RefreshToken(ctx context.Context, refreshToken string) (*KimiTokenData, error) {
-	if strings.TrimSpace(refreshToken) == "" {
-		return nil, fmt.Errorf("kimi: refresh token is required")
-	}
-	if ctx == nil {
-		ctx = context.Background()
-	}
-	refreshToken = strings.TrimSpace(refreshToken)
-
-	result, err, _ := kimiRefreshGroup.Do(refreshToken, func() (interface{}, error) {
-		return c.refreshTokenSingleFlight(context.WithoutCancel(ctx), refreshToken)
-	})
-	if err != nil {
-		return nil, err
-	}
-	tokenData, ok := result.(*KimiTokenData)
-	if !ok || tokenData == nil {
-		return nil, fmt.Errorf("kimi: refresh token failed: invalid single-flight result")
-	}
-	return tokenData, nil
-}
-
-func (c *DeviceFlowClient) refreshTokenSingleFlight(ctx context.Context, refreshToken string) (*KimiTokenData, error) {
 	data := url.Values{}
 	data.Set("client_id", kimiClientID)
 	data.Set("grant_type", "refresh_token")

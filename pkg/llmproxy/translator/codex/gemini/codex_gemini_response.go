@@ -7,11 +7,9 @@ package gemini
 import (
 	"bytes"
 	"context"
-	"crypto/sha256"
-	"strings"
 	"time"
 
-	translatorcommon "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/translatorcommon"
+	translatorcommon "github.com/kooshapari/CLIProxyAPI/v7/internal/translator/common"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
 )
@@ -22,12 +20,10 @@ var (
 
 // ConvertCodexResponseToGeminiParams holds parameters for response conversion.
 type ConvertCodexResponseToGeminiParams struct {
-	Model              string
-	CreatedAt          int64
-	ResponseID         string
-	LastStorageOutput  []byte
-	HasOutputTextDelta bool
-	LastImageHashByID  map[string][32]byte
+	Model             string
+	CreatedAt         int64
+	ResponseID        string
+	LastStorageOutput []byte
 }
 
 // ConvertCodexResponseToGemini converts Codex streaming response format to Gemini format.
@@ -46,12 +42,10 @@ type ConvertCodexResponseToGeminiParams struct {
 func ConvertCodexResponseToGemini(_ context.Context, modelName string, originalRequestRawJSON, requestRawJSON, rawJSON []byte, param *any) [][]byte {
 	if *param == nil {
 		*param = &ConvertCodexResponseToGeminiParams{
-			Model:              modelName,
-			CreatedAt:          0,
-			ResponseID:         "",
-			LastStorageOutput:  nil,
-			HasOutputTextDelta: false,
-			LastImageHashByID:  make(map[string][32]byte),
+			Model:             modelName,
+			CreatedAt:         0,
+			ResponseID:        "",
+			LastStorageOutput: nil,
 		}
 	}
 
@@ -64,77 +58,24 @@ func ConvertCodexResponseToGemini(_ context.Context, modelName string, originalR
 	typeResult := rootResult.Get("type")
 	typeStr := typeResult.String()
 
-	params := (*param).(*ConvertCodexResponseToGeminiParams)
-
 	// Base Gemini response template
 	template := []byte(`{"candidates":[{"content":{"role":"model","parts":[]}}],"usageMetadata":{"trafficType":"PROVISIONED_THROUGHPUT"},"modelVersion":"gemini-2.5-pro","createTime":"2025-08-15T02:52:03.884209Z","responseId":"06CeaPH7NaCU48APvNXDyA4"}`)
-	{
-		template, _ = sjson.SetBytes(template, "modelVersion", params.Model)
+	if len((*param).(*ConvertCodexResponseToGeminiParams).LastStorageOutput) > 0 && typeStr == "response.output_item.done" {
+		template = append([]byte(nil), (*param).(*ConvertCodexResponseToGeminiParams).LastStorageOutput...)
+	} else {
+		template, _ = sjson.SetBytes(template, "modelVersion", (*param).(*ConvertCodexResponseToGeminiParams).Model)
 		createdAtResult := rootResult.Get("response.created_at")
 		if createdAtResult.Exists() {
-			params.CreatedAt = createdAtResult.Int()
-			template, _ = sjson.SetBytes(template, "createTime", time.Unix(params.CreatedAt, 0).Format(time.RFC3339Nano))
+			(*param).(*ConvertCodexResponseToGeminiParams).CreatedAt = createdAtResult.Int()
+			template, _ = sjson.SetBytes(template, "createTime", time.Unix((*param).(*ConvertCodexResponseToGeminiParams).CreatedAt, 0).Format(time.RFC3339Nano))
 		}
-		template, _ = sjson.SetBytes(template, "responseId", params.ResponseID)
-	}
-
-	if typeStr == "response.image_generation_call.partial_image" {
-		itemID := rootResult.Get("item_id").String()
-		b64 := rootResult.Get("partial_image_b64").String()
-		if b64 == "" {
-			return [][]byte{}
-		}
-		if itemID != "" {
-			if params.LastImageHashByID == nil {
-				params.LastImageHashByID = make(map[string][32]byte)
-			}
-			hash := sha256.Sum256([]byte(b64))
-			if last, ok := params.LastImageHashByID[itemID]; ok && last == hash {
-				return [][]byte{}
-			}
-			params.LastImageHashByID[itemID] = hash
-		}
-
-		outputFormat := rootResult.Get("output_format").String()
-		mimeType := mimeTypeFromCodexOutputFormat(outputFormat)
-
-		part := []byte(`{"inlineData":{"data":"","mimeType":""}}`)
-		part, _ = sjson.SetBytes(part, "inlineData.data", b64)
-		part, _ = sjson.SetBytes(part, "inlineData.mimeType", mimeType)
-		template, _ = sjson.SetRawBytes(template, "candidates.0.content.parts.-1", part)
-		return [][]byte{template}
+		template, _ = sjson.SetBytes(template, "responseId", (*param).(*ConvertCodexResponseToGeminiParams).ResponseID)
 	}
 
 	// Handle function call completion
 	if typeStr == "response.output_item.done" {
 		itemResult := rootResult.Get("item")
 		itemType := itemResult.Get("type").String()
-		if itemType == "image_generation_call" {
-			itemID := itemResult.Get("id").String()
-			b64 := itemResult.Get("result").String()
-			if b64 == "" {
-				return [][]byte{}
-			}
-			if itemID != "" {
-				if params.LastImageHashByID == nil {
-					params.LastImageHashByID = make(map[string][32]byte)
-				}
-				hash := sha256.Sum256([]byte(b64))
-				if last, ok := params.LastImageHashByID[itemID]; ok && last == hash {
-					return [][]byte{}
-				}
-				params.LastImageHashByID[itemID] = hash
-			}
-
-			outputFormat := itemResult.Get("output_format").String()
-			mimeType := mimeTypeFromCodexOutputFormat(outputFormat)
-
-			part := []byte(`{"inlineData":{"data":"","mimeType":""}}`)
-			part, _ = sjson.SetBytes(part, "inlineData.data", b64)
-			part, _ = sjson.SetBytes(part, "inlineData.mimeType", mimeType)
-			template, _ = sjson.SetRawBytes(template, "candidates.0.content.parts.-1", part)
-			return [][]byte{template}
-		}
 		if itemType == "function_call" {
 			// Create function call part
 			functionCall := []byte(`{"functionCall":{"name":"","args":{}}}`)
@@ -156,12 +97,11 @@ func ConvertCodexResponseToGemini(_ context.Context, modelName string, originalR
 					functionCall, _ = sjson.SetRawBytes(functionCall, "functionCall.args", []byte(argsStr))
 				}
 			}
-			functionCall = setGeminiFunctionCallID(functionCall, itemResult)
 
 			template, _ = sjson.SetRawBytes(template, "candidates.0.content.parts.-1", functionCall)
 			template, _ = sjson.SetBytes(template, "candidates.0.finishReason", "STOP")
 
-			params.LastStorageOutput = append([]byte(nil), template...)
+			(*param).(*ConvertCodexResponseToGeminiParams).LastStorageOutput = append([]byte(nil), template...)
 
 			// Use this return to storage message
 			return [][]byte{}
@@ -190,10 +130,11 @@ func ConvertCodexResponseToGemini(_ context.Context, modelName string, originalR
 		return [][]byte{}
 	}
 
-	if len(params.LastStorageOutput) > 0 {
-		stored := append([]byte(nil), params.LastStorageOutput...)
-		params.LastStorageOutput = nil
-		return [][]byte{stored, template}
+	if len((*param).(*ConvertCodexResponseToGeminiParams).LastStorageOutput) > 0 {
+		return [][]byte{
+			append([]byte(nil), (*param).(*ConvertCodexResponseToGeminiParams).LastStorageOutput...),
+			template,
+		}
 	}
 	return [][]byte{template}
 }
@@ -299,20 +240,6 @@ func ConvertCodexResponseToGeminiNonStream(_ context.Context, modelName string, 
 						})
 					}
 
-				case "image_generation_call":
-					flushPendingFunctionCalls()
-					b64 := value.Get("result").String()
-					if b64 == "" {
-						break
-					}
-					outputFormat := value.Get("output_format").String()
-					mimeType := mimeTypeFromCodexOutputFormat(outputFormat)
-
-					part := []byte(`{"inlineData":{"data":"","mimeType":""}}`)
-					part, _ = sjson.SetBytes(part, "inlineData.data", b64)
-					part, _ = sjson.SetBytes(part, "inlineData.mimeType", mimeType)
-					template, _ = sjson.SetRawBytes(template, "candidates.0.content.parts.-1", part)
-
 				case "function_call":
 					// Collect function call for potential merging with consecutive ones
 					hasToolCall = true
@@ -333,7 +260,6 @@ func ConvertCodexResponseToGeminiNonStream(_ context.Context, modelName string, 
 							functionCall, _ = sjson.SetRawBytes(functionCall, "functionCall.args", []byte(argsStr))
 						}
 					}
-					functionCall = setGeminiFunctionCallID(functionCall, value)
 
 					pendingFunctionCalls = append(pendingFunctionCalls, functionCall)
 				}
@@ -383,38 +309,6 @@ func buildReverseMapFromGeminiOriginal(original []byte) map[string]string {
 	return rev
 }
 
-func setGeminiFunctionCallID(functionCall []byte, item gjson.Result) []byte {
-	if callID := strings.TrimSpace(item.Get("call_id").String()); callID != "" {
-		functionCall, _ = sjson.SetBytes(functionCall, "functionCall.id", callID)
-		return functionCall
-	}
-	if id := strings.TrimSpace(item.Get("id").String()); id != "" {
-		functionCall, _ = sjson.SetBytes(functionCall, "functionCall.id", id)
-	}
-	return functionCall
-}
-
 func GeminiTokenCount(ctx context.Context, count int64) []byte {
 	return translatorcommon.GeminiTokenCountJSON(count)
-}
-
-func mimeTypeFromCodexOutputFormat(outputFormat string) string {
-	if outputFormat == "" {
-		return "image/png"
-	}
-	if strings.Contains(outputFormat, "/") {
-		return outputFormat
-	}
-	switch strings.ToLower(outputFormat) {
-	case "png":
-		return "image/png"
-	case "jpg", "jpeg":
-		return "image/jpeg"
-	case "webp":
-		return "image/webp"
-	case "gif":
-		return "image/gif"
-	default:
-		return "image/png"
-	}
 }

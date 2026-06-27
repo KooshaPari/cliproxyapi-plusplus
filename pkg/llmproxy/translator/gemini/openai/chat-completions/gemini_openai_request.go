@@ -196,8 +196,8 @@ func ConvertOpenAIRequestToGemini(modelName string, inputRawJSON []byte, _ bool)
 							text := item.Get("text").String()
 							if strings.TrimSpace(text) != "" {
 								node, _ = sjson.SetBytes(node, "parts."+itoa(p)+".text", text)
-								p++
 							}
+							p++
 						case "image_url":
 							imageURL := item.Get("image_url.url").String()
 							if len(imageURL) > 5 {
@@ -208,18 +208,6 @@ func ConvertOpenAIRequestToGemini(modelName string, inputRawJSON []byte, _ bool)
 									node, _ = sjson.SetBytes(node, "parts."+itoa(p)+".inlineData.mime_type", mime)
 									node, _ = sjson.SetBytes(node, "parts."+itoa(p)+".inlineData.data", data)
 									node, _ = sjson.SetBytes(node, "parts."+itoa(p)+".thoughtSignature", geminiFunctionThoughtSignature)
-									p++
-								}
-							}
-						case "video_url":
-							videoURL := item.Get("video_url.url").String()
-							if len(videoURL) > 5 {
-								pieces := strings.SplitN(videoURL[5:], ";", 2)
-								if len(pieces) == 2 && len(pieces[1]) > 7 {
-									mime := pieces[0]
-									data := pieces[1][7:]
-									node, _ = sjson.SetBytes(node, "parts."+itoa(p)+".inlineData.mime_type", mime)
-									node, _ = sjson.SetBytes(node, "parts."+itoa(p)+".inlineData.data", data)
 									p++
 								}
 							}
@@ -236,14 +224,6 @@ func ConvertOpenAIRequestToGemini(modelName string, inputRawJSON []byte, _ bool)
 								p++
 							} else {
 								log.Warnf("Unknown file name extension '%s' in user message, skip", ext)
-							}
-						case "input_audio":
-							audioData := item.Get("input_audio.data").String()
-							if audioData != "" {
-								mimeType := openAIInputAudioMimeType(item.Get("input_audio.format").String())
-								node, _ = sjson.SetBytes(node, "parts."+itoa(p)+".inlineData.mime_type", mimeType)
-								node, _ = sjson.SetBytes(node, "parts."+itoa(p)+".inlineData.data", audioData)
-								p++
 							}
 						}
 					}
@@ -264,8 +244,8 @@ func ConvertOpenAIRequestToGemini(modelName string, inputRawJSON []byte, _ bool)
 							text := item.Get("text").String()
 							if strings.TrimSpace(text) != "" {
 								node, _ = sjson.SetBytes(node, "parts."+itoa(p)+".text", text)
-								p++
 							}
+							p++
 						case "image_url":
 							// If the assistant returned an inline data URL, preserve it for history fidelity.
 							imageURL := item.Get("image_url.url").String()
@@ -297,7 +277,7 @@ func ConvertOpenAIRequestToGemini(modelName string, inputRawJSON []byte, _ bool)
 						fargs := tc.Get("function.arguments").String()
 						node, _ = sjson.SetBytes(node, "parts."+itoa(p)+".functionCall.name", fname)
 						node, _ = sjson.SetRawBytes(node, "parts."+itoa(p)+".functionCall.args", []byte(fargs))
-						node, _ = sjson.SetBytes(node, "parts."+itoa(p)+".thoughtSignature", openAIToolCallGeminiThoughtSignature(tc))
+						node, _ = sjson.SetBytes(node, "parts."+itoa(p)+".thoughtSignature", geminiFunctionThoughtSignature)
 						p++
 						if fid != "" {
 							fIDs = append(fIDs, fid)
@@ -328,16 +308,6 @@ func ConvertOpenAIRequestToGemini(modelName string, inputRawJSON []byte, _ bool)
 					out, _ = sjson.SetRawBytes(out, "contents.-1", node)
 				}
 			}
-		}
-	}
-
-	// Gemini/Vertex accepts assistant/model turns in history, but some model
-	// surfaces reject requests whose final turn is model-authored prefill.
-	contents := gjson.GetBytes(out, "contents")
-	if contents.Exists() && contents.IsArray() {
-		arr := contents.Array()
-		if len(arr) > 0 && arr[len(arr)-1].Get("role").String() == "model" {
-			out, _ = sjson.DeleteBytes(out, fmt.Sprintf("contents.%d", len(arr)-1))
 		}
 	}
 
@@ -429,20 +399,6 @@ func ConvertOpenAIRequestToGemini(modelName string, inputRawJSON []byte, _ bool)
 	out = common.AttachDefaultSafetySettings(out, "safetySettings")
 
 	return out
-}
-
-func openAIToolCallGeminiThoughtSignature(toolCall gjson.Result) string {
-	for _, path := range []string{
-		"extra_content.google.thought_signature",
-		"function.extra_content.google.thought_signature",
-		"thoughtSignature",
-		"thought_signature",
-	} {
-		if signatureResult := toolCall.Get(path); signatureResult.Exists() {
-			return sigcompat.GeminiReplaySignatureOrBypass(signatureResult.String(), sigcompat.SignatureBlockKindGeminiFunctionCall)
-		}
-	}
-	return geminiFunctionThoughtSignature
 }
 
 // itoa converts int to string without strconv import for few usages.

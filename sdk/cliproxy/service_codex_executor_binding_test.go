@@ -62,25 +62,3 @@ func TestEnsureExecutorsForAuthWithMode_CodexForceReplace(t *testing.T) {
 		t.Fatal("expected codex executor replacement in force mode")
 	}
 }
-
-func TestEnsureExecutorsForAuth_XAIBindsAutoExecutor(t *testing.T) {
-	service := &Service{
-		cfg:         &config.Config{},
-		coreManager: coreauth.NewManager(nil, nil, nil),
-	}
-	auth := &coreauth.Auth{
-		ID:       "xai-auth-1",
-		Provider: "xai",
-		Status:   coreauth.StatusActive,
-	}
-
-	service.ensureExecutorsForAuth(auth)
-
-	gotExecutor, ok := service.coreManager.Executor("xai")
-	if !ok || gotExecutor == nil {
-		t.Fatal("expected xai executor after bind")
-	}
-	if _, ok := gotExecutor.(*executor.XAIAutoExecutor); !ok {
-		t.Fatalf("xai executor type = %T, want *executor.XAIAutoExecutor", gotExecutor)
-	}
-}

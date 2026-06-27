@@ -4,10 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"io"
-	"net/http"
-	"strings"
 	"testing"
-	"time"
 
 	cliproxyauth "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth"
 )
@@ -102,44 +99,9 @@ func TestGenerateStableSessionID_FallsBackToContentRawForNonTextUserMessage(t *t
 func buildRequestBodyFromPayload(t *testing.T, modelName string) map[string]any {
 	t.Helper()
 
-	request, ok := body["request"].(map[string]any)
-	if !ok {
-		t.Fatalf("request missing or invalid type")
-	}
-
-	contents, ok := request["contents"].([]any)
-	if !ok || len(contents) == 0 {
-		t.Fatalf("contents missing or empty")
-	}
-	content, ok := contents[0].(map[string]any)
-	if !ok {
-		t.Fatalf("content missing or invalid type")
-	}
-	if got, ok := content["x-debug"].(string); !ok || got != "keep-me" {
-		t.Fatalf("x-debug should be preserved when no tool schema exists, got=%v", content["x-debug"])
-	}
-
-	nonSchema, ok := request["nonSchema"].(map[string]any)
-	if !ok {
-		t.Fatalf("nonSchema missing or invalid type")
-	}
-	if _, ok := nonSchema["nullable"]; !ok {
-		t.Fatalf("nullable should be preserved outside schema cleanup path")
-	}
-	if got, ok := nonSchema["x-extra"].(string); !ok || got != "keep-me" {
-		t.Fatalf("x-extra should be preserved outside schema cleanup path, got=%v", nonSchema["x-extra"])
-	}
-
-	if generationConfig, ok := request["generationConfig"].(map[string]any); ok {
-		if _, ok := generationConfig["maxOutputTokens"]; ok {
-			t.Fatalf("maxOutputTokens should still be removed for non-Claude requests")
-		}
-	}
-}
-
-func buildRequestBodyFromPayload(t *testing.T, modelName string) map[string]any {
-	t.Helper()
-	return buildRequestBodyFromRawPayload(t, modelName, []byte(`{
+	executor := &AntigravityExecutor{}
+	auth := &cliproxyauth.Auth{}
+	payload := []byte(`{
 		"request": {
 			"tools": [
 				{
@@ -149,20 +111,17 @@ func buildRequestBodyFromPayload(t *testing.T, modelName string) map[string]any 
 							"parametersJsonSchema": {
 								"$schema": "http://json-schema.org/draft-07/schema#",
 								"$id": "root-schema",
-								"$comment": "root comment should be removed",
 								"type": "object",
 								"properties": {
 									"$id": {"type": "string"},
 									"arg": {
 										"type": "object",
-										"$comment": "nested comment should be removed",
 										"prefill": "hello",
 										"properties": {
 											"mode": {
 												"type": "string",
 												"deprecated": true,
 												"enum": ["a", "b"],
-												"enumDescriptions": ["Alpha", "Beta"],
 												"enumTitles": ["A", "B"]
 											}
 										}
@@ -177,25 +136,12 @@ func buildRequestBodyFromPayload(t *testing.T, modelName string) map[string]any 
 				}
 			]
 		}
-	}`))
-}
-
-func buildRequestBodyFromRawPayload(t *testing.T, modelName string, payload []byte) map[string]any {
-	t.Helper()
-
-	executor := &AntigravityExecutor{}
-	auth := &cliproxyauth.Auth{Metadata: map[string]any{"project_id": "project-1"}}
+	}`)
 
 	req, err := executor.buildRequest(context.Background(), auth, "token", modelName, payload, false, "", "https://example.com")
 	if err != nil {
 		t.Fatalf("buildRequest error: %v", err)
 	}
-
-	return requestBody(t, req)
-}
-
-func requestBody(t *testing.T, req *http.Request) map[string]any {
-	t.Helper()
 
 	raw, err := io.ReadAll(req.Body)
 	if err != nil {
@@ -304,9 +250,6 @@ func assertSchemaSanitizedAndPropertyPreserved(t *testing.T, params map[string]a
 	if _, ok := params["$id"]; ok {
 		t.Fatalf("root $id should be removed from schema")
 	}
-	if _, ok := params["$comment"]; ok {
-		t.Fatalf("root $comment should be removed from schema")
-	}
 	if _, ok := params["patternProperties"]; ok {
 		t.Fatalf("patternProperties should be removed from schema")
 	}
@@ -326,9 +269,6 @@ func assertSchemaSanitizedAndPropertyPreserved(t *testing.T, params map[string]a
 	if _, ok := arg["prefill"]; ok {
 		t.Fatalf("prefill should be removed from nested schema")
 	}
-	if _, ok := arg["$comment"]; ok {
-		t.Fatalf("nested $comment should be removed from schema")
-	}
 
 	argProps, ok := arg["properties"].(map[string]any)
 	if !ok {
@@ -340,9 +280,6 @@ func assertSchemaSanitizedAndPropertyPreserved(t *testing.T, params map[string]a
 	}
 	if _, ok := mode["enumTitles"]; ok {
 		t.Fatalf("enumTitles should be removed from nested schema")
-	}
-	if _, ok := mode["enumDescriptions"]; ok {
-		t.Fatalf("enumDescriptions should be removed from nested schema")
 	}
 	if _, ok := mode["deprecated"]; ok {
 		t.Fatalf("deprecated should be removed from nested schema")

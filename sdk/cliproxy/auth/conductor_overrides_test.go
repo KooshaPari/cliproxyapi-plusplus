@@ -12,8 +12,6 @@ import (
 	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v6/sdk/cliproxy/executor"
 )
 
-const requestScopedNotFoundMessage = "Item with id 'rs_0b5f3eb6f51f175c0169ca74e4a85881998539920821603a74' not found. Items are not persisted when `store` is set to false. Try again with `store` set to true, or remove this item from your input."
-
 func TestManager_ShouldRetryAfterError_RespectsAuthRequestRetryOverride(t *testing.T) {
 	m := NewManager(nil, nil, nil)
 	m.SetRetryConfig(3, 30*time.Second, 0)
@@ -61,49 +59,6 @@ func TestManager_ShouldRetryAfterError_RespectsAuthRequestRetryOverride(t *testi
 	_, shouldRetry = m.shouldRetryAfterError(&Error{HTTPStatus: 500, Message: "boom"}, 1, []string{"claude"}, model, maxWait)
 	if shouldRetry {
 		t.Fatalf("expected shouldRetry=false on attempt=1 for request_retry=1, got true")
-	}
-}
-
-func TestManager_ShouldRetryAfterError_UsesOAuthModelAliasForCooldown(t *testing.T) {
-	m := NewManager(nil, nil, nil)
-	m.SetRetryConfig(3, 30*time.Second, 0)
-	m.SetOAuthModelAlias(map[string][]internalconfig.OAuthModelAlias{
-		"kimi": {
-			{Name: "deepseek-v3.1", Alias: "pool-model"},
-		},
-	})
-
-	routeModel := "pool-model"
-	upstreamModel := "deepseek-v3.1"
-	next := time.Now().Add(5 * time.Second)
-
-	auth := &Auth{
-		ID:       "auth-1",
-		Provider: "kimi",
-		ModelStates: map[string]*ModelState{
-			upstreamModel: {
-				Unavailable:    true,
-				Status:         StatusError,
-				NextRetryAfter: next,
-				Quota: QuotaState{
-					Exceeded:      true,
-					Reason:        "quota",
-					NextRecoverAt: next,
-				},
-			},
-		},
-	}
-	if _, errRegister := m.Register(context.Background(), auth); errRegister != nil {
-		t.Fatalf("register auth: %v", errRegister)
-	}
-
-	_, _, maxWait := m.retrySettings()
-	wait, shouldRetry := m.shouldRetryAfterError(&Error{HTTPStatus: 429, Message: "quota"}, 0, []string{"kimi"}, routeModel, maxWait)
-	if !shouldRetry {
-		t.Fatalf("expected shouldRetry=true, got false (wait=%v)", wait)
-	}
-	if wait <= 0 {
-		t.Fatalf("expected wait > 0, got %v", wait)
 	}
 }
 
@@ -221,34 +176,6 @@ func (e *authFallbackExecutor) StreamCalls() []string {
 	out := make([]string, len(e.streamCalls))
 	copy(out, e.streamCalls)
 	return out
-}
-
-type retryAfterStatusError struct {
-	status     int
-	message    string
-	retryAfter time.Duration
-}
-
-func (e *retryAfterStatusError) Error() string {
-	if e == nil {
-		return ""
-	}
-	return e.message
-}
-
-func (e *retryAfterStatusError) StatusCode() int {
-	if e == nil {
-		return 0
-	}
-	return e.status
-}
-
-func (e *retryAfterStatusError) RetryAfter() *time.Duration {
-	if e == nil {
-		return nil
-	}
-	d := e.retryAfter
-	return &d
 }
 
 func newCredentialRetryLimitTestManager(t *testing.T, maxRetryCredentials int) (*Manager, *credentialRetryLimitExecutor) {

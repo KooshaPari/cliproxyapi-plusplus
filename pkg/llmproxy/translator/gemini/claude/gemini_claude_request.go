@@ -6,7 +6,7 @@
 package claude
 
 import (
-	"fmt"
+	"bytes"
 	"strings"
 
 	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/gemini/common"
@@ -17,7 +17,7 @@ import (
 const geminiClaudeThoughtSignature = "skip_thought_signature_validator"
 
 // ConvertClaudeRequestToGemini parses a Claude API request and returns a complete
-// Gemini request body (as JSON bytes) ready to be sent via SendRawMessageStream.
+// Gemini CLI request body (as JSON bytes) ready to be sent via SendRawMessageStream.
 // All JSON transformations are performed using gjson/sjson.
 //
 // Parameters:
@@ -26,7 +26,7 @@ const geminiClaudeThoughtSignature = "skip_thought_signature_validator"
 //   - stream: A boolean indicating if the request is for a streaming response.
 //
 // Returns:
-//   - []byte: The transformed request in Gemini format.
+//   - []byte: The transformed request in Gemini CLI format.
 func ConvertClaudeRequestToGemini(modelName string, inputRawJSON []byte, _ bool) []byte {
 	rawJSON := inputRawJSON
 	rawJSON = bytes.ReplaceAll(rawJSON, []byte(`"url":{"type":"string","format":"uri",`), []byte(`"url":{"type":"string",`))
@@ -43,9 +43,6 @@ func ConvertClaudeRequestToGemini(modelName string, inputRawJSON []byte, _ bool)
 			if systemPromptResult.Get("type").String() == "text" {
 				textResult := systemPromptResult.Get("text")
 				if textResult.Type == gjson.String {
-					if util.IsClaudeCodeAttributionSystemText(textResult.String()) {
-						return true
-					}
 					part := []byte(`{"text":""}`)
 					part, _ = sjson.SetBytes(part, "text", textResult.String())
 					systemInstruction, _ = sjson.SetRawBytes(systemInstruction, "parts.-1", part)
@@ -57,7 +54,7 @@ func ConvertClaudeRequestToGemini(modelName string, inputRawJSON []byte, _ bool)
 		if hasSystemParts {
 			out, _ = sjson.SetRawBytes(out, "system_instruction", systemInstruction)
 		}
-	} else if systemResult.Type == gjson.String && !util.IsClaudeCodeAttributionSystemText(systemResult.String()) {
+	} else if systemResult.Type == gjson.String {
 		out, _ = sjson.SetBytes(out, "system_instruction.parts.-1.text", systemResult.String())
 	}
 
@@ -71,23 +68,12 @@ func ConvertClaudeRequestToGemini(modelName string, inputRawJSON []byte, _ bool)
 			role := roleResult.String()
 			if role == "assistant" {
 				role = "model"
-			} else if role == "system" {
-				role = "user"
 			}
 
 			contentJSON := []byte(`{"role":"","parts":[]}`)
 			contentJSON, _ = sjson.SetBytes(contentJSON, "role", role)
 
 			contentsResult := messageResult.Get("content")
-			if roleResult.String() == "system" {
-				if reminderText, ok := translatorcommon.ClaudeMessageSystemReminderText(contentsResult); ok {
-					part := []byte(`{"text":""}`)
-					part, _ = sjson.SetBytes(part, "text", reminderText)
-					contentJSON, _ = sjson.SetRawBytes(contentJSON, "parts.-1", part)
-					out, _ = sjson.SetRawBytes(out, "contents.-1", contentJSON)
-				}
-				return true
-			}
 			if contentsResult.IsArray() {
 				contentsResult.ForEach(func(_, contentResult gjson.Result) bool {
 					switch contentResult.Get("type").String() {
@@ -133,11 +119,7 @@ func ConvertClaudeRequestToGemini(modelName string, inputRawJSON []byte, _ bool)
 						responseData := contentResult.Get("content").Raw
 						part := []byte(`{"functionResponse":{"name":"","response":{"result":""}}}`)
 						part, _ = sjson.SetBytes(part, "functionResponse.name", funcName)
-						if toolResult.ResultIsRaw {
-							part, _ = sjson.SetRawBytes(part, "functionResponse.response.result", []byte(toolResult.Result))
-						} else {
-							part, _ = sjson.SetBytes(part, "functionResponse.response.result", toolResult.Result)
-						}
+						part, _ = sjson.SetBytes(part, "functionResponse.response.result", responseData)
 						contentJSON, _ = sjson.SetRawBytes(contentJSON, "parts.-1", part)
 					}
 					return true
@@ -157,30 +139,6 @@ func ConvertClaudeRequestToGemini(modelName string, inputRawJSON []byte, _ bool)
 			}
 			return true
 		})
-	}
-
-	// strip trailing model turn with unanswered function calls —
-	// Gemini returns empty responses when the last turn is a model
-	// functionCall with no corresponding user functionResponse.
-	contents := gjson.GetBytes(out, "contents")
-	if contents.Exists() && contents.IsArray() {
-		arr := contents.Array()
-		if len(arr) > 0 {
-			last := arr[len(arr)-1]
-			if last.Get("role").String() == "model" {
-				hasFC := false
-				last.Get("parts").ForEach(func(_, part gjson.Result) bool {
-					if part.Get("functionCall").Exists() {
-						hasFC = true
-						return false
-					}
-					return true
-				})
-				if hasFC {
-					out, _ = sjson.DeleteBytes(out, fmt.Sprintf("contents.%d", len(arr)-1))
-				}
-			}
-		}
 	}
 
 	// tools
