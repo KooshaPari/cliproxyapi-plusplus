@@ -37,8 +37,8 @@ import (
 	"github.com/kooshapari/CLIProxyAPI/v7/sdk/api/handlers/gemini"
 	"github.com/kooshapari/CLIProxyAPI/v7/sdk/api/handlers/openai"
 	sdkAuth "github.com/kooshapari/CLIProxyAPI/v7/sdk/auth"
-	sdkconfig "github.com/kooshapari/CLIProxyAPI/v7/sdk/config"
 	"github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth"
+	sdkconfig "github.com/kooshapari/CLIProxyAPI/v7/sdk/config"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 )
