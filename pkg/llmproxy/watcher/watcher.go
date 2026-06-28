@@ -80,6 +80,12 @@ type AuthUpdate struct {
 	Auth   *coreauth.Auth
 }
 
+func (w *Watcher) LastConfigHash() string {
+	w.clientsMutex.RLock()
+	defer w.clientsMutex.RUnlock()
+	return w.lastConfigHash
+}
+
 const (
 	// replaceCheckDelay is a short delay to allow atomic replace (rename) to settle
 	// before deciding whether a Remove event indicates a real deletion.
