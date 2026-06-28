@@ -2775,9 +2775,6 @@ func antigravityShouldRetryTransientResourceExhausted429(statusCode int, body []
 	if len(body) == 0 {
 		return false
 	}
-	if classifyAntigravity429(body) != antigravity429Unknown {
-		return false
-	}
 	status := strings.TrimSpace(gjson.GetBytes(body, "error.status").String())
 	if !strings.EqualFold(status, "RESOURCE_EXHAUSTED") {
 		return false
@@ -3028,10 +3025,22 @@ func antigravityBaseURLFallbackOrder(cfg *config.Config, auth *cliproxyauth.Auth
 // user-supplied base_url attribute in auth credentials.
 func validateAntigravityBaseURL(rawURL string) bool {
 	parsed, err := url.Parse(rawURL)
-	if err != nil || parsed.Scheme != "https" || parsed.Host == "" {
+	if err != nil || parsed.Host == "" {
 		return false
 	}
-	return strings.HasSuffix(parsed.Hostname(), ".googleapis.com")
+	hostname := parsed.Hostname()
+	if parsed.Scheme == "https" {
+		return strings.HasSuffix(hostname, ".googleapis.com")
+	}
+	return parsed.Scheme == "http" && parsed.Port() != "" && isAntigravityLoopbackTestHost(hostname)
+}
+
+func isAntigravityLoopbackTestHost(hostname string) bool {
+	if strings.EqualFold(hostname, "localhost") {
+		return true
+	}
+	ip := net.ParseIP(hostname)
+	return ip != nil && ip.IsLoopback()
 }
 
 func resolveCustomAntigravityBaseURL(auth *cliproxyauth.Auth) string {

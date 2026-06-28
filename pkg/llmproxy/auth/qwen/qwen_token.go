@@ -55,20 +55,16 @@ func (ts *QwenTokenStorage) SaveTokenToFile(authFilePath string) error {
 		return err
 	}
 
-	// The embedded BaseTokenStorage may have been constructed without a file
-	// path (e.g. via a struct literal). Rebuild it bound to the validated path
-	// while preserving the existing token data so Save() writes to disk.
-	rebuilt := auth.NewBaseTokenStorage(cleanPath)
-	rebuilt.IDToken = ts.BaseTokenStorage.IDToken
-	rebuilt.AccessToken = ts.BaseTokenStorage.AccessToken
-	rebuilt.RefreshToken = ts.BaseTokenStorage.RefreshToken
-	rebuilt.LastRefresh = ts.BaseTokenStorage.LastRefresh
-	rebuilt.Email = ts.BaseTokenStorage.Email
-	rebuilt.Expire = ts.BaseTokenStorage.Expire
-	rebuilt.SetMetadata(ts.BaseTokenStorage.GetMetadata())
-	rebuilt.Type = "qwen"
-	ts.BaseTokenStorage = rebuilt
-
+	baseStorage := auth.NewBaseTokenStorage(cleanPath)
+	baseStorage.IDToken = ts.BaseTokenStorage.IDToken
+	baseStorage.AccessToken = ts.BaseTokenStorage.AccessToken
+	baseStorage.RefreshToken = ts.BaseTokenStorage.RefreshToken
+	baseStorage.LastRefresh = ts.BaseTokenStorage.LastRefresh
+	baseStorage.Email = ts.BaseTokenStorage.Email
+	baseStorage.Expire = ts.BaseTokenStorage.Expire
+	baseStorage.Metadata = ts.BaseTokenStorage.Metadata
+	ts.BaseTokenStorage = baseStorage
+	ts.BaseTokenStorage.Type = "qwen"
 	return ts.BaseTokenStorage.Save()
 }
 
