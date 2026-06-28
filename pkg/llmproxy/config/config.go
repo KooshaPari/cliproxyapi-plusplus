@@ -1042,6 +1042,10 @@ func LoadConfigOptional(configFile string, optional bool) (*Config, error) {
 	// Sanitize Codex keys: drop entries without base-url
 	cfg.SanitizeCodexKeys()
 
+	// Normalize Codex/Claude header defaults (trim whitespace).
+	cfg.SanitizeCodexHeaderDefaults()
+	cfg.SanitizeClaudeHeaderDefaults()
+
 	// Sanitize Claude key headers
 	cfg.SanitizeClaudeKeys()
 

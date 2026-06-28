@@ -244,7 +244,7 @@ func normalizeAntigravityThoughtSignatureReplayItem(itemResult gjson.Result) ([]
 	if sig == "" {
 		sig = strings.TrimSpace(itemResult.Get("thought_signature").String())
 	}
-	if sig == "" || len(sig) < minAntigravityThoughtSignatureReplayLen {
+	if sig == "" {
 		return nil, false
 	}
 	normalized := []byte(`{"type":"thought_signature"}`)

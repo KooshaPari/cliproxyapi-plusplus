@@ -820,7 +820,8 @@ func (l *FileRequestLogger) generateFilename(url string, requestID ...string) st
 	// Use request ID if provided, otherwise use sequential ID
 	var idPart string
 	if len(requestID) > 0 && requestID[0] != "" {
-		idPart = requestID[0]
+		// Sanitize the request ID to prevent path traversal / separator injection.
+		idPart = l.sanitizeForFilename(requestID[0])
 	} else {
 		id := requestLogID.Add(1)
 		idPart = fmt.Sprintf("%d", id)

@@ -57,6 +57,8 @@ type ConvertOpenAIResponseToAnthropicParams struct {
 	ThinkingContentBlockIndex int
 	// Next available content block index
 	NextContentBlockIndex int
+	// Accumulated url_citation annotations (Claude citation objects, raw JSON array)
+	Citations []byte
 }
 
 // ToolCallAccumulator holds the state for accumulating tool call data
@@ -218,6 +220,11 @@ func convertOpenAIStreamingChunkToAnthropic(rawJSON []byte, param *ConvertOpenAI
 			param.ContentAccumulator.WriteString(content.String())
 		}
 
+		// Handle url_citation annotations
+		if annotations := delta.Get("annotations"); annotations.Exists() && annotations.IsArray() {
+			param.Citations = appendOpenAIAnnotationsAsClaudeCitations(param.Citations, annotations)
+		}
+
 		// Handle tool calls
 		if toolCalls := delta.Get("tool_calls"); toolCalls.Exists() && toolCalls.IsArray() {
 			if param.ToolCallsAccumulator == nil {
@@ -349,6 +356,9 @@ func convertOpenAIStreamingChunkToAnthropic(rawJSON []byte, param *ConvertOpenAI
 			if cachedTokens > 0 {
 				messageDeltaJSON, _ = sjson.SetBytes(messageDeltaJSON, "usage.cache_read_input_tokens", cachedTokens)
 			}
+			if len(param.Citations) > 0 {
+				messageDeltaJSON, _ = sjson.SetRawBytes(messageDeltaJSON, "citations", param.Citations)
+			}
 			results = append(results, translatorcommon.AppendSSEEventBytes(nil, "message_delta", messageDeltaJSON, 2))
 			param.MessageDeltaSent = true
 
@@ -406,6 +416,9 @@ func convertOpenAIDoneToAnthropic(param *ConvertOpenAIResponseToAnthropicParams)
 	if param.FinishReason != "" && !param.MessageDeltaSent {
 		messageDeltaJSON := []byte(`{"type":"message_delta","delta":{"stop_reason":"","stop_sequence":null},"usage":{"input_tokens":0,"output_tokens":0}}`)
 		messageDeltaJSON, _ = sjson.SetBytes(messageDeltaJSON, "delta.stop_reason", mapOpenAIFinishReasonToAnthropic(effectiveOpenAIFinishReason(param)))
+		if len(param.Citations) > 0 {
+			messageDeltaJSON, _ = sjson.SetRawBytes(messageDeltaJSON, "citations", param.Citations)
+		}
 		results = append(results, translatorcommon.AppendSSEEventBytes(nil, "message_delta", messageDeltaJSON, 2))
 		param.MessageDeltaSent = true
 	}
@@ -503,6 +516,37 @@ func mapOpenAIFinishReasonToAnthropic(openAIReason string) string {
 	default:
 		return "end_turn"
 	}
+}
+
+// appendOpenAIAnnotationsAsClaudeCitations converts OpenAI url_citation
+// annotations into Claude citation objects, appending them to an existing raw
+// JSON array (pass nil to start a new array).
+func appendOpenAIAnnotationsAsClaudeCitations(existing []byte, annotations gjson.Result) []byte {
+	out := existing
+	if len(out) == 0 {
+		out = []byte(`[]`)
+	}
+	annotations.ForEach(func(_, ann gjson.Result) bool {
+		if strings.TrimSpace(ann.Get("type").String()) != "url_citation" {
+			return true
+		}
+		citation := []byte(`{"type":"web_search_result_location"}`)
+		if url := ann.Get("url"); url.Exists() {
+			citation, _ = sjson.SetBytes(citation, "url", url.String())
+		}
+		if title := ann.Get("title"); title.Exists() {
+			citation, _ = sjson.SetBytes(citation, "title", title.String())
+		}
+		if startIndex := ann.Get("start_index"); startIndex.Exists() {
+			citation, _ = sjson.SetBytes(citation, "start_index", startIndex.Int())
+		}
+		if endIndex := ann.Get("end_index"); endIndex.Exists() {
+			citation, _ = sjson.SetBytes(citation, "end_index", endIndex.Int())
+		}
+		out, _ = sjson.SetRawBytes(out, "-1", citation)
+		return true
+	})
+	return out
 }
 
 func (p *ConvertOpenAIResponseToAnthropicParams) toolContentBlockIndex(openAIToolIndex int) int {
@@ -719,6 +763,12 @@ func ConvertOpenAIResponseToClaudeNonStream(_ context.Context, _ string, origina
 					block := []byte(`{"type":"thinking","thinking":""}`)
 					block, _ = sjson.SetBytes(block, "thinking", reasoningText)
 					out, _ = sjson.SetRawBytes(out, "content.-1", block)
+				}
+			}
+
+			if annotations := message.Get("annotations"); annotations.Exists() && annotations.IsArray() {
+				if citations := appendOpenAIAnnotationsAsClaudeCitations(nil, annotations); len(citations) > 0 {
+					out, _ = sjson.SetRawBytes(out, "citations", citations)
 				}
 			}
 

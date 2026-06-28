@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/config"
 	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/interfaces"
 	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/logging"
@@ -184,13 +185,8 @@ func BuildErrorResponseBody(status int, errText string) []byte {
 
 	trimmed := strings.TrimSpace(errText)
 	if trimmed != "" && json.Valid([]byte(trimmed)) {
-		var payload map[string]any
-		if err := json.Unmarshal([]byte(trimmed), &payload); err == nil {
-			if _, ok := payload["error"]; ok {
-				return []byte(trimmed)
-			}
-			errText = fmt.Sprintf("upstream returned JSON payload without top-level error field: %s", trimmed)
-		}
+		// Valid JSON is returned as-is to preserve upstream error payloads.
+		return []byte(trimmed)
 	}
 
 	errType := "invalid_request_error"
@@ -292,9 +288,12 @@ func requestExecutionMetadata(ctx context.Context) map[string]any {
 	}
 
 	meta := make(map[string]any)
-	if key != "" {
-		meta[idempotencyKeyMetadataKey] = key
+	if key == "" {
+		// Generate an idempotency key when the client does not supply one so
+		// downstream retries can be correlated.
+		key = uuid.NewString()
 	}
+	meta[idempotencyKeyMetadataKey] = key
 	if requestPath != "" {
 		meta[coreexecutor.RequestPathMetadataKey] = requestPath
 	}
@@ -1267,6 +1266,7 @@ func (h *BaseAPIHandler) executeStreamWithAuthManagerFormats(ctx context.Context
 		}
 		sentPayload := false
 		bootstrapRetries := 0
+		chunkIndex := 0
 		var historyChunks [][]byte
 		maxBootstrapRetries := StreamingBootstrapRetries(h.Cfg)
 
@@ -1335,6 +1335,7 @@ func (h *BaseAPIHandler) executeStreamWithAuthManagerFormats(ctx context.Context
 								replaceHeader(upstreamHeaders, downstreamHeadersFromExecutor(rawStreamHeaders, passthroughHeadersEnabled))
 								streamHeaderInitialized = false
 								streamHeadersCommitted = false
+								chunkIndex = 0
 								pendingChunks = nil
 								streamClosedBeforeRead = false
 								chunks = retryResult.Chunks
@@ -1360,9 +1361,40 @@ func (h *BaseAPIHandler) executeStreamWithAuthManagerFormats(ctx context.Context
 					return
 				}
 				if len(chunk.Payload) > 0 {
+					payload := cloneBytes(chunk.Payload)
+					if streamInterceptorsActive {
+						applyStreamHeaderInit()
+						executedReq, executedOpts := executedRequest()
+						intercepted := interceptStreamChunk(ctx, interceptorHost, pluginapi.StreamChunkInterceptRequest{
+							SourceFormat:    responseProtocol,
+							Model:           normalizedModel,
+							RequestedModel:  originalRequestedModel,
+							RequestHeaders:  cloneHeader(executedOpts.Headers),
+							ResponseHeaders: cloneHeader(rawStreamHeaders),
+							OriginalRequest: cloneBytes(executedOpts.OriginalRequest),
+							RequestBody:     cloneBytes(executedReq.Payload),
+							Body:            payload,
+							HistoryChunks:   cloneByteSlices(historyChunks),
+							ChunkIndex:      chunkIndex,
+							Metadata:        executedOpts.Metadata,
+						}, execOptions.SkipInterceptorPluginID)
+						applyStreamHeaders(intercepted.Headers)
+						if len(intercepted.Body) > 0 {
+							payload = cloneBytes(intercepted.Body)
+						}
+						chunkIndex++
+						if intercepted.DropChunk {
+							continue
+						}
+					}
+					if responseProtocol == "openai-response" {
+						if errValidate := validateSSEDataJSON(payload); errValidate != nil {
+							_ = sendErr(&interfaces.ErrorMessage{StatusCode: http.StatusBadGateway, Error: errValidate})
+							return
+						}
+					}
 					sentPayload = true
 					streamHeadersCommitted = true
-					payload := cloneBytes(chunk.Payload)
 					if okSendData := sendData(payload); !okSendData {
 						return
 					}
@@ -1393,6 +1425,9 @@ func statusFromError(err error) int {
 func (h *BaseAPIHandler) providersForExecution(modelName, originalRequestedModel string, allowImageModel bool, routeDecision modelRouteDecision) (providers []string, normalizedModel string, err *interfaces.ErrorMessage) {
 	if routeDecision.Provider != "" {
 		resolvedModelName := strings.TrimSpace(routeDecision.Model)
+		if resolvedModelName == "" {
+			resolvedModelName = strings.TrimSpace(originalRequestedModel)
+		}
 		if resolvedModelName == "" {
 			resolvedModelName = strings.TrimSpace(modelName)
 		}

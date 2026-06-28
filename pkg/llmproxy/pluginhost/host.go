@@ -523,7 +523,17 @@ func (h *Host) pluginIdentityCurrent(id string, path string, version string) boo
 		return false
 	}
 	path = cleanPluginPath(path)
-	if path == "" || h.activePluginPaths[id] != path {
+	if path == "" {
+		// Plugins loaded from disk always carry a non-empty path, so the
+		// path/version identity maps are the authoritative currency check.
+		// Records that intentionally omit a path (no on-disk file backing
+		// them) cannot participate in path-based hot-reload identity; for
+		// those, currency is defined solely by presence in the active
+		// snapshot. This keeps the strict path check below for real plugin
+		// files while allowing path-less records to remain addressable.
+		return h.snapshotContainsPathlessRecordLocked(id, version)
+	}
+	if h.activePluginPaths[id] != path {
 		return false
 	}
 	activePathVersion, okVersion := h.pluginFileVersions[path]
@@ -531,6 +541,27 @@ func (h *Host) pluginIdentityCurrent(id string, path string, version string) boo
 		return false
 	}
 	return h.activePluginVersions[id] == version
+}
+
+// snapshotContainsPathlessRecordLocked reports whether the active snapshot
+// holds a record for id that also omits an on-disk path and matches version.
+// Callers must hold h.mu.
+func (h *Host) snapshotContainsPathlessRecordLocked(id string, version string) bool {
+	raw := h.snapshot.Load()
+	snap, _ := raw.(*Snapshot)
+	if snap == nil || !snap.enabled {
+		return false
+	}
+	for _, record := range snap.records {
+		if strings.TrimSpace(record.id) != id {
+			continue
+		}
+		if cleanPluginPath(record.path) != "" {
+			continue
+		}
+		return strings.TrimSpace(record.version) == version
+	}
+	return false
 }
 
 func (h *Host) snapshotWithoutPluginLocked(id string) ([]capabilityRecord, bool) {

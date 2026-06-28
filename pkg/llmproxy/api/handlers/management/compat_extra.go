@@ -135,24 +135,86 @@ func (h *Handler) PutAmpModelMappings(c *gin.Context) {
 	h.cfg.AmpCode.ModelMappings = body.Value
 	h.persist(c)
 }
-func (h *Handler) PatchAmpModelMappings(c *gin.Context) { h.PutAmpModelMappings(c) }
+
+// PatchAmpModelMappings upserts the supplied mappings by their "from" field,
+// updating existing entries and appending new ones while preserving any
+// mappings that are not referenced in the request.
+func (h *Handler) PatchAmpModelMappings(c *gin.Context) {
+	var body struct {
+		Value []config.AmpModelMapping `json:"value"`
+	}
+	if c.ShouldBindJSON(&body) != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid body"})
+		return
+	}
+	existing := h.cfg.AmpCode.ModelMappings
+	index := make(map[string]int, len(existing))
+	for i, mapping := range existing {
+		index[mapping.From] = i
+	}
+	for _, mapping := range body.Value {
+		if i, ok := index[mapping.From]; ok {
+			existing[i] = mapping
+			continue
+		}
+		index[mapping.From] = len(existing)
+		existing = append(existing, mapping)
+	}
+	h.cfg.AmpCode.ModelMappings = existing
+	h.persist(c)
+}
+
+// DeleteAmpModelMappings removes mappings named by their "from" field in the
+// request body. A missing or empty body removes all mappings.
 func (h *Handler) DeleteAmpModelMappings(c *gin.Context) {
-	h.cfg.AmpCode.ModelMappings = nil
+	var body struct {
+		Value []string `json:"value"`
+	}
+	// Ignore bind errors (e.g. empty body) and treat them as "delete all".
+	_ = c.ShouldBindJSON(&body)
+	if len(body.Value) == 0 {
+		h.cfg.AmpCode.ModelMappings = nil
+		h.persist(c)
+		return
+	}
+	remove := make(map[string]struct{}, len(body.Value))
+	for _, from := range body.Value {
+		remove[from] = struct{}{}
+	}
+	filtered := make([]config.AmpModelMapping, 0, len(h.cfg.AmpCode.ModelMappings))
+	for _, mapping := range h.cfg.AmpCode.ModelMappings {
+		if _, ok := remove[mapping.From]; ok {
+			continue
+		}
+		filtered = append(filtered, mapping)
+	}
+	h.cfg.AmpCode.ModelMappings = filtered
 	h.persist(c)
 }
 func (h *Handler) GetAmpForceModelMappings(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"force-model-mappings": h.cfg.AmpCode.ForceModelMappings})
 }
 func (h *Handler) PutAmpForceModelMappings(c *gin.Context) {
-	var body struct {
-		Value bool `json:"value"`
-	}
-	if c.ShouldBindJSON(&body) != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid body"})
+	value, ok := h.putBoolField(c)
+	if !ok {
 		return
 	}
-	h.cfg.AmpCode.ForceModelMappings = body.Value
+	h.cfg.AmpCode.ForceModelMappings = value
 	h.persist(c)
+}
+
+// putBoolField binds a {"value": bool} body and requires the "value" field to be
+// present. It writes a 400 response and returns ok=false when the body is
+// invalid or the field is missing.
+func (h *Handler) putBoolField(c *gin.Context) (bool, bool) {
+	var body struct {
+		Value *bool `json:"value"`
+	}
+	if c.ShouldBindJSON(&body) != nil || body.Value == nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid body"})
+		return false, false
+	}
+	return *body.Value, true
 }
 
 func normalizeAmpUpstreamAPIKeys(entries []config.AmpUpstreamAPIKeyEntry) []config.AmpUpstreamAPIKeyEntry {

@@ -2886,10 +2886,12 @@ func (e *KiroExecutor) CloseExecutionSession(sessionID string) {}
 
 // getAccountKey returns a unique key for rate limiting and cooldown tracking.
 func getAccountKey(auth *cliproxyauth.Auth) string {
-	if auth == nil {
-		return ""
+	var clientID, refreshToken string
+	if auth != nil {
+		clientID = getAuthValue(auth, "client_id")
+		refreshToken = getAuthValue(auth, "refresh_token")
 	}
-	return fmt.Sprintf("kiro:%s:%s", auth.ID, auth.Label)
+	return kiroauth.GetAccountKey(clientID, refreshToken)
 }
 
 // fetchAndSaveProfileArn fetches the IAM profile ARN for the authenticated user and saves it to the auth record.

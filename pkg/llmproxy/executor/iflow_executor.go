@@ -107,6 +107,29 @@ func detectIFlowProviderError(rawJSON []byte) *iflowProviderError {
 	}
 }
 
+// unwrapIFlowDataEnvelope unwraps a {"success":true,"data":{...}} response
+// envelope returned by some iFlow endpoints, returning the inner completion
+// object. When the payload is not a recognized envelope it is returned as-is.
+func unwrapIFlowDataEnvelope(raw []byte) []byte {
+	root := gjson.ParseBytes(raw)
+	if !root.IsObject() {
+		return raw
+	}
+	// Only unwrap when the top-level object is an envelope, not an actual
+	// completion (which has its own choices/object fields).
+	if root.Get("choices").Exists() || root.Get("object").String() == "chat.completion" {
+		return raw
+	}
+	dataField := root.Get("data")
+	if !dataField.Exists() || !dataField.IsObject() {
+		return raw
+	}
+	if dataField.Get("choices").Exists() || dataField.Get("object").String() == "chat.completion" {
+		return []byte(dataField.Raw)
+	}
+	return raw
+}
+
 // PrepareRequest injects iFlow credentials into the outgoing HTTP request.
 func (e *IFlowExecutor) PrepareRequest(req *http.Request, auth *cliproxyauth.Auth) error {
 	if req == nil {
@@ -233,6 +256,10 @@ func (e *IFlowExecutor) execute(ctx context.Context, auth *cliproxyauth.Auth, re
 		}
 		return resp, providerErr
 	}
+
+	// iFlow may wrap successful completions in a {"success":true,"data":{...}}
+	// envelope. Unwrap it so downstream translation sees the chat.completion object.
+	data = unwrapIFlowDataEnvelope(data)
 
 	var param any
 	// Note: TranslateNonStream uses req.Model (original with suffix) to preserve

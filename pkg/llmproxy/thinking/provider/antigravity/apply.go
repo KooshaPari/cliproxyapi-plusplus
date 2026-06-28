@@ -143,6 +143,22 @@ func (a *Applier) applyBudgetFormat(body []byte, config thinking.ThinkingConfig,
 
 	budget := config.Budget
 
+	// For ModeNone the user explicitly wants thinking output disabled. Claude models
+	// require thinkingConfig to remain present (with a budget at or above the model
+	// minimum and includeThoughts=false) to honor that intent, so clamp the budget up
+	// to the minimum instead of dropping the config. Other modes fall through to the
+	// shared normalization below, which may remove an under-minimum config.
+	if config.Mode == thinking.ModeNone {
+		if isClaude && modelInfo != nil && modelInfo.Thinking != nil {
+			if minBudget := modelInfo.Thinking.Min; minBudget > 0 && budget < minBudget {
+				budget = minBudget
+			}
+		}
+		result, _ = sjson.SetBytes(result, "request.generationConfig.thinkingConfig.thinkingBudget", budget)
+		result, _ = sjson.SetBytes(result, "request.generationConfig.thinkingConfig.includeThoughts", false)
+		return result, nil
+	}
+
 	// Apply Claude-specific constraints first to get the final budget value
 	if isClaude && modelInfo != nil {
 		budget, result = a.normalizeClaudeBudget(budget, result, modelInfo)
@@ -150,15 +166,6 @@ func (a *Applier) applyBudgetFormat(body []byte, config thinking.ThinkingConfig,
 		if budget == -2 {
 			return result, nil
 		}
-	}
-
-	// For ModeNone, always set includeThoughts to false regardless of user setting.
-	// This ensures that when user requests budget=0 (disable thinking output),
-	// the includeThoughts is correctly set to false even if budget is clamped to min.
-	if config.Mode == thinking.ModeNone {
-		result, _ = sjson.SetBytes(result, "request.generationConfig.thinkingConfig.thinkingBudget", budget)
-		result, _ = sjson.SetBytes(result, "request.generationConfig.thinkingConfig.includeThoughts", false)
-		return result, nil
 	}
 
 	// Determine includeThoughts: respect user's explicit setting from original body if provided

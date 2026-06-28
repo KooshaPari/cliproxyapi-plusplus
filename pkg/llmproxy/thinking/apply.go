@@ -175,8 +175,8 @@ func ApplyThinking(body []byte, model string, fromFormat string, toFormat string
 	applier := GetProviderApplier(providerFormat)
 	if applier == nil {
 		log.WithFields(log.Fields{
-			"provider": providerFormat,
-			"model":    model,
+			"provider": redactLogText(providerFormat),
+			"model":    redactLogText(model),
 		}).Debug("thinking: unknown provider, passthrough |")
 		return body, nil
 	}
@@ -265,11 +265,11 @@ func ApplyThinking(body []byte, model string, fromFormat string, toFormat string
 	}
 
 	log.WithFields(log.Fields{
-		"provider": providerFormat,
-		"model":    modelInfo.ID,
-		"mode":     validated.Mode,
-		"budget":   validated.Budget,
-		"level":    validated.Level,
+		"provider": redactLogText(providerFormat),
+		"model":    redactLogText(modelInfo.ID),
+		"mode":     redactLogMode(validated.Mode),
+		"budget":   redactLogInt(validated.Budget),
+		"level":    redactLogLevel(validated.Level),
 	}).Debug("thinking: processed config to apply |")
 
 	// 6. Apply configuration using provider-specific applier
@@ -310,9 +310,9 @@ func parseSuffixToConfig(rawSuffix, provider, model string) ThinkingConfig {
 
 	// Unknown suffix format - return empty config
 	log.WithFields(log.Fields{
-		"provider":   provider,
-		"model":      model,
-		"raw_suffix": rawSuffix,
+		"provider":   redactLogText(provider),
+		"model":      redactLogText(model),
+		"raw_suffix": redactLogText(rawSuffix),
 	}).Debug("thinking: unknown suffix format, treating as no config |")
 	return ThinkingConfig{}
 }
@@ -357,8 +357,8 @@ func applyUserDefinedModel(body []byte, modelInfo *registry.ModelInfo, fromForma
 
 	if !hasThinkingConfig(config) {
 		log.WithFields(log.Fields{
-			"model":    modelID,
-			"provider": toFormat,
+			"model":    redactLogText(modelID),
+			"provider": redactLogText(toFormat),
 		}).Debug("thinking: user-defined model, passthrough (no config) |")
 		return body, nil
 	}
@@ -366,20 +366,20 @@ func applyUserDefinedModel(body []byte, modelInfo *registry.ModelInfo, fromForma
 	applier := GetProviderApplier(toFormat)
 	if applier == nil {
 		log.WithFields(log.Fields{
-			"model":    modelID,
-			"provider": toFormat,
+			"model":    redactLogText(modelID),
+			"provider": redactLogText(toFormat),
 		}).Debug("thinking: user-defined model, passthrough (unknown provider) |")
 		return body, nil
 	}
 
 	config = normalizeUserDefinedConfig(config, fromFormat, toFormat)
 	log.WithFields(log.Fields{
-		"provider": toFormat,
-		"model":    modelID,
-		"mode":     config.Mode,
-		"budget":   config.Budget,
-		"level":    config.Level,
-	}).Debug("thinking: processed config to apply |")
+		"provider": redactLogText(toFormat),
+		"model":    redactLogText(modelID),
+		"mode":     redactLogMode(config.Mode),
+		"budget":   redactLogInt(config.Budget),
+		"level":    redactLogLevel(config.Level),
+	}).Debug("thinking: applying config for user-defined model (skip validation)")
 	return applier.Apply(body, config, modelInfo)
 }
 
@@ -642,6 +642,28 @@ func extractCodexConfig(body []byte) ThinkingConfig {
 			return ThinkingConfig{Mode: ModeNone, Budget: 0}
 		}
 		return ThinkingConfig{Mode: ModeLevel, Level: ThinkingLevel(value)}
+	}
+
+	// Fall back to the "variant" field used by some Codex-compatible clients.
+	if variant := gjson.GetBytes(body, "variant"); variant.Exists() {
+		switch strings.ToLower(strings.TrimSpace(variant.String())) {
+		case "none":
+			return ThinkingConfig{Mode: ModeNone, Budget: 0}
+		case "auto":
+			return ThinkingConfig{Mode: ModeLevel, Level: LevelAuto}
+		case "minimal":
+			return ThinkingConfig{Mode: ModeLevel, Level: LevelMinimal}
+		case "low":
+			return ThinkingConfig{Mode: ModeLevel, Level: LevelLow}
+		case "medium":
+			return ThinkingConfig{Mode: ModeLevel, Level: LevelMedium}
+		case "high":
+			return ThinkingConfig{Mode: ModeLevel, Level: LevelHigh}
+		case "xhigh", "x-high":
+			return ThinkingConfig{Mode: ModeLevel, Level: LevelXHigh}
+		case "max":
+			return ThinkingConfig{Mode: ModeLevel, Level: LevelMax}
+		}
 	}
 
 	return ThinkingConfig{}

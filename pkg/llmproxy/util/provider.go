@@ -62,6 +62,12 @@ func GetProviderName(modelName string) []string {
 		providers = append(providers, name)
 	}
 
+	// Provider-pinned models (e.g. "github-copilot/gpt-5.2") resolve to their explicit provider.
+	if provider, _, ok := ResolveProviderPinnedModel(modelName); ok {
+		appendProvider(provider)
+		return providers
+	}
+
 	for _, provider := range registry.GetGlobalRegistry().GetModelProviders(modelName) {
 		appendProvider(provider)
 	}
@@ -143,7 +149,7 @@ func IsOpenAICompatibilityAlias(modelName string, cfg *config.Config) bool {
 			continue
 		}
 		for _, model := range compat.Models {
-			if model.Alias == modelName {
+			if strings.EqualFold(model.Alias, modelName) || strings.EqualFold(model.Name, modelName) {
 				return true
 			}
 		}
@@ -171,7 +177,7 @@ func GetOpenAICompatibilityConfig(alias string, cfg *config.Config) (*config.Ope
 			continue
 		}
 		for _, model := range compat.Models {
-			if model.Alias == alias {
+			if strings.EqualFold(model.Alias, alias) || strings.EqualFold(model.Name, alias) {
 				return &compat, &model
 			}
 		}

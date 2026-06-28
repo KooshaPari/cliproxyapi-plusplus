@@ -88,9 +88,9 @@ func getAuthValue(auth *cliproxyauth.Auth, key string) string {
 		return ""
 	}
 	if value, ok := auth.Metadata[key].(string); ok && strings.TrimSpace(value) != "" {
-		return strings.TrimSpace(value)
+		return strings.ToLower(strings.TrimSpace(value))
 	}
-	return strings.TrimSpace(auth.Attributes[key])
+	return strings.ToLower(strings.TrimSpace(auth.Attributes[key]))
 }
 
 // Real-time usage estimation configuration

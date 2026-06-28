@@ -55,17 +55,25 @@ func BuildClaudeResponse(content string, toolUses []KiroToolUse, model string, u
 		}
 	}
 
-	// Add tool_use blocks - skip truncated tools and log warning
+	// Add tool_use blocks. Truncated tools are emitted with a SOFT_LIMIT_REACHED
+	// status marker in their input rather than dropped, so Claude can detect the
+	// truncation and continue the loop instead of silently losing the tool call.
 	for _, toolUse := range toolUses {
+		input := toolUse.Input
 		if toolUse.IsTruncated && toolUse.TruncationInfo != nil {
-			log.Warnf("kiro: buildClaudeResponse skipping truncated tool: %s (ID: %s)", toolUse.Name, toolUse.ToolUseID)
-			continue
+			log.Warnf("kiro: buildClaudeResponse marking truncated tool with SOFT_LIMIT_REACHED: %s (ID: %s)", toolUse.Name, toolUse.ToolUseID)
+			inputMap := map[string]interface{}{}
+			for k, v := range toolUse.Input {
+				inputMap[k] = v
+			}
+			inputMap["_status"] = "SOFT_LIMIT_REACHED"
+			input = inputMap
 		}
 		contentBlocks = append(contentBlocks, map[string]interface{}{
 			"type":  "tool_use",
 			"id":    toolUse.ToolUseID,
 			"name":  toolUse.Name,
-			"input": toolUse.Input,
+			"input": input,
 		})
 	}
 

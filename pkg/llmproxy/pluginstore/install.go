@@ -29,6 +29,10 @@ type InstallOptions struct {
 	// BeforeWrite runs after the archive has been downloaded and verified, but
 	// before an existing target plugin file is replaced.
 	BeforeWrite func() error
+	// Versioned installs the artifact under a version-tagged filename
+	// (id-vVERSION.ext) instead of the bare id.ext name. Used by the home-plugin
+	// platform sync so multiple versions can coexist on disk.
+	Versioned bool
 }
 
 // ErrLoadedPluginLocked is returned when an install would overwrite a plugin
@@ -69,9 +73,9 @@ func (c Client) InstallVersion(ctx context.Context, plugin Plugin, releaseTag st
 		return InstallResult{}, errValidate
 	}
 	options = normalizeInstallOptions(options)
-	if errPrepare := prepareLoadedPluginInstall(options); errPrepare != nil {
-		return InstallResult{}, errPrepare
-	}
+	// Note: the loaded-plugin lock is enforced later in InstallArchive, after the
+	// archive is verified and an identical on-disk artifact can be detected and
+	// skipped. Blocking here would reject identical re-installs of busy plugins.
 	version = normalizeVersion(version)
 	if !validPluginVersion(version) {
 		return InstallResult{}, fmt.Errorf("invalid plugin version %q", version)
@@ -192,7 +196,11 @@ func installTargetPath(options InstallOptions, id string, version string) (strin
 	} else if errStat != nil && !errors.Is(errStat, os.ErrNotExist) {
 		return "", fmt.Errorf("stat runtime plugin: %w", errStat)
 	}
-	return filepath.Join(options.PluginsDir, options.GOOS, options.GOARCH, id+pluginExtension(options.GOOS)), nil
+	fileName := id + pluginExtension(options.GOOS)
+	if options.Versioned {
+		fileName = versionedPluginFileName(id, version, options.GOOS)
+	}
+	return filepath.Join(options.PluginsDir, options.GOOS, options.GOARCH, fileName), nil
 }
 
 func readTargetLibrary(reader *zip.Reader, id string, version string, goos string) ([]byte, os.FileMode, error) {

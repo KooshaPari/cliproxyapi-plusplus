@@ -49,6 +49,21 @@ func (b *BaseTokenStorage) GetEmail() string { return b.Email }
 // GetType returns the provider type string.
 func (b *BaseTokenStorage) GetType() string { return b.Type }
 
+// validateTokenPath rejects any token path containing traversal components
+// (e.g. "..") and confirms the file name stays within its parent directory.
+// It returns the cleaned, validated path for use in file I/O.
+func validateTokenPath(authFilePath string) (string, error) {
+	// Reject traversal anywhere in the path (including the directory portion).
+	if _, err := misc.ResolveSafeFilePath(authFilePath); err != nil {
+		return "", err
+	}
+	// Confirm the file name resolves inside its parent directory.
+	return misc.ResolveSafeFilePathInDir(
+		filepath.Dir(authFilePath),
+		filepath.Base(authFilePath),
+	)
+}
+
 // Save serialises v (the outer provider struct that embeds BaseTokenStorage)
 // to the file at authFilePath using an atomic write (write to a temp file,
 // then rename).  The directory is created if it does not already exist.
@@ -60,10 +75,7 @@ func (b *BaseTokenStorage) Save(authFilePath string, v any) error {
 	// Use ResolveSafeFilePathInDir to ensure path stays within parent directory.
 	// This prevents path-injection attacks by validating the resolved path
 	// doesn't escape the expected directory structure.
-	validatedPath, err := misc.ResolveSafeFilePathInDir(
-		authFilePath,
-		filepath.Dir(authFilePath),
-	)
+	validatedPath, err := validateTokenPath(authFilePath)
 	if err != nil {
 		return fmt.Errorf("base token storage: invalid file path: %w", err)
 	}
@@ -111,10 +123,7 @@ func (b *BaseTokenStorage) Save(authFilePath string, v any) error {
 // are populated.
 func (b *BaseTokenStorage) Load(authFilePath string, v any) error {
 	// Use ResolveSafeFilePathInDir to ensure path stays within parent directory.
-	validatedPath, err := misc.ResolveSafeFilePathInDir(
-		authFilePath,
-		filepath.Dir(authFilePath),
-	)
+	validatedPath, err := validateTokenPath(authFilePath)
 	if err != nil {
 		return fmt.Errorf("base token storage: invalid file path: %w", err)
 	}
@@ -134,10 +143,7 @@ func (b *BaseTokenStorage) Load(authFilePath string, v any) error {
 // does not exist (idempotent delete).
 func (b *BaseTokenStorage) Clear(authFilePath string) error {
 	// Use ResolveSafeFilePathInDir to ensure path stays within parent directory.
-	validatedPath, err := misc.ResolveSafeFilePathInDir(
-		authFilePath,
-		filepath.Dir(authFilePath),
-	)
+	validatedPath, err := validateTokenPath(authFilePath)
 	if err != nil {
 		return fmt.Errorf("base token storage: invalid file path: %w", err)
 	}

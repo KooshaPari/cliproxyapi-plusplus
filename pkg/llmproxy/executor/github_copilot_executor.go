@@ -835,8 +835,9 @@ func normalizeGitHubCopilotResponsesTools(body []byte) []byte {
 		if tools.IsArray() {
 			for _, tool := range tools.Array() {
 				toolType := tool.Get("type").String()
+				// Built-in Copilot tools are not user-definable and are stripped from
+				// the request rather than passed through.
 				if isGitHubCopilotResponsesBuiltinTool(toolType) {
-					filtered, _ = sjson.SetRaw(filtered, "-1", tool.Raw)
 					continue
 				}
 				// Accept OpenAI format (type="function") and Claude format

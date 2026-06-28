@@ -376,7 +376,23 @@ func ConvertOpenAIResponsesRequestToGemini(modelName string, inputRawJSON []byte
 	if contents.Exists() && contents.IsArray() {
 		arr := contents.Array()
 		if len(arr) > 0 && arr[len(arr)-1].Get("role").String() == "model" {
-			out, _ = sjson.DeleteBytes(out, fmt.Sprintf("contents.%d", len(arr)-1))
+			// Reasoning-only model turns carry encrypted thought signatures that
+			// downstream Gemini surfaces require for continuity; never strip them.
+			// Only drop trailing model-authored prefill that contains visible
+			// text/tool output.
+			last := arr[len(arr)-1]
+			parts := last.Get("parts")
+			onlyThought := parts.Exists() && parts.IsArray() && len(parts.Array()) > 0
+			parts.ForEach(func(_, part gjson.Result) bool {
+				if !part.Get("thought").Bool() {
+					onlyThought = false
+					return false
+				}
+				return true
+			})
+			if !onlyThought {
+				out, _ = sjson.DeleteBytes(out, fmt.Sprintf("contents.%d", len(arr)-1))
+			}
 		}
 	}
 

@@ -761,8 +761,9 @@ func (e *CodexExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, re
 	if len(opts.OriginalRequest) > 0 {
 		originalPayloadSource = opts.OriginalRequest
 	}
-	originalPayload := originalPayloadSource
-	originalTranslated, body := translateCodexRequestPair(from, to, baseModel, originalPayload, req.Payload, false)
+	originalPayload := normalizeCodexOpenAIVariant(from, originalPayloadSource)
+	reqPayload := normalizeCodexOpenAIVariant(from, req.Payload)
+	originalTranslated, body := translateCodexRequestPair(from, to, baseModel, originalPayload, reqPayload, false)
 
 	body, err = thinking.ApplyThinking(body, req.Model, from.String(), to.String(), e.Identifier())
 	if err != nil {
@@ -781,9 +782,8 @@ func (e *CodexExecutor) Execute(ctx context.Context, auth *cliproxyauth.Auth, re
 		body, _ = sjson.DeleteBytes(body, "prompt_cache_retention")
 		body, _ = sjson.DeleteBytes(body, "safety_identifier")
 	}
-	if !gjson.GetBytes(body, "instructions").Exists() {
-		body, _ = sjson.SetBytes(body, "instructions", "")
-	}
+	body = normalizeCodexInstructions(body)
+	body = sanitizeOpenAIResponsesReasoningEncryptedContent(ctx, "codex executor", body)
 	body = normalizeCodexToolSchemas(body)
 	body, replayScope, errReplay := applyCodexReasoningReplayCacheRequired(ctx, from, req, opts, body)
 	if errReplay != nil {
@@ -937,6 +937,8 @@ func (e *CodexExecutor) executeCompact(ctx context.Context, auth *cliproxyauth.A
 	body = helps.ApplyPayloadConfigWithRequest(e.cfg, baseModel, to.String(), from.String(), "", body, originalTranslated, requestedModel, requestPath, opts.Headers)
 	body, _ = sjson.SetBytes(body, "model", baseModel)
 	body, _ = sjson.DeleteBytes(body, "stream")
+	body = normalizeCodexInstructions(body)
+	body = sanitizeOpenAIResponsesReasoningEncryptedContent(ctx, "codex executor", body)
 	body = normalizeCodexToolSchemas(body)
 
 	url := strings.TrimSuffix(baseURL, "/") + "/responses/compact"
@@ -1011,8 +1013,9 @@ func (e *CodexExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.Au
 	if len(opts.OriginalRequest) > 0 {
 		originalPayloadSource = opts.OriginalRequest
 	}
-	originalPayload := originalPayloadSource
-	originalTranslated, body := translateCodexRequestPair(from, to, baseModel, originalPayload, req.Payload, true)
+	originalPayload := normalizeCodexOpenAIVariant(from, originalPayloadSource)
+	reqPayloadStream := normalizeCodexOpenAIVariant(from, req.Payload)
+	originalTranslated, body := translateCodexRequestPair(from, to, baseModel, originalPayload, reqPayloadStream, false)
 
 	body, err = thinking.ApplyThinking(body, req.Model, from.String(), to.String(), e.Identifier())
 	if err != nil {
@@ -1033,6 +1036,7 @@ func (e *CodexExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.Au
 	if e.cfg == nil || e.cfg.DisableImageGeneration == config.DisableImageGenerationOff {
 		body = ensureImageGenerationTool(body, baseModel, auth)
 	}
+	body = sanitizeOpenAIResponsesReasoningEncryptedContent(ctx, "codex executor", body)
 	body = normalizeCodexToolSchemas(body)
 	body, replayScope, errReplay := applyCodexReasoningReplayCacheRequired(ctx, from, req, opts, body)
 	if errReplay != nil {
@@ -1082,6 +1086,7 @@ func (e *CodexExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.Au
 		var param any
 		outputItemsByIndex := make(map[int64][]byte)
 		var outputItemsFallback [][]byte
+		completedSeen := false
 		for scanner.Scan() {
 			line := applyCodexIdentityConfuseResponsePayload(scanner.Bytes(), identityState)
 			helps.AppendAPIResponseChunk(ctx, e.cfg, line)
@@ -1111,6 +1116,7 @@ func (e *CodexExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.Au
 				case "response.output_item.done":
 					collectCodexOutputItemDone(data, outputItemsByIndex, &outputItemsFallback)
 				case "response.completed":
+					completedSeen = true
 					if detail, ok := helps.ParseCodexUsage(data); ok {
 						reporter.Publish(ctx, detail)
 					}
@@ -1118,9 +1124,6 @@ func (e *CodexExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.Au
 					data = patchCodexCompletedOutput(data, outputItemsByIndex, outputItemsFallback)
 					cacheCodexReasoningReplayFromCompleted(replayScope, data)
 					translatedLine = append([]byte("data: "), data...)
-				}
-				if eventType := strings.TrimSpace(gjson.GetBytes(data, "type").String()); eventType != "" && !bytes.Contains(translatedLine, []byte("\nevent:")) && !bytes.HasPrefix(bytes.TrimSpace(translatedLine), []byte("event:")) {
-					translatedLine = append(append([]byte("event: "+eventType+"\n"), translatedLine...), '\n')
 				}
 			}
 
@@ -1137,8 +1140,20 @@ func (e *CodexExecutor) ExecuteStream(ctx context.Context, auth *cliproxyauth.Au
 		if errScan := scanner.Err(); errScan != nil {
 			recordAPIResponseError(ctx, e.cfg, errScan)
 			reporter.PublishFailure(ctx, errScan)
-			out <- cliproxyexecutor.StreamChunk{Err: errScan}
+			select {
+			case out <- cliproxyexecutor.StreamChunk{Err: errScan}:
+			case <-ctx.Done():
+			}
 			return
+		}
+		if !completedSeen {
+			missErr := statusErr{code: 408, msg: "stream error: stream disconnected before completion: stream closed before response.completed"}
+			helps.RecordAPIResponseError(ctx, e.cfg, missErr)
+			reporter.PublishFailure(ctx, missErr)
+			select {
+			case out <- cliproxyexecutor.StreamChunk{Err: missErr}:
+			case <-ctx.Done():
+			}
 		}
 	}()
 	return &cliproxyexecutor.StreamResult{Headers: httpResp.Header.Clone(), Chunks: out}, nil
@@ -1801,6 +1816,29 @@ func codexStatusErrorClassification(statusCode int, body []byte) (code string, e
 	default:
 		return "", "", false
 	}
+}
+
+// normalizeCodexOpenAIVariant maps the `variant` field used by some Codex-compatible
+// OpenAI Chat Completions clients to `reasoning_effort` before request translation.
+// This ensures variant-only requests (no explicit reasoning_effort) correctly propagate
+// the reasoning effort level through the codex translator.
+func normalizeCodexOpenAIVariant(from sdktranslator.Format, payload []byte) []byte {
+	if !sourceFormatEqual(from, sdktranslator.FormatOpenAI) {
+		return payload
+	}
+	variant := strings.TrimSpace(gjson.GetBytes(payload, "variant").String())
+	if variant == "" {
+		return payload
+	}
+	// Only map if reasoning_effort is not already set.
+	if gjson.GetBytes(payload, "reasoning_effort").Exists() {
+		return payload
+	}
+	updated, err := sjson.SetBytes(payload, "reasoning_effort", variant)
+	if err != nil {
+		return payload
+	}
+	return updated
 }
 
 func normalizeCodexInstructions(body []byte) []byte {

@@ -25,6 +25,8 @@ type ConvertOpenAIResponseToGeminiParams struct {
 	ContentAccumulator strings.Builder
 	// Track if this is the first chunk
 	IsFirstChunk bool
+	// Accumulated url_citation annotations (Gemini citation objects, raw JSON array)
+	Citations []byte
 }
 
 // ToolCallAccumulator holds the state for accumulating tool call data
@@ -147,6 +149,12 @@ func ConvertOpenAIResponseToGemini(_ context.Context, _ string, originalRequestR
 				chunkOutputs = append(chunkOutputs, contentTemplate)
 			}
 
+			// Handle url_citation annotations
+			if annotations := delta.Get("annotations"); annotations.Exists() && annotations.IsArray() {
+				p := (*param).(*ConvertOpenAIResponseToGeminiParams)
+				p.Citations = appendOpenAIAnnotationsAsGeminiCitations(p.Citations, annotations)
+			}
+
 			if len(chunkOutputs) > 0 {
 				results = append(results, chunkOutputs...)
 				return true
@@ -210,6 +218,11 @@ func ConvertOpenAIResponseToGemini(_ context.Context, _ string, originalRequestR
 				geminiFinishReason := mapOpenAIFinishReasonToGemini(finishReason.String())
 				template, _ = sjson.SetBytes(template, "candidates.0.finishReason", geminiFinishReason)
 
+				// Attach accumulated citations as groundingMetadata
+				if p := (*param).(*ConvertOpenAIResponseToGeminiParams); len(p.Citations) > 0 {
+					template, _ = sjson.SetRawBytes(template, "candidates.0.groundingMetadata.citations", p.Citations)
+				}
+
 				// If we have accumulated tool calls, output them now
 				if len((*param).(*ConvertOpenAIResponseToGeminiParams).ToolCallsAccumulator) > 0 {
 					partIndex := 0
@@ -249,6 +262,37 @@ func ConvertOpenAIResponseToGemini(_ context.Context, _ string, originalRequestR
 }
 
 // mapOpenAIFinishReasonToGemini maps OpenAI finish reasons to Gemini finish reasons
+// appendOpenAIAnnotationsAsGeminiCitations converts OpenAI url_citation
+// annotations into Gemini groundingMetadata citation objects, appending them to
+// an existing raw JSON array (pass nil to start a new array).
+func appendOpenAIAnnotationsAsGeminiCitations(existing []byte, annotations gjson.Result) []byte {
+	out := existing
+	if len(out) == 0 {
+		out = []byte(`[]`)
+	}
+	annotations.ForEach(func(_, ann gjson.Result) bool {
+		if strings.TrimSpace(ann.Get("type").String()) != "url_citation" {
+			return true
+		}
+		citation := []byte(`{}`)
+		if url := ann.Get("url"); url.Exists() {
+			citation, _ = sjson.SetBytes(citation, "url", url.String())
+		}
+		if title := ann.Get("title"); title.Exists() {
+			citation, _ = sjson.SetBytes(citation, "title", title.String())
+		}
+		if startIndex := ann.Get("start_index"); startIndex.Exists() {
+			citation, _ = sjson.SetBytes(citation, "startIndex", startIndex.Int())
+		}
+		if endIndex := ann.Get("end_index"); endIndex.Exists() {
+			citation, _ = sjson.SetBytes(citation, "endIndex", endIndex.Int())
+		}
+		out, _ = sjson.SetRawBytes(out, "-1", citation)
+		return true
+	})
+	return out
+}
+
 func mapOpenAIFinishReasonToGemini(openAIReason string) string {
 	switch openAIReason {
 	case "stop":
@@ -593,6 +637,13 @@ func ConvertOpenAIResponseToGeminiNonStream(_ context.Context, _ string, origina
 					}
 					return true
 				})
+			}
+
+			// Handle url_citation annotations as groundingMetadata
+			if annotations := message.Get("annotations"); annotations.Exists() && annotations.IsArray() {
+				if citations := appendOpenAIAnnotationsAsGeminiCitations(nil, annotations); len(citations) > 0 {
+					out, _ = sjson.SetRawBytes(out, "candidates.0.groundingMetadata.citations", citations)
+				}
 			}
 
 			// Handle finish reason

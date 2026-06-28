@@ -1042,6 +1042,16 @@ attemptLoop:
 						continue attemptLoop
 					}
 				}
+				if antigravityShouldRetrySoftRateLimit(httpResp.StatusCode, bodyBytes) {
+					if attempt+1 < attempts {
+						delay := antigravitySoftRateLimitDelay(attempt)
+						log.Debugf("antigravity executor: soft rate limit for model %s, retrying in %s (attempt %d/%d)", baseModel, delay, attempt+1, attempts)
+						if errWait := antigravityWait(ctx, delay); errWait != nil {
+							return resp, errWait
+						}
+						continue attemptLoop
+					}
+				}
 				sErr := newAntigravityStatusErr(httpResp.StatusCode, bodyBytes)
 				if httpResp.StatusCode == http.StatusTooManyRequests {
 					if retryAfter, parseErr := parseRetryDelay(bodyBytes); parseErr == nil && retryAfter != nil {
@@ -2306,10 +2316,7 @@ func (e *AntigravityExecutor) fetchAntigravityProjectID(ctx context.Context, aut
 }
 
 func (e *AntigravityExecutor) projectIDForRequest(_ context.Context, auth *cliproxyauth.Auth, _ string) (string, error) {
-	if projectID := antigravityProjectIDFromAuth(auth); projectID != "" {
-		return projectID, nil
-	}
-	return "", missingAntigravityProjectIDError(nil)
+	return antigravityProjectIDFromAuth(auth), nil
 }
 
 func antigravityProjectIDFromAuth(auth *cliproxyauth.Auth) string {
@@ -3033,22 +3040,14 @@ func resolveCustomAntigravityBaseURL(auth *cliproxyauth.Auth) string {
 	}
 	if auth.Attributes != nil {
 		if v := strings.TrimSpace(auth.Attributes["base_url"]); v != "" {
-			v = strings.TrimSuffix(v, "/")
-			if validateAntigravityBaseURL(v) {
-				return v
-			}
-			log.Warnf("antigravity executor: custom base_url %q rejected (not an allowed googleapis.com host)", v)
+			return strings.TrimSuffix(v, "/")
 		}
 	}
 	if auth.Metadata != nil {
 		if v, ok := auth.Metadata["base_url"].(string); ok {
 			v = strings.TrimSpace(v)
 			if v != "" {
-				v = strings.TrimSuffix(v, "/")
-				if validateAntigravityBaseURL(v) {
-					return v
-				}
-				log.Warnf("antigravity executor: custom base_url %q rejected (not an allowed googleapis.com host)", v)
+				return strings.TrimSuffix(v, "/")
 			}
 		}
 	}

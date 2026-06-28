@@ -521,10 +521,11 @@ func (s *ObjectTokenStore) resolveAuthPath(auth *cliproxyauth.Auth) (string, err
 	}
 	if auth.Attributes != nil {
 		if path := strings.TrimSpace(auth.Attributes["path"]); path != "" {
-			if filepath.IsAbs(path) {
-				return path, nil
+			resolved := path
+			if !filepath.IsAbs(resolved) {
+				resolved = filepath.Join(s.authDir, resolved)
 			}
-			return filepath.Join(s.authDir, path), nil
+			return ensurePathWithinDir(resolved, s.authDir, "object store")
 		}
 	}
 	fileName := strings.TrimSpace(auth.FileName)
@@ -537,7 +538,7 @@ func (s *ObjectTokenStore) resolveAuthPath(auth *cliproxyauth.Auth) (string, err
 	if !strings.HasSuffix(strings.ToLower(fileName), ".json") {
 		fileName += ".json"
 	}
-	return filepath.Join(s.authDir, fileName), nil
+	return ensurePathWithinDir(filepath.Join(s.authDir, fileName), s.authDir, "object store")
 }
 
 func (s *ObjectTokenStore) resolveDeletePath(id string) (string, error) {

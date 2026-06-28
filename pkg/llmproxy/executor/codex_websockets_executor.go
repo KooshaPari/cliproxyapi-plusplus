@@ -459,6 +459,7 @@ func (e *CodexWebsocketsExecutor) ExecuteStream(ctx context.Context, auth *clipr
 
 	requestedModel := payloadRequestedModel(opts, req.Model)
 	body = applyPayloadConfigWithRoot(e.cfg, baseModel, to.String(), "", body, body, requestedModel)
+	body, _ = sjson.SetBytes(body, "model", baseModel)
 	body = normalizeCodexToolSchemas(body)
 
 	httpURL := strings.TrimSuffix(baseURL, "/") + "/responses"
@@ -897,9 +898,11 @@ func applyCodexPromptCacheHeadersWithContext(ctx context.Context, from sdktransl
 	var cache codexCache
 	switch from {
 	case "claude":
-		userIDResult := gjson.GetBytes(req.Payload, "metadata.user_id")
-		if userIDResult.Exists() {
-			key := fmt.Sprintf("%s-%s", req.Model, userIDResult.String())
+		// Require a Claude Code session ID (from JSON-encoded user_id or X-Claude-Code-Session-Id
+		// header). Bare user_id strings are rejected to prevent cross-session cache pollution.
+		sessionID := helps.ExtractClaudeCodeSessionID(ctx, req.Payload, nil)
+		if sessionID != "" {
+			key := fmt.Sprintf("%s-claude:%s", req.Model, sessionID)
 			if cached, ok := getCodexCache(key); ok {
 				cache = cached
 			} else {
