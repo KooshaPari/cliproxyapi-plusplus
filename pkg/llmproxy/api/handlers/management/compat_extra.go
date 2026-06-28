@@ -225,8 +225,10 @@ func (h *Handler) RequestGitLabPATToken(c *gin.Context) {
 		},
 		Metadata: map[string]any{
 			"base_url":              baseURL,
+			"auth_kind":             "personal_access_token",
 			"personal_access_token": token,
 			"gateway_base_url":      direct["base_url"],
+			"duo_gateway_token":     direct["token"],
 			"gateway_token":         direct["token"],
 			"model_provider":        modelProvider,
 			"model_name":            modelName,

@@ -149,7 +149,12 @@ func (h *Handler) PutConfigYAML(c *gin.Context) {
 	}
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	if WriteConfig(h.configFilePath, body) != nil {
+	if errWriteConfig := WriteConfig(h.configFilePath, body); errWriteConfig != nil {
+		if isReadOnlyConfigWriteError(errWriteConfig) {
+			h.cfg = &cfg
+			c.JSON(http.StatusOK, gin.H{"ok": true, "changed": []string{"config"}})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "write_failed", "message": "failed to write config"})
 		return
 	}
@@ -303,7 +308,7 @@ func normalizeRoutingStrategy(strategy string) (string, bool) {
 	switch normalized {
 	case "", "round-robin", "roundrobin", "rr":
 		return "round-robin", true
-	case "fill-first", "fillfirst", "ff":
+	case "fill-first", "fill_first", "fillfirst", "ff":
 		return "fill-first", true
 	default:
 		return "", false

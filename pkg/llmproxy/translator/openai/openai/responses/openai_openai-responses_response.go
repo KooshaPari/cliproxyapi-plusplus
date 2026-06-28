@@ -31,6 +31,7 @@ type oaiToResponsesState struct {
 	// aggregation buffers for response.output
 	// Per-output message text buffers by index
 	MsgTextBuf   map[int]*strings.Builder
+	MsgAnnBuf    map[int][]gjson.Result
 	ReasoningBuf strings.Builder
 	Reasonings   []oaiToResponsesStateReasoning
 	FuncArgsBuf  map[string]*strings.Builder
@@ -60,6 +61,23 @@ var responseIDCounter uint64
 
 func emitRespEvent(event string, payload []byte) []byte {
 	return translatorcommon.SSEEventData(event, payload)
+}
+
+func setResponseAnnotations(payload []byte, path string, annotations []gjson.Result) []byte {
+	if len(annotations) == 0 {
+		return payload
+	}
+	raw := make([]string, 0, len(annotations))
+	for _, annotation := range annotations {
+		if annotation.Raw != "" {
+			raw = append(raw, annotation.Raw)
+		}
+	}
+	if len(raw) == 0 {
+		return payload
+	}
+	payload, _ = sjson.SetRawBytes(payload, path, []byte("["+strings.Join(raw, ",")+"]"))
+	return payload
 }
 
 func buildResponsesCompletedEvent(st *oaiToResponsesState, requestRawJSON []byte, nextSeq func() int) []byte {
@@ -155,6 +173,7 @@ func buildResponsesCompletedEvent(st *oaiToResponsesState, requestRawJSON []byte
 			item := []byte(`{"id":"","type":"message","status":"completed","content":[{"type":"output_text","annotations":[],"logprobs":[],"text":""}],"role":"assistant"}`)
 			item, _ = sjson.SetBytes(item, "id", fmt.Sprintf("msg_%s_%d", st.ResponseID, i))
 			item, _ = sjson.SetBytes(item, "content.0.text", txt)
+			item = setResponseAnnotations(item, "content.0.annotations", st.MsgAnnBuf[i])
 			outputItems = append(outputItems, completedOutputItem{index: st.MsgOutputIx[i], raw: item})
 		}
 	}
@@ -287,6 +306,7 @@ func ConvertOpenAIChatCompletionsResponseToOpenAIResponses(ctx context.Context, 
 		st.Created = root.Get("created").Int()
 		// reset aggregation state for a new streaming response
 		st.MsgTextBuf = make(map[int]*strings.Builder)
+		st.MsgAnnBuf = make(map[int][]gjson.Result)
 		st.ReasoningBuf.Reset()
 		st.ReasoningID = ""
 		st.ReasoningIndex = 0
@@ -396,6 +416,12 @@ func ConvertOpenAIChatCompletionsResponseToOpenAIResponses(ctx context.Context, 
 					}
 					st.MsgTextBuf[idx].WriteString(c.String())
 				}
+				if annotations := delta.Get("annotations"); annotations.Exists() && annotations.IsArray() {
+					annotations.ForEach(func(_, annotation gjson.Result) bool {
+						st.MsgAnnBuf[idx] = append(st.MsgAnnBuf[idx], annotation)
+						return true
+					})
+				}
 
 				// reasoning_content (OpenAI reasoning incremental text)
 				if rc := delta.Get("reasoning_content"); rc.Exists() && rc.String() != "" {
@@ -452,6 +478,7 @@ func ConvertOpenAIChatCompletionsResponseToOpenAIResponses(ctx context.Context, 
 						partDone, _ = sjson.SetBytes(partDone, "output_index", msgOutputIndex)
 						partDone, _ = sjson.SetBytes(partDone, "content_index", 0)
 						partDone, _ = sjson.SetBytes(partDone, "part.text", fullText)
+						partDone = setResponseAnnotations(partDone, "part.annotations", st.MsgAnnBuf[idx])
 						out = append(out, emitRespEvent("response.content_part.done", partDone))
 
 						itemDone := []byte(`{"type":"response.output_item.done","sequence_number":0,"output_index":0,"item":{"id":"","type":"message","status":"completed","content":[{"type":"output_text","annotations":[],"logprobs":[],"text":""}],"role":"assistant"}}`)
@@ -459,6 +486,7 @@ func ConvertOpenAIChatCompletionsResponseToOpenAIResponses(ctx context.Context, 
 						itemDone, _ = sjson.SetBytes(itemDone, "output_index", msgOutputIndex)
 						itemDone, _ = sjson.SetBytes(itemDone, "item.id", fmt.Sprintf("msg_%s_%d", st.ResponseID, idx))
 						itemDone, _ = sjson.SetBytes(itemDone, "item.content.0.text", fullText)
+						itemDone = setResponseAnnotations(itemDone, "item.content.0.annotations", st.MsgAnnBuf[idx])
 						out = append(out, emitRespEvent("response.output_item.done", itemDone))
 						st.MsgItemDone[idx] = true
 					}
@@ -551,6 +579,7 @@ func ConvertOpenAIChatCompletionsResponseToOpenAIResponses(ctx context.Context, 
 							partDone, _ = sjson.SetBytes(partDone, "output_index", msgOutputIndex)
 							partDone, _ = sjson.SetBytes(partDone, "content_index", 0)
 							partDone, _ = sjson.SetBytes(partDone, "part.text", fullText)
+							partDone = setResponseAnnotations(partDone, "part.annotations", st.MsgAnnBuf[i])
 							out = append(out, emitRespEvent("response.content_part.done", partDone))
 
 							itemDone := []byte(`{"type":"response.output_item.done","sequence_number":0,"output_index":0,"item":{"id":"","type":"message","status":"completed","content":[{"type":"output_text","annotations":[],"logprobs":[],"text":""}],"role":"assistant"}}`)
@@ -558,6 +587,7 @@ func ConvertOpenAIChatCompletionsResponseToOpenAIResponses(ctx context.Context, 
 							itemDone, _ = sjson.SetBytes(itemDone, "output_index", msgOutputIndex)
 							itemDone, _ = sjson.SetBytes(itemDone, "item.id", fmt.Sprintf("msg_%s_%d", st.ResponseID, i))
 							itemDone, _ = sjson.SetBytes(itemDone, "item.content.0.text", fullText)
+							itemDone = setResponseAnnotations(itemDone, "item.content.0.annotations", st.MsgAnnBuf[i])
 							out = append(out, emitRespEvent("response.output_item.done", itemDone))
 							st.MsgItemDone[i] = true
 						}
@@ -749,6 +779,14 @@ func ConvertOpenAIChatCompletionsResponseToOpenAIResponsesNonStream(_ context.Co
 					item := []byte(`{"id":"","type":"message","status":"completed","content":[{"type":"output_text","annotations":[],"logprobs":[],"text":""}],"role":"assistant"}`)
 					item, _ = sjson.SetBytes(item, "id", fmt.Sprintf("msg_%s_%d", id, int(choice.Get("index").Int())))
 					item, _ = sjson.SetBytes(item, "content.0.text", c.String())
+					if annotations := msg.Get("annotations"); annotations.Exists() && annotations.IsArray() {
+						collected := make([]gjson.Result, 0)
+						annotations.ForEach(func(_, annotation gjson.Result) bool {
+							collected = append(collected, annotation)
+							return true
+						})
+						item = setResponseAnnotations(item, "content.0.annotations", collected)
+					}
 					outputsWrapper, _ = sjson.SetRawBytes(outputsWrapper, "arr.-1", item)
 				}
 

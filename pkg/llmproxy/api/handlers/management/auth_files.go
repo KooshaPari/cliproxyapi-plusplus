@@ -61,12 +61,13 @@ type codexOAuthService interface {
 }
 
 var (
-	callbackForwardersMu  sync.Mutex
-	callbackForwarders    = make(map[int]*callbackForwarder)
-	errAuthFileMustBeJSON = errors.New("auth file must be .json")
-	errAuthFileNotFound   = errors.New("auth file not found")
-	errPluginVirtualAuth  = errors.New("plugin virtual auth cannot be modified directly; edit or delete the source auth file")
-	newCodexOAuthService  = func(cfg *config.Config) codexOAuthService { return codex.NewCodexAuth(cfg) }
+	callbackForwardersMu   sync.Mutex
+	callbackForwarders     = make(map[int]*callbackForwarder)
+	errAuthFileMustBeJSON  = errors.New("auth file must be .json")
+	errAuthFileNotFound    = errors.New("auth file not found")
+	errAuthFileInvalidName = errors.New("invalid auth file name")
+	errPluginVirtualAuth   = errors.New("plugin virtual auth cannot be modified directly; edit or delete the source auth file")
+	newCodexOAuthService   = func(cfg *config.Config) codexOAuthService { return codex.NewCodexAuth(cfg) }
 )
 
 func extractLastRefreshTimestamp(meta map[string]any) (time.Time, bool) {
@@ -774,6 +775,10 @@ func (h *Handler) UploadAuthFile(c *gin.Context) {
 	}
 	if len(fileHeaders) == 1 {
 		if _, errUpload := h.storeUploadedAuthFile(ctx, fileHeaders[0]); errUpload != nil {
+			if errors.Is(errUpload, errAuthFileInvalidName) {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "invalid name"})
+				return
+			}
 			if errors.Is(errUpload, errAuthFileMustBeJSON) {
 				c.JSON(http.StatusBadRequest, gin.H{"error": "file must be .json"})
 				return
@@ -795,6 +800,9 @@ func (h *Handler) UploadAuthFile(c *gin.Context) {
 					failureName = filepath.Base(file.Filename)
 				}
 				msg := errUpload.Error()
+				if errors.Is(errUpload, errAuthFileInvalidName) {
+					msg = "invalid name"
+				}
 				if errors.Is(errUpload, errAuthFileMustBeJSON) {
 					msg = "file must be .json"
 				}
@@ -950,7 +958,11 @@ func (h *Handler) storeUploadedAuthFile(ctx context.Context, file *multipart.Fil
 	if file == nil {
 		return "", fmt.Errorf("no file uploaded")
 	}
-	name := filepath.Base(strings.TrimSpace(file.Filename))
+	submittedName := strings.TrimSpace(file.Filename)
+	if isUnsafeAuthFileName(submittedName) {
+		return "", errAuthFileInvalidName
+	}
+	name := filepath.Base(submittedName)
 	if !strings.HasSuffix(strings.ToLower(name), ".json") {
 		return "", errAuthFileMustBeJSON
 	}
@@ -1166,11 +1178,36 @@ func (h *Handler) registerAuthFromFile(ctx context.Context, path string, data []
 	if h.authManager == nil {
 		return nil
 	}
+	if err := h.validateAuthFilePath(path); err != nil {
+		return err
+	}
 	auth, err := h.buildAuthFromFileData(path, data)
 	if err != nil {
 		return err
 	}
 	return h.upsertAuthRecord(ctx, auth)
+}
+
+func (h *Handler) validateAuthFilePath(path string) error {
+	if h == nil || h.cfg == nil || strings.TrimSpace(h.cfg.AuthDir) == "" {
+		return fmt.Errorf("auth directory is not configured")
+	}
+	authDir, err := filepath.Abs(h.cfg.AuthDir)
+	if err != nil {
+		return fmt.Errorf("resolve auth directory: %w", err)
+	}
+	authPath, err := filepath.Abs(path)
+	if err != nil {
+		return fmt.Errorf("resolve auth file path: %w", err)
+	}
+	rel, err := filepath.Rel(authDir, authPath)
+	if err != nil {
+		return fmt.Errorf("resolve auth file relative path: %w", err)
+	}
+	if rel == "." || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) || filepath.IsAbs(rel) {
+		return fmt.Errorf("auth file path escapes auth directory")
+	}
+	return nil
 }
 
 func (h *Handler) buildAuthFromFileData(path string, data []byte) (*coreauth.Auth, error) {
