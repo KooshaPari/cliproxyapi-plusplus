@@ -48,6 +48,9 @@ func (c Client) Install(ctx context.Context, plugin Plugin, options InstallOptio
 		return InstallResult{}, errValidate
 	}
 	options = normalizeInstallOptions(options)
+	if errPrepare := prepareLoadedPluginInstall(options); errPrepare != nil {
+		return InstallResult{}, errPrepare
+	}
 	release, errRelease := c.FetchLatestRelease(ctx, plugin)
 	if errRelease != nil {
 		return InstallResult{}, errRelease
@@ -66,6 +69,9 @@ func (c Client) InstallVersion(ctx context.Context, plugin Plugin, releaseTag st
 		return InstallResult{}, errValidate
 	}
 	options = normalizeInstallOptions(options)
+	if errPrepare := prepareLoadedPluginInstall(options); errPrepare != nil {
+		return InstallResult{}, errPrepare
+	}
 	version = normalizeVersion(version)
 	if !validPluginVersion(version) {
 		return InstallResult{}, fmt.Errorf("invalid plugin version %q", version)
@@ -159,15 +165,10 @@ func InstallArchive(archiveData []byte, plugin Plugin, options InstallOptions) (
 			}, nil
 		}
 	}
-	// Re-check immediately before replacing an existing file: the same version
-	// may have been loaded while the archive was being downloaded and verified.
-	if overwritten && options.BeforeWrite != nil {
-		if errBeforeWrite := options.BeforeWrite(); errBeforeWrite != nil {
-			return InstallResult{}, fmt.Errorf("prepare plugin write: %w", errBeforeWrite)
-		}
-	}
-	if overwritten && loadedPluginInstallBlocked(options) {
-		return InstallResult{}, ErrLoadedPluginLocked
+	// Re-check immediately before writing: the same plugin may have been loaded
+	// while the archive was being downloaded and verified.
+	if errPrepare := prepareLoadedPluginInstall(options); errPrepare != nil {
+		return InstallResult{}, errPrepare
 	}
 	if errWrite := writeFileAtomic(targetPath, libraryData, mode); errWrite != nil {
 		return InstallResult{}, errWrite
@@ -185,7 +186,13 @@ func installTargetPath(options InstallOptions, id string, version string) (strin
 	if !validPluginVersion(version) {
 		return "", fmt.Errorf("invalid plugin version %q", version)
 	}
-	return filepath.Join(options.PluginsDir, options.GOOS, options.GOARCH, versionedPluginFileName(id, version, options.GOOS)), nil
+	rootPath := filepath.Join(options.PluginsDir, id+pluginExtension(options.GOOS))
+	if _, errStat := os.Stat(rootPath); errStat == nil {
+		return rootPath, nil
+	} else if errStat != nil && !errors.Is(errStat, os.ErrNotExist) {
+		return "", fmt.Errorf("stat runtime plugin: %w", errStat)
+	}
+	return filepath.Join(options.PluginsDir, options.GOOS, options.GOARCH, id+pluginExtension(options.GOOS)), nil
 }
 
 func readTargetLibrary(reader *zip.Reader, id string, version string, goos string) ([]byte, os.FileMode, error) {
@@ -467,6 +474,21 @@ func writeFileAtomic(targetPath string, data []byte, mode os.FileMode) error {
 
 func loadedPluginInstallBlocked(options InstallOptions) bool {
 	return options.PluginLoaded != nil && strings.EqualFold(options.GOOS, "windows") && options.PluginLoaded()
+}
+
+func prepareLoadedPluginInstall(options InstallOptions) error {
+	if !loadedPluginInstallBlocked(options) {
+		return nil
+	}
+	if options.BeforeWrite != nil {
+		if errBeforeWrite := options.BeforeWrite(); errBeforeWrite != nil {
+			return fmt.Errorf("prepare plugin write: %w", errBeforeWrite)
+		}
+		if !loadedPluginInstallBlocked(options) {
+			return nil
+		}
+	}
+	return ErrLoadedPluginLocked
 }
 
 func normalizeInstallOptions(options InstallOptions) InstallOptions {

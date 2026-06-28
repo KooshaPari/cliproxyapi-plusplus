@@ -42,12 +42,22 @@ type thinkingTestCase struct {
 
 func getTestModels() []*registry.ModelInfo {
 	return []*registry.ModelInfo{
-		{ID: "level-model"},
-		{ID: "budget-model"},
-		{ID: "dynamic-model"},
-		{ID: "zero-model"},
-		{ID: "gpt-5-codex"},
-		{ID: "gpt-5.2-codex"},
+		{ID: "level-model", Thinking: &registry.ThinkingSupport{Levels: []string{"minimal", "low", "medium", "high"}}},
+		{ID: "level-subset-model", Thinking: &registry.ThinkingSupport{Levels: []string{"low", "high"}}},
+		{ID: "budget-model", Thinking: &registry.ThinkingSupport{Min: 1024, Max: 128000, ZeroAllowed: true}},
+		{ID: "dynamic-model", Thinking: &registry.ThinkingSupport{Min: 128, Max: 20000, DynamicAllowed: true}},
+		{ID: "zero-model", Thinking: &registry.ThinkingSupport{Min: 128, Max: 20000, ZeroAllowed: true}},
+		{ID: "gemini-budget-model", Thinking: &registry.ThinkingSupport{Min: 128, Max: 20000, DynamicAllowed: true}},
+		{ID: "gemini-mixed-model", Thinking: &registry.ThinkingSupport{Min: 128, Max: 32768, DynamicAllowed: true, Levels: []string{"low", "high"}}},
+		{ID: "claude-budget-model", Thinking: &registry.ThinkingSupport{Min: 1024, Max: 128000, ZeroAllowed: true}},
+		{ID: "antigravity-budget-model", Thinking: &registry.ThinkingSupport{Min: 128, Max: 20000, ZeroAllowed: true, DynamicAllowed: true}},
+		{ID: "no-thinking-model"},
+		{ID: "user-defined-model", UserDefined: true},
+		{ID: "gpt-5", Thinking: &registry.ThinkingSupport{Levels: []string{"low", "medium", "high"}}},
+		{ID: "gpt-5.1", Thinking: &registry.ThinkingSupport{ZeroAllowed: true, Levels: []string{"low", "medium", "high", "none"}}},
+		{ID: "gpt-5.2", Thinking: &registry.ThinkingSupport{ZeroAllowed: true, Levels: []string{"low", "medium", "high", "xhigh", "none"}}},
+		{ID: "gpt-5-codex", Thinking: &registry.ThinkingSupport{Levels: []string{"low", "medium", "high"}}},
+		{ID: "gpt-5.2-codex", Thinking: &registry.ThinkingSupport{ZeroAllowed: true, Levels: []string{"low", "medium", "high", "xhigh", "none"}}},
 	}
 }
 

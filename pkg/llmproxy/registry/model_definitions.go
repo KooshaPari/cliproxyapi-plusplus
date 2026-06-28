@@ -308,6 +308,12 @@ func GetStaticModelDefinitionsByChannel(channel string) []*ModelInfo {
 		return GetAntigravityModels()
 	case "xai", "x-ai", "grok":
 		return GetXAIModels()
+	case "kilo", "kilocode":
+		return GetKiloModels()
+	case "kiro":
+		return GetKiroModels()
+	case "cursor":
+		return GetCursorModels()
 	default:
 		return nil
 	}

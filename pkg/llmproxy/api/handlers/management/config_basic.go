@@ -152,7 +152,7 @@ func (h *Handler) PutConfigYAML(c *gin.Context) {
 	if errWriteConfig := WriteConfig(h.configFilePath, body); errWriteConfig != nil {
 		if isReadOnlyConfigWriteError(errWriteConfig) {
 			h.cfg = &cfg
-			c.JSON(http.StatusOK, gin.H{"ok": true, "changed": []string{"config"}})
+			c.JSON(http.StatusOK, gin.H{"ok": true, "changed": []string{"config"}, "persisted": false})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "write_failed", "message": "failed to write config"})

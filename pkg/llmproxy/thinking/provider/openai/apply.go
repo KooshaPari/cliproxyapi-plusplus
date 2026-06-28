@@ -56,7 +56,7 @@ func (a *Applier) Apply(body []byte, config thinking.ThinkingConfig, modelInfo *
 	}
 
 	if config.Mode == thinking.ModeLevel {
-		result, _ := sjson.SetBytes(body, "reasoning_effort", string(config.Level))
+		result, _ := sjson.SetBytes(body, "reasoning_effort", normalizeOpenAIEffort(string(config.Level), modelInfo))
 		return result, nil
 	}
 
@@ -77,7 +77,7 @@ func (a *Applier) Apply(body []byte, config thinking.ThinkingConfig, modelInfo *
 		return body, nil
 	}
 
-	result, _ := sjson.SetBytes(body, "reasoning_effort", effort)
+	result, _ := sjson.SetBytes(body, "reasoning_effort", normalizeOpenAIEffort(effort, nil))
 	return result, nil
 }
 
@@ -99,8 +99,7 @@ func applyCompatibleOpenAI(body []byte, config thinking.ThinkingConfig) ([]byte,
 			effort = string(config.Level)
 		}
 	case thinking.ModeAuto:
-		// Auto mode for user-defined models: pass through as "auto"
-		effort = string(thinking.LevelAuto)
+		effort = string(thinking.LevelMedium)
 	case thinking.ModeBudget:
 		// Budget mode: convert budget to level using threshold mapping
 		level, ok := thinking.ConvertBudgetToLevel(config.Budget)
@@ -112,6 +111,22 @@ func applyCompatibleOpenAI(body []byte, config thinking.ThinkingConfig) ([]byte,
 		return body, nil
 	}
 
-	result, _ := sjson.SetBytes(body, "reasoning_effort", effort)
+	result, _ := sjson.SetBytes(body, "reasoning_effort", normalizeOpenAIEffort(effort, nil))
 	return result, nil
+}
+
+func normalizeOpenAIEffort(effort string, modelInfo *registry.ModelInfo) string {
+	switch effort {
+	case string(thinking.LevelMinimal):
+		return string(thinking.LevelLow)
+	case string(thinking.LevelAuto):
+		return string(thinking.LevelMedium)
+	case string(thinking.LevelXHigh):
+		if modelInfo != nil && modelInfo.Thinking != nil && thinking.HasLevel(modelInfo.Thinking.Levels, string(thinking.LevelXHigh)) {
+			return effort
+		}
+		return string(thinking.LevelHigh)
+	default:
+		return effort
+	}
 }

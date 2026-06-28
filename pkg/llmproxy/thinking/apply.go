@@ -194,9 +194,6 @@ func ApplyThinking(body []byte, model string, fromFormat string, toFormat string
 		return applyUserDefinedModel(body, modelInfo, fromFormat, providerFormat, suffixResult)
 	}
 	if modelInfo.Thinking == nil {
-		if suffixResult.HasSuffix {
-			return applyUserDefinedModel(body, modelInfo, fromFormat, providerFormat, suffixResult)
-		}
 		config := extractThinkingConfig(body, providerFormat)
 		if hasThinkingConfig(config) {
 			log.WithFields(log.Fields{
