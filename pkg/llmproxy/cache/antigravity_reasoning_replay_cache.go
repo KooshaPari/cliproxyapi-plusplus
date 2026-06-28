@@ -27,7 +27,7 @@ const (
 	// reaches capacity so high write volume does not rescan the map every turn.
 	AntigravityReasoningReplayCacheEvictBatchSize = 128
 
-	minAntigravityThoughtSignatureReplayLen = 16
+	minAntigravityThoughtSignatureReplayLen = 1
 )
 
 type antigravityReasoningReplayEntry struct {

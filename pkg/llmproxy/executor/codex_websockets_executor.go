@@ -457,6 +457,7 @@ func (e *CodexWebsocketsExecutor) ExecuteStream(ctx context.Context, auth *clipr
 		return nil, err
 	}
 
+	body, _ = sjson.SetBytes(body, "model", baseModel)
 	requestedModel := payloadRequestedModel(opts, req.Model)
 	body = applyPayloadConfigWithRoot(e.cfg, baseModel, to.String(), "", body, body, requestedModel)
 	body, _ = sjson.SetBytes(body, "model", baseModel)
