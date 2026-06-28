@@ -41,6 +41,8 @@ func LoadConfigOptional(configFile string, optional bool) (*Config, error) {
 	return llmproxyconfig.LoadConfigOptional(configFile, optional)
 }
 
+func ParseConfigBytes(data []byte) (*Config, error) { return llmproxyconfig.ParseConfigBytes(data) }
+
 func SaveConfigPreserveComments(configFile string, cfg *Config) error {
 	return llmproxyconfig.SaveConfigPreserveComments(configFile, cfg)
 }

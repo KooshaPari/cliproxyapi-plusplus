@@ -17,6 +17,11 @@ func convertResponsesToolToOpenAIChatTools(tool gjson.Result) [][]byte {
 	case "namespace":
 		return convertResponsesNamespaceToolToOpenAIChat(tool)
 	default:
+		// Builtin tools (e.g. web_search, web_search_preview) are passed
+		// through to the chat completions tools array as-is.
+		if raw := strings.TrimSpace(tool.Raw); raw != "" {
+			return [][]byte{[]byte(raw)}
+		}
 		return nil
 	}
 	return nil

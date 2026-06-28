@@ -50,7 +50,7 @@ func (c *Client) doRequest(method, path string, body io.Reader) ([]byte, int, er
 	if err != nil {
 		return nil, 0, err
 	}
-	defer func() { _ = resp.Body.Close() }()
+	defer resp.Body.Close()
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, resp.StatusCode, err
@@ -138,11 +138,6 @@ func (c *Client) GetConfigYAML() (string, error) {
 func (c *Client) PutConfigYAML(yamlContent string) error {
 	_, err := c.put("/v0/management/config.yaml", strings.NewReader(yamlContent))
 	return err
-}
-
-// GetUsage fetches usage statistics.
-func (c *Client) GetUsage() (map[string]any, error) {
-	return c.getJSON("/v0/management/usage")
 }
 
 // GetAuthFiles lists auth credential files.
@@ -397,4 +392,9 @@ func (c *Client) PutStringField(path string, value string) error {
 func (c *Client) DeleteField(path string) error {
 	_, _, err := c.doRequest("DELETE", "/v0/management/"+path, nil)
 	return err
+}
+
+// GetUsage fetches usage statistics.
+func (c *Client) GetUsage() (map[string]any, error) {
+	return c.getJSON("/v0/management/usage")
 }

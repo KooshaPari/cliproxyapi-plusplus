@@ -214,10 +214,18 @@ func (s *PostgresStore) Save(ctx context.Context, auth *cliproxyauth.Auth) (stri
 
 	switch {
 	case auth.Storage != nil:
+		if auth.Metadata == nil {
+			auth.Metadata = make(map[string]any)
+		}
+		auth.Metadata["disabled"] = auth.Disabled
+		if setter, ok := auth.Storage.(interface{ SetMetadata(map[string]any) }); ok {
+			setter.SetMetadata(auth.Metadata)
+		}
 		if err = auth.Storage.SaveTokenToFile(path); err != nil {
 			return "", err
 		}
 	case auth.Metadata != nil:
+		auth.Metadata["disabled"] = auth.Disabled
 		raw, errMarshal := json.Marshal(auth.Metadata)
 		if errMarshal != nil {
 			return "", fmt.Errorf("postgres store: marshal metadata: %w", errMarshal)
@@ -243,7 +251,8 @@ func (s *PostgresStore) Save(ctx context.Context, auth *cliproxyauth.Auth) (stri
 	if auth.Attributes == nil {
 		auth.Attributes = make(map[string]string)
 	}
-	auth.Attributes["path"] = path
+	auth.Attributes[cliproxyauth.AttributePath] = path
+	auth.Attributes[cliproxyauth.AttributeSourceBackend] = cliproxyauth.AuthSourcePostgres
 
 	if strings.TrimSpace(auth.FileName) == "" {
 		auth.FileName = auth.ID
@@ -266,7 +275,7 @@ func (s *PostgresStore) List(ctx context.Context) ([]*cliproxyauth.Auth, error) 
 	if err != nil {
 		return nil, fmt.Errorf("postgres store: list auth: %w", err)
 	}
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 
 	auths := make([]*cliproxyauth.Auth, 0, 32)
 	for rows.Next() {
@@ -293,7 +302,10 @@ func (s *PostgresStore) List(ctx context.Context) ([]*cliproxyauth.Auth, error) 
 		if provider == "" {
 			provider = "unknown"
 		}
-		attr := map[string]string{"path": path}
+		attr := map[string]string{
+			cliproxyauth.AttributePath:          path,
+			cliproxyauth.AttributeSourceBackend: cliproxyauth.AuthSourcePostgres,
+		}
 		if email := strings.TrimSpace(valueAsString(metadata["email"])); email != "" {
 			attr["email"] = email
 		}
@@ -309,6 +321,11 @@ func (s *PostgresStore) List(ctx context.Context) ([]*cliproxyauth.Auth, error) 
 			UpdatedAt:        updatedAt,
 			LastRefreshedAt:  time.Time{},
 			NextRefreshAfter: time.Time{},
+		}
+		cliproxyauth.ApplyCustomHeadersFromMetadata(auth)
+		if disabled, ok := metadata["disabled"].(bool); ok && disabled {
+			auth.Disabled = true
+			auth.Status = cliproxyauth.StatusDisabled
 		}
 		auths = append(auths, auth)
 	}
@@ -357,16 +374,10 @@ func (s *PostgresStore) PersistAuthFiles(ctx context.Context, _ string, paths ..
 		}
 		relID, err := s.relativeAuthID(trimmed)
 		if err != nil {
-			// Attempt to resolve absolute path under authDir with path-validation.
+			// Attempt to resolve absolute path under authDir.
 			abs := trimmed
 			if !filepath.IsAbs(abs) {
-				resolved := filepath.Join(s.authDir, trimmed)
-				// Ensure resolved path stays within authDir to prevent path-injection.
-				if !strings.HasPrefix(resolved, s.authDir+string(filepath.Separator)) && resolved != s.authDir {
-					log.Warnf("postgres store: path escape detected for %s, ignoring", trimmed)
-					continue
-				}
-				abs = resolved
+				abs = filepath.Join(s.authDir, trimmed)
 			}
 			relID, err = s.relativeAuthID(abs)
 			if err != nil {
@@ -446,8 +457,12 @@ func (s *PostgresStore) syncAuthFromDatabase(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("postgres store: load auth from database: %w", err)
 	}
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 
+	// Mirror database rows onto the local spool without wiping it: local-only
+	// files (not represented in the database) are preserved. Per-row failures
+	// (e.g. a directory occupying a target file path) are logged and skipped so
+	// one bad row cannot abort mirroring of the remaining healthy rows.
 	if err = os.MkdirAll(s.authDir, 0o700); err != nil {
 		return fmt.Errorf("postgres store: recreate auth directory: %w", err)
 	}
@@ -465,14 +480,17 @@ func (s *PostgresStore) syncAuthFromDatabase(ctx context.Context) error {
 			log.WithError(errPath).Warnf("postgres store: skipping auth %s outside spool", id)
 			continue
 		}
-		if info, errInfo := os.Stat(path); errInfo == nil && info.IsDir() {
+		if errMk := os.MkdirAll(filepath.Dir(path), 0o700); errMk != nil {
+			log.WithError(errMk).Warnf("postgres store: skipping auth %s: create subdir failed", id)
 			continue
 		}
-		if err = os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
-			return fmt.Errorf("postgres store: create auth subdir: %w", err)
+		if info, errStat := os.Stat(path); errStat == nil && info.IsDir() {
+			log.Warnf("postgres store: skipping auth %s: target path is a directory", id)
+			continue
 		}
-		if err = os.WriteFile(path, []byte(payload), 0o600); err != nil {
-			return fmt.Errorf("postgres store: write auth file: %w", err)
+		if errWrite := os.WriteFile(path, []byte(payload), 0o600); errWrite != nil {
+			log.WithError(errWrite).Warnf("postgres store: skipping auth %s: write failed", id)
+			continue
 		}
 	}
 	if err = rows.Err(); err != nil {
@@ -495,11 +513,7 @@ func (s *PostgresStore) syncAuthFile(ctx context.Context, relID, path string) er
 	return s.persistAuth(ctx, relID, data)
 }
 
-func (s *PostgresStore) upsertAuthRecord(ctx context.Context, relID, _ string) error {
-	path, err := s.absoluteAuthPath(relID)
-	if err != nil {
-		return fmt.Errorf("postgres store: resolve auth path: %w", err)
-	}
+func (s *PostgresStore) upsertAuthRecord(ctx context.Context, relID, path string) error {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return fmt.Errorf("postgres store: read auth file: %w", err)
@@ -560,16 +574,16 @@ func (s *PostgresStore) resolveAuthPath(auth *cliproxyauth.Auth) (string, error)
 	}
 	if auth.Attributes != nil {
 		if p := strings.TrimSpace(auth.Attributes["path"]); p != "" {
-			return s.ensureManagedAuthPath(p)
+			return s.constrainToAuthDir(p)
 		}
 	}
 	if fileName := strings.TrimSpace(auth.FileName); fileName != "" {
-		return s.ensureManagedAuthPath(fileName)
+		return s.constrainToAuthDir(fileName)
 	}
 	if auth.ID == "" {
 		return "", fmt.Errorf("postgres store: missing id")
 	}
-	return s.ensureManagedAuthPath(auth.ID)
+	return s.constrainToAuthDir(auth.ID)
 }
 
 func (s *PostgresStore) resolveDeletePath(id string) (string, error) {
@@ -577,40 +591,26 @@ func (s *PostgresStore) resolveDeletePath(id string) (string, error) {
 	if id == "" {
 		return "", fmt.Errorf("postgres store: id is empty")
 	}
-	return s.ensureManagedAuthPath(id)
+	return s.constrainToAuthDir(id)
 }
 
-func (s *PostgresStore) ensureManagedAuthPath(path string) (string, error) {
-	if s == nil {
-		return "", fmt.Errorf("postgres store: store not initialized")
+// constrainToAuthDir resolves an auth identifier or path relative to authDir and
+// rejects any value that escapes the managed auth directory (absolute paths
+// outside it or traversal segments).
+func (s *PostgresStore) constrainToAuthDir(value string) (string, error) {
+	resolved := value
+	if !filepath.IsAbs(resolved) {
+		resolved = filepath.Join(s.authDir, filepath.FromSlash(resolved))
 	}
-	authDir := strings.TrimSpace(s.authDir)
-	if authDir == "" {
-		return "", fmt.Errorf("postgres store: auth directory not configured")
-	}
-	absAuthDir, err := filepath.Abs(authDir)
+	clean := filepath.Clean(resolved)
+	rel, err := filepath.Rel(s.authDir, clean)
 	if err != nil {
-		return "", fmt.Errorf("postgres store: resolve auth directory: %w", err)
+		return "", fmt.Errorf("postgres store: compute relative path: %w", err)
 	}
-	candidate := strings.TrimSpace(path)
-	if candidate == "" {
-		return "", fmt.Errorf("postgres store: auth path is empty")
+	if rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
+		return "", fmt.Errorf("postgres store: path %s outside managed directory", value)
 	}
-	if !filepath.IsAbs(candidate) {
-		candidate = filepath.Join(absAuthDir, filepath.FromSlash(candidate))
-	}
-	absCandidate, err := filepath.Abs(candidate)
-	if err != nil {
-		return "", fmt.Errorf("postgres store: resolve auth path %q: %w", path, err)
-	}
-	rel, err := filepath.Rel(absAuthDir, absCandidate)
-	if err != nil {
-		return "", fmt.Errorf("postgres store: compute relative auth path: %w", err)
-	}
-	if rel == "." || rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
-		return "", fmt.Errorf("postgres store: path %q outside managed directory", path)
-	}
-	return absCandidate, nil
+	return clean, nil
 }
 
 func (s *PostgresStore) relativeAuthID(path string) (string, error) {
@@ -636,7 +636,7 @@ func (s *PostgresStore) absoluteAuthPath(id string) (string, error) {
 		return "", fmt.Errorf("postgres store: store not initialized")
 	}
 	clean := filepath.Clean(filepath.FromSlash(id))
-	if clean == "." || clean == ".." || strings.HasPrefix(clean, ".."+string(os.PathSeparator)) {
+	if strings.HasPrefix(clean, "..") {
 		return "", fmt.Errorf("postgres store: invalid auth identifier %s", id)
 	}
 	path := filepath.Join(s.authDir, clean)

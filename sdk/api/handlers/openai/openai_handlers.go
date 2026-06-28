@@ -49,6 +49,19 @@ func (h *OpenAIAPIHandler) HandlerType() string {
 	return constant.OpenAI
 }
 
+func (h *OpenAIAPIHandler) ImagesGenerations(c *gin.Context) {
+	NewOpenAIImagesAPIHandler(h.BaseAPIHandler).ImageGenerations(c)
+}
+
+func (h *OpenAIAPIHandler) ImagesEdits(c *gin.Context) {
+	c.JSON(http.StatusNotImplemented, handlers.ErrorResponse{
+		Error: handlers.ErrorDetail{
+			Message: "image edits are not implemented",
+			Type:    "not_implemented_error",
+		},
+	})
+}
+
 // Models returns the OpenAI-compatible model metadata supported by this handler.
 func (h *OpenAIAPIHandler) Models() []map[string]any {
 	// Get dynamic models from the global registry
@@ -60,6 +73,11 @@ func (h *OpenAIAPIHandler) Models() []map[string]any {
 // It returns a list of available AI models with their capabilities
 // and specifications in OpenAI-compatible format.
 func (h *OpenAIAPIHandler) OpenAIModels(c *gin.Context) {
+	if _, ok := c.Request.URL.Query()["client_version"]; ok {
+		c.JSON(http.StatusOK, h.codexClientModelsResponse())
+		return
+	}
+
 	// Get all available models
 	allModels := h.Models()
 
@@ -97,7 +115,7 @@ func (h *OpenAIAPIHandler) OpenAIModels(c *gin.Context) {
 // Parameters:
 //   - c: The Gin context containing the HTTP request and response
 func (h *OpenAIAPIHandler) ChatCompletions(c *gin.Context) {
-	rawJSON, err := c.GetRawData()
+	rawJSON, err := handlers.ReadRequestBody(c)
 	// If data retrieval fails, return a 400 Bad Request error.
 	if err != nil {
 		c.JSON(http.StatusBadRequest, handlers.ErrorResponse{
@@ -169,7 +187,7 @@ func shouldTreatAsResponsesFormat(rawJSON []byte) bool {
 // Parameters:
 //   - c: The Gin context containing the HTTP request and response
 func (h *OpenAIAPIHandler) Completions(c *gin.Context) {
-	rawJSON, err := c.GetRawData()
+	rawJSON, err := handlers.ReadRequestBody(c)
 	// If data retrieval fails, return a 400 Bad Request error.
 	if err != nil {
 		c.JSON(http.StatusBadRequest, handlers.ErrorResponse{

@@ -5,17 +5,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strconv"
 	"io"
 	"net/http"
 	"reflect"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	cliproxyauth "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth"
-	"github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/usage"
 	internallogging "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/logging"
 	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/thinking"
 	cliproxyauth "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth"
@@ -545,6 +543,10 @@ func parseOpenAIResponsesUsage(data []byte) usage.Detail {
 	return parseOpenAIResponsesUsageDetail(usageNode)
 }
 
+func ParseOpenAIResponsesUsage(data []byte) usage.Detail {
+	return parseOpenAIResponsesUsage(data)
+}
+
 func parseOpenAIResponsesStreamUsage(line []byte) (usage.Detail, bool) {
 	payload := jsonPayload(line)
 	if len(payload) == 0 || !gjson.ValidBytes(payload) {
@@ -555,6 +557,14 @@ func parseOpenAIResponsesStreamUsage(line []byte) (usage.Detail, bool) {
 		return usage.Detail{}, false
 	}
 	return parseOpenAIResponsesUsageDetail(usageNode), true
+}
+
+func ParseOpenAIResponsesStreamUsage(line []byte) (usage.Detail, bool) {
+	return parseOpenAIResponsesStreamUsage(line)
+}
+
+func ParseOpenAIResponsesUsageDetail(usageNode gjson.Result) usage.Detail {
+	return parseOpenAIResponsesUsageDetail(usageNode)
 }
 
 func parseOpenAIUsageDetail(usageNode gjson.Result) usage.Detail {
@@ -616,7 +626,6 @@ func parseUsageNumber(raw string) int64 {
 		return int64(parsed)
 	}
 	return 0
-	return parseOpenAIStyleUsageNode(usageNode), true
 }
 
 func ParseClaudeUsage(data []byte) usage.Detail {

@@ -15,10 +15,10 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/auth/base"
 	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/config"
 	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/util"
 	log "github.com/sirupsen/logrus"
+	"golang.org/x/sync/singleflight"
 )
 
 const (
@@ -39,6 +39,8 @@ const (
 	// refreshThresholdSeconds is when to refresh token before expiry (5 minutes).
 	refreshThresholdSeconds = 300
 )
+
+var kimiRefreshGroup singleflight.Group
 
 // KimiAuth handles Kimi authentication flow.
 type KimiAuth struct {
@@ -79,15 +81,13 @@ func (k *KimiAuth) CreateTokenStorage(bundle *KimiAuthBundle) *KimiTokenStorage 
 		expired = time.Unix(bundle.TokenData.ExpiresAt, 0).UTC().Format(time.RFC3339)
 	}
 	return &KimiTokenStorage{
-		BaseTokenStorage: base.BaseTokenStorage{
-			AccessToken:  bundle.TokenData.AccessToken,
-			RefreshToken: bundle.TokenData.RefreshToken,
-			Type:         "kimi",
-		},
-		TokenType: bundle.TokenData.TokenType,
-		Scope:     bundle.TokenData.Scope,
-		DeviceID:  strings.TrimSpace(bundle.DeviceID),
-		Expired:   expired,
+		AccessToken:  bundle.TokenData.AccessToken,
+		RefreshToken: bundle.TokenData.RefreshToken,
+		TokenType:    bundle.TokenData.TokenType,
+		Scope:        bundle.TokenData.Scope,
+		DeviceID:     strings.TrimSpace(bundle.DeviceID),
+		Expired:      expired,
+		Type:         "kimi",
 	}
 }
 
@@ -100,23 +100,35 @@ type DeviceFlowClient struct {
 
 // NewDeviceFlowClient creates a new device flow client.
 func NewDeviceFlowClient(cfg *config.Config) *DeviceFlowClient {
-	return NewDeviceFlowClientWithDeviceID(cfg, "", nil)
+	return NewDeviceFlowClientWithDeviceID(cfg, "")
 }
 
 // NewDeviceFlowClientWithDeviceID creates a new device flow client with the specified device ID.
-func NewDeviceFlowClientWithDeviceID(cfg *config.Config, deviceID string, httpClient *http.Client) *DeviceFlowClient {
-	if httpClient == nil {
-		httpClient = &http.Client{Timeout: 30 * time.Second}
-		if cfg != nil {
-			httpClient = util.SetProxy(&cfg.SDKConfig, httpClient)
+func NewDeviceFlowClientWithDeviceID(cfg *config.Config, deviceID string) *DeviceFlowClient {
+	return NewDeviceFlowClientWithDeviceIDAndProxyURL(cfg, deviceID, "")
+}
+
+// NewDeviceFlowClientWithDeviceIDAndProxyURL creates a new device flow client with a proxy override.
+// proxyURL takes precedence over cfg.ProxyURL when non-empty.
+func NewDeviceFlowClientWithDeviceIDAndProxyURL(cfg *config.Config, deviceID string, proxyURL string) *DeviceFlowClient {
+	client := &http.Client{Timeout: 30 * time.Second}
+	effectiveProxyURL := strings.TrimSpace(proxyURL)
+	var sdkCfg config.SDKConfig
+	if cfg != nil {
+		sdkCfg = cfg.SDKConfig
+		if effectiveProxyURL == "" {
+			effectiveProxyURL = strings.TrimSpace(cfg.ProxyURL)
 		}
 	}
+	sdkCfg.ProxyURL = effectiveProxyURL
+	client = util.SetProxy(&sdkCfg, client)
+
 	resolvedDeviceID := strings.TrimSpace(deviceID)
 	if resolvedDeviceID == "" {
 		resolvedDeviceID = getOrCreateDeviceID()
 	}
 	return &DeviceFlowClient{
-		httpClient: httpClient,
+		httpClient: client,
 		cfg:        cfg,
 		deviceID:   resolvedDeviceID,
 	}
@@ -332,6 +344,28 @@ func (c *DeviceFlowClient) exchangeDeviceCode(ctx context.Context, deviceCode st
 
 // RefreshToken exchanges a refresh token for a new access token.
 func (c *DeviceFlowClient) RefreshToken(ctx context.Context, refreshToken string) (*KimiTokenData, error) {
+	if strings.TrimSpace(refreshToken) == "" {
+		return nil, fmt.Errorf("kimi: refresh token is required")
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	refreshToken = strings.TrimSpace(refreshToken)
+
+	result, err, _ := kimiRefreshGroup.Do(refreshToken, func() (interface{}, error) {
+		return c.refreshTokenSingleFlight(context.WithoutCancel(ctx), refreshToken)
+	})
+	if err != nil {
+		return nil, err
+	}
+	tokenData, ok := result.(*KimiTokenData)
+	if !ok || tokenData == nil {
+		return nil, fmt.Errorf("kimi: refresh token failed: invalid single-flight result")
+	}
+	return tokenData, nil
+}
+
+func (c *DeviceFlowClient) refreshTokenSingleFlight(ctx context.Context, refreshToken string) (*KimiTokenData, error) {
 	data := url.Values{}
 	data.Set("client_id", kimiClientID)
 	data.Set("grant_type", "refresh_token")

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/signature"
 	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/gemini/common"
 	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/util"
 	log "github.com/sirupsen/logrus"
@@ -61,12 +62,11 @@ func ConvertGeminiRequestToGemini(_ string, inputRawJSON []byte, _ bool) []byte 
 		valid := role == "user" || role == "model"
 		if role == "" || !valid {
 			var newRole string
-			switch prevRole {
-			case "":
+			if prevRole == "" {
 				newRole = "user"
-			case "user":
+			} else if prevRole == "user" {
 				newRole = "model"
-			default:
+			} else {
 				newRole = "user"
 			}
 			path := fmt.Sprintf("contents.%d.role", idx)
@@ -79,19 +79,7 @@ func ConvertGeminiRequestToGemini(_ string, inputRawJSON []byte, _ bool) []byte 
 		return true
 	})
 
-	gjson.GetBytes(out, "contents").ForEach(func(key, content gjson.Result) bool {
-		if content.Get("role").String() == "model" {
-			content.Get("parts").ForEach(func(partKey, part gjson.Result) bool {
-				if part.Get("functionCall").Exists() {
-					out, _ = sjson.SetBytes(out, fmt.Sprintf("contents.%d.parts.%d.thoughtSignature", key.Int(), partKey.Int()), "skip_thought_signature_validator")
-				} else if part.Get("thoughtSignature").Exists() {
-					out, _ = sjson.SetBytes(out, fmt.Sprintf("contents.%d.parts.%d.thoughtSignature", key.Int(), partKey.Int()), "skip_thought_signature_validator")
-				}
-				return true
-			})
-		}
-		return true
-	})
+	out = signature.SanitizeGeminiRequestThoughtSignatures(out, "contents")
 
 	if gjson.GetBytes(rawJSON, "generationConfig.responseSchema").Exists() {
 		strJson, _ := util.RenameKey(string(out), "generationConfig.responseSchema", "generationConfig.responseJsonSchema")
@@ -99,7 +87,7 @@ func ConvertGeminiRequestToGemini(_ string, inputRawJSON []byte, _ bool) []byte 
 	}
 
 	// Backfill empty functionResponse.name from the preceding functionCall.name.
-	// Amp may send function responses with empty names; the Gemini API rejects these.
+	// Some clients send function responses with empty names; the Gemini API rejects these.
 	out = backfillEmptyFunctionResponseNames(out)
 
 	out = common.AttachDefaultSafetySettings(out, "safetySettings")

@@ -168,10 +168,6 @@ func (s *ObjectTokenStore) Save(ctx context.Context, auth *cliproxyauth.Auth) (s
 	if path == "" {
 		return "", fmt.Errorf("object store: missing file path attribute for %s", auth.ID)
 	}
-	path, err = ensurePathWithinDir(path, s.authDir, "object store")
-	if err != nil {
-		return "", err
-	}
 
 	if auth.Disabled {
 		if _, statErr := os.Stat(path); errors.Is(statErr, fs.ErrNotExist) {
@@ -188,10 +184,18 @@ func (s *ObjectTokenStore) Save(ctx context.Context, auth *cliproxyauth.Auth) (s
 
 	switch {
 	case auth.Storage != nil:
+		if auth.Metadata == nil {
+			auth.Metadata = make(map[string]any)
+		}
+		auth.Metadata["disabled"] = auth.Disabled
+		if setter, ok := auth.Storage.(interface{ SetMetadata(map[string]any) }); ok {
+			setter.SetMetadata(auth.Metadata)
+		}
 		if err = auth.Storage.SaveTokenToFile(path); err != nil {
 			return "", err
 		}
 	case auth.Metadata != nil:
+		auth.Metadata["disabled"] = auth.Disabled
 		raw, errMarshal := json.Marshal(auth.Metadata)
 		if errMarshal != nil {
 			return "", fmt.Errorf("object store: marshal metadata: %w", errMarshal)
@@ -217,7 +221,8 @@ func (s *ObjectTokenStore) Save(ctx context.Context, auth *cliproxyauth.Auth) (s
 	if auth.Attributes == nil {
 		auth.Attributes = make(map[string]string)
 	}
-	auth.Attributes["path"] = path
+	auth.Attributes[cliproxyauth.AttributePath] = path
+	auth.Attributes[cliproxyauth.AttributeSourceBackend] = cliproxyauth.AuthSourceObjectStore
 
 	if strings.TrimSpace(auth.FileName) == "" {
 		auth.FileName = auth.ID
@@ -299,9 +304,9 @@ func (s *ObjectTokenStore) PersistAuthFiles(ctx context.Context, _ string, paths
 		if trimmed == "" {
 			continue
 		}
-		abs, err := s.ensureManagedAuthPath(trimmed)
-		if err != nil {
-			return err
+		abs := trimmed
+		if !filepath.IsAbs(abs) {
+			abs = filepath.Join(s.authDir, trimmed)
 		}
 		if err := s.uploadAuth(ctx, abs); err != nil {
 			return err
@@ -351,7 +356,7 @@ func (s *ObjectTokenStore) syncConfigFromBucket(ctx context.Context, example str
 		if errGet != nil {
 			return fmt.Errorf("object store: fetch config: %w", errGet)
 		}
-		defer func() { _ = object.Close() }()
+		defer object.Close()
 		data, errRead := io.ReadAll(object)
 		if errRead != nil {
 			return fmt.Errorf("object store: read config: %w", errRead)
@@ -516,7 +521,11 @@ func (s *ObjectTokenStore) resolveAuthPath(auth *cliproxyauth.Auth) (string, err
 	}
 	if auth.Attributes != nil {
 		if path := strings.TrimSpace(auth.Attributes["path"]); path != "" {
-			return s.ensureManagedAuthPath(path)
+			resolved := path
+			if !filepath.IsAbs(resolved) {
+				resolved = filepath.Join(s.authDir, resolved)
+			}
+			return ensurePathWithinDir(resolved, s.authDir, "object store")
 		}
 	}
 	fileName := strings.TrimSpace(auth.FileName)
@@ -529,7 +538,7 @@ func (s *ObjectTokenStore) resolveAuthPath(auth *cliproxyauth.Auth) (string, err
 	if !strings.HasSuffix(strings.ToLower(fileName), ".json") {
 		fileName += ".json"
 	}
-	return s.ensureManagedAuthPath(fileName)
+	return ensurePathWithinDir(filepath.Join(s.authDir, fileName), s.authDir, "object store")
 }
 
 func (s *ObjectTokenStore) resolveDeletePath(id string) (string, error) {
@@ -537,47 +546,21 @@ func (s *ObjectTokenStore) resolveDeletePath(id string) (string, error) {
 	if id == "" {
 		return "", fmt.Errorf("object store: id is empty")
 	}
+	// Absolute paths are honored as-is; callers must ensure they point inside the mirror.
+	if filepath.IsAbs(id) {
+		return id, nil
+	}
+	// Treat any non-absolute id (including nested like "team/foo") as relative to the mirror authDir.
+	// Normalize separators and guard against path traversal.
 	clean := filepath.Clean(filepath.FromSlash(id))
 	if clean == "." || clean == ".." || strings.HasPrefix(clean, ".."+string(os.PathSeparator)) {
 		return "", fmt.Errorf("object store: invalid auth identifier %s", id)
 	}
+	// Ensure .json suffix.
 	if !strings.HasSuffix(strings.ToLower(clean), ".json") {
 		clean += ".json"
 	}
-	return s.ensureManagedAuthPath(clean)
-}
-
-func (s *ObjectTokenStore) ensureManagedAuthPath(path string) (string, error) {
-	if s == nil {
-		return "", fmt.Errorf("object store: store not initialized")
-	}
-	authDir := strings.TrimSpace(s.authDir)
-	if authDir == "" {
-		return "", fmt.Errorf("object store: auth directory not configured")
-	}
-	absAuthDir, err := filepath.Abs(authDir)
-	if err != nil {
-		return "", fmt.Errorf("object store: resolve auth directory: %w", err)
-	}
-	candidate := strings.TrimSpace(path)
-	if candidate == "" {
-		return "", fmt.Errorf("object store: auth path is empty")
-	}
-	if !filepath.IsAbs(candidate) {
-		candidate = filepath.Join(absAuthDir, filepath.FromSlash(candidate))
-	}
-	absCandidate, err := filepath.Abs(candidate)
-	if err != nil {
-		return "", fmt.Errorf("object store: resolve auth path %q: %w", path, err)
-	}
-	rel, err := filepath.Rel(absAuthDir, absCandidate)
-	if err != nil {
-		return "", fmt.Errorf("object store: compute relative auth path: %w", err)
-	}
-	if rel == "." || rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
-		return "", fmt.Errorf("object store: path %q escapes auth directory", path)
-	}
-	return absCandidate, nil
+	return filepath.Join(s.authDir, clean), nil
 }
 
 func (s *ObjectTokenStore) readAuthFile(path, baseDir string) (*cliproxyauth.Auth, error) {
@@ -605,7 +588,10 @@ func (s *ObjectTokenStore) readAuthFile(path, baseDir string) (*cliproxyauth.Aut
 		rel = filepath.Base(path)
 	}
 	rel = normalizeAuthID(rel)
-	attr := map[string]string{"path": path}
+	attr := map[string]string{
+		cliproxyauth.AttributePath:          path,
+		cliproxyauth.AttributeSourceBackend: cliproxyauth.AuthSourceObjectStore,
+	}
 	if email := strings.TrimSpace(valueAsString(metadata["email"])); email != "" {
 		attr["email"] = email
 	}
@@ -621,6 +607,11 @@ func (s *ObjectTokenStore) readAuthFile(path, baseDir string) (*cliproxyauth.Aut
 		UpdatedAt:        info.ModTime(),
 		LastRefreshedAt:  time.Time{},
 		NextRefreshAfter: time.Time{},
+	}
+	cliproxyauth.ApplyCustomHeadersFromMetadata(auth)
+	if disabled, ok := metadata["disabled"].(bool); ok && disabled {
+		auth.Disabled = true
+		auth.Status = cliproxyauth.StatusDisabled
 	}
 	return auth, nil
 }

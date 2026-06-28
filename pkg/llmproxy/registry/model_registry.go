@@ -15,13 +15,13 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// redactClientID redacts a client ID for safe logging, avoiding circular imports with util.
-func redactClientID(id string) string {
-	if id == "" {
-		return ""
-	}
-	return "[REDACTED]"
-}
+// OpenAIImageModelType marks models that are callable through OpenAI-compatible image endpoints.
+const OpenAIImageModelType = "openai-image"
+
+const (
+	DefaultClaudeMaxInputTokens  = 200000
+	DefaultClaudeMaxOutputTokens = 64000
+)
 
 // ModelInfo represents information about an available model
 type ModelInfo struct {
@@ -49,18 +49,21 @@ type ModelInfo struct {
 	OutputTokenLimit int `json:"outputTokenLimit,omitempty"`
 	// SupportedGenerationMethods lists supported generation methods
 	SupportedGenerationMethods []string `json:"supportedGenerationMethods,omitempty"`
+	// SupportedEndpoints lists OpenAI-compatible endpoint paths supported by the model.
+	SupportedEndpoints []string `json:"supported_endpoints,omitempty"`
 	// ContextLength is the context window size
 	ContextLength int `json:"context_length,omitempty"`
 	// MaxCompletionTokens is the maximum completion tokens
 	MaxCompletionTokens int `json:"max_completion_tokens,omitempty"`
 	// SupportedParameters lists supported parameters
 	SupportedParameters []string `json:"supported_parameters,omitempty"`
-	// SupportedEndpoints lists supported API endpoints (e.g., "/chat/completions", "/responses").
-	SupportedEndpoints []string `json:"supported_endpoints,omitempty"`
 	// SupportedInputModalities lists supported input modalities (e.g., TEXT, IMAGE, VIDEO, AUDIO)
 	SupportedInputModalities []string `json:"supportedInputModalities,omitempty"`
 	// SupportedOutputModalities lists supported output modalities (e.g., TEXT, IMAGE)
 	SupportedOutputModalities []string `json:"supportedOutputModalities,omitempty"`
+	// SupportsWebSearch indicates this Antigravity model is listed by
+	// fetchAvailableModels.webSearchModelIds and can execute native googleSearch.
+	SupportsWebSearch bool `json:"supports_web_search,omitempty"`
 
 	// Thinking holds provider-specific reasoning/thinking budget capabilities.
 	// This is optional and currently used for Gemini thinking budget normalization.
@@ -446,7 +449,7 @@ func (r *ModelRegistry) RegisterClient(clientID, clientProvider string, models [
 	r.invalidateAvailableModelsCacheLocked()
 	r.triggerModelsRegistered(provider, clientID, models)
 	if len(added) == 0 && len(removed) == 0 && !providerChanged {
-		// Only metadata (e.g., display name) changed; skip separator when no log output.
+		// Only metadata (e.g., display name) changed; keep no-op re-registration quiet.
 		return
 	}
 
@@ -653,9 +656,10 @@ func (r *ModelRegistry) SetModelQuotaExceeded(clientID, modelID string) {
 	r.ensureAvailableModelsCacheLocked()
 
 	if registration, exists := r.models[modelID]; exists {
-		registration.QuotaExceededClients[clientID] = new(time.Now())
-		safeClient := redactClientID(clientID)
-		log.Debugf("Marked model %s as quota exceeded for client %s", modelID, safeClient)
+		now := time.Now()
+		registration.QuotaExceededClients[clientID] = &now
+		r.invalidateAvailableModelsCacheLocked()
+		log.Debugf("Marked model %s as quota exceeded for client %s", modelID, clientID)
 	}
 }
 
@@ -701,11 +705,10 @@ func (r *ModelRegistry) SuspendClientModel(clientID, modelID, reason string) {
 	registration.SuspendedClients[clientID] = reason
 	registration.LastUpdated = time.Now()
 	r.invalidateAvailableModelsCacheLocked()
-	safeClient := redactClientID(clientID)
 	if reason != "" {
-		log.Debugf("Suspended client %s for model %s: %s", safeClient, modelID, reason)
+		log.Debugf("Suspended client %s for model %s: %s", clientID, modelID, reason)
 	} else {
-		log.Debugf("Suspended client %s for model %s", safeClient, modelID)
+		log.Debugf("Suspended client %s for model %s", clientID, modelID)
 	}
 }
 
@@ -731,8 +734,7 @@ func (r *ModelRegistry) ResumeClientModel(clientID, modelID string) {
 	delete(registration.SuspendedClients, clientID)
 	registration.LastUpdated = time.Now()
 	r.invalidateAvailableModelsCacheLocked()
-	safeClient := redactClientID(clientID)
-	log.Debugf("Resumed client %s for model %s", safeClient, modelID)
+	log.Debugf("Resumed client %s for model %s", clientID, modelID)
 }
 
 // ClientSupportsModel reports whether the client registered support for modelID.
@@ -1152,40 +1154,33 @@ func (r *ModelRegistry) convertModelToMap(model *ModelInfo, handlerType string) 
 		if len(model.SupportedParameters) > 0 {
 			result["supported_parameters"] = append([]string(nil), model.SupportedParameters...)
 		}
-		if len(model.SupportedEndpoints) > 0 {
-			result["supported_endpoints"] = model.SupportedEndpoints
-		}
 		return result
 
-	case "claude", "kiro", "antigravity":
-		// Claude, Kiro, and Antigravity all use Claude-compatible format for Claude Code client
+	case "claude":
 		result := map[string]any{
 			"id":       model.ID,
 			"object":   "model",
 			"owned_by": model.OwnedBy,
 		}
 		if model.Created > 0 {
-			result["created_at"] = model.Created
+			result["created_at"] = time.Unix(model.Created, 0).UTC().Format(time.RFC3339)
 		}
-		if model.Type != "" {
-			result["type"] = "model"
-		}
+		result["type"] = "model"
 		if model.DisplayName != "" {
 			result["display_name"] = model.DisplayName
+		} else {
+			result["display_name"] = model.ID
 		}
-		// Add thinking support for Claude Code client
-		// Claude Code checks for "thinking" field (simple boolean) to enable tab toggle
-		// Also add "extended_thinking" for detailed budget info
-		if model.Thinking != nil {
-			result["thinking"] = true
-			result["extended_thinking"] = map[string]any{
-				"supported":       true,
-				"min":             model.Thinking.Min,
-				"max":             model.Thinking.Max,
-				"zero_allowed":    model.Thinking.ZeroAllowed,
-				"dynamic_allowed": model.Thinking.DynamicAllowed,
-			}
+		maxInput := model.ContextLength
+		if maxInput <= 0 {
+			maxInput = DefaultClaudeMaxInputTokens
 		}
+		maxOutput := model.MaxCompletionTokens
+		if maxOutput <= 0 {
+			maxOutput = DefaultClaudeMaxOutputTokens
+		}
+		result["max_input_tokens"] = maxInput
+		result["max_tokens"] = maxOutput
 		return result
 
 	case "gemini":

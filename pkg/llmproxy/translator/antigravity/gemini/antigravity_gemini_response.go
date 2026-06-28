@@ -1,21 +1,20 @@
-// Package gemini provides request translation functionality for Gemini to Gemini CLI API compatibility.
-// It handles parsing and transforming Gemini API requests into Gemini CLI API format,
+// Package gemini provides request translation functionality for Gemini to Antigravity API compatibility.
+// It handles parsing and transforming Gemini API requests into Antigravity API format,
 // extracting model information, system instructions, message contents, and tool declarations.
 // The package performs JSON data transformation to ensure compatibility
-// between Gemini API format and Gemini CLI API's expected format.
+// between Gemini API format and Antigravity API's expected format.
 package gemini
 
 import (
 	"bytes"
 	"context"
 
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/interfaces"
-	translatorcommon "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/translatorcommon"
+	translatorcommon "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/common"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
 )
 
-// ConvertAntigravityResponseToGemini parses and transforms a Gemini CLI API request into Gemini API format.
+// ConvertAntigravityResponseToGemini parses and transforms a Antigravity API request into Gemini API format.
 // It extracts the model name, system instruction, message contents, and tool declarations
 // from the raw JSON request and returns them in the format expected by the Gemini API.
 // The function performs the following transformations:
@@ -26,7 +25,7 @@ import (
 // Parameters:
 //   - ctx: The context for the request, used for cancellation and timeout handling
 //   - modelName: The name of the model to use for the request (unused in current implementation)
-//   - rawJSON: The raw JSON request data from the Gemini CLI API
+//   - rawJSON: The raw JSON request data from the Antigravity API
 //   - param: A pointer to a parameter object for the conversion (unused in current implementation)
 //
 // Returns:
@@ -36,7 +35,7 @@ func ConvertAntigravityResponseToGemini(ctx context.Context, _ string, originalR
 		rawJSON = bytes.TrimSpace(rawJSON[5:])
 	}
 
-	if alt, ok := ctx.Value(interfaces.ContextKeyAlt).(string); ok {
+	if alt, ok := ctx.Value("alt").(string); ok {
 		var chunk []byte
 		if alt == "" {
 			responseResult := gjson.GetBytes(rawJSON, "response")
@@ -63,14 +62,14 @@ func ConvertAntigravityResponseToGemini(ctx context.Context, _ string, originalR
 	return [][]byte{}
 }
 
-// ConvertAntigravityResponseToGeminiNonStream converts a non-streaming Gemini CLI request to a non-streaming Gemini response.
-// This function processes the complete Gemini CLI request and transforms it into a single Gemini-compatible
+// ConvertAntigravityResponseToGeminiNonStream converts a non-streaming Antigravity request to a non-streaming Gemini response.
+// This function processes the complete Antigravity request and transforms it into a single Gemini-compatible
 // JSON response. It extracts the response data from the request and returns it in the expected format.
 //
 // Parameters:
 //   - ctx: The context for the request, used for cancellation and timeout handling
 //   - modelName: The name of the model being used for the response (unused in current implementation)
-//   - rawJSON: The raw JSON request data from the Gemini CLI API
+//   - rawJSON: The raw JSON request data from the Antigravity API
 //   - param: A pointer to a parameter object for the conversion (unused in current implementation)
 //
 // Returns:
@@ -94,16 +93,8 @@ func GeminiTokenCount(ctx context.Context, count int64) []byte {
 // When returning standard Gemini API format, we must restore the original name.
 func restoreUsageMetadata(chunk []byte) []byte {
 	if cpaUsage := gjson.GetBytes(chunk, "cpaUsageMetadata"); cpaUsage.Exists() {
-		if !gjson.GetBytes(chunk, "usageMetadata").Exists() {
-			chunk, _ = sjson.SetRawBytes(chunk, "usageMetadata", []byte(cpaUsage.Raw))
-		}
+		chunk, _ = sjson.SetRawBytes(chunk, "usageMetadata", []byte(cpaUsage.Raw))
 		chunk, _ = sjson.DeleteBytes(chunk, "cpaUsageMetadata")
-	}
-	if cpaUsage := gjson.GetBytes(chunk, "response.cpaUsageMetadata"); cpaUsage.Exists() {
-		if !gjson.GetBytes(chunk, "response.usageMetadata").Exists() {
-			chunk, _ = sjson.SetRawBytes(chunk, "response.usageMetadata", []byte(cpaUsage.Raw))
-		}
-		chunk, _ = sjson.DeleteBytes(chunk, "response.cpaUsageMetadata")
 	}
 	return chunk
 }

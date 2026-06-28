@@ -206,6 +206,7 @@ func installManifest(ctx context.Context, client sdkpluginstore.Client, manifest
 		GOOS:         platform.GOOS,
 		GOARCH:       platform.GOARCH,
 		PluginLoaded: pluginIsBusy,
+		Versioned:    true,
 	})
 	if errInstall != nil {
 		return sdkpluginstore.InstallResult{}, fmt.Errorf("home plugins: install %s: %w", id, errInstall)

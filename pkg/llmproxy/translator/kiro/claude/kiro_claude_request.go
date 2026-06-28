@@ -869,6 +869,15 @@ func BuildUserMessageStruct(msg gjson.Result, modelID, origin string) (KiroUserI
 				status := "success"
 				if isError {
 					status = "error"
+					// SOFT_LIMIT_REACHED is a soft signal rather than a hard error;
+					// Kiro expects these tool results to be reported as success so the
+					// conversation can continue.
+					for _, tc := range textContents {
+						if strings.Contains(tc.Text, "SOFT_LIMIT_REACHED") {
+							status = "success"
+							break
+						}
+					}
 				}
 
 				toolResults = append(toolResults, KiroToolResult{

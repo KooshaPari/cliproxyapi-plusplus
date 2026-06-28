@@ -12,7 +12,7 @@ import (
 	"strconv"
 	"strings"
 
-	translatorcommon "github.com/kooshapari/CLIProxyAPI/v7/internal/translator/common"
+	translatorcommon "github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/translator/common"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
 )
@@ -25,8 +25,8 @@ type ConvertOpenAIResponseToGeminiParams struct {
 	ContentAccumulator strings.Builder
 	// Track if this is the first chunk
 	IsFirstChunk bool
-	// Accumulated annotations from OpenAI response
-	Annotations []map[string]interface{}
+	// Accumulated url_citation annotations (Gemini citation objects, raw JSON array)
+	Citations []byte
 }
 
 // ToolCallAccumulator holds the state for accumulating tool call data
@@ -149,20 +149,10 @@ func ConvertOpenAIResponseToGemini(_ context.Context, _ string, originalRequestR
 				chunkOutputs = append(chunkOutputs, contentTemplate)
 			}
 
-			// Handle annotations (web search citations)
+			// Handle url_citation annotations
 			if annotations := delta.Get("annotations"); annotations.Exists() && annotations.IsArray() {
-				annotations.ForEach(func(_, ann gjson.Result) bool {
-					entry := map[string]interface{}{
-						"type":        ann.Get("type").String(),
-						"url":         ann.Get("url").String(),
-						"title":       ann.Get("title").String(),
-						"start_index": ann.Get("start_index").Int(),
-						"end_index":   ann.Get("end_index").Int(),
-					}
-					(*param).(*ConvertOpenAIResponseToGeminiParams).Annotations = append(
-						(*param).(*ConvertOpenAIResponseToGeminiParams).Annotations, entry)
-					return true
-				})
+				p := (*param).(*ConvertOpenAIResponseToGeminiParams)
+				p.Citations = appendOpenAIAnnotationsAsGeminiCitations(p.Citations, annotations)
 			}
 
 			if len(chunkOutputs) > 0 {
@@ -228,22 +218,9 @@ func ConvertOpenAIResponseToGemini(_ context.Context, _ string, originalRequestR
 				geminiFinishReason := mapOpenAIFinishReasonToGemini(finishReason.String())
 				template, _ = sjson.SetBytes(template, "candidates.0.finishReason", geminiFinishReason)
 
-				// Add groundingMetadata if annotations were accumulated
-				if anns := (*param).(*ConvertOpenAIResponseToGeminiParams).Annotations; len(anns) > 0 {
-					citations := make([]interface{}, len(anns))
-					for i, a := range anns {
-						citations[i] = a
-					}
-					template, _ = sjson.SetBytes(template, "candidates.0.groundingMetadata.citations", citations)
-				}
-
-				// Add groundingMetadata if annotations were accumulated
-				if anns := (*param).(*ConvertOpenAIResponseToGeminiParams).Annotations; len(anns) > 0 {
-					citations := make([]interface{}, len(anns))
-					for i, a := range anns {
-						citations[i] = a
-					}
-					template, _ = sjson.SetBytes(template, "candidates.0.groundingMetadata.citations", citations)
+				// Attach accumulated citations as groundingMetadata
+				if p := (*param).(*ConvertOpenAIResponseToGeminiParams); len(p.Citations) > 0 {
+					template, _ = sjson.SetRawBytes(template, "candidates.0.groundingMetadata.citations", p.Citations)
 				}
 
 				// If we have accumulated tool calls, output them now
@@ -285,6 +262,37 @@ func ConvertOpenAIResponseToGemini(_ context.Context, _ string, originalRequestR
 }
 
 // mapOpenAIFinishReasonToGemini maps OpenAI finish reasons to Gemini finish reasons
+// appendOpenAIAnnotationsAsGeminiCitations converts OpenAI url_citation
+// annotations into Gemini groundingMetadata citation objects, appending them to
+// an existing raw JSON array (pass nil to start a new array).
+func appendOpenAIAnnotationsAsGeminiCitations(existing []byte, annotations gjson.Result) []byte {
+	out := existing
+	if len(out) == 0 {
+		out = []byte(`[]`)
+	}
+	annotations.ForEach(func(_, ann gjson.Result) bool {
+		if strings.TrimSpace(ann.Get("type").String()) != "url_citation" {
+			return true
+		}
+		citation := []byte(`{}`)
+		if url := ann.Get("url"); url.Exists() {
+			citation, _ = sjson.SetBytes(citation, "url", url.String())
+		}
+		if title := ann.Get("title"); title.Exists() {
+			citation, _ = sjson.SetBytes(citation, "title", title.String())
+		}
+		if startIndex := ann.Get("start_index"); startIndex.Exists() {
+			citation, _ = sjson.SetBytes(citation, "startIndex", startIndex.Int())
+		}
+		if endIndex := ann.Get("end_index"); endIndex.Exists() {
+			citation, _ = sjson.SetBytes(citation, "endIndex", endIndex.Int())
+		}
+		out, _ = sjson.SetRawBytes(out, "-1", citation)
+		return true
+	})
+	return out
+}
+
 func mapOpenAIFinishReasonToGemini(openAIReason string) string {
 	switch openAIReason {
 	case "stop":
@@ -496,12 +504,11 @@ func captureBracketed(runes []rune, i int) (string, int) {
 	}
 	startRune := runes[i]
 	var endRune rune
-	switch startRune {
-	case '{':
+	if startRune == '{' {
 		endRune = '}'
-	case '[':
+	} else if startRune == '[' {
 		endRune = ']'
-	default:
+	} else {
 		return "", -1
 	}
 	depth := 0
@@ -529,10 +536,9 @@ func captureBracketed(runes []rune, i int) (string, int) {
 			j++
 			continue
 		}
-		switch r {
-		case startRune:
+		if r == startRune {
 			depth++
-		case endRune:
+		} else if r == endRune {
 			depth--
 			if depth == 0 {
 				return string(runes[i : j+1]), j + 1
@@ -633,46 +639,17 @@ func ConvertOpenAIResponseToGeminiNonStream(_ context.Context, _ string, origina
 				})
 			}
 
+			// Handle url_citation annotations as groundingMetadata
+			if annotations := message.Get("annotations"); annotations.Exists() && annotations.IsArray() {
+				if citations := appendOpenAIAnnotationsAsGeminiCitations(nil, annotations); len(citations) > 0 {
+					out, _ = sjson.SetRawBytes(out, "candidates.0.groundingMetadata.citations", citations)
+				}
+			}
+
 			// Handle finish reason
 			if finishReason := choice.Get("finish_reason"); finishReason.Exists() {
 				geminiFinishReason := mapOpenAIFinishReasonToGemini(finishReason.String())
 				out, _ = sjson.SetBytes(out, "candidates.0.finishReason", geminiFinishReason)
-			}
-
-			// Handle annotations as groundingMetadata
-			if annotations := message.Get("annotations"); annotations.Exists() && annotations.IsArray() {
-				var citations []interface{}
-				annotations.ForEach(func(_, ann gjson.Result) bool {
-					citations = append(citations, map[string]interface{}{
-						"type":        ann.Get("type").String(),
-						"url":         ann.Get("url").String(),
-						"title":       ann.Get("title").String(),
-						"start_index": ann.Get("start_index").Int(),
-						"end_index":   ann.Get("end_index").Int(),
-					})
-					return true
-				})
-				if len(citations) > 0 {
-					out, _ = sjson.SetBytes(out, "candidates.0.groundingMetadata.citations", citations)
-				}
-			}
-
-			// Handle annotations as groundingMetadata
-			if annotations := message.Get("annotations"); annotations.Exists() && annotations.IsArray() {
-				var citations []interface{}
-				annotations.ForEach(func(_, ann gjson.Result) bool {
-					citations = append(citations, map[string]interface{}{
-						"type":        ann.Get("type").String(),
-						"url":         ann.Get("url").String(),
-						"title":       ann.Get("title").String(),
-						"start_index": ann.Get("start_index").Int(),
-						"end_index":   ann.Get("end_index").Int(),
-					})
-					return true
-				})
-				if len(citations) > 0 {
-					out, _ = sjson.SetBytes(out, "candidates.0.groundingMetadata.citations", citations)
-				}
 			}
 
 			// Set index

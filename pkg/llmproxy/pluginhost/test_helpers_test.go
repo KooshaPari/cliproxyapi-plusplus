@@ -359,6 +359,34 @@ func writeVersionedPluginFile(t *testing.T, root, id, version string) string {
 	return path
 }
 
+// markPluginIdentityCurrent registers a path-less, version-less record for id
+// in the host's active snapshot so that adapter-level identity checks
+// (pluginIdentityCurrent) treat the plugin as live. Production adapters are
+// always constructed from a current snapshot record; unit tests that hand-build
+// adapters use this helper to establish the same invariant. Existing snapshot
+// records are preserved so multiple identities can coexist.
+func markPluginIdentityCurrent(host *Host, ids ...string) {
+	snap, _ := host.snapshot.Load().(*Snapshot)
+	records := make([]capabilityRecord, 0)
+	if snap != nil {
+		records = append(records, snap.records...)
+	}
+	for _, id := range ids {
+		found := false
+		for _, record := range records {
+			if record.id == id && record.path == "" {
+				found = true
+				break
+			}
+		}
+		if !found {
+			records = append(records, capabilityRecord{id: id})
+		}
+	}
+	sortRecords(records)
+	host.snapshot.Store(&Snapshot{enabled: true, records: records})
+}
+
 func enabledPluginConfigWithStoreVersion(t *testing.T, version string) config.PluginInstanceConfig {
 	t.Helper()
 	var node yaml.Node

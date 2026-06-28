@@ -1,6 +1,6 @@
 // Package antigravity implements thinking configuration for Antigravity API format.
 //
-// Antigravity uses request.generationConfig.thinkingConfig.* path (same as gemini-cli)
+// Antigravity uses request.generationConfig.thinkingConfig.* path.
 // but requires additional normalization for Claude models:
 //   - Ensure thinking budget < max_tokens
 //   - Remove thinkingConfig if budget < minimum allowed
@@ -102,6 +102,10 @@ func (a *Applier) applyLevelFormat(body []byte, config thinking.ThinkingConfig) 
 	result, _ = sjson.DeleteBytes(result, "request.generationConfig.thinkingConfig.include_thoughts")
 
 	if config.Mode == thinking.ModeNone {
+		if config.Budget == 0 && config.Level == "" {
+			result, _ = sjson.DeleteBytes(result, "request.generationConfig.thinkingConfig")
+			return result, nil
+		}
 		result, _ = sjson.SetBytes(result, "request.generationConfig.thinkingConfig.includeThoughts", false)
 		if config.Level != "" {
 			result, _ = sjson.SetBytes(result, "request.generationConfig.thinkingConfig.thinkingLevel", string(config.Level))
@@ -139,22 +143,29 @@ func (a *Applier) applyBudgetFormat(body []byte, config thinking.ThinkingConfig,
 
 	budget := config.Budget
 
+	// For ModeNone the user explicitly wants thinking output disabled. Claude models
+	// require thinkingConfig to remain present (with a budget at or above the model
+	// minimum and includeThoughts=false) to honor that intent, so clamp the budget up
+	// to the minimum instead of dropping the config. Other modes fall through to the
+	// shared normalization below, which may remove an under-minimum config.
+	if config.Mode == thinking.ModeNone {
+		if isClaude && modelInfo != nil && modelInfo.Thinking != nil {
+			if minBudget := modelInfo.Thinking.Min; minBudget > 0 && budget < minBudget {
+				budget = minBudget
+			}
+		}
+		result, _ = sjson.SetBytes(result, "request.generationConfig.thinkingConfig.thinkingBudget", budget)
+		result, _ = sjson.SetBytes(result, "request.generationConfig.thinkingConfig.includeThoughts", false)
+		return result, nil
+	}
+
 	// Apply Claude-specific constraints first to get the final budget value
 	if isClaude && modelInfo != nil {
-		budget, result = a.normalizeClaudeBudget(budget, result, modelInfo, config.Mode)
+		budget, result = a.normalizeClaudeBudget(budget, result, modelInfo)
 		// Check if budget was removed entirely
 		if budget == -2 {
 			return result, nil
 		}
-	}
-
-	// For ModeNone, always set includeThoughts to false regardless of user setting.
-	// This ensures that when user requests budget=0 (disable thinking output),
-	// the includeThoughts is correctly set to false even if budget is clamped to min.
-	if config.Mode == thinking.ModeNone {
-		result, _ = sjson.SetBytes(result, "request.generationConfig.thinkingConfig.thinkingBudget", budget)
-		result, _ = sjson.SetBytes(result, "request.generationConfig.thinkingConfig.includeThoughts", false)
-		return result, nil
 	}
 
 	// Determine includeThoughts: respect user's explicit setting from original body if provided
@@ -192,7 +203,7 @@ func (a *Applier) applyBudgetFormat(body []byte, config thinking.ThinkingConfig,
 //
 // Returns the normalized budget and updated payload.
 // Returns budget=-2 as a sentinel indicating thinkingConfig was removed entirely.
-func (a *Applier) normalizeClaudeBudget(budget int, payload []byte, modelInfo *registry.ModelInfo, mode thinking.ThinkingMode) (int, []byte) {
+func (a *Applier) normalizeClaudeBudget(budget int, payload []byte, modelInfo *registry.ModelInfo) (int, []byte) {
 	if modelInfo == nil {
 		return budget, payload
 	}
@@ -209,15 +220,9 @@ func (a *Applier) normalizeClaudeBudget(budget int, payload []byte, modelInfo *r
 		minBudget = modelInfo.Thinking.Min
 	}
 	if minBudget > 0 && budget >= 0 && budget < minBudget {
-		if mode == thinking.ModeNone {
-			// Keep thinking config present for ModeNone and clamp budget,
-			// so includeThoughts=false is preserved explicitly.
-			budget = minBudget
-		} else {
-			// Budget is below minimum, remove thinking config entirely
-			payload, _ = sjson.DeleteBytes(payload, "request.generationConfig.thinkingConfig")
-			return -2, payload
-		}
+		// Budget is below minimum, remove thinking config entirely
+		payload, _ = sjson.DeleteBytes(payload, "request.generationConfig.thinkingConfig")
+		return -2, payload
 	}
 
 	// Set default max tokens if needed

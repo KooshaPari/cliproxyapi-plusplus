@@ -17,8 +17,6 @@ import (
 
 var functionNameSanitizer = regexp.MustCompile(`[^a-zA-Z0-9_.:-]`)
 
-const DefaultAuthDir = "~/.cli-proxy-api"
-
 // SanitizeFunctionName ensures a function name matches the requirements for Gemini/Vertex AI.
 // It replaces invalid characters with underscores, ensures it starts with a letter or underscore,
 // and truncates it to 64 characters if necessary.
@@ -35,7 +33,7 @@ func SanitizeFunctionName(name string) string {
 	// Re-reading requirements: Must start with a letter or an underscore.
 	if len(sanitized) > 0 {
 		first := sanitized[0]
-		if (first < 'a' || first > 'z') && (first < 'A' || first > 'Z') && first != '_' {
+		if !((first >= 'a' && first <= 'z') || (first >= 'A' && first <= 'Z') || first == '_') {
 			// If it starts with an allowed character but not allowed at the beginning (digit, dot, colon, dash),
 			// we must prepend an underscore.
 
@@ -75,6 +73,8 @@ func SetLogLevel(cfg *config.Config) {
 
 // ResolveAuthDir normalizes the auth directory path for consistent reuse throughout the app.
 // It expands a leading tilde (~) to the user's home directory and returns a cleaned path.
+// An empty authDir is returned unchanged so callers can decide whether to apply a default
+// (see ResolveAuthDirOrDefault).
 func ResolveAuthDir(authDir string) (string, error) {
 	if authDir == "" {
 		return "", nil
@@ -93,16 +93,6 @@ func ResolveAuthDir(authDir string) (string, error) {
 		return filepath.Clean(filepath.Join(home, filepath.FromSlash(normalized))), nil
 	}
 	return filepath.Clean(authDir), nil
-}
-
-// ResolveAuthDirOrDefault resolves the configured auth directory, falling back
-// to the project default when empty.
-func ResolveAuthDirOrDefault(authDir string) (string, error) {
-	trimmed := strings.TrimSpace(authDir)
-	if trimmed == "" {
-		trimmed = DefaultAuthDir
-	}
-	return ResolveAuthDir(trimmed)
 }
 
 // CountAuthFiles returns the number of auth records available through the provided Store.
@@ -136,11 +126,4 @@ func WritablePath() string {
 		}
 	}
 	return ""
-}
-
-// IsClaudeThinkingModel checks if the model is a Claude thinking model
-// that requires the interleaved-thinking beta header.
-func IsClaudeThinkingModel(model string) bool {
-	lower := strings.ToLower(model)
-	return strings.Contains(lower, "claude") && strings.Contains(lower, "thinking")
 }

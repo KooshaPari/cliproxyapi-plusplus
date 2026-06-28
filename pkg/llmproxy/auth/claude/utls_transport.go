@@ -7,7 +7,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/config"
+	"github.com/kooshapari/CLIProxyAPI/v7/sdk/config"
 	"github.com/kooshapari/CLIProxyAPI/v7/sdk/proxyutil"
 	tls "github.com/refraction-networking/utls"
 	log "github.com/sirupsen/logrus"
@@ -34,7 +34,7 @@ func newUtlsRoundTripper(cfg *config.SDKConfig) *utlsRoundTripper {
 	if cfg != nil {
 		proxyDialer, mode, errBuild := proxyutil.BuildDialer(cfg.ProxyURL)
 		if errBuild != nil {
-			log.Errorf("failed to configure proxy dialer for %q: %v", cfg.ProxyURL, errBuild)
+			log.Errorf("failed to configure proxy dialer for %q: %v", proxyutil.Redact(cfg.ProxyURL), errBuild)
 		} else if mode != proxyutil.ModeInherit && proxyDialer != nil {
 			dialer = proxyDialer
 		}
@@ -104,21 +104,18 @@ func (t *utlsRoundTripper) createConnection(host, addr string) (*http2.ClientCon
 		return nil, err
 	}
 
-	tlsConfig := &tls.Config{
-		ServerName: host,
-		MinVersion: tls.VersionTLS13,
-	}
+	tlsConfig := &tls.Config{ServerName: host}
 	tlsConn := tls.UClient(conn, tlsConfig, tls.HelloChrome_Auto)
 
 	if err := tlsConn.Handshake(); err != nil {
-		_ = conn.Close()
+		conn.Close()
 		return nil, err
 	}
 
 	tr := &http2.Transport{}
 	h2Conn, err := tr.NewClientConn(tlsConn)
 	if err != nil {
-		_ = tlsConn.Close()
+		tlsConn.Close()
 		return nil, err
 	}
 

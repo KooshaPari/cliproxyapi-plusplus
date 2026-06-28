@@ -20,13 +20,19 @@ import (
 var aiAPIPrefixes = []string{
 	"/v1/chat/completions",
 	"/v1/completions",
+	"/v1/images",
+	"/v1/videos",
 	"/v1/messages",
 	"/v1/responses",
+	"/openai/v1/videos",
 	"/v1beta/models/",
-	"/api/provider/",
+	"/backend-api/codex/",
 }
 
-const skipGinLogKey = "__gin_skip_request_logging__"
+const (
+	skipGinLogKey  = "__gin_skip_request_logging__"
+	creditsUsedKey = "__antigravity_credits_used__"
+)
 
 // GinLogrusLogger returns a Gin middleware handler that logs HTTP requests and responses
 // using logrus. It captures request details including method, path, status code, latency,
@@ -78,6 +84,9 @@ func GinLogrusLogger() gin.HandlerFunc {
 			requestID = "--------"
 		}
 		logLine := fmt.Sprintf("%3d | %13v | %15s | %-7s \"%s\"", statusCode, latency, clientIP, method, path)
+		if creditsUsed(c) {
+			logLine += " [credits]"
+		}
 		if errorMessage != "" {
 			logLine = logLine + " | " + errorMessage
 		}
@@ -112,31 +121,28 @@ func isAIAPIPath(path string) bool {
 // Returns:
 //   - gin.HandlerFunc: A middleware handler for panic recovery
 func GinLogrusRecovery() gin.HandlerFunc {
-	return gin.CustomRecovery(ginLogrusRecoveryFunc)
-}
+	return func(c *gin.Context) {
+		defer func() {
+			recovered := recover()
+			if recovered == nil {
+				return
+			}
+			// Re-panic ErrAbortHandler so net/http aborts the connection without noisy
+			// stack logs. gin.CustomRecovery would swallow this, so recovery is handled
+			// manually here to preserve the sentinel propagation.
+			if err, ok := recovered.(error); ok && errors.Is(err, http.ErrAbortHandler) {
+				panic(http.ErrAbortHandler)
+			}
 
-// ginLogrusRecoveryFunc is the recovery callback used by GinLogrusRecovery.
-// It re-panics http.ErrAbortHandler so net/http can abort the connection cleanly,
-// and logs + returns 500 for all other panics.
-func ginLogrusRecoveryFunc(c *gin.Context, recovered interface{}) {
-	if err, ok := recovered.(error); ok && errors.Is(err, http.ErrAbortHandler) {
-		// Let net/http handle ErrAbortHandler so the connection is aborted without noisy stack logs.
-		panic(http.ErrAbortHandler)
-	}
+			log.WithFields(log.Fields{
+				"panic": recovered,
+				"stack": string(debug.Stack()),
+				"path":  c.Request.URL.Path,
+			}).Error("recovered from panic")
 
-	if c != nil && c.Request != nil {
-		log.WithFields(log.Fields{
-			"panic": recovered,
-			"stack": string(debug.Stack()),
-			"path":  c.Request.URL.Path,
-		}).Error("recovered from panic")
-
-		c.AbortWithStatus(http.StatusInternalServerError)
-	} else {
-		log.WithFields(log.Fields{
-			"panic": recovered,
-			"stack": string(debug.Stack()),
-		}).Error("recovered from panic")
+			c.AbortWithStatus(http.StatusInternalServerError)
+		}()
+		c.Next()
 	}
 }
 
@@ -154,6 +160,18 @@ func shouldSkipGinRequestLogging(c *gin.Context) bool {
 		return false
 	}
 	val, exists := c.Get(skipGinLogKey)
+	if !exists {
+		return false
+	}
+	flag, ok := val.(bool)
+	return ok && flag
+}
+
+func creditsUsed(c *gin.Context) bool {
+	if c == nil {
+		return false
+	}
+	val, exists := c.Get(creditsUsedKey)
 	if !exists {
 		return false
 	}

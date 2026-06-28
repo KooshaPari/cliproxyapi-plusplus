@@ -15,15 +15,19 @@ import (
 )
 
 func (h *Handler) apiCallTransport(auth *coreauth.Auth) http.RoundTripper {
-	hasAuthProxy := false
 	var proxyCandidates []string
 	if auth != nil {
 		if proxyStr := strings.TrimSpace(auth.ProxyURL); proxyStr != "" {
+			if strings.EqualFold(proxyStr, "direct") {
+				return directAPICallTransport()
+			}
 			proxyCandidates = append(proxyCandidates, proxyStr)
-			hasAuthProxy = true
 		}
 	}
 	if h != nil && h.cfg != nil {
+		if proxyStr := strings.TrimSpace(h.apiKeyProxyURL(auth)); proxyStr != "" {
+			proxyCandidates = append(proxyCandidates, proxyStr)
+		}
 		if proxyStr := strings.TrimSpace(h.cfg.ProxyURL); proxyStr != "" {
 			proxyCandidates = append(proxyCandidates, proxyStr)
 		}
@@ -34,12 +38,13 @@ func (h *Handler) apiCallTransport(auth *coreauth.Auth) http.RoundTripper {
 		if transport != nil {
 			return transport
 		}
-		if hasAuthProxy {
-			return &transportFailureRoundTripper{err: fmt.Errorf("authentication proxy misconfigured: %v", errBuild)}
-		}
-		log.Debugf("failed to setup API call proxy from URL: %s, trying next candidate", proxyStr)
+		log.Debugf("failed to setup API call proxy from URL %q: %v; trying next candidate", proxyStr, errBuild)
 	}
 
+	return directAPICallTransport()
+}
+
+func directAPICallTransport() http.RoundTripper {
 	transport, ok := http.DefaultTransport.(*http.Transport)
 	if !ok || transport == nil {
 		return &http.Transport{Proxy: nil}
@@ -48,6 +53,51 @@ func (h *Handler) apiCallTransport(auth *coreauth.Auth) http.RoundTripper {
 	clone.Proxy = nil
 	clone.DialContext = guardedAPICallDialContext
 	return clone
+}
+
+func (h *Handler) apiKeyProxyURL(auth *coreauth.Auth) string {
+	if h == nil || h.cfg == nil || auth == nil {
+		return ""
+	}
+	apiKey := strings.TrimSpace(auth.Attributes["api_key"])
+	if apiKey == "" {
+		return ""
+	}
+	switch strings.ToLower(strings.TrimSpace(auth.Provider)) {
+	case "gemini":
+		for _, entry := range h.cfg.GeminiKey {
+			if strings.TrimSpace(entry.APIKey) == apiKey {
+				return strings.TrimSpace(entry.ProxyURL)
+			}
+		}
+	case "claude", "anthropic":
+		for _, entry := range h.cfg.ClaudeKey {
+			if strings.TrimSpace(entry.APIKey) == apiKey {
+				return strings.TrimSpace(entry.ProxyURL)
+			}
+		}
+	case "codex", "openai":
+		for _, entry := range h.cfg.CodexKey {
+			if strings.TrimSpace(entry.APIKey) == apiKey {
+				return strings.TrimSpace(entry.ProxyURL)
+			}
+		}
+	}
+	compatName := strings.TrimSpace(auth.Attributes["compat_name"])
+	if compatName == "" {
+		compatName = strings.TrimSpace(auth.Attributes["provider_key"])
+	}
+	for _, compat := range h.cfg.OpenAICompatibility {
+		if compatName != "" && !strings.EqualFold(strings.TrimSpace(compat.Name), compatName) {
+			continue
+		}
+		for _, entry := range compat.APIKeyEntries {
+			if strings.TrimSpace(entry.APIKey) == apiKey {
+				return strings.TrimSpace(entry.ProxyURL)
+			}
+		}
+	}
+	return ""
 }
 
 func (h *Handler) apiCallHTTPClient(auth *coreauth.Auth) *http.Client {

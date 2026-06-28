@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/url"
 	"reflect"
+	"sort"
 	"strings"
 
 	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/config"
@@ -39,8 +40,26 @@ func BuildConfigChangeDetails(oldCfg, newCfg *config.Config) []string {
 	if oldCfg.UsageStatisticsEnabled != newCfg.UsageStatisticsEnabled {
 		changes = append(changes, fmt.Sprintf("usage-statistics-enabled: %t -> %t", oldCfg.UsageStatisticsEnabled, newCfg.UsageStatisticsEnabled))
 	}
+	if oldCfg.RedisUsageQueueRetentionSeconds != newCfg.RedisUsageQueueRetentionSeconds {
+		changes = append(changes, fmt.Sprintf("redis-usage-queue-retention-seconds: %d -> %d", oldCfg.RedisUsageQueueRetentionSeconds, newCfg.RedisUsageQueueRetentionSeconds))
+	}
 	if oldCfg.DisableCooling != newCfg.DisableCooling {
 		changes = append(changes, fmt.Sprintf("disable-cooling: %t -> %t", oldCfg.DisableCooling, newCfg.DisableCooling))
+	}
+	if oldCfg.SaveCooldownStatus != newCfg.SaveCooldownStatus {
+		changes = append(changes, fmt.Sprintf("save-cooldown-status: %t -> %t", oldCfg.SaveCooldownStatus, newCfg.SaveCooldownStatus))
+	}
+	if oldCfg.TransientErrorCooldownSeconds != newCfg.TransientErrorCooldownSeconds {
+		changes = append(changes, fmt.Sprintf("transient-error-cooldown-seconds: %d -> %d", oldCfg.TransientErrorCooldownSeconds, newCfg.TransientErrorCooldownSeconds))
+	}
+	if oldCfg.DisableClaudeCloakMode != newCfg.DisableClaudeCloakMode {
+		changes = append(changes, fmt.Sprintf("disable-claude-cloak-mode: %t -> %t", oldCfg.DisableClaudeCloakMode, newCfg.DisableClaudeCloakMode))
+	}
+	if oldCfg.DisableImageGeneration != newCfg.DisableImageGeneration {
+		changes = append(changes, fmt.Sprintf("disable-image-generation: %v -> %v", oldCfg.DisableImageGeneration, newCfg.DisableImageGeneration))
+	}
+	if strings.TrimSpace(oldCfg.GPTImage2BaseModel) != strings.TrimSpace(newCfg.GPTImage2BaseModel) {
+		changes = append(changes, fmt.Sprintf("gpt-image-2-base-model: %s -> %s", strings.TrimSpace(oldCfg.GPTImage2BaseModel), strings.TrimSpace(newCfg.GPTImage2BaseModel)))
 	}
 	if oldCfg.RequestLog != newCfg.RequestLog {
 		changes = append(changes, fmt.Sprintf("request-log: %t -> %t", oldCfg.RequestLog, newCfg.RequestLog))
@@ -77,9 +96,19 @@ func BuildConfigChangeDetails(oldCfg, newCfg *config.Config) []string {
 	if oldCfg.QuotaExceeded.SwitchPreviewModel != newCfg.QuotaExceeded.SwitchPreviewModel {
 		changes = append(changes, fmt.Sprintf("quota-exceeded.switch-preview-model: %t -> %t", oldCfg.QuotaExceeded.SwitchPreviewModel, newCfg.QuotaExceeded.SwitchPreviewModel))
 	}
+	if oldCfg.QuotaExceeded.AntigravityCredits != newCfg.QuotaExceeded.AntigravityCredits {
+		changes = append(changes, fmt.Sprintf("quota-exceeded.antigravity-credits: %t -> %t", oldCfg.QuotaExceeded.AntigravityCredits, newCfg.QuotaExceeded.AntigravityCredits))
+	}
+
+	if oldCfg.Codex.IdentityConfuse != newCfg.Codex.IdentityConfuse {
+		changes = append(changes, fmt.Sprintf("codex.identity-confuse: %t -> %t", oldCfg.Codex.IdentityConfuse, newCfg.Codex.IdentityConfuse))
+	}
 
 	if oldCfg.Routing.Strategy != newCfg.Routing.Strategy {
 		changes = append(changes, fmt.Sprintf("routing.strategy: %s -> %s", oldCfg.Routing.Strategy, newCfg.Routing.Strategy))
+	}
+	if !reflect.DeepEqual(oldCfg.Payload, newCfg.Payload) {
+		changes = appendPayloadConfigChanges(changes, oldCfg.Payload, newCfg.Payload)
 	}
 
 	// API keys (redacted) and counts
@@ -153,6 +182,9 @@ func BuildConfigChangeDetails(oldCfg, newCfg *config.Config) []string {
 			newExcluded := SummarizeExcludedModels(n.ExcludedModels)
 			if oldExcluded.hash != newExcluded.hash {
 				changes = append(changes, fmt.Sprintf("claude[%d].excluded-models: updated (%d -> %d entries)", i, oldExcluded.count, newExcluded.count))
+			}
+			if o.RebuildMidSystemMessage != n.RebuildMidSystemMessage {
+				changes = append(changes, fmt.Sprintf("claude[%d].rebuild-mid-system-message: %t -> %t", i, o.RebuildMidSystemMessage, n.RebuildMidSystemMessage))
 			}
 			if o.Cloak != nil && n.Cloak != nil {
 				if strings.TrimSpace(o.Cloak.Mode) != strings.TrimSpace(n.Cloak.Mode) {
@@ -327,12 +359,78 @@ func BuildConfigChangeDetails(oldCfg, newCfg *config.Config) []string {
 	return changes
 }
 
+func equalStringSet(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	counts := make(map[string]int, len(a))
+	for _, item := range a {
+		counts[item]++
+	}
+	for _, item := range b {
+		counts[item]--
+		if counts[item] < 0 {
+			return false
+		}
+	}
+	return true
+}
+
+func equalUpstreamAPIKeys(a, b []config.AmpUpstreamAPIKeyEntry) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if strings.TrimSpace(a[i].UpstreamAPIKey) != strings.TrimSpace(b[i].UpstreamAPIKey) {
+			return false
+		}
+		if !reflect.DeepEqual(normalizeStringList(a[i].APIKeys), normalizeStringList(b[i].APIKeys)) {
+			return false
+		}
+	}
+	return true
+}
+
+func normalizeStringList(values []string) []string {
+	out := make([]string, 0, len(values))
+	for _, value := range values {
+		if trimmed := strings.TrimSpace(value); trimmed != "" {
+			out = append(out, trimmed)
+		}
+	}
+	sort.Strings(out)
+	return out
+}
+
 func trimStrings(in []string) []string {
 	out := make([]string, len(in))
 	for i := range in {
 		out[i] = strings.TrimSpace(in[i])
 	}
 	return out
+}
+
+func appendPayloadConfigChanges(changes []string, oldPayload, newPayload config.PayloadConfig) []string {
+	changes = appendPayloadRuleChanges(changes, "default", oldPayload.Default, newPayload.Default)
+	changes = appendPayloadRuleChanges(changes, "default-raw", oldPayload.DefaultRaw, newPayload.DefaultRaw)
+	changes = appendPayloadRuleChanges(changes, "override", oldPayload.Override, newPayload.Override)
+	changes = appendPayloadRuleChanges(changes, "override-raw", oldPayload.OverrideRaw, newPayload.OverrideRaw)
+	changes = appendPayloadFilterRuleChanges(changes, "filter", oldPayload.Filter, newPayload.Filter)
+	return changes
+}
+
+func appendPayloadRuleChanges(changes []string, section string, oldRules, newRules []config.PayloadRule) []string {
+	if reflect.DeepEqual(oldRules, newRules) {
+		return changes
+	}
+	return append(changes, fmt.Sprintf("payload.%s: updated (%d -> %d rules)", section, len(oldRules), len(newRules)))
+}
+
+func appendPayloadFilterRuleChanges(changes []string, section string, oldRules, newRules []config.PayloadFilterRule) []string {
+	if reflect.DeepEqual(oldRules, newRules) {
+		return changes
+	}
+	return append(changes, fmt.Sprintf("payload.%s: updated (%d -> %d rules)", section, len(oldRules), len(newRules)))
 }
 
 func equalStringMap(a, b map[string]string) bool {
@@ -373,44 +471,4 @@ func formatProxyURL(raw string) string {
 		return host
 	}
 	return scheme + "://" + host
-}
-
-func equalStringSet(a, b []string) bool {
-	if len(a) == 0 && len(b) == 0 {
-		return true
-	}
-	aSet := make(map[string]struct{}, len(a))
-	for _, k := range a {
-		aSet[strings.TrimSpace(k)] = struct{}{}
-	}
-	bSet := make(map[string]struct{}, len(b))
-	for _, k := range b {
-		bSet[strings.TrimSpace(k)] = struct{}{}
-	}
-	if len(aSet) != len(bSet) {
-		return false
-	}
-	for k := range aSet {
-		if _, ok := bSet[k]; !ok {
-			return false
-		}
-	}
-	return true
-}
-
-// equalUpstreamAPIKeys compares two slices of AmpUpstreamAPIKeyEntry for equality.
-// Comparison is done by count and content (upstream key and client keys).
-func equalUpstreamAPIKeys(a, b []config.AmpUpstreamAPIKeyEntry) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if strings.TrimSpace(a[i].UpstreamAPIKey) != strings.TrimSpace(b[i].UpstreamAPIKey) {
-			return false
-		}
-		if !equalStringSet(a[i].APIKeys, b[i].APIKeys) {
-			return false
-		}
-	}
-	return true
 }

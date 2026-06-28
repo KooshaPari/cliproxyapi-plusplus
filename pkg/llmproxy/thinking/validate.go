@@ -184,7 +184,7 @@ func convertAutoToMidRange(config ThinkingConfig, support *registry.ThinkingSupp
 			"provider":      redactLogText(provider),
 			"model":         redactLogText(model),
 			"original_mode": "auto",
-			"clamped_to":    redactLogLevel(LevelMedium),
+			"clamped_to":    redactLogText(string(LevelMedium)),
 		}).Debug("thinking: mode converted, dynamic not allowed, using medium level |")
 		return config
 	}
@@ -250,8 +250,8 @@ func clampLevel(level ThinkingLevel, modelInfo *registry.ModelInfo, provider str
 		log.WithFields(log.Fields{
 			"provider":       redactLogText(provider),
 			"model":          redactLogText(model),
-			"original_value": redactLogLevel(level),
-			"clamped_to":     redactLogLevel(clamped),
+			"original_value": redactLogText(string(level)),
+			"clamped_to":     redactLogText(string(clamped)),
 		}).Debug("thinking: level clamped |")
 		return clamped
 	}
@@ -339,7 +339,7 @@ func normalizeLevels(levels []string) []string {
 // These providers may also support level-based thinking (hybrid models).
 func isBudgetCapableProvider(provider string) bool {
 	switch provider {
-	case "gemini", "gemini-cli", "antigravity", "claude":
+	case "gemini", "antigravity", "claude":
 		return true
 	default:
 		return false
@@ -348,7 +348,7 @@ func isBudgetCapableProvider(provider string) bool {
 
 func isGeminiFamily(provider string) bool {
 	switch provider {
-	case "gemini", "gemini-cli", "antigravity":
+	case "gemini", "antigravity":
 		return true
 	default:
 		return false

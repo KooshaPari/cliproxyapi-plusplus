@@ -2483,6 +2483,7 @@ func TestAccessAdapterPanicFusesAndReturnsNotHandled(t *testing.T) {
 			},
 		},
 	}
+	markPluginIdentityCurrent(host, "auth-panic")
 	req, errNewRequest := http.NewRequest(http.MethodGet, "http://example.test/v1/models", nil)
 	if errNewRequest != nil {
 		t.Fatalf("NewRequest() error = %v", errNewRequest)
@@ -2514,6 +2515,7 @@ func TestAccessAdapterBodyReadFailureReturnsInternalError(t *testing.T) {
 			},
 		},
 	}
+	markPluginIdentityCurrent(host, "auth-plugin")
 	req, errNewRequest := http.NewRequest(http.MethodPost, "http://example.test/v1/chat", nil)
 	if errNewRequest != nil {
 		t.Fatalf("NewRequest() error = %v", errNewRequest)
@@ -2648,6 +2650,7 @@ func TestExecutorAdapterMethods(t *testing.T) {
 		inputFormats:  []sdktranslator.Format{sdktranslator.FormatOpenAI},
 		outputFormats: []sdktranslator.Format{sdktranslator.FormatOpenAI},
 	}
+	markPluginIdentityCurrent(host, "executor-plugin")
 	auth := &coreauth.Auth{
 		ID:       "auth-1",
 		Provider: "plugin-provider",
@@ -2764,8 +2767,9 @@ func TestExecutorAdapterUsesResponseFormatForOutputTranslation(t *testing.T) {
 	openAIRequest := []byte(`{"model":"model-1","messages":[{"role":"user","content":"hi"}]}`)
 
 	var captured pluginapi.ExecutorRequest
+	host := New()
 	adapter := &executorAdapter{
-		host:          New(),
+		host:          host,
 		pluginID:      "executor-plugin",
 		provider:      "plugin-provider",
 		inputFormats:  []sdktranslator.Format{sdktranslator.FormatClaude},
@@ -2777,6 +2781,7 @@ func TestExecutorAdapterUsesResponseFormatForOutputTranslation(t *testing.T) {
 			},
 		},
 	}
+	markPluginIdentityCurrent(host, "executor-plugin")
 
 	resp, errExecute := adapter.Execute(context.Background(), &coreauth.Auth{}, coreexecutor.Request{
 		Model:   "model-1",
@@ -2839,6 +2844,7 @@ func TestExecutorAdapterSelectsCustomOutputWithHostResponseTranslator(t *testing
 			},
 		},
 	}
+	markPluginIdentityCurrent(host, "executor-plugin")
 
 	resp, errExecute := adapter.Execute(context.Background(), &coreauth.Auth{}, coreexecutor.Request{
 		Model:   "model-1",
@@ -2978,6 +2984,7 @@ func TestExecutorAdapterPanicFusesAndReturnsError(t *testing.T) {
 			},
 		},
 	}
+	markPluginIdentityCurrent(host, "executor-panic")
 
 	resp, errExecute := adapter.Execute(context.Background(), &coreauth.Auth{}, coreexecutor.Request{}, coreexecutor.Options{})
 	if errExecute == nil {

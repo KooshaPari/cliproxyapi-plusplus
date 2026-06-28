@@ -12,6 +12,20 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+const openAICompatibleProviderPrefix = "openai-compatible-"
+
+// OpenAICompatibleProviderKey returns the internal provider key for an OpenAI-compatible provider.
+func OpenAICompatibleProviderKey(name string) string {
+	name = strings.ToLower(strings.TrimSpace(name))
+	if name == "" || name == "openai-compatibility" || strings.HasPrefix(name, openAICompatibleProviderPrefix) {
+		if name == "" {
+			return "openai-compatibility"
+		}
+		return name
+	}
+	return openAICompatibleProviderPrefix + name
+}
+
 // GetProviderName determines all AI service providers capable of serving a registered model.
 // It first queries the global model registry to retrieve the providers backing the supplied model name.
 // When the model has not been registered yet, it falls back to legacy string heuristics to infer
@@ -21,7 +35,6 @@ import (
 //   - "gemini" for Google's Gemini family
 //   - "codex" for OpenAI GPT-compatible providers
 //   - "claude" for Anthropic models
-//   - "qwen" for Alibaba's Qwen models
 //   - "openai-compatibility" for external OpenAI-compatible providers
 //
 // Parameters:
@@ -33,10 +46,6 @@ import (
 func GetProviderName(modelName string) []string {
 	if modelName == "" {
 		return nil
-	}
-
-	if pinnedProvider, _, pinned := ResolveProviderPinnedModel(modelName); pinned {
-		return []string{pinnedProvider}
 	}
 
 	providers := make([]string, 0, 4)
@@ -53,6 +62,12 @@ func GetProviderName(modelName string) []string {
 		providers = append(providers, name)
 	}
 
+	// Provider-pinned models (e.g. "github-copilot/gpt-5.2") resolve to their explicit provider.
+	if provider, _, ok := ResolveProviderPinnedModel(modelName); ok {
+		appendProvider(provider)
+		return providers
+	}
+
 	for _, provider := range registry.GetGlobalRegistry().GetModelProviders(modelName) {
 		appendProvider(provider)
 	}
@@ -61,43 +76,34 @@ func GetProviderName(modelName string) []string {
 		return providers
 	}
 
-	// Fallback: if cursor provider has registered models, route unknown models to it.
-	// Cursor acts as a universal proxy supporting multiple model families (Claude, GPT, Gemini, etc.).
-	if models := registry.GetGlobalRegistry().GetAvailableModelsByProvider("cursor"); len(models) > 0 {
-		return []string{"cursor"}
-	}
-
 	return providers
 }
 
-// ResolveProviderPinnedModel checks whether modelName is a provider-pinned alias
-// in the form "<provider>/<model>" and verifies that provider currently serves
-// the target model in the global registry.
-//
-// Returns:
-//   - provider: normalized provider prefix
-//   - baseModel: model without provider prefix
-//   - ok: true when prefix is valid and provider serves baseModel
-func ResolveProviderPinnedModel(modelName string) (provider string, baseModel string, ok bool) {
-	modelName = strings.TrimSpace(modelName)
-	parts := strings.SplitN(modelName, "/", 2)
-	if len(parts) != 2 {
+// ResolveProviderPinnedModel parses provider/model names and validates the provider.
+func ResolveProviderPinnedModel(modelName string) (string, string, bool) {
+	provider, model, ok := strings.Cut(strings.TrimSpace(modelName), "/")
+	if !ok || strings.TrimSpace(provider) == "" || strings.TrimSpace(model) == "" {
 		return "", "", false
 	}
-
-	provider = strings.ToLower(strings.TrimSpace(parts[0]))
-	baseModel = strings.TrimSpace(parts[1])
-	if provider == "" || baseModel == "" {
-		return "", "", false
-	}
-
-	for _, candidate := range registry.GetGlobalRegistry().GetModelProviders(baseModel) {
-		if strings.EqualFold(candidate, provider) {
-			return provider, baseModel, true
+	provider = strings.ToLower(strings.TrimSpace(provider))
+	model = strings.TrimSpace(model)
+	switch provider {
+	case "anthropic", "claude":
+		return "claude", model, true
+	case "openai", "codex":
+		return "codex", model, true
+	case "github-copilot", "copilot":
+		return "github-copilot", model, true
+	case "gemini", "google":
+		return "gemini", model, true
+	case "gitlab-duo", "gitlab":
+		return "gitlab-duo", model, true
+	default:
+		if strings.HasPrefix(provider, openAICompatibleProviderPrefix) {
+			return provider, model, true
 		}
+		return "", "", false
 	}
-
-	return "", "", false
 }
 
 // ResolveAutoModel resolves the "auto" model name to an actual available model.
@@ -137,14 +143,13 @@ func IsOpenAICompatibilityAlias(modelName string, cfg *config.Config) bool {
 	if cfg == nil {
 		return false
 	}
-	modelName = normalizeOpenAICompatibilityAlias(modelName)
-	if modelName == "" {
-		return false
-	}
 
 	for _, compat := range cfg.OpenAICompatibility {
+		if compat.Disabled {
+			continue
+		}
 		for _, model := range compat.Models {
-			if strings.EqualFold(strings.TrimSpace(model.Alias), modelName) || strings.EqualFold(strings.TrimSpace(model.Name), modelName) {
+			if strings.EqualFold(model.Alias, modelName) || strings.EqualFold(model.Name, modelName) {
 				return true
 			}
 		}
@@ -166,30 +171,18 @@ func GetOpenAICompatibilityConfig(alias string, cfg *config.Config) (*config.Ope
 	if cfg == nil {
 		return nil, nil
 	}
-	alias = normalizeOpenAICompatibilityAlias(alias)
-	if alias == "" {
-		return nil, nil
-	}
 
 	for _, compat := range cfg.OpenAICompatibility {
+		if compat.Disabled {
+			continue
+		}
 		for _, model := range compat.Models {
-			if strings.EqualFold(strings.TrimSpace(model.Alias), alias) || strings.EqualFold(strings.TrimSpace(model.Name), alias) {
+			if strings.EqualFold(model.Alias, alias) || strings.EqualFold(model.Name, alias) {
 				return &compat, &model
 			}
 		}
 	}
 	return nil, nil
-}
-
-func normalizeOpenAICompatibilityAlias(modelName string) string {
-	modelName = strings.TrimSpace(modelName)
-	if modelName == "" {
-		return ""
-	}
-	if _, baseModel, ok := ResolveProviderPinnedModel(modelName); ok {
-		return baseModel
-	}
-	return modelName
 }
 
 // InArray checks if a string exists in a slice of strings.
@@ -227,16 +220,6 @@ func HideAPIKey(apiKey string) string {
 		return apiKey[:1] + "..." + apiKey[len(apiKey)-1:]
 	}
 	return apiKey
-}
-
-// RedactAPIKey completely redacts an API key for secure logging.
-// Unlike HideAPIKey which shows partial characters, this returns "[REDACTED]"
-// to satisfy strict security scanning requirements.
-func RedactAPIKey(apiKey string) string {
-	if apiKey == "" {
-		return ""
-	}
-	return "[REDACTED]"
 }
 
 // maskAuthorizationHeader masks the Authorization header value while preserving the auth type prefix.

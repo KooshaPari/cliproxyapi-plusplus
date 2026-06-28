@@ -50,11 +50,25 @@ func (ts *QwenTokenStorage) SaveTokenToFile(authFilePath string) error {
 		return fmt.Errorf("qwen token: base token storage is nil")
 	}
 
-	if _, err := cleanTokenFilePath(authFilePath, "qwen token"); err != nil {
+	cleanPath, err := cleanTokenFilePath(authFilePath, "qwen token")
+	if err != nil {
 		return err
 	}
 
-	ts.BaseTokenStorage.Type = "qwen"
+	// The embedded BaseTokenStorage may have been constructed without a file
+	// path (e.g. via a struct literal). Rebuild it bound to the validated path
+	// while preserving the existing token data so Save() writes to disk.
+	rebuilt := auth.NewBaseTokenStorage(cleanPath)
+	rebuilt.IDToken = ts.BaseTokenStorage.IDToken
+	rebuilt.AccessToken = ts.BaseTokenStorage.AccessToken
+	rebuilt.RefreshToken = ts.BaseTokenStorage.RefreshToken
+	rebuilt.LastRefresh = ts.BaseTokenStorage.LastRefresh
+	rebuilt.Email = ts.BaseTokenStorage.Email
+	rebuilt.Expire = ts.BaseTokenStorage.Expire
+	rebuilt.SetMetadata(ts.BaseTokenStorage.GetMetadata())
+	rebuilt.Type = "qwen"
+	ts.BaseTokenStorage = rebuilt
+
 	return ts.BaseTokenStorage.Save()
 }
 
