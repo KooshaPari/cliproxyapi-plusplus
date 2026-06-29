@@ -2,6 +2,7 @@ package configaccess
 
 import (
 	"context"
+	"crypto/subtle"
 	"net/http"
 	"strings"
 
@@ -30,7 +31,11 @@ func Register(cfg *sdkconfig.SDKConfig) {
 
 type provider struct {
 	name string
-	keys map[string]struct{}
+	// keys is stored as a slice so that the comparison loop visits every element
+	// regardless of which position matches, preventing timing side-channels.
+	// A map membership check would short-circuit on the first hit and leak timing
+	// information about whether and where a key exists.
+	keys [][]byte
 }
 
 func newProvider(name string, keys []string) *provider {
@@ -38,11 +43,11 @@ func newProvider(name string, keys []string) *provider {
 	if providerName == "" {
 		providerName = sdkaccess.DefaultAccessProviderName
 	}
-	keySet := make(map[string]struct{}, len(keys))
-	for _, key := range keys {
-		keySet[key] = struct{}{}
+	keyBytes := make([][]byte, len(keys))
+	for i, k := range keys {
+		keyBytes[i] = []byte(k)
 	}
-	return &provider{name: providerName, keys: keySet}
+	return &provider{name: providerName, keys: keyBytes}
 }
 
 func (p *provider) Identifier() string {
@@ -89,7 +94,10 @@ func (p *provider) Authenticate(_ context.Context, r *http.Request) (*sdkaccess.
 		if candidate.value == "" {
 			continue
 		}
-		if _, ok := p.keys[candidate.value]; ok {
+		// constantTimeMatchKey iterates all configured keys with subtle.ConstantTimeCompare
+		// so that the loop always runs to completion, preventing timing attacks that
+		// could reveal how many keys are configured or which prefix was correct.
+		if constantTimeMatchKey(p.keys, []byte(candidate.value)) {
 			return &sdkaccess.Result{
 				Provider:  p.Identifier(),
 				Principal: candidate.value,
@@ -101,6 +109,16 @@ func (p *provider) Authenticate(_ context.Context, r *http.Request) (*sdkaccess.
 	}
 
 	return nil, sdkaccess.NewInvalidCredentialError()
+}
+
+// constantTimeMatchKey returns true if candidate matches any key in the slice.
+// It always iterates the full slice to prevent timing side-channels.
+func constantTimeMatchKey(keys [][]byte, candidate []byte) bool {
+	matched := 0
+	for _, k := range keys {
+		matched |= subtle.ConstantTimeCompare(k, candidate)
+	}
+	return matched == 1
 }
 
 func extractBearerToken(header string) string {

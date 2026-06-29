@@ -127,6 +127,35 @@ func TestProvider_Authenticate(t *testing.T) {
 	}
 }
 
+// TestConstantTimeMatchKey verifies that constantTimeMatchKey correctly accepts
+// matching keys and rejects wrong or empty candidates without short-circuiting.
+func TestConstantTimeMatchKey(t *testing.T) {
+	keys := [][]byte{[]byte("alpha"), []byte("beta"), []byte("gamma")}
+
+	if !constantTimeMatchKey(keys, []byte("alpha")) {
+		t.Error("expected match for 'alpha'")
+	}
+	if !constantTimeMatchKey(keys, []byte("beta")) {
+		t.Error("expected match for 'beta'")
+	}
+	if !constantTimeMatchKey(keys, []byte("gamma")) {
+		t.Error("expected match for 'gamma'")
+	}
+	if constantTimeMatchKey(keys, []byte("delta")) {
+		t.Error("unexpected match for unknown key 'delta'")
+	}
+	if constantTimeMatchKey(keys, []byte("")) {
+		t.Error("unexpected match for empty key")
+	}
+	if constantTimeMatchKey(nil, []byte("alpha")) {
+		t.Error("unexpected match against empty key set")
+	}
+	// Prefix of a valid key must not match.
+	if constantTimeMatchKey(keys, []byte("alph")) {
+		t.Error("unexpected match for key prefix 'alph'")
+	}
+}
+
 func TestExtractBearerToken(t *testing.T) {
 	cases := []struct {
 		header string
