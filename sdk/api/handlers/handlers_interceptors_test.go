@@ -715,6 +715,13 @@ func TestHandlerStreamInterceptorInitializesHeadersBeforeReturn(t *testing.T) {
 	dataChan := result.dataChan
 	upstreamHeaders := result.upstreamHeaders
 	errChan := result.errChan
+	firstChunk, ok := <-dataChan
+	if !ok {
+		t.Fatal("data channel closed before first chunk")
+	}
+	if string(firstChunk) != "payload" {
+		t.Fatalf("first chunk = %q, want payload", firstChunk)
+	}
 	if upstreamHeaders.Get("X-Init") != "plugin" {
 		t.Fatalf("upstream headers before first payload = %#v, want initialized plugin header", upstreamHeaders)
 	}

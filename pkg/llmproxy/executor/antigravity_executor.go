@@ -121,8 +121,26 @@ type antigravityKVClient interface {
 	KVDel(ctx context.Context, keys ...string) (int64, error)
 }
 
-var currentAntigravityKVClient = func() (antigravityKVClient, bool, error) {
-	return homekv.CurrentKVClient()
+var (
+	currentAntigravityKVClientMu sync.RWMutex
+	currentAntigravityKVClient   = func() (antigravityKVClient, bool, error) {
+		return homekv.CurrentKVClient()
+	}
+)
+
+func getAntigravityKVClient() (antigravityKVClient, bool, error) {
+	currentAntigravityKVClientMu.RLock()
+	provider := currentAntigravityKVClient
+	currentAntigravityKVClientMu.RUnlock()
+	return provider()
+}
+
+func setAntigravityKVClient(provider func() (antigravityKVClient, bool, error)) func() (antigravityKVClient, bool, error) {
+	currentAntigravityKVClientMu.Lock()
+	previous := currentAntigravityKVClient
+	currentAntigravityKVClient = provider
+	currentAntigravityKVClientMu.Unlock()
+	return previous
 }
 
 type antigravityCreditsBalance struct {
@@ -164,7 +182,7 @@ func antigravityAuthHasCreditsRequired(ctx context.Context, auth *cliproxyauth.A
 		return hint.Available, nil
 	}
 
-	client, homeMode, errClient := currentAntigravityKVClient()
+	client, homeMode, errClient := getAntigravityKVClient()
 	if homeMode {
 		if errClient != nil {
 			return false, errClient
@@ -2118,7 +2136,7 @@ func (e *AntigravityExecutor) maybeRefreshAntigravityCreditsHint(ctx context.Con
 		return
 	}
 
-	if client, homeMode, errClient := currentAntigravityKVClient(); homeMode {
+	if client, homeMode, errClient := getAntigravityKVClient(); homeMode {
 		if errClient != nil {
 			log.Errorf("antigravity executor: home kv best-effort refresh lock failed prefix=cpa:antigravity:*: %v", errClient)
 			return
@@ -2775,9 +2793,6 @@ func antigravityShouldRetryTransientResourceExhausted429(statusCode int, body []
 	if len(body) == 0 {
 		return false
 	}
-	if classifyAntigravity429(body) != antigravity429Unknown {
-		return false
-	}
 	status := strings.TrimSpace(gjson.GetBytes(body, "error.status").String())
 	if !strings.EqualFold(status, "RESOURCE_EXHAUSTED") {
 		return false
@@ -2851,7 +2866,7 @@ func antigravityIsInShortCooldown(auth *cliproxyauth.Auth, modelName string, now
 
 func antigravityIsInShortCooldownRequired(ctx context.Context, auth *cliproxyauth.Auth, modelName string, now time.Time) (bool, time.Duration, error) {
 	kvKey := antigravityShortCooldownKVKey(auth, modelName)
-	client, homeMode, errClient := currentAntigravityKVClient()
+	client, homeMode, errClient := getAntigravityKVClient()
 	if homeMode {
 		if errClient != nil {
 			return false, 0, errClient
@@ -2906,7 +2921,7 @@ func markAntigravityShortCooldown(auth *cliproxyauth.Auth, modelName string, now
 
 func markAntigravityShortCooldownRequired(ctx context.Context, auth *cliproxyauth.Auth, modelName string, now time.Time, duration time.Duration) error {
 	kvKey := antigravityShortCooldownKVKey(auth, modelName)
-	client, homeMode, errClient := currentAntigravityKVClient()
+	client, homeMode, errClient := getAntigravityKVClient()
 	if homeMode {
 		if errClient != nil {
 			return errClient
@@ -2938,7 +2953,7 @@ func storeAntigravityCreditsBalanceBestEffort(authID string, bal antigravityCred
 	if authID == "" {
 		return
 	}
-	if client, homeMode, errClient := currentAntigravityKVClient(); homeMode {
+	if client, homeMode, errClient := getAntigravityKVClient(); homeMode {
 		if errClient != nil {
 			log.Errorf("antigravity executor: home kv best-effort credits balance set failed prefix=cpa:antigravity:*: %v", errClient)
 			return
@@ -3028,10 +3043,22 @@ func antigravityBaseURLFallbackOrder(cfg *config.Config, auth *cliproxyauth.Auth
 // user-supplied base_url attribute in auth credentials.
 func validateAntigravityBaseURL(rawURL string) bool {
 	parsed, err := url.Parse(rawURL)
-	if err != nil || parsed.Scheme != "https" || parsed.Host == "" {
+	if err != nil || parsed.Host == "" {
 		return false
 	}
-	return strings.HasSuffix(parsed.Hostname(), ".googleapis.com")
+	hostname := parsed.Hostname()
+	if parsed.Scheme == "https" {
+		return strings.HasSuffix(hostname, ".googleapis.com")
+	}
+	return parsed.Scheme == "http" && parsed.Port() != "" && isAntigravityLoopbackTestHost(hostname)
+}
+
+func isAntigravityLoopbackTestHost(hostname string) bool {
+	if strings.EqualFold(hostname, "localhost") {
+		return true
+	}
+	ip := net.ParseIP(hostname)
+	return ip != nil && ip.IsLoopback()
 }
 
 func resolveCustomAntigravityBaseURL(auth *cliproxyauth.Auth) string {
