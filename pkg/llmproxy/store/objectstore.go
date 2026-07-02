@@ -521,11 +521,7 @@ func (s *ObjectTokenStore) resolveAuthPath(auth *cliproxyauth.Auth) (string, err
 	}
 	if auth.Attributes != nil {
 		if path := strings.TrimSpace(auth.Attributes["path"]); path != "" {
-			resolved := path
-			if !filepath.IsAbs(resolved) {
-				resolved = filepath.Join(s.authDir, resolved)
-			}
-			return ensurePathWithinDir(resolved, s.authDir, "object store")
+			return resolveManagedAuthPath(s.authDir, path, "object store", false)
 		}
 	}
 	fileName := strings.TrimSpace(auth.FileName)
@@ -535,10 +531,7 @@ func (s *ObjectTokenStore) resolveAuthPath(auth *cliproxyauth.Auth) (string, err
 	if fileName == "" {
 		return "", fmt.Errorf("object store: auth %s missing filename", auth.ID)
 	}
-	if !strings.HasSuffix(strings.ToLower(fileName), ".json") {
-		fileName += ".json"
-	}
-	return ensurePathWithinDir(filepath.Join(s.authDir, fileName), s.authDir, "object store")
+	return resolveManagedAuthPath(s.authDir, fileName, "object store", true)
 }
 
 func (s *ObjectTokenStore) resolveDeletePath(id string) (string, error) {
@@ -546,21 +539,7 @@ func (s *ObjectTokenStore) resolveDeletePath(id string) (string, error) {
 	if id == "" {
 		return "", fmt.Errorf("object store: id is empty")
 	}
-	// Absolute paths are honored as-is; callers must ensure they point inside the mirror.
-	if filepath.IsAbs(id) {
-		return id, nil
-	}
-	// Treat any non-absolute id (including nested like "team/foo") as relative to the mirror authDir.
-	// Normalize separators and guard against path traversal.
-	clean := filepath.Clean(filepath.FromSlash(id))
-	if clean == "." || clean == ".." || strings.HasPrefix(clean, ".."+string(os.PathSeparator)) {
-		return "", fmt.Errorf("object store: invalid auth identifier %s", id)
-	}
-	// Ensure .json suffix.
-	if !strings.HasSuffix(strings.ToLower(clean), ".json") {
-		clean += ".json"
-	}
-	return filepath.Join(s.authDir, clean), nil
+	return resolveManagedAuthPath(s.authDir, id, "object store", true)
 }
 
 func (s *ObjectTokenStore) readAuthFile(path, baseDir string) (*cliproxyauth.Auth, error) {

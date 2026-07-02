@@ -21,10 +21,17 @@ import (
 )
 
 func resetAntigravityCreditsRetryState() {
-	antigravityCreditsFailureByAuth = sync.Map{}
-	antigravityShortCooldownByAuth = sync.Map{}
-	antigravityCreditsBalanceByAuth = sync.Map{}
-	antigravityCreditsHintRefreshByID = sync.Map{}
+	clearSyncMap(&antigravityCreditsFailureByAuth)
+	clearSyncMap(&antigravityShortCooldownByAuth)
+	clearSyncMap(&antigravityCreditsBalanceByAuth)
+	clearSyncMap(&antigravityCreditsHintRefreshByID)
+}
+
+func clearSyncMap(m *sync.Map) {
+	m.Range(func(key, _ any) bool {
+		m.Delete(key)
+		return true
+	})
 }
 
 type fakeAntigravityKVClient struct {
@@ -108,12 +115,11 @@ func (c *fakeAntigravityKVClient) KVDel(_ context.Context, keys ...string) (int6
 
 func useFakeAntigravityKVClient(t *testing.T, client *fakeAntigravityKVClient, homeMode bool, errClient error) {
 	t.Helper()
-	previous := currentAntigravityKVClient
-	currentAntigravityKVClient = func() (antigravityKVClient, bool, error) {
+	previous := setAntigravityKVClient(func() (antigravityKVClient, bool, error) {
 		return client, homeMode, errClient
-	}
+	})
 	t.Cleanup(func() {
-		currentAntigravityKVClient = previous
+		setAntigravityKVClient(previous)
 	})
 }
 

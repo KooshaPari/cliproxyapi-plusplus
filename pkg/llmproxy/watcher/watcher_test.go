@@ -1508,6 +1508,7 @@ func TestNormalizeAuthNil(t *testing.T) {
 
 // stubStore implements coreauth.Store plus watcher-specific persistence helpers.
 type stubStore struct {
+	mu              sync.Mutex
 	authDir         string
 	cfgPersisted    int32
 	authPersisted   int32
@@ -1526,11 +1527,19 @@ func (s *stubStore) PersistConfig(context.Context) error {
 }
 func (s *stubStore) PersistAuthFiles(_ context.Context, message string, paths ...string) error {
 	atomic.AddInt32(&s.authPersisted, 1)
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	s.lastAuthMessage = message
-	s.lastAuthPaths = paths
+	s.lastAuthPaths = append([]string(nil), paths...)
 	return nil
 }
 func (s *stubStore) AuthDir() string { return s.authDir }
+
+func (s *stubStore) LastAuth() (string, []string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.lastAuthMessage, append([]string(nil), s.lastAuthPaths...)
+}
 
 func TestNewWatcherDetectsPersisterAndAuthDir(t *testing.T) {
 	tmp := t.TempDir()
@@ -1567,11 +1576,12 @@ func TestPersistConfigAndAuthAsyncInvokePersister(t *testing.T) {
 	if atomic.LoadInt32(&store.authPersisted) != 1 {
 		t.Fatalf("expected PersistAuthFiles to be called once, got %d", store.authPersisted)
 	}
-	if store.lastAuthMessage != "msg" {
-		t.Fatalf("unexpected auth message: %s", store.lastAuthMessage)
+	message, paths := store.LastAuth()
+	if message != "msg" {
+		t.Fatalf("unexpected auth message: %s", message)
 	}
-	if len(store.lastAuthPaths) != 2 || store.lastAuthPaths[0] != "a" || store.lastAuthPaths[1] != "b" {
-		t.Fatalf("unexpected filtered paths: %#v", store.lastAuthPaths)
+	if len(paths) != 2 || paths[0] != "a" || paths[1] != "b" {
+		t.Fatalf("unexpected filtered paths: %#v", paths)
 	}
 }
 
@@ -1599,7 +1609,7 @@ func TestScheduleConfigReloadDebounces(t *testing.T) {
 	if atomic.LoadInt32(&reloads) != 1 {
 		t.Fatalf("expected single debounced reload, got %d", reloads)
 	}
-	if w.lastConfigHash == "" {
+	if w.LastConfigHash() == "" {
 		t.Fatal("expected lastConfigHash to be set after reload")
 	}
 }

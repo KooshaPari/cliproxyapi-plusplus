@@ -467,24 +467,10 @@ func (s *GitTokenStore) PersistAuthFiles(_ context.Context, message string, path
 }
 
 func (s *GitTokenStore) resolveDeletePath(id string) (string, error) {
-	id = strings.TrimSpace(id)
-	if id == "" {
-		return "", fmt.Errorf("auth filestore: id is empty")
+	if filepath.IsAbs(strings.TrimSpace(id)) {
+		return "", fmt.Errorf("auth filestore: auth path %s outside managed directory", id)
 	}
-	dir := s.baseDirSnapshot()
-	if dir == "" {
-		return "", fmt.Errorf("auth filestore: directory not configured")
-	}
-	// Absolute identifiers and traversal are not permitted: every managed auth
-	// file must resolve to a location inside the base directory.
-	if filepath.IsAbs(id) {
-		return "", fmt.Errorf("git token store: absolute delete id %q not permitted", id)
-	}
-	clean := filepath.Clean(filepath.FromSlash(id))
-	if clean == ".." || strings.HasPrefix(clean, ".."+string(os.PathSeparator)) {
-		return "", fmt.Errorf("git token store: delete id %q escapes managed directory", id)
-	}
-	return ensurePathWithinDir(filepath.Join(dir, clean), dir, "git token store")
+	return resolveManagedAuthPath(s.baseDirSnapshot(), id, "auth filestore", false)
 }
 
 func (s *GitTokenStore) readAuthFile(path, baseDir string) (*cliproxyauth.Auth, error) {
@@ -550,46 +536,18 @@ func (s *GitTokenStore) resolveAuthPath(auth *cliproxyauth.Auth) (string, error)
 	if auth == nil {
 		return "", fmt.Errorf("auth filestore: auth is nil")
 	}
-	dir := s.baseDirSnapshot()
 	if auth.Attributes != nil {
 		if p := strings.TrimSpace(auth.Attributes["path"]); p != "" {
-			if dir == "" {
-				return p, nil
-			}
-			resolved := p
-			if !filepath.IsAbs(resolved) {
-				resolved = filepath.Join(dir, resolved)
-			}
-			return ensurePathWithinDir(resolved, dir, "git token store")
+			return resolveManagedAuthPath(s.baseDirSnapshot(), p, "auth filestore", false)
 		}
 	}
 	if fileName := strings.TrimSpace(auth.FileName); fileName != "" {
-		if dir == "" {
-			if filepath.IsAbs(fileName) {
-				return fileName, nil
-			}
-			return fileName, nil
-		}
-		resolved := fileName
-		if !filepath.IsAbs(resolved) {
-			resolved = filepath.Join(dir, resolved)
-		}
-		return ensurePathWithinDir(resolved, dir, "git token store")
+		return resolveManagedAuthPath(s.baseDirSnapshot(), fileName, "auth filestore", false)
 	}
 	if auth.ID == "" {
 		return "", fmt.Errorf("auth filestore: missing id")
 	}
-	if dir == "" {
-		if filepath.IsAbs(auth.ID) {
-			return auth.ID, nil
-		}
-		return "", fmt.Errorf("auth filestore: directory not configured")
-	}
-	resolved := auth.ID
-	if !filepath.IsAbs(resolved) {
-		resolved = filepath.Join(dir, resolved)
-	}
-	return ensurePathWithinDir(resolved, dir, "git token store")
+	return resolveManagedAuthPath(s.baseDirSnapshot(), auth.ID, "auth filestore", false)
 }
 
 func (s *GitTokenStore) labelFor(metadata map[string]any) string {

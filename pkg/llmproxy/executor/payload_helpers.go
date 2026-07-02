@@ -39,7 +39,7 @@ func applyPayloadConfigWithRoot(cfg *config.Config, model, protocol, root string
 	// Apply default rules: first write wins per field across all matching rules.
 	for i := range rules.Default {
 		rule := &rules.Default[i]
-		if !payloadRuleApplies(rule.Models, protocol, candidates) {
+		if !payloadPayloadRuleMatches(rule.Models, protocol, candidates) {
 			continue
 		}
 		for path, value := range rule.Params {
@@ -47,16 +47,13 @@ func applyPayloadConfigWithRoot(cfg *config.Config, model, protocol, root string
 			if fullPath == "" {
 				continue
 			}
-			if _, ok := appliedDefaults[fullPath]; ok {
+			if originalValue := gjson.GetBytes(source, fullPath); originalValue.Exists() {
+				if updated, errSet := sjson.SetRawBytes(out, fullPath, []byte(originalValue.Raw)); errSet == nil {
+					out = updated
+				}
 				continue
 			}
-			// When the field already exists in the source payload, defaults must not
-			// override the caller's value; restore the source value into the output.
-			if existing := gjson.GetBytes(source, fullPath); existing.Exists() {
-				if updated, errSet := sjson.SetRawBytes(out, fullPath, []byte(existing.Raw)); errSet == nil {
-					out = updated
-					appliedDefaults[fullPath] = struct{}{}
-				}
+			if _, ok := appliedDefaults[fullPath]; ok {
 				continue
 			}
 			updated, errSet := sjson.SetBytes(out, fullPath, value)
@@ -70,7 +67,7 @@ func applyPayloadConfigWithRoot(cfg *config.Config, model, protocol, root string
 	// Apply default raw rules: first write wins per field across all matching rules.
 	for i := range rules.DefaultRaw {
 		rule := &rules.DefaultRaw[i]
-		if !payloadRuleApplies(rule.Models, protocol, candidates) {
+		if !payloadPayloadRuleMatches(rule.Models, protocol, candidates) {
 			continue
 		}
 		for path, value := range rule.Params {
@@ -78,7 +75,10 @@ func applyPayloadConfigWithRoot(cfg *config.Config, model, protocol, root string
 			if fullPath == "" {
 				continue
 			}
-			if gjson.GetBytes(source, fullPath).Exists() {
+			if originalValue := gjson.GetBytes(source, fullPath); originalValue.Exists() {
+				if updated, errSet := sjson.SetRawBytes(out, fullPath, []byte(originalValue.Raw)); errSet == nil {
+					out = updated
+				}
 				continue
 			}
 			if _, ok := appliedDefaults[fullPath]; ok {
@@ -99,7 +99,7 @@ func applyPayloadConfigWithRoot(cfg *config.Config, model, protocol, root string
 	// Apply override rules: last write wins per field across all matching rules.
 	for i := range rules.Override {
 		rule := &rules.Override[i]
-		if !payloadRuleApplies(rule.Models, protocol, candidates) {
+		if !payloadPayloadRuleMatches(rule.Models, protocol, candidates) {
 			continue
 		}
 		for path, value := range rule.Params {
@@ -117,7 +117,7 @@ func applyPayloadConfigWithRoot(cfg *config.Config, model, protocol, root string
 	// Apply override raw rules: last write wins per field across all matching rules.
 	for i := range rules.OverrideRaw {
 		rule := &rules.OverrideRaw[i]
-		if !payloadRuleApplies(rule.Models, protocol, candidates) {
+		if !payloadPayloadRuleMatches(rule.Models, protocol, candidates) {
 			continue
 		}
 		for path, value := range rule.Params {
@@ -139,9 +139,7 @@ func applyPayloadConfigWithRoot(cfg *config.Config, model, protocol, root string
 	// Apply filter rules: remove matching paths from payload.
 	for i := range rules.Filter {
 		rule := &rules.Filter[i]
-		// Filter rules are never applied unconditionally: dropping fields requires an
-		// explicit model match to avoid accidentally stripping payloads globally.
-		if !payloadModelRulesMatch(rule.Models, protocol, candidates) {
+		if !payloadFilterRuleMatches(rule.Models, protocol, candidates) {
 			continue
 		}
 		for _, path := range rule.Params {
@@ -159,12 +157,16 @@ func applyPayloadConfigWithRoot(cfg *config.Config, model, protocol, root string
 	return out
 }
 
-// payloadRuleApplies reports whether a payload rule with the given model rules
-// should be applied. An empty model-rule set means the rule is unconditional and
-// applies to every model/protocol; otherwise model/protocol matching is used.
-func payloadRuleApplies(rules []config.PayloadModelRule, protocol string, models []string) bool {
+func payloadPayloadRuleMatches(rules []config.PayloadModelRule, protocol string, models []string) bool {
 	if len(rules) == 0 {
 		return true
+	}
+	return payloadModelRulesMatch(rules, protocol, models)
+}
+
+func payloadFilterRuleMatches(rules []config.PayloadModelRule, protocol string, models []string) bool {
+	if len(rules) == 0 {
+		return false
 	}
 	return payloadModelRulesMatch(rules, protocol, models)
 }
@@ -178,36 +180,24 @@ func payloadModelRulesMatch(rules []config.PayloadModelRule, protocol string, mo
 	if len(models) == 0 {
 		for _, entry := range rules {
 			name := strings.TrimSpace(entry.Name)
+			if ep := strings.TrimSpace(entry.Protocol); ep != "" && (protocol == "" || !strings.EqualFold(ep, protocol)) {
+				continue
+			}
 			if name == "" {
-				// Empty Name means unconditional rule - applies to all models, but a
-				// declared protocol must still match when both sides are present.
-				if ep := strings.TrimSpace(entry.Protocol); ep != "" && protocol != "" && !strings.EqualFold(ep, protocol) {
-					continue
-				}
+				// Empty Name means unconditional rule - applies to all models.
 				return true
 			}
 		}
 		return false
 	}
-	// Unconditional (empty-Name) entries apply to any model, subject to a protocol
-	// match when both the rule and request declare one.
-	for _, entry := range rules {
-		if strings.TrimSpace(entry.Name) != "" {
-			continue
-		}
-		if ep := strings.TrimSpace(entry.Protocol); ep != "" && protocol != "" && !strings.EqualFold(ep, protocol) {
-			continue
-		}
-		return true
-	}
 	for _, model := range models {
 		for _, entry := range rules {
 			name := strings.TrimSpace(entry.Name)
-			if name == "" {
+			if ep := strings.TrimSpace(entry.Protocol); ep != "" && (protocol == "" || !strings.EqualFold(ep, protocol)) {
 				continue
 			}
-			if ep := strings.TrimSpace(entry.Protocol); ep != "" && protocol != "" && !strings.EqualFold(ep, protocol) {
-				continue
+			if name == "" {
+				return true
 			}
 			if matchModelPattern(name, model) {
 				return true
@@ -243,17 +233,13 @@ func payloadModelCandidates(model, requestedModel string) []string {
 	if requestedModel != "" {
 		parsed := thinking.ParseSuffix(requestedModel)
 		base := strings.TrimSpace(parsed.ModelName)
-		// Strip an additional "+alias" segment (for example "model+thinking") so the
-		// underlying base model name is also offered as a candidate.
-		if idx := strings.Index(base, "+"); idx >= 0 {
-			if trimmed := strings.TrimSpace(base[:idx]); trimmed != "" {
-				addCandidate(trimmed)
-			}
+		if !parsed.HasSuffix {
+			base = strings.TrimSpace(strings.TrimSuffix(requestedModel, "+thinking"))
 		}
 		if base != "" {
 			addCandidate(base)
 		}
-		if parsed.HasSuffix {
+		if parsed.HasSuffix || base != requestedModel {
 			addCandidate(requestedModel)
 		}
 	}

@@ -721,7 +721,6 @@ func extractAndRemoveBetas(body []byte) ([]string, []byte) {
 	var betas []string
 	if betasResult.IsArray() {
 		for _, item := range betasResult.Array() {
-			// Only string items are valid betas; ignore malformed (numbers, bools, objects).
 			if item.Type != gjson.String {
 				continue
 			}
@@ -729,11 +728,10 @@ func extractAndRemoveBetas(body []byte) ([]string, []byte) {
 				betas = append(betas, s)
 			}
 		}
-	} else if betasResult.Type == gjson.String {
-		// Comma-separated string form: split, trim, and drop empty segments.
-		for _, part := range strings.Split(betasResult.String(), ",") {
-			if s := strings.TrimSpace(part); s != "" {
-				betas = append(betas, s)
+	} else if s := strings.TrimSpace(betasResult.String()); s != "" {
+		for _, part := range strings.Split(s, ",") {
+			if beta := strings.TrimSpace(part); beta != "" {
+				betas = append(betas, beta)
 			}
 		}
 	}

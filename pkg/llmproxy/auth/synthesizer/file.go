@@ -3,17 +3,14 @@ package synthesizer
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/auth/codex"
 	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/config"
-	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/runtime/geminicli"
 	coreauth "github.com/kooshapari/CLIProxyAPI/v7/sdk/cliproxy/auth"
 	"github.com/kooshapari/CLIProxyAPI/v7/sdk/pluginapi"
 )
@@ -81,6 +78,9 @@ func synthesizeFileAuths(ctx *SynthesisContext, fullPath string, data []byte) []
 	t, _ := metadata["type"].(string)
 	provider := strings.ToLower(strings.TrimSpace(t))
 	if provider == "gemini" {
+		if len(splitGeminiProjectIDs(metadata)) == 0 {
+			return nil
+		}
 		provider = "gemini-cli"
 	}
 	if ctx.PluginAuthParser != nil {
@@ -118,6 +118,9 @@ func synthesizeFileAuths(ctx *SynthesisContext, fullPath string, data []byte) []
 			}
 			return auths
 		}
+	}
+	if provider == "gemini-cli" {
+		return synthesizeGeminiCLIFileAuths(ctx, fullPath, metadata)
 	}
 	if provider == "" {
 		return nil
@@ -211,140 +214,7 @@ func synthesizeFileAuths(ctx *SynthesisContext, fullPath string, data []byte) []
 			}
 		}
 	}
-	// Gemini CLI credentials are only materialised as multi-project virtual auths.
-	// A single primary entry is never scheduled directly: if the file declares
-	// multiple projects we disable the primary and emit one virtual per project;
-	// otherwise the file is ignored entirely.
-	if provider == "gemini-cli" {
-		virtuals := SynthesizeGeminiVirtualAuths(a, metadata, now)
-		if len(virtuals) == 0 {
-			return nil
-		}
-		for _, v := range virtuals {
-			ApplyAuthExcludedModelsMeta(v, cfg, perAccountExcluded, "oauth")
-		}
-		out := make([]*coreauth.Auth, 0, 1+len(virtuals))
-		out = append(out, a)
-		out = append(out, virtuals...)
-		return out
-	}
 	return []*coreauth.Auth{a}
-}
-
-// SynthesizeGeminiVirtualAuths creates virtual Auth entries for multi-project
-// Gemini credentials. It disables the primary auth and creates one active
-// virtual auth per project. It returns nil when fewer than two projects are
-// declared, signalling that the credential should be ignored.
-func SynthesizeGeminiVirtualAuths(primary *coreauth.Auth, metadata map[string]any, now time.Time) []*coreauth.Auth {
-	if primary == nil || metadata == nil {
-		return nil
-	}
-	projects := splitGeminiProjectIDs(metadata)
-	if len(projects) <= 1 {
-		return nil
-	}
-	email, _ := metadata["email"].(string)
-	shared := geminicli.NewSharedCredential(primary.ID, email, metadata, projects)
-	primary.Disabled = true
-	primary.Status = coreauth.StatusDisabled
-	primary.Runtime = shared
-	if primary.Attributes == nil {
-		primary.Attributes = make(map[string]string)
-	}
-	primary.Attributes["gemini_virtual_primary"] = "true"
-	primary.Attributes["virtual_children"] = strings.Join(projects, ",")
-	source := primary.Attributes["source"]
-	authPath := primary.Attributes["path"]
-	originalProvider := primary.Provider
-	if originalProvider == "" {
-		originalProvider = "gemini-cli"
-	}
-	label := primary.Label
-	if label == "" {
-		label = originalProvider
-	}
-	virtuals := make([]*coreauth.Auth, 0, len(projects))
-	for _, projectID := range projects {
-		attrs := map[string]string{
-			"runtime_only":           "true",
-			"gemini_virtual_parent":  primary.ID,
-			"gemini_virtual_project": projectID,
-		}
-		if source != "" {
-			attrs["source"] = source
-		}
-		if authPath != "" {
-			attrs["path"] = authPath
-		}
-		// Propagate priority from primary auth to virtual auths.
-		if priorityVal, hasPriority := primary.Attributes["priority"]; hasPriority && priorityVal != "" {
-			attrs["priority"] = priorityVal
-		}
-		// Propagate note from primary auth to virtual auths.
-		if noteVal, hasNote := primary.Attributes["note"]; hasNote && noteVal != "" {
-			attrs["note"] = noteVal
-		}
-		metadataCopy := map[string]any{
-			"email":             email,
-			"project_id":        projectID,
-			"virtual":           true,
-			"virtual_parent_id": primary.ID,
-			"type":              metadata["type"],
-		}
-		if v, ok := metadata["disable_cooling"]; ok {
-			metadataCopy["disable_cooling"] = v
-		} else if v, ok := metadata["disable-cooling"]; ok {
-			metadataCopy["disable_cooling"] = v
-		}
-		if v, ok := metadata["request_retry"]; ok {
-			metadataCopy["request_retry"] = v
-		} else if v, ok := metadata["request-retry"]; ok {
-			metadataCopy["request_retry"] = v
-		}
-		proxy := strings.TrimSpace(primary.ProxyURL)
-		if proxy != "" {
-			metadataCopy["proxy_url"] = proxy
-		}
-		virtual := &coreauth.Auth{
-			ID:         buildGeminiVirtualID(primary.ID, projectID),
-			Provider:   originalProvider,
-			Label:      fmt.Sprintf("%s [%s]", label, projectID),
-			Status:     coreauth.StatusActive,
-			Attributes: attrs,
-			Metadata:   metadataCopy,
-			ProxyURL:   primary.ProxyURL,
-			Prefix:     primary.Prefix,
-			CreatedAt:  primary.CreatedAt,
-			UpdatedAt:  primary.UpdatedAt,
-			Runtime:    geminicli.NewVirtualCredential(projectID, shared),
-		}
-		virtuals = append(virtuals, virtual)
-	}
-	return virtuals
-}
-
-// splitGeminiProjectIDs extracts and deduplicates project IDs from metadata.
-func splitGeminiProjectIDs(metadata map[string]any) []string {
-	raw, _ := metadata["project_id"].(string)
-	trimmed := strings.TrimSpace(raw)
-	if trimmed == "" {
-		return nil
-	}
-	parts := strings.Split(trimmed, ",")
-	result := make([]string, 0, len(parts))
-	seen := make(map[string]struct{}, len(parts))
-	for _, part := range parts {
-		id := strings.TrimSpace(part)
-		if id == "" {
-			continue
-		}
-		if _, ok := seen[id]; ok {
-			continue
-		}
-		seen[id] = struct{}{}
-		result = append(result, id)
-	}
-	return result
 }
 
 func parsePluginFileAuths(parser PluginAuthParser, req pluginapi.AuthParseRequest) ([]*coreauth.Auth, bool, error) {
@@ -371,6 +241,105 @@ func compactPluginAuths(auths []*coreauth.Auth) []*coreauth.Auth {
 			continue
 		}
 		out = append(out, auth)
+	}
+	return out
+}
+
+func synthesizeGeminiCLIFileAuths(ctx *SynthesisContext, fullPath string, metadata map[string]any) []*coreauth.Auth {
+	if ctx == nil {
+		return nil
+	}
+	id := fullPath
+	if strings.TrimSpace(ctx.AuthDir) != "" {
+		if rel, errRel := filepath.Rel(ctx.AuthDir, fullPath); errRel == nil && rel != "" {
+			id = rel
+		}
+	}
+	if runtime.GOOS == "windows" {
+		id = strings.ToLower(id)
+	}
+	label := "gemini-cli"
+	if email, _ := metadata["email"].(string); email != "" {
+		label = email
+	}
+	primary := &coreauth.Auth{
+		ID:       id,
+		Provider: "gemini-cli",
+		Label:    label,
+		Status:   coreauth.StatusDisabled,
+		Disabled: true,
+		Attributes: map[string]string{
+			coreauth.AttributeSource:        fullPath,
+			coreauth.AttributePath:          fullPath,
+			coreauth.AttributeSourceBackend: coreauth.AuthSourceFile,
+		},
+		Metadata:  metadata,
+		CreatedAt: ctx.Now,
+		UpdatedAt: ctx.Now,
+	}
+	if rawPriority, ok := metadata["priority"]; ok {
+		switch v := rawPriority.(type) {
+		case float64:
+			primary.Attributes["priority"] = strconv.Itoa(int(v))
+		case string:
+			priority := strings.TrimSpace(v)
+			if _, errAtoi := strconv.Atoi(priority); errAtoi == nil {
+				primary.Attributes["priority"] = priority
+			}
+		}
+	}
+	auths := []*coreauth.Auth{primary}
+	for _, projectID := range splitGeminiProjectIDs(metadata) {
+		virtualMetadata := cloneMetadata(metadata)
+		virtualMetadata["project_id"] = projectID
+		virtual := &coreauth.Auth{
+			ID:       buildGeminiVirtualID(id, projectID),
+			Provider: "gemini-cli",
+			Label:    label + " (" + projectID + ")",
+			Status:   coreauth.StatusActive,
+			Attributes: map[string]string{
+				coreauth.AttributeSource:        fullPath,
+				coreauth.AttributePath:          fullPath,
+				coreauth.AttributeSourceBackend: coreauth.AuthSourceFile,
+				"gemini_virtual_parent":         primary.ID,
+				"gemini_project_id":             projectID,
+			},
+			Metadata:  virtualMetadata,
+			CreatedAt: ctx.Now,
+			UpdatedAt: ctx.Now,
+		}
+		if priority := strings.TrimSpace(primary.Attributes["priority"]); priority != "" {
+			virtual.Attributes["priority"] = priority
+		}
+		auths = append(auths, virtual)
+	}
+	return auths
+}
+
+func splitGeminiProjectIDs(metadata map[string]any) []string {
+	raw, _ := metadata["project_id"].(string)
+	parts := strings.Split(raw, ",")
+	out := make([]string, 0, len(parts))
+	seen := make(map[string]struct{}, len(parts))
+	for _, part := range parts {
+		projectID := strings.TrimSpace(part)
+		if projectID == "" {
+			continue
+		}
+		key := strings.ToLower(projectID)
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		seen[key] = struct{}{}
+		out = append(out, projectID)
+	}
+	return out
+}
+
+func cloneMetadata(metadata map[string]any) map[string]any {
+	out := make(map[string]any, len(metadata))
+	for key, value := range metadata {
+		out[key] = value
 	}
 	return out
 }
