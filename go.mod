@@ -17,7 +17,7 @@ require (
 	github.com/go-git/go-git/v6 v6.0.0-alpha.4
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.3
-	github.com/jackc/pgx/v5 v5.9.2
+	github.com/jackc/pgx/v5 v5.10.0
 	github.com/joho/godotenv v1.5.1
 	github.com/klauspost/compress v1.18.6
 	github.com/minio/minio-go/v7 v7.1.0
