@@ -19,7 +19,7 @@ require (
 	github.com/gorilla/websocket v1.5.3
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/joho/godotenv v1.5.1
-	github.com/klauspost/compress v1.18.6
+	github.com/klauspost/compress v1.19.0
 	github.com/minio/minio-go/v7 v7.1.0
 	github.com/pierrec/xxHash v0.1.5
 	github.com/redis/go-redis/v9 v9.21.0
