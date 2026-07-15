@@ -47,6 +47,9 @@ func GetProviderName(modelName string) []string {
 	if modelName == "" {
 		return nil
 	}
+	if provider, _, ok := ResolveProviderPinnedModel(modelName); ok {
+		return []string{provider}
+	}
 
 	providers := make([]string, 0, 4)
 	seen := make(map[string]struct{})
@@ -143,7 +146,7 @@ func IsOpenAICompatibilityAlias(modelName string, cfg *config.Config) bool {
 			continue
 		}
 		for _, model := range compat.Models {
-			if model.Alias == modelName {
+			if strings.EqualFold(model.Alias, modelName) || strings.EqualFold(model.Name, modelName) {
 				return true
 			}
 		}
@@ -171,7 +174,7 @@ func GetOpenAICompatibilityConfig(alias string, cfg *config.Config) (*config.Ope
 			continue
 		}
 		for _, model := range compat.Models {
-			if model.Alias == alias {
+			if strings.EqualFold(model.Alias, alias) || strings.EqualFold(model.Name, alias) {
 				return &compat, &model
 			}
 		}

@@ -83,11 +83,16 @@ func (ts *KimiTokenStorage) SaveTokenToFile(authFilePath string) error {
 	misc.LogSavingCredentials(authFilePath)
 	ts.Type = "kimi"
 
-	if err := os.MkdirAll(filepath.Dir(authFilePath), 0700); err != nil {
+	validatedPath, err := misc.ResolveSafeFilePath(authFilePath)
+	if err != nil {
+		return fmt.Errorf("invalid token file path: %w", err)
+	}
+
+	if err := os.MkdirAll(filepath.Dir(validatedPath), 0700); err != nil {
 		return fmt.Errorf("failed to create directory: %v", err)
 	}
 
-	f, err := os.Create(authFilePath)
+	f, err := os.Create(validatedPath)
 	if err != nil {
 		return fmt.Errorf("failed to create token file: %w", err)
 	}

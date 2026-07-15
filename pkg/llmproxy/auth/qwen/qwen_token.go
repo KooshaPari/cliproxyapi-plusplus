@@ -50,10 +50,20 @@ func (ts *QwenTokenStorage) SaveTokenToFile(authFilePath string) error {
 		return fmt.Errorf("qwen token: base token storage is nil")
 	}
 
-	if _, err := cleanTokenFilePath(authFilePath, "qwen token"); err != nil {
+	cleanPath, err := cleanTokenFilePath(authFilePath, "qwen token")
+	if err != nil {
 		return err
 	}
 
+	baseStorage := auth.NewBaseTokenStorage(cleanPath)
+	baseStorage.IDToken = ts.BaseTokenStorage.IDToken
+	baseStorage.AccessToken = ts.BaseTokenStorage.AccessToken
+	baseStorage.RefreshToken = ts.BaseTokenStorage.RefreshToken
+	baseStorage.LastRefresh = ts.BaseTokenStorage.LastRefresh
+	baseStorage.Email = ts.BaseTokenStorage.Email
+	baseStorage.Expire = ts.BaseTokenStorage.Expire
+	baseStorage.Metadata = ts.BaseTokenStorage.Metadata
+	ts.BaseTokenStorage = baseStorage
 	ts.BaseTokenStorage.Type = "qwen"
 	return ts.BaseTokenStorage.Save()
 }

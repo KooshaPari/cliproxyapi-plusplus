@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"html"
 	"net"
 	"net/http"
 	"net/url"
@@ -268,20 +269,21 @@ func (s *OAuthServer) handleSuccess(w http.ResponseWriter, r *http.Request) {
 // Returns:
 //   - string: The HTML content for the success page
 func (s *OAuthServer) generateSuccessHTML(setupRequired bool, platformURL string) string {
-	html := LoginSuccessHtml
+	htmlContent := LoginSuccessHtml
+	escapedPlatformURL := html.EscapeString(platformURL)
 
 	// Replace platform URL placeholder
-	html = strings.Replace(html, "{{PLATFORM_URL}}", platformURL, -1)
+	htmlContent = strings.Replace(htmlContent, "{{PLATFORM_URL}}", escapedPlatformURL, -1)
 
 	// Add setup notice if required
 	if setupRequired {
-		setupNotice := strings.Replace(SetupNoticeHtml, "{{PLATFORM_URL}}", platformURL, -1)
-		html = strings.Replace(html, "{{SETUP_NOTICE}}", setupNotice, 1)
+		setupNotice := strings.Replace(SetupNoticeHtml, "{{PLATFORM_URL}}", escapedPlatformURL, -1)
+		htmlContent = strings.Replace(htmlContent, "{{SETUP_NOTICE}}", setupNotice, 1)
 	} else {
-		html = strings.Replace(html, "{{SETUP_NOTICE}}", "", 1)
+		htmlContent = strings.Replace(htmlContent, "{{SETUP_NOTICE}}", "", 1)
 	}
 
-	return html
+	return htmlContent
 }
 
 // sendResult sends the OAuth result to the waiting channel.

@@ -25,6 +25,8 @@ type ConvertOpenAIResponseToGeminiParams struct {
 	ContentAccumulator strings.Builder
 	// Track if this is the first chunk
 	IsFirstChunk bool
+	// URL citations accumulated from OpenAI annotation deltas.
+	Citations []string
 }
 
 // ToolCallAccumulator holds the state for accumulating tool call data
@@ -52,6 +54,7 @@ func ConvertOpenAIResponseToGemini(_ context.Context, _ string, originalRequestR
 			ToolCallsAccumulator: nil,
 			ContentAccumulator:   strings.Builder{},
 			IsFirstChunk:         false,
+			Citations:            nil,
 		}
 	}
 
@@ -122,6 +125,7 @@ func ConvertOpenAIResponseToGemini(_ context.Context, _ string, originalRequestR
 			}
 
 			var chunkOutputs [][]byte
+			appendOpenAIAnnotationCitations(delta.Get("annotations"), &(*param).(*ConvertOpenAIResponseToGeminiParams).Citations)
 
 			// Handle reasoning/thinking delta
 			if reasoning := delta.Get("reasoning_content"); reasoning.Exists() {
@@ -209,6 +213,7 @@ func ConvertOpenAIResponseToGemini(_ context.Context, _ string, originalRequestR
 			if finishReason := choice.Get("finish_reason"); finishReason.Exists() {
 				geminiFinishReason := mapOpenAIFinishReasonToGemini(finishReason.String())
 				template, _ = sjson.SetBytes(template, "candidates.0.finishReason", geminiFinishReason)
+				template = setGeminiGroundingCitations(template, (*param).(*ConvertOpenAIResponseToGeminiParams).Citations)
 
 				// If we have accumulated tool calls, output them now
 				if len((*param).(*ConvertOpenAIResponseToGeminiParams).ToolCallsAccumulator) > 0 {
@@ -601,6 +606,10 @@ func ConvertOpenAIResponseToGeminiNonStream(_ context.Context, _ string, origina
 				out, _ = sjson.SetBytes(out, "candidates.0.finishReason", geminiFinishReason)
 			}
 
+			var citations []string
+			appendOpenAIAnnotationCitations(message.Get("annotations"), &citations)
+			out = setGeminiGroundingCitations(out, citations)
+
 			// Set index
 			out, _ = sjson.SetBytes(out, "candidates.0.index", choiceIdx)
 
@@ -619,6 +628,25 @@ func ConvertOpenAIResponseToGeminiNonStream(_ context.Context, _ string, origina
 	}
 
 	return out
+}
+
+func appendOpenAIAnnotationCitations(annotations gjson.Result, citations *[]string) {
+	if !annotations.Exists() || !annotations.IsArray() {
+		return
+	}
+	annotations.ForEach(func(_, annotation gjson.Result) bool {
+		if annotation.Get("type").String() == "url_citation" {
+			*citations = append(*citations, annotation.Raw)
+		}
+		return true
+	})
+}
+
+func setGeminiGroundingCitations(payload []byte, citations []string) []byte {
+	for _, citation := range citations {
+		payload, _ = sjson.SetRawBytes(payload, "candidates.0.groundingMetadata.citations.-1", []byte(citation))
+	}
+	return payload
 }
 
 func GeminiTokenCount(ctx context.Context, count int64) []byte {

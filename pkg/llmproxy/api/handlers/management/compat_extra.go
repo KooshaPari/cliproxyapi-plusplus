@@ -112,13 +112,13 @@ func (h *Handler) GetAmpRestrictManagementToLocalhost(c *gin.Context) {
 }
 func (h *Handler) PutAmpRestrictManagementToLocalhost(c *gin.Context) {
 	var body struct {
-		Value bool `json:"value"`
+		Value *bool `json:"value"`
 	}
-	if c.ShouldBindJSON(&body) != nil {
+	if c.ShouldBindJSON(&body) != nil || body.Value == nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid body"})
 		return
 	}
-	h.cfg.AmpCode.RestrictManagementToLocalhost = body.Value
+	h.cfg.AmpCode.RestrictManagementToLocalhost = *body.Value
 	h.persist(c)
 }
 func (h *Handler) GetAmpModelMappings(c *gin.Context) {
@@ -135,9 +135,70 @@ func (h *Handler) PutAmpModelMappings(c *gin.Context) {
 	h.cfg.AmpCode.ModelMappings = body.Value
 	h.persist(c)
 }
-func (h *Handler) PatchAmpModelMappings(c *gin.Context) { h.PutAmpModelMappings(c) }
+func (h *Handler) PatchAmpModelMappings(c *gin.Context) {
+	var body struct {
+		Value []config.AmpModelMapping `json:"value"`
+	}
+	if c.ShouldBindJSON(&body) != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid body"})
+		return
+	}
+
+	bySource := make(map[string]int, len(h.cfg.AmpCode.ModelMappings))
+	for idx, mapping := range h.cfg.AmpCode.ModelMappings {
+		bySource[mapping.From] = idx
+	}
+	for _, mapping := range body.Value {
+		if idx, ok := bySource[mapping.From]; ok {
+			h.cfg.AmpCode.ModelMappings[idx] = mapping
+			continue
+		}
+		bySource[mapping.From] = len(h.cfg.AmpCode.ModelMappings)
+		h.cfg.AmpCode.ModelMappings = append(h.cfg.AmpCode.ModelMappings, mapping)
+	}
+	h.persist(c)
+}
 func (h *Handler) DeleteAmpModelMappings(c *gin.Context) {
-	h.cfg.AmpCode.ModelMappings = nil
+	if c.Request.Body == nil {
+		h.cfg.AmpCode.ModelMappings = nil
+		h.persist(c)
+		return
+	}
+
+	raw, err := io.ReadAll(c.Request.Body)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid body"})
+		return
+	}
+	if strings.TrimSpace(string(raw)) == "" {
+		h.cfg.AmpCode.ModelMappings = nil
+		h.persist(c)
+		return
+	}
+
+	var body struct {
+		Value []string `json:"value"`
+	}
+	if err := json.Unmarshal(raw, &body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid body"})
+		return
+	}
+	remove := make(map[string]struct{}, len(body.Value))
+	for _, from := range body.Value {
+		remove[from] = struct{}{}
+	}
+	if len(remove) == 0 {
+		h.persist(c)
+		return
+	}
+	kept := h.cfg.AmpCode.ModelMappings[:0]
+	for _, mapping := range h.cfg.AmpCode.ModelMappings {
+		if _, ok := remove[mapping.From]; ok {
+			continue
+		}
+		kept = append(kept, mapping)
+	}
+	h.cfg.AmpCode.ModelMappings = kept
 	h.persist(c)
 }
 func (h *Handler) GetAmpForceModelMappings(c *gin.Context) {
@@ -145,13 +206,13 @@ func (h *Handler) GetAmpForceModelMappings(c *gin.Context) {
 }
 func (h *Handler) PutAmpForceModelMappings(c *gin.Context) {
 	var body struct {
-		Value bool `json:"value"`
+		Value *bool `json:"value"`
 	}
-	if c.ShouldBindJSON(&body) != nil {
+	if c.ShouldBindJSON(&body) != nil || body.Value == nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid body"})
 		return
 	}
-	h.cfg.AmpCode.ForceModelMappings = body.Value
+	h.cfg.AmpCode.ForceModelMappings = *body.Value
 	h.persist(c)
 }
 

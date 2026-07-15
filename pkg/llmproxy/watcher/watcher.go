@@ -141,6 +141,12 @@ func (w *Watcher) SetConfig(cfg *config.Config) {
 	w.oldConfigYaml, _ = yaml.Marshal(cfg)
 }
 
+func (w *Watcher) LastConfigHash() string {
+	w.clientsMutex.RLock()
+	defer w.clientsMutex.RUnlock()
+	return w.lastConfigHash
+}
+
 // SetPluginAuthParser updates the plugin auth parser used for file auth synthesis.
 func (w *Watcher) SetPluginAuthParser(parser synthesizer.PluginAuthParser) {
 	w.clientsMutex.Lock()

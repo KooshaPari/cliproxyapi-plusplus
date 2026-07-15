@@ -78,8 +78,12 @@ func synthesizeFileAuths(ctx *SynthesisContext, fullPath string, data []byte) []
 	t, _ := metadata["type"].(string)
 	provider := strings.ToLower(strings.TrimSpace(t))
 	if provider == "gemini" {
+		if len(splitGeminiProjectIDs(metadata)) == 0 {
+			return nil
+		}
 		provider = "gemini-cli"
 	}
+	id := synthesizeFileAuthID(ctx, fullPath)
 	if ctx.PluginAuthParser != nil {
 		auths, handled, errParse := parsePluginFileAuths(ctx.PluginAuthParser, pluginapi.AuthParseRequest{
 			Provider: provider,
@@ -116,22 +120,15 @@ func synthesizeFileAuths(ctx *SynthesisContext, fullPath string, data []byte) []
 			return auths
 		}
 	}
-	if provider == "" || provider == "gemini-cli" {
+	if provider == "gemini-cli" {
+		return synthesizeGeminiCLIFileAuths(ctx, fullPath, id, metadata)
+	}
+	if provider == "" {
 		return nil
 	}
 	label := provider
 	if email, _ := metadata["email"].(string); email != "" {
 		label = email
-	}
-	// Use relative path under authDir as ID to stay consistent with the file-based token store.
-	id := fullPath
-	if strings.TrimSpace(ctx.AuthDir) != "" {
-		if rel, errRel := filepath.Rel(ctx.AuthDir, fullPath); errRel == nil && rel != "" {
-			id = rel
-		}
-	}
-	if runtime.GOOS == "windows" {
-		id = strings.ToLower(id)
 	}
 
 	proxyURL := ""
@@ -209,6 +206,131 @@ func synthesizeFileAuths(ctx *SynthesisContext, fullPath string, data []byte) []
 		}
 	}
 	return []*coreauth.Auth{a}
+}
+
+func synthesizeFileAuthID(ctx *SynthesisContext, fullPath string) string {
+	id := fullPath
+	if ctx != nil && strings.TrimSpace(ctx.AuthDir) != "" {
+		if rel, errRel := filepath.Rel(ctx.AuthDir, fullPath); errRel == nil && rel != "" {
+			id = rel
+		}
+	}
+	if runtime.GOOS == "windows" {
+		id = strings.ToLower(id)
+	}
+	return id
+}
+
+func synthesizeGeminiCLIFileAuths(ctx *SynthesisContext, fullPath, id string, metadata map[string]any) []*coreauth.Auth {
+	if ctx == nil {
+		return nil
+	}
+	now := ctx.Now
+	label := "gemini-cli"
+	if email, _ := metadata["email"].(string); email != "" {
+		label = email
+	}
+	primary := &coreauth.Auth{
+		ID:       id,
+		Provider: "gemini-cli",
+		Label:    label,
+		Status:   coreauth.StatusDisabled,
+		Disabled: true,
+		Attributes: map[string]string{
+			coreauth.AttributeSource:        fullPath,
+			coreauth.AttributePath:          fullPath,
+			coreauth.AttributeSourceBackend: coreauth.AuthSourceFile,
+		},
+		Metadata:  metadata,
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
+	applyFileMetadata(ctx, primary, metadata)
+
+	projects := splitGeminiProjectIDs(metadata)
+	if len(projects) == 0 {
+		return []*coreauth.Auth{primary}
+	}
+
+	auths := make([]*coreauth.Auth, 0, len(projects)+1)
+	auths = append(auths, primary)
+	for _, projectID := range projects {
+		virtualMetadata := cloneMetadata(metadata)
+		virtualMetadata["project_id"] = projectID
+		virtual := &coreauth.Auth{
+			ID:       buildGeminiVirtualID(id, projectID),
+			Provider: "gemini-cli",
+			Label:    label + " (" + projectID + ")",
+			Status:   coreauth.StatusActive,
+			Attributes: map[string]string{
+				coreauth.AttributeSource:        fullPath,
+				coreauth.AttributePath:          fullPath,
+				coreauth.AttributeSourceBackend: coreauth.AuthSourceFile,
+				"gemini_virtual_parent":         primary.ID,
+			},
+			Metadata:  virtualMetadata,
+			CreatedAt: now,
+			UpdatedAt: now,
+		}
+		applyFileMetadata(ctx, virtual, metadata)
+		auths = append(auths, virtual)
+	}
+	return auths
+}
+
+func applyFileMetadata(ctx *SynthesisContext, auth *coreauth.Auth, metadata map[string]any) {
+	if auth == nil {
+		return
+	}
+	if auth.Attributes == nil {
+		auth.Attributes = make(map[string]string)
+	}
+	if rawPriority, ok := metadata["priority"]; ok {
+		switch v := rawPriority.(type) {
+		case float64:
+			auth.Attributes["priority"] = strconv.Itoa(int(v))
+		case string:
+			priority := strings.TrimSpace(v)
+			if _, errAtoi := strconv.Atoi(priority); errAtoi == nil {
+				auth.Attributes["priority"] = priority
+			}
+		}
+	}
+	coreauth.ApplyCustomHeadersFromMetadata(auth)
+	coreauth.SetOAuthModelAliasesAttribute(auth, extractOAuthModelAliasesFromMetadata(metadata))
+	ApplyAuthExcludedModelsMeta(auth, ctx.Config, extractExcludedModelsFromMetadata(metadata), "oauth")
+}
+
+func splitGeminiProjectIDs(metadata map[string]any) []string {
+	raw, _ := metadata["project_id"].(string)
+	if strings.TrimSpace(raw) == "" {
+		return nil
+	}
+	seen := make(map[string]struct{})
+	projects := make([]string, 0)
+	for _, part := range strings.Split(raw, ",") {
+		projectID := strings.TrimSpace(part)
+		if projectID == "" {
+			continue
+		}
+		if _, exists := seen[projectID]; exists {
+			continue
+		}
+		seen[projectID] = struct{}{}
+		projects = append(projects, projectID)
+	}
+	return projects
+}
+
+func cloneMetadata(metadata map[string]any) map[string]any {
+	if metadata == nil {
+		return nil
+	}
+	out := make(map[string]any, len(metadata))
+	for key, value := range metadata {
+		out[key] = value
+	}
+	return out
 }
 
 func parsePluginFileAuths(parser PluginAuthParser, req pluginapi.AuthParseRequest) ([]*coreauth.Auth, bool, error) {

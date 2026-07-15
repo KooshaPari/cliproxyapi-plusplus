@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/config"
 	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/interfaces"
 	"github.com/kooshapari/CLIProxyAPI/v7/pkg/llmproxy/logging"
@@ -186,10 +187,7 @@ func BuildErrorResponseBody(status int, errText string) []byte {
 	if trimmed != "" && json.Valid([]byte(trimmed)) {
 		var payload map[string]any
 		if err := json.Unmarshal([]byte(trimmed), &payload); err == nil {
-			if _, ok := payload["error"]; ok {
-				return []byte(trimmed)
-			}
-			errText = fmt.Sprintf("upstream returned JSON payload without top-level error field: %s", trimmed)
+			return []byte(trimmed)
 		}
 	}
 
@@ -294,6 +292,8 @@ func requestExecutionMetadata(ctx context.Context) map[string]any {
 	meta := make(map[string]any)
 	if key != "" {
 		meta[idempotencyKeyMetadataKey] = key
+	} else {
+		meta[idempotencyKeyMetadataKey] = uuid.NewString()
 	}
 	if requestPath != "" {
 		meta[coreexecutor.RequestPathMetadataKey] = requestPath
@@ -1360,12 +1360,42 @@ func (h *BaseAPIHandler) executeStreamWithAuthManagerFormats(ctx context.Context
 					return
 				}
 				if len(chunk.Payload) > 0 {
-					sentPayload = true
-					streamHeadersCommitted = true
 					payload := cloneBytes(chunk.Payload)
+					if streamInterceptorsActive {
+						applyStreamHeaderInit()
+						executedReq, executedOpts := executedRequest()
+						intercepted := interceptStreamChunk(ctx, interceptorHost, pluginapi.StreamChunkInterceptRequest{
+							SourceFormat:    responseProtocol,
+							Model:           normalizedModel,
+							RequestedModel:  originalRequestedModel,
+							RequestHeaders:  cloneHeader(executedOpts.Headers),
+							ResponseHeaders: cloneHeader(rawStreamHeaders),
+							OriginalRequest: cloneBytes(executedOpts.OriginalRequest),
+							RequestBody:     cloneBytes(executedReq.Payload),
+							Body:            payload,
+							HistoryChunks:   cloneByteSlices(historyChunks),
+							ChunkIndex:      len(historyChunks),
+							Metadata:        executedOpts.Metadata,
+						}, execOptions.SkipInterceptorPluginID)
+						applyStreamHeaders(intercepted.Headers)
+						if len(intercepted.Body) > 0 {
+							payload = cloneBytes(intercepted.Body)
+						}
+						if intercepted.DropChunk {
+							continue
+						}
+					}
+					if responseProtocol == "openai-response" {
+						if errValidate := validateSSEDataJSON(payload); errValidate != nil {
+							_ = sendErr(&interfaces.ErrorMessage{StatusCode: http.StatusBadGateway, Error: errValidate})
+							return
+						}
+					}
+					streamHeadersCommitted = true
 					if okSendData := sendData(payload); !okSendData {
 						return
 					}
+					sentPayload = true
 					if streamInterceptorsActive {
 						historyChunks = appendStreamInterceptorHistory(historyChunks, payload)
 					}
@@ -1394,7 +1424,7 @@ func (h *BaseAPIHandler) providersForExecution(modelName, originalRequestedModel
 	if routeDecision.Provider != "" {
 		resolvedModelName := strings.TrimSpace(routeDecision.Model)
 		if resolvedModelName == "" {
-			resolvedModelName = strings.TrimSpace(modelName)
+			resolvedModelName = strings.TrimSpace(originalRequestedModel)
 		}
 		baseModel := strings.TrimSpace(thinking.ParseSuffix(resolvedModelName).ModelName)
 		if errMsg := h.validateImageOnlyModel(baseModel, allowImageModel); errMsg != nil {

@@ -71,12 +71,14 @@ func SetLogLevel(cfg *config.Config) {
 	}
 }
 
-// ResolveAuthDir normalizes the auth directory path for consistent reuse throughout the app.
-// It expands a leading tilde (~) to the user's home directory and returns a cleaned path.
-// If authDir is empty, it defaults to ~/.cli-proxy-api.
+// ResolveAuthDir normalizes a supplied auth directory path for consistent reuse
+// throughout the app. It expands a leading tilde (~) to the user's home
+// directory and returns a cleaned path. Empty input remains empty; callers that
+// want the configured default should use ResolveAuthDirOrDefault.
 func ResolveAuthDir(authDir string) (string, error) {
+	authDir = strings.TrimSpace(authDir)
 	if authDir == "" {
-		authDir = config.DefaultAuthDir
+		return "", nil
 	}
 	if strings.HasPrefix(authDir, "~") {
 		home, err := os.UserHomeDir()

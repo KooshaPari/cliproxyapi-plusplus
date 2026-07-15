@@ -57,6 +57,8 @@ type ConvertOpenAIResponseToAnthropicParams struct {
 	ThinkingContentBlockIndex int
 	// Next available content block index
 	NextContentBlockIndex int
+	// URL citations accumulated from OpenAI annotation deltas.
+	Citations []string
 }
 
 // ToolCallAccumulator holds the state for accumulating tool call data
@@ -100,6 +102,7 @@ func ConvertOpenAIResponseToClaude(_ context.Context, _ string, originalRequestR
 			TextContentBlockIndex:       -1,
 			ThinkingContentBlockIndex:   -1,
 			NextContentBlockIndex:       0,
+			Citations:                   nil,
 		}
 	}
 
@@ -274,6 +277,8 @@ func convertOpenAIStreamingChunkToAnthropic(rawJSON []byte, param *ConvertOpenAI
 				return true
 			})
 		}
+
+		appendOpenAIAnnotationCitations(delta.Get("annotations"), &param.Citations)
 	}
 
 	// Handle finish_reason (but don't send message_delta/message_stop yet)
@@ -349,6 +354,7 @@ func convertOpenAIStreamingChunkToAnthropic(rawJSON []byte, param *ConvertOpenAI
 			if cachedTokens > 0 {
 				messageDeltaJSON, _ = sjson.SetBytes(messageDeltaJSON, "usage.cache_read_input_tokens", cachedTokens)
 			}
+			messageDeltaJSON = setRawCitations(messageDeltaJSON, "citations", param.Citations)
 			results = append(results, translatorcommon.AppendSSEEventBytes(nil, "message_delta", messageDeltaJSON, 2))
 			param.MessageDeltaSent = true
 
@@ -406,6 +412,7 @@ func convertOpenAIDoneToAnthropic(param *ConvertOpenAIResponseToAnthropicParams)
 	if param.FinishReason != "" && !param.MessageDeltaSent {
 		messageDeltaJSON := []byte(`{"type":"message_delta","delta":{"stop_reason":"","stop_sequence":null},"usage":{"input_tokens":0,"output_tokens":0}}`)
 		messageDeltaJSON, _ = sjson.SetBytes(messageDeltaJSON, "delta.stop_reason", mapOpenAIFinishReasonToAnthropic(effectiveOpenAIFinishReason(param)))
+		messageDeltaJSON = setRawCitations(messageDeltaJSON, "citations", param.Citations)
 		results = append(results, translatorcommon.AppendSSEEventBytes(nil, "message_delta", messageDeltaJSON, 2))
 		param.MessageDeltaSent = true
 	}
@@ -631,6 +638,10 @@ func ConvertOpenAIResponseToClaudeNonStream(_ context.Context, _ string, origina
 		}
 
 		if message := choice.Get("message"); message.Exists() {
+			var citations []string
+			appendOpenAIAnnotationCitations(message.Get("annotations"), &citations)
+			out = setRawCitations(out, "citations", citations)
+
 			if contentResult := message.Get("content"); contentResult.Exists() {
 				if contentResult.IsArray() {
 					var textBuilder strings.Builder
@@ -766,6 +777,25 @@ func ConvertOpenAIResponseToClaudeNonStream(_ context.Context, _ string, origina
 	}
 
 	return out
+}
+
+func appendOpenAIAnnotationCitations(annotations gjson.Result, citations *[]string) {
+	if !annotations.Exists() || !annotations.IsArray() {
+		return
+	}
+	annotations.ForEach(func(_, annotation gjson.Result) bool {
+		if annotation.Get("type").String() == "url_citation" {
+			*citations = append(*citations, annotation.Raw)
+		}
+		return true
+	})
+}
+
+func setRawCitations(payload []byte, path string, citations []string) []byte {
+	for _, citation := range citations {
+		payload, _ = sjson.SetRawBytes(payload, path+".-1", []byte(citation))
+	}
+	return payload
 }
 
 func ClaudeTokenCount(ctx context.Context, count int64) []byte {

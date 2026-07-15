@@ -1,0 +1,45 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.3",
+  "version": 1,
+  "serialNumber": "urn:uuid:c1d30611-6317-4b79-90ce-46c5c8c4d509",
+  "metadata": {
+    "timestamp": "2026-06-28T19:27:07.687001000Z",
+    "tools": [
+      {
+        "vendor": "CycloneDX",
+        "name": "cargo-cyclonedx",
+        "version": "0.5.9"
+      }
+    ],
+    "component": {
+      "type": "library",
+      "bom-ref": "path+file:///Users/kooshapari/CodeProjects/Phenotype/repos/cliproxyapi-plusplus/examples/plugin/frontend-auth/rust#cliproxy-frontend-auth-rust@0.1.0",
+      "name": "cliproxy-frontend-auth-rust",
+      "version": "0.1.0",
+      "scope": "required",
+      "purl": "pkg:cargo/cliproxy-frontend-auth-rust@0.1.0?download_url=file://.",
+      "components": [
+        {
+          "type": "library",
+          "bom-ref": "path+file:///Users/kooshapari/CodeProjects/Phenotype/repos/cliproxyapi-plusplus/examples/plugin/frontend-auth/rust#cliproxy-frontend-auth-rust@0.1.0 bin-target-0",
+          "name": "cliproxy_frontend_auth_rust",
+          "version": "0.1.0",
+          "purl": "pkg:cargo/cliproxy-frontend-auth-rust@0.1.0?download_url=file://.#src/lib.rs"
+        }
+      ]
+    },
+    "properties": [
+      {
+        "name": "cdx:rustc:sbom:target:triple",
+        "value": "aarch64-apple-darwin"
+      }
+    ]
+  },
+  "components": [],
+  "dependencies": [
+    {
+      "ref": "path+file:///Users/kooshapari/CodeProjects/Phenotype/repos/cliproxyapi-plusplus/examples/plugin/frontend-auth/rust#cliproxy-frontend-auth-rust@0.1.0"
+    }
+  ]
+}

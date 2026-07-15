@@ -721,15 +721,25 @@ func extractAndRemoveBetas(body []byte) ([]string, []byte) {
 	var betas []string
 	if betasResult.IsArray() {
 		for _, item := range betasResult.Array() {
-			if s := strings.TrimSpace(item.String()); s != "" {
-				betas = append(betas, s)
+			if item.Type != gjson.String {
+				continue
 			}
+			betas = appendBetaValues(betas, item.String())
 		}
-	} else if s := strings.TrimSpace(betasResult.String()); s != "" {
-		betas = append(betas, s)
+	} else if betasResult.Type == gjson.String {
+		betas = appendBetaValues(betas, betasResult.String())
 	}
 	body, _ = sjson.DeleteBytes(body, "betas")
 	return betas, body
+}
+
+func appendBetaValues(betas []string, raw string) []string {
+	for _, part := range strings.Split(raw, ",") {
+		if s := strings.TrimSpace(part); s != "" {
+			betas = append(betas, s)
+		}
+	}
+	return betas
 }
 
 // disableThinkingIfToolChoiceForced checks if tool_choice forces tool use and disables thinking.
