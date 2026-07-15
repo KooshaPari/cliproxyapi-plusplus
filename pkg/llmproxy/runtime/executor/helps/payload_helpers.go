@@ -62,7 +62,11 @@ func ApplyPayloadConfigWithRequest(cfg *config.Config, model, protocol, fromProt
 						continue
 					}
 					for _, resolvedPath := range resolvePayloadRulePaths(out, fullPath) {
-						if gjson.GetBytes(source, resolvedPath).Exists() {
+						if originalValue := gjson.GetBytes(source, resolvedPath); originalValue.Exists() {
+							updated, errSet := sjson.SetRawBytes(out, resolvedPath, []byte(originalValue.Raw))
+							if errSet == nil {
+								out = updated
+							}
 							continue
 						}
 						if _, ok := appliedDefaults[resolvedPath]; ok {
@@ -89,7 +93,11 @@ func ApplyPayloadConfigWithRequest(cfg *config.Config, model, protocol, fromProt
 						continue
 					}
 					for _, resolvedPath := range resolvePayloadRulePaths(out, fullPath) {
-						if gjson.GetBytes(source, resolvedPath).Exists() {
+						if originalValue := gjson.GetBytes(source, resolvedPath); originalValue.Exists() {
+							updated, errSet := sjson.SetRawBytes(out, resolvedPath, []byte(originalValue.Raw))
+							if errSet == nil {
+								out = updated
+							}
 							continue
 						}
 						if _, ok := appliedDefaults[resolvedPath]; ok {
@@ -215,24 +223,29 @@ func shouldStripImageGeneration(mode config.DisableImageGenerationMode, requestP
 }
 
 func payloadModelRulesMatch(rules []config.PayloadModelRule, protocol string, fromProtocol string, headers http.Header, payload []byte, root string, models []string) bool {
-	if len(rules) == 0 || len(models) == 0 {
-		return false
+	if len(rules) == 0 {
+		return true
 	}
-	for _, model := range models {
-		for _, entry := range rules {
-			name := strings.TrimSpace(entry.Name)
-			if name == "" {
+	for _, entry := range rules {
+		name := strings.TrimSpace(entry.Name)
+		if ep := strings.TrimSpace(entry.Protocol); ep != "" {
+			if protocol == "" || !strings.EqualFold(ep, protocol) {
 				continue
 			}
-			if ep := strings.TrimSpace(entry.Protocol); ep != "" && protocol != "" && !strings.EqualFold(ep, protocol) {
-				continue
+		}
+		if !payloadFromProtocolMatches(entry.FromProtocol, fromProtocol) {
+			continue
+		}
+		if !payloadHeadersMatch(headers, entry.Headers) {
+			continue
+		}
+		if name == "" {
+			if payloadModelRuleConditionsMatch(payload, root, entry) {
+				return true
 			}
-			if !payloadFromProtocolMatches(entry.FromProtocol, fromProtocol) {
-				continue
-			}
-			if !payloadHeadersMatch(headers, entry.Headers) {
-				continue
-			}
+			continue
+		}
+		for _, model := range models {
 			if !matchModelPattern(name, model) {
 				continue
 			}

@@ -1599,7 +1599,7 @@ func TestScheduleConfigReloadDebounces(t *testing.T) {
 	if atomic.LoadInt32(&reloads) != 1 {
 		t.Fatalf("expected single debounced reload, got %d", reloads)
 	}
-	if w.lastConfigHash == "" {
+	if w.LastConfigHash() == "" {
 		t.Fatal("expected lastConfigHash to be set after reload")
 	}
 }

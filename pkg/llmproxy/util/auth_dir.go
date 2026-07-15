@@ -15,14 +15,20 @@ func ResolveAuthDirOrDefault(authDir string) (string, error) {
 	if authDir == "" {
 		authDir = DefaultAuthDir
 	}
-	if strings.HasPrefix(authDir, "~/") {
+	if strings.HasPrefix(authDir, "~") {
 		home, err := os.UserHomeDir()
 		if err != nil {
 			return "", err
 		}
 		if home != "" {
-			return filepath.Join(home, strings.TrimPrefix(authDir, "~/")), nil
+			remainder := strings.TrimPrefix(authDir, "~")
+			remainder = strings.TrimLeft(remainder, "/\\")
+			if remainder == "" {
+				return filepath.Clean(home), nil
+			}
+			normalized := strings.ReplaceAll(remainder, "\\", "/")
+			return filepath.Clean(filepath.Join(home, filepath.FromSlash(normalized))), nil
 		}
 	}
-	return authDir, nil
+	return filepath.Clean(authDir), nil
 }

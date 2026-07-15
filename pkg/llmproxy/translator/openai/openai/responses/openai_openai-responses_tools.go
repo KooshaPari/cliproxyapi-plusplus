@@ -17,7 +17,7 @@ func convertResponsesToolToOpenAIChatTools(tool gjson.Result) [][]byte {
 	case "namespace":
 		return convertResponsesNamespaceToolToOpenAIChat(tool)
 	default:
-		return nil
+		return [][]byte{[]byte(tool.Raw)}
 	}
 	return nil
 }

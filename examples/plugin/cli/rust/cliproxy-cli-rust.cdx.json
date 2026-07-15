@@ -1,0 +1,45 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.3",
+  "version": 1,
+  "serialNumber": "urn:uuid:9afec688-4f35-469b-adae-d8c4d277ca0b",
+  "metadata": {
+    "timestamp": "2026-06-28T19:26:59.418334000Z",
+    "tools": [
+      {
+        "vendor": "CycloneDX",
+        "name": "cargo-cyclonedx",
+        "version": "0.5.9"
+      }
+    ],
+    "component": {
+      "type": "library",
+      "bom-ref": "path+file:///Users/kooshapari/CodeProjects/Phenotype/repos/cliproxyapi-plusplus/.worktrees/feat-upstream-port-2026-06-26/examples/plugin/cli/rust#cliproxy-cli-rust@0.1.0",
+      "name": "cliproxy-cli-rust",
+      "version": "0.1.0",
+      "scope": "required",
+      "purl": "pkg:cargo/cliproxy-cli-rust@0.1.0?download_url=file://.",
+      "components": [
+        {
+          "type": "library",
+          "bom-ref": "path+file:///Users/kooshapari/CodeProjects/Phenotype/repos/cliproxyapi-plusplus/.worktrees/feat-upstream-port-2026-06-26/examples/plugin/cli/rust#cliproxy-cli-rust@0.1.0 bin-target-0",
+          "name": "cliproxy_cli_rust",
+          "version": "0.1.0",
+          "purl": "pkg:cargo/cliproxy-cli-rust@0.1.0?download_url=file://.#src/lib.rs"
+        }
+      ]
+    },
+    "properties": [
+      {
+        "name": "cdx:rustc:sbom:target:triple",
+        "value": "aarch64-apple-darwin"
+      }
+    ]
+  },
+  "components": [],
+  "dependencies": [
+    {
+      "ref": "path+file:///Users/kooshapari/CodeProjects/Phenotype/repos/cliproxyapi-plusplus/.worktrees/feat-upstream-port-2026-06-26/examples/plugin/cli/rust#cliproxy-cli-rust@0.1.0"
+    }
+  ]
+}

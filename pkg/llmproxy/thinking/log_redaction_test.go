@@ -137,6 +137,7 @@ func TestThinkingApplyLogsRedactSensitiveValues(t *testing.T) {
 
 	_, err = applyUserDefinedModel(
 		[]byte(`{}`),
+		[]byte(`{}`),
 		nil,
 		"claude",
 		"claude",
@@ -148,6 +149,7 @@ func TestThinkingApplyLogsRedactSensitiveValues(t *testing.T) {
 
 	_, err = applyUserDefinedModel(
 		[]byte(`{"thinking":{"budget_tokens":2000}}`),
+		[]byte(`{"thinking":{"budget_tokens":2000}}`),
 		nil,
 		"claude",
 		"lane6-unknown-provider",
@@ -158,6 +160,7 @@ func TestThinkingApplyLogsRedactSensitiveValues(t *testing.T) {
 	}
 
 	_, err = applyUserDefinedModel(
+		[]byte(`{"thinking":{"budget_tokens":2000}}`),
 		[]byte(`{"thinking":{"budget_tokens":2000}}`),
 		nil,
 		"claude",

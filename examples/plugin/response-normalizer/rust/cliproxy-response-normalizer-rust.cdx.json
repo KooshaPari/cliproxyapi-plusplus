@@ -1,0 +1,45 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.3",
+  "version": 1,
+  "serialNumber": "urn:uuid:dff65fe0-b73e-4ee1-b543-b9bb7876c7c6",
+  "metadata": {
+    "timestamp": "2026-06-28T19:27:03.860339000Z",
+    "tools": [
+      {
+        "vendor": "CycloneDX",
+        "name": "cargo-cyclonedx",
+        "version": "0.5.9"
+      }
+    ],
+    "component": {
+      "type": "library",
+      "bom-ref": "path+file:///Users/kooshapari/CodeProjects/Phenotype/repos/cliproxyapi-plusplus/.worktrees/feat-upstream-port-2026-06-26/examples/plugin/response-normalizer/rust#cliproxy-response-normalizer-rust@0.1.0",
+      "name": "cliproxy-response-normalizer-rust",
+      "version": "0.1.0",
+      "scope": "required",
+      "purl": "pkg:cargo/cliproxy-response-normalizer-rust@0.1.0?download_url=file://.",
+      "components": [
+        {
+          "type": "library",
+          "bom-ref": "path+file:///Users/kooshapari/CodeProjects/Phenotype/repos/cliproxyapi-plusplus/.worktrees/feat-upstream-port-2026-06-26/examples/plugin/response-normalizer/rust#cliproxy-response-normalizer-rust@0.1.0 bin-target-0",
+          "name": "cliproxy_response_normalizer_rust",
+          "version": "0.1.0",
+          "purl": "pkg:cargo/cliproxy-response-normalizer-rust@0.1.0?download_url=file://.#src/lib.rs"
+        }
+      ]
+    },
+    "properties": [
+      {
+        "name": "cdx:rustc:sbom:target:triple",
+        "value": "aarch64-apple-darwin"
+      }
+    ]
+  },
+  "components": [],
+  "dependencies": [
+    {
+      "ref": "path+file:///Users/kooshapari/CodeProjects/Phenotype/repos/cliproxyapi-plusplus/.worktrees/feat-upstream-port-2026-06-26/examples/plugin/response-normalizer/rust#cliproxy-response-normalizer-rust@0.1.0"
+    }
+  ]
+}

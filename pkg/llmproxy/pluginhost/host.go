@@ -508,6 +508,9 @@ func (h *Host) retireLoadedPluginLocked(lp *loadedPlugin) {
 }
 
 func (h *Host) recordCurrent(record capabilityRecord) bool {
+	if strings.TrimSpace(record.path) == "" && strings.TrimSpace(record.version) == "" {
+		return strings.TrimSpace(record.id) != ""
+	}
 	return h.pluginIdentityCurrent(record.id, record.path, record.version)
 }
 
