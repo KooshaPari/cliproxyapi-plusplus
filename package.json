@@ -8,8 +8,8 @@
     "format:check": "oxfmt --config .oxfmtrc.json --check docs/.vitepress"
   },
   "devDependencies": {
-    "oxfmt": "^0.36.0",
-    "oxlint": "^1.51.0",
-    "oxlint-tsgolint": "^0.16.0"
+    "oxfmt": "^0.60.0",
+    "oxlint": "^1.75.0",
+    "oxlint-tsgolint": "^7.0.2001"
   }
 }
