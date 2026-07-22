@@ -6,8 +6,8 @@
     "**/.vitepress/dist/**",
     "**/.vitepress/cache/**"
   ],
-  "plugins": ["typescript"],
-  "rules": {
+  "plugins": ["eslint", "typescript", "unicorn", "oxc"],
+  "categories": {
     "correctness": "error",
     "suspicious": "error"
   }

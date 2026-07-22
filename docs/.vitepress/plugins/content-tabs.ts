@@ -1,6 +1,9 @@
 import type MarkdownIt from "markdown-it";
 import type { RuleBlock } from "markdown-it/lib/parser_block";
 
+type Tab = { id: string; label: string; content: string };
+type TabHeader = { id: string; label: string };
+
 /**
  * Parse tab definitions from markdown content
  *
@@ -19,9 +22,9 @@ import type { RuleBlock } from "markdown-it/lib/parser_block";
  * :::
  */
 function parseTabsContent(content: string): {
-  tabs: Array<{ id: string; label: string; content: string }>;
+  tabs: Array<Tab>;
 } {
-  const tabs: Array<{ id: string; label: string; content: string }> = [];
+  const tabs: Array<Tab> = [];
   const lines = content.split(/\r?\n/);
   let inTab = false;
   let currentId = "";
@@ -34,8 +37,8 @@ function parseTabsContent(content: string): {
     const startMatch = line.match(tabStart);
     if (startMatch) {
       if (inTab && currentContent.length > 0) {
-        const content = currentContent.join("\n").trim();
-        tabs.push({ id: currentId, label: currentId, content });
+        const body = currentContent.join("\n").trim();
+        tabs.push({ id: currentId, label: currentId, content: body });
       }
 
       inTab = true;
@@ -45,8 +48,8 @@ function parseTabsContent(content: string): {
     }
 
     if (inTab && tabEnd.test(line)) {
-      const content = currentContent.join("\n").trim();
-      tabs.push({ id: currentId, label: currentId, content });
+      const body = currentContent.join("\n").trim();
+      tabs.push({ id: currentId, label: currentId, content: body });
       inTab = false;
       currentId = "";
       currentContent = [];
@@ -59,8 +62,8 @@ function parseTabsContent(content: string): {
   }
 
   if (inTab && currentContent.length > 0) {
-    const content = currentContent.join("\n").trim();
-    tabs.push({ id: currentId, label: currentId, content });
+    const body = currentContent.join("\n").trim();
+    tabs.push({ id: currentId, label: currentId, content: body });
   }
 
   return { tabs };
@@ -185,11 +188,11 @@ export function contentTabsPlugin(md: MarkdownIt) {
   });
 
   // Custom renderer for the marker
-  md.renderer.rules.tabs_marker = (tokens, idx, options, env, self) => {
+  md.renderer.rules.tabs_marker = (tokens, idx, _options, _env, _self) => {
     const token = tokens[idx];
     try {
       const data = JSON.parse(token.content);
-      const tabs = data.tabs.map((t: { id: string; label: string }) => {
+      const tabs = data.tabs.map((t: TabHeader) => {
         const id = normalizeTabId(t.id);
         return {
           id,
@@ -202,16 +205,16 @@ export function contentTabsPlugin(md: MarkdownIt) {
       html += `<div class="content-tabs" data-tabs='${JSON.stringify(tabs)}'>`;
       html += `<div class="tab-headers">`;
 
-      tabs.forEach((tab: { id: string; label: string }, idx: number) => {
-        const active = idx === 0 ? "active" : "";
+      tabs.forEach((tab: TabHeader, _idx: number) => {
+        const active = _idx === 0 ? "active" : "";
         html += `<button class="tab-header ${active}" data-tab="${tab.id}">${tab.label}</button>`;
       });
 
       html += `</div>`;
       html += `<div class="tab-bodies">`;
 
-      data.tabs.forEach((tab: { id: string; label: string; content: string }, idx: number) => {
-        const display = idx === 0 ? "block" : "none";
+      data.tabs.forEach((tab: Tab, _idx: number) => {
+        const display = _idx === 0 ? "block" : "none";
         const normalizedId = normalizeTabId(tab.id);
         html += `<div class="tab-body" data-tab="${normalizedId}" style="display: ${display}">`;
         html += md.render(tab.content);
@@ -221,7 +224,7 @@ export function contentTabsPlugin(md: MarkdownIt) {
       html += `</div></div></div>`;
 
       return html;
-    } catch (e) {
+    } catch {
       return `<div class="content-tabs-error">Error parsing tabs</div>`;
     }
   };
