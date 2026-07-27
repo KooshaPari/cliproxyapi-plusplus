@@ -88,3 +88,6 @@ test.test
 .llmignore
 journey-fix/
 .grade-reports/
+
+# Benchmark artifacts (not source)
+bench/
