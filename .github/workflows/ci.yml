@@ -82,7 +82,6 @@ jobs:
     needs: detect
     if: needs.detect.outputs.has_rust == 'true'
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -102,7 +101,6 @@ jobs:
     needs: detect
     if: needs.detect.outputs.has_deny == 'true'
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -116,7 +114,6 @@ jobs:
     needs: detect
     if: needs.detect.outputs.has_python == 'true'
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -134,7 +131,6 @@ jobs:
     needs: detect
     if: needs.detect.outputs.has_go == 'true'
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -152,7 +148,6 @@ jobs:
     needs: detect
     if: needs.detect.outputs.has_typescript == 'true'
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -176,7 +171,6 @@ jobs:
     needs: detect
     if: needs.detect.outputs.has_security == 'true'
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - name: gitleaks
@@ -188,7 +182,6 @@ jobs:
     name: Dependency Review
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/dependency-review-action@v4
@@ -211,7 +204,7 @@ jobs:
             "go:${{ needs.go.result }}" \
             "typescript:${{ needs.typescript.result }}" \
             "security:${{ needs.security.result }}" \
-            "dep-review:${{ needs.dependency-review.result }}" \
+            "dep-review:${{ needs.dep-review.result }}" \
             ; do
             name="${pair%%:*}"
             result="${pair#*:}"
