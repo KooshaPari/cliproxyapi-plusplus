@@ -4,7 +4,7 @@ go 1.26.0
 
 require (
 	github.com/KooshaPari/phenotype-go-auth v0.0.0
-	github.com/andybalholm/brotli v1.2.1
+	github.com/andybalholm/brotli v1.2.2
 	github.com/atotto/clipboard v0.1.4
 	github.com/cespare/xxhash/v2 v2.3.0
 	github.com/charmbracelet/bubbles v1.0.0
