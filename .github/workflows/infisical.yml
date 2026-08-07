@@ -24,6 +24,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          # gitleaks and other history-aware checks need the parent commit.
+          fetch-depth: 0
 
       - name: Install Infisical CLI
         run: |
