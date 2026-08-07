@@ -41,6 +41,20 @@ jobs:
               return;
             }
 
+            try {
+              await github.rest.repos.getBranch({
+                owner,
+                repo,
+                branch: desiredBase,
+              });
+            } catch (error) {
+              if (error.status === 404) {
+                core.warning(`Branch ${desiredBase} does not exist; leaving PR #${prNumber} targeted at ${baseRef}.`);
+                return;
+              }
+              throw error;
+            }
+
             core.info(`Retargeting PR #${prNumber} base from ${baseRef} to ${desiredBase}.`);
 
             try {
