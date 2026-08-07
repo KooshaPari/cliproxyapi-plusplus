@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Retarget PR base to dev
-        uses: actions/github-script@v7
+        uses: actions/github-script@e69ef5462fd455e02edcaf4dd7708eda96b9eda0 # v7.0.0
         with:
           script: |
             const pr = context.payload.pull_request;
@@ -39,6 +39,20 @@ jobs:
             if (headRef === desiredBase) {
               core.info(`PR #${prNumber} is ${desiredBase} -> main; skipping retarget.`);
               return;
+            }
+
+            try {
+              await github.rest.repos.getBranch({
+                owner,
+                repo,
+                branch: desiredBase,
+              });
+            } catch (error) {
+              if (error.status === 404) {
+                core.warning(`Branch ${desiredBase} does not exist; leaving PR #${prNumber} targeted at ${baseRef}.`);
+                return;
+              }
+              throw error;
             }
 
             core.info(`Retargeting PR #${prNumber} base from ${baseRef} to ${desiredBase}.`);
