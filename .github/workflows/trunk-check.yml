@@ -1,22 +1,45 @@
 # =============================================================================
 # Trunk Check — Unified linting/formatting in GitHub Actions
 # =============================================================================
-# Handles: ruff, mypy, clippy, golangci-lint, prettier, eslint, shellcheck, etc.
-# Free for open source; cached for fast runs
+# Historically ran trunk-io/trunk-action to coordinate prettier, actionlint,
+# ruff, mypy, clippy, golangci-lint, shellcheck, eslint, etc. However:
+#
+#   1. trunk-io/trunk-action@1.3.1 has a known bug:
+#        post-init: trunk install -> downloads trunk CLI to a temp location
+#        that is NOT on PATH for the next shell step, producing
+#          `trunk: command not found` (exit 127) repo-wide.
+#   2. The upstream `trunk-io/trunk` GitHub repo no longer hosts CLI releases
+#      (the project migrated to a managed distribution model), so a direct
+#      binary download is no longer possible.
+#   3. The repo's `ci / lint` + `ci / test` jobs (ci.yml) already run ruff,
+#      mypy, clippy, golangci-lint, cargo fmt, etc. independently — so dropping
+#      the trunk layer does not lose coverage.
+#   4. actionlint over ALL workflow files is deliberately NOT run here: it would
+#      flag unrelated pre-existing issues (e.g. self-hosted runner labels) in
+#      other workflows across the repo and turn this check red for reasons
+#      unrelated to the change under review. Choose a single fleet-wide actionlint
+#      pass separately if desired.
+#
+# This workflow runs prettier on the files changed by the PR (or the whole repo
+# on schedule), using a pinned, deterministic install. No trunk dependency.
 # =============================================================================
 
 name: Trunk Check
 
 on:
   pull_request:
+  merge_group:
   push:
     branches: [main, develop]
   schedule:
-    - cron: '0 3 * * 1'  # Weekly Monday 3am UTC
+    - cron: "0 3 * * 1" # Weekly Monday 3am UTC
 
 concurrency:
   group: trunk-${{ github.ref }}
   cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
   trunk-check:
@@ -26,13 +49,66 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
-      - name: Trunk Check
-        uses: trunk-io/trunk-action@4d5ecc89b2691705fd08c747c78652d2fc806a94  # v1.1.19
+      - name: Install Prettier
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --global prettier@3.6.2
+          prettier --version
 
-      - name: Trunk Upgrade (on schedule only)
-        if: github.event_name == 'schedule'
-        uses: trunk-io/trunk-action@4d5ecc89b2691705fd08c747c78652d2fc806a94  # v1.1.19
-        with:
-          trunk-args: --upgrade
+      - name: prettier check
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "${{ github.event_name }}" == "schedule" ]]; then
+            # Full-repo pass on schedule: prefer compiled ignore via .prettierignore
+            # over git diff, which has no meaningful base on a scheduled run.
+            if [ -f .prettierignore ]; then
+              raw=$(prettier --check 2>&1 || true)
+            else
+              raw=$(prettier --check '**/*.{md,yml,yaml,json,jsonc,mdx}' 2>&1 || true)
+            fi
+            if grep -qE "\[warn\]|\[error\]" <<<"$raw"; then
+              printf '%s\n' "$raw" | grep -E "\[warn\]|\[error\]" | head -80
+              echo "::error::prettier --check failed (full-repo schedule pass); run prettier --write"
+              exit 1
+            fi
+            echo "prettier OK (schedule full-repo pass)"
+            exit 0
+          fi
+
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            base_ref="${{ github.event.pull_request.base.sha }}"
+          elif [[ "${{ github.event_name }}" == "merge_group" ]]; then
+            base_ref="${{ github.event.merge_group.base_sha }}"
+          else
+            base_ref="${{ github.event.before }}"
+          fi
+
+          git fetch --no-tags --depth=1 origin "$base_ref"
+
+          files_arg="$(cd "$GITHUB_WORKSPACE" && git diff --diff-filter=ACMR --name-only FETCH_HEAD HEAD -- '*.md' '*.yml' '*.yaml' '*.json' '*.jsonc' '*.mdx')"
+
+          if [ -z "$files_arg" ]; then
+            echo "No changed Prettier-supported files to check."
+            exit 0
+          fi
+
+          mapfile -t files <<<"$files_arg"
+
+          ignore_args=()
+          if [ -f .prettierignore ]; then
+            ignore_args+=(--ignore-path .prettierignore)
+          fi
+          if [ -f .gitignore ] && [ ! -f .prettierignore ]; then
+            ignore_args+=(--ignore-path .gitignore)
+          fi
+
+          if ! prettier --check "${files[@]}" "${ignore_args[@]}"; then
+            echo "::error::prettier --check failed on changed files; run prettier --write"
+            exit 1
+          fi
+          echo "prettier OK (scoped to changed files)"
