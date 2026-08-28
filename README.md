@@ -1,28 +1,14 @@
-## Work State
-
-| Field | Value |
-|---|---|
-| Last commit | 2026-06-08 |
-| Open issues | 36 |
-| Open PRs | 9 |
-| Focus | multi-provider LLM proxy fork — builds + CI workflows repaired |
-
-Progress: ████████░░ 80%
-
-> **Work state:** ACTIVE · **Progress:** `███████░░░ 70%`
-> CLIProxyAPI++ — multi-provider LLM proxy fork. Builds + CI workflows repaired (25 files). Residual: pre-existing Go test failures surfaced now that CI runs. · updated 2026-06-02
-
 # cliproxyapi-plusplus
-[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FKooshaPari%2Fcliproxyapi-plusplus.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2FKooshaPari%2Fcliproxyapi-plusplus?ref=badge_shield)
-[![AI Slop Inside](https://sladge.net/badge.svg)](https://sladge.net)
-
 
 Agent-native, multi-provider OpenAI-compatible proxy for production and local model routing.
 
-This is the Plus version of [cliproxyapi-plusplus](https://github.com/kooshapari/cliproxyapi-plusplus), adding support for third-party providers on top of the mainline project.
+> **Fork attribution:** `cliproxyapi-plusplus` is KooshaPari's fork of [router-for-me/CLIProxyAPI](https://github.com/router-for-me/CLIProxyAPI). GitHub's native fork relationship remains the source of upstream provenance.
 
-All third-party provider support is maintained by community contributors; cliproxyapi-plusplus does not provide technical support. Please contact the corresponding community maintainer if you need assistance.
+## Extensions in this fork
 
+This fork focuses on provider-aware routing, authentication, quotas, diagnostics, operational controls, and integration with broader agent infrastructure. It does not claim ownership of upstream work or upstream adoption.
+
+## Key Features
 ## Key Features
 
 - OpenAI-compatible request surface across heterogeneous providers.
