@@ -2,6 +2,8 @@
 
 Agent-native, multi-provider OpenAI-compatible proxy for production and local model routing.
 
+[![AI slop inside](https://sladge.net/badge.svg)](https://sladge.net) [![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/KooshaPari/cliproxyapi-plusplus/total)](https://github.com/KooshaPari/cliproxyapi-plusplus/releases)
+
 > **Fork attribution:** `cliproxyapi-plusplus` is KooshaPari's fork of [router-for-me/CLIProxyAPI](https://github.com/router-for-me/CLIProxyAPI). GitHub's native fork relationship remains the source of upstream provenance.
 
 ## Extensions in this fork
