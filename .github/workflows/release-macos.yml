@@ -1,0 +1,37 @@
+name: Release macOS (cliproxyapi-plusplus)
+
+# Calls the reusable workflow at kooshapari/phenotype-fleet-ops.
+# Self-hosted runners only (zero billed minutes).
+# All Apple Developer secrets live in Infisical project 8efe392e-56a6-4c3c-89f9-8141183dd7e8.
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+
+concurrency:
+  group: macos-release-cliproxyapi-plusplus-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  macos:
+    name: Build, sign, notarize cliproxyapi-plusplus
+    uses: kooshapari/phenotype-fleet-ops/.github/workflows/macos-release.yml@main
+    with:
+      app-name: cliproxyapi-plusplus
+      app-bundle-id: app.phenotype.cliproxy
+      build-cmd: |
+          pnpm install --frozen-lockfile
+          pnpm --filter desktop build
+          pnpm --filter desktop electron-builder --mac --x64 --arm64
+          cp -R apps/desktop/dist/mac*/cliproxyapi-plusplus.app dist/macos/ || true
+      entitlements-file: apps/desktop/Entitlements.plist
+      artifact-dir: dist/macos
+      create-dmg: true
+      sign-identity: "Developer ID Application"
+    secrets:
+      INFISICAL_TOKEN: ${{ secrets.INFISICAL_TOKEN }}

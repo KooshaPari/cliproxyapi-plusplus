@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Minimal entitlements for Electron desktop apps.
+  electron-builder applies these automatically when configured in package.json:
+    "mac": { "hardenedRuntime": true, "entitlements": "build/entitlements.mac.plist" }
+-->
+<plist version="1.0">
+<dict>
+  <key>com.apple.security.cs.allow-jit</key>
+  <true/>
+
+  <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+  <true/>
+
+  <key>com.apple.security.network.client</key>
+  <true/>
+
+  <!-- electron-updater needs this to download and run the update binary.
+       Add ONLY if you ship auto-update. -->
+  <!-- <key>com.apple.security.cs.disable-library-validation</key>
+  <true/> -->
+
+  <!-- cliproxyapi-plusplus is an Electron CLI proxy wrapper -->
+  <key>com.apple.security.network.client</key>
+  <true/>
+  <key>com.apple.security.cs.allow-jit</key>
+  <true/>
+</dict>
+</plist>
